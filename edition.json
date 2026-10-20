@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "just-every/envelope",
+  "identityKind": "project",
+  "toolchain": {
+    "id": "runeditrun/edition-authoring",
+    "version": "1.1.0"
+  },
+  "components": [
+    {
+      "id": "just-every/envelope",
+      "role": "edition",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/auth.server.ts",
+          "src/server.ts",
+          "src/identity.ts",
+          "src/routes",
+          "src/site",
+          "scripts/installer"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/base",
+      "role": "foundation",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/base"
+        ],
+        "origin": {
+          "repository": "https://github.com/runeditrun/base.git",
+          "revision": "fa38858fa0c686bcb78a7d501ab4b5a547233e98",
+          "paths": [
+            "foundation/runtime"
+          ]
+        }
+      }
+    },
+    {
+      "id": "runeditrun/ai",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/ai"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/demo",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/demo"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/dependencies",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/dependencies"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/mail",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/mail"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/operator-auth",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/operator-auth"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/owner-claim",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/owner-claim"
+        ]
+      }
+    },
+    {
+      "id": "runeditrun/edition-authoring",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "scripts/edition-authoring"
+        ]
+      }
+    }
+  ]
+}
