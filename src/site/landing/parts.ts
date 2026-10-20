@@ -35,7 +35,8 @@ export function keep(text: string): string {
 
  .replace(/([^\s\u2060])-(?=[^\s\u2060])/g, '$1\u2060-\u2060')
  .replace(/→ /g, '→ ')
- .replace(/[ \u00a0]*([+−×=])[ \u00a0]+/g, ' $1 ')
+ .replace(/(^|[ \u00a0]+)([+−×=])[ \u00a0]+/g, '$1$2 ')
+ .replace(/(\d)×/g, '$1\u2060×')
  }).join('')
 }
 
