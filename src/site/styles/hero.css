@@ -1,0 +1,49 @@
+/* 01 Hero: the header over the aqua ground, the top card, the text-free clay plate and, below the clay letters, the
+   corner cards either side of the copy, as hero G places them. The ground runs from the aqua token to white over the
+   painting's full height (1024 of its 1236-wide crop), as the plate's own ground does, so the plate's edges vanish. */
+/* On a short desktop window the plate gives way so the headline and Run Envelope stay above the fold. */
+.hero { --fold: max(560px, (100vh - 400px) * 1236 / 576); --pw: min(78vw, 1236px, var(--fold)); background: linear-gradient(180deg, var(--aqua) 0, #fff calc(var(--pw) * 1024 / 1236)); padding-bottom: 72px; }
+.hero-stage { display: flex; flex-direction: column; align-items: center; width: min(100% - 2 * var(--gutter), 1480px); margin-inline: auto; }
+.hero-top { margin-top: 2px; padding: 14px 26px; font-size: 17px; line-height: 1.4; text-align: center; border-radius: 14px; text-wrap: balance; }
+.hero-art { width: var(--pw); margin-top: -2px; }
+.hero-art img { width: 100%; height: auto;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent), linear-gradient(180deg, transparent, #000 4%, #000 92%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent), linear-gradient(180deg, transparent, #000 4%, #000 92%, transparent); mask-composite: intersect; }
+.hero-foot { display: grid; grid-template-columns: minmax(270px, 1fr) minmax(0, 680px) minmax(270px, 1fr); grid-template-areas: 'left copy right'; gap: 24px 28px; width: 100%; margin-top: 4px; }
+.hero-cards { display: grid; align-content: start; gap: 26px; }
+.hero-cards--left { grid-area: left; justify-items: start; }
+.hero-cards--right { grid-area: right; justify-items: end; }
+.hc { width: min(100%, 340px); padding: 17px 20px 18px; border-radius: 14px; font-size: 16px; line-height: 1.45; color: var(--ink); }
+.hero-copy { grid-area: copy; text-align: center; padding-top: 6px; }
+.hero-sub { font-size: 22.5px; line-height: 1.38; color: #1b2840; text-wrap: balance; }
+.hero-alt { margin-top: 16px; font-size: 19px; color: #1b2840; text-wrap: balance; }
+.hero-alt strong { font-weight: 700; }
+.hero-actions { margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.hero-actions .run { min-width: 352px; min-height: 60px; }
+.hero-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 38px; }
+
+@media (min-width: 1700px) {
+  .hero { --pw: min(1360px, var(--fold)); }
+  .hero-sub { font-size: 26px; }
+  .hc { width: min(100%, 370px); font-size: 17.5px; }
+}
+@media (max-width: 1279px) {
+  .hero { --pw: min(78vw, 1236px); }
+  .hero-foot { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: 'copy copy' 'left right'; gap: 36px 28px; }
+  .hero-copy { max-width: 720px; justify-self: center; padding-top: 6px; }
+  .hero-cards--left, .hero-cards--right { justify-items: stretch; gap: 20px; }
+  .hc { width: 100%; }
+  .hero-sub { font-size: 22px; }
+}
+@media (max-width: 759px) {
+  .hero { --pw: min(100vw - 32px, 440px); background: linear-gradient(180deg, var(--aqua) 0, var(--aqua) calc(var(--pw) * 1.06 + 130px), #fff calc(var(--pw) * 1.06 + 360px)); padding-bottom: 48px; }
+  .hero-top { width: 100%; margin-top: 10px; padding: 12px 16px; font-size: 15px; }
+  .hero-art { margin-top: 14px; }
+  .hero-foot { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'copy' 'left' 'right'; gap: 20px; margin-top: 8px; }
+  .hero-sub { font-size: 17px; line-height: 1.42; }
+  .hero-alt { margin-top: 12px; font-size: 16px; }
+  .hero-actions { margin-top: 18px; gap: 14px; }
+  .hero-actions .run { width: 100%; min-width: 0; }
+  .hero-cards--left { margin-top: 28px; }
+  .hc { padding: 16px 18px; font-size: 16px; }
+}

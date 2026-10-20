@@ -1,0 +1,135 @@
+/* 02 Payday week, 03 Gross to net and 04 Run prepared. */
+
+/* 02: the schedule legend, then five day cards hanging from a forest rail; Friday's card carries a green top edge.
+   Below 1180 the days become a vertical list on the rail, each day's events side by side. */
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 44px; margin-top: 40px; }
+.legend li { display: flex; align-items: center; gap: 12px; font-size: 19px; color: var(--ink); }
+.legend .chip { font-size: 18px; min-height: 38px; padding: 6px 16px; border-radius: 10px; }
+.days { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px; margin-top: 66px; }
+.days::before { content: ''; position: absolute; left: 10%; right: 10%; top: -24px; height: 3px; border-radius: 2px; background: var(--forest); }
+.day { position: relative; padding: 26px 24px 28px; border-radius: 22px; }
+.day::before { content: ''; position: absolute; left: 50%; top: -31px; width: 17px; height: 17px; margin-left: -8.5px; border-radius: 50%; background: var(--forest); box-shadow: 0 0 0 3px var(--aqua); }
+.day h3 { font: 800 27px/1.15 var(--heading); letter-spacing: -.015em; color: var(--ink); }
+.day--payday { box-shadow: inset 0 6px 0 var(--done), var(--card-shadow); }
+.day-events { margin-top: 14px; }
+.ev { padding: 16px 0; border-top: 1px solid var(--hair); }
+.ev:first-child { border-top: 0; padding-top: 6px; }
+.ev p { margin-top: 8px; font-size: 17.5px; line-height: 1.38; color: var(--ink); }
+.ev--bad p { color: var(--red); }
+.ev-then { display: block; margin: 4px 0; color: var(--muted); font-size: 20px; line-height: 1; }
+.ev .bad { display: block; }
+.ev--payday p.payday { margin-top: 10px; font-size: 21px; line-height: 1.32; font-weight: 600; }
+.ev--payday + .ev p { font-size: 18px; }
+
+@media (max-width: 1279px) {
+  .days { grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 40px; padding-left: 34px; }
+  .days::before { left: 7px; right: auto; top: 24px; bottom: 24px; width: 3px; height: auto; }
+  .day { padding: 22px 24px 22px; }
+  .day::before { left: -34px; top: 30px; margin-left: 0; }
+  .day-events { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 28px; margin-top: 8px; }
+  .ev, .ev:first-child { border-top: 1px solid var(--hair); padding: 14px 0; }
+  .ev p { font-size: 17px; }
+}
+@media (max-width: 759px) {
+  .legend { justify-content: flex-start; gap: 10px 18px; margin-top: 26px; }
+  .legend li { font-size: 15px; gap: 8px; }
+  .legend .chip { font-size: 14px; min-height: 30px; padding: 4px 10px; }
+  .days { padding-left: 26px; margin-top: 30px; gap: 14px; }
+  .days::before { left: 5px; }
+  .day { padding: 18px 18px; border-radius: 18px; }
+  .day::before { left: -27px; top: 24px; width: 15px; height: 15px; }
+  .day h3 { font-size: 22px; }
+  .day-events { grid-template-columns: minmax(0, 1fr); }
+  .ev p { font-size: 15.5px; }
+  .ev--payday p.payday { font-size: 18px; }
+}
+
+/* 03: six cards in a row, each with its business chip, kind, person, calculation, green result and, under the card,
+   a grey rule chip; three a row below 1280 and stacked whole on a phone with the rule inside the card. */
+.kinds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; margin-top: 48px; }
+.kind { display: flex; flex-direction: column; gap: 18px; }
+.kind-card { flex: 1; padding: 16px 18px 22px; border-radius: 16px; }
+.kind-top { display: flex; flex-direction: column; gap: 14px; }
+.kind-top .chip { justify-content: center; min-height: 44px; border-radius: 12px; font-size: 17px; }
+.kind-name { font: 700 14.5px/1 var(--text); letter-spacing: .2em; text-transform: uppercase; color: var(--forest); }
+.kind h3 { margin-top: 14px; font: 800 19px/1.25 var(--heading); color: var(--ink); }
+.kind .role { display: block; font-weight: 700; color: var(--body); }
+.kind .role-dot { display: none; }
+.kind-calc { margin-top: 12px; display: grid; gap: 2px; font-size: 16.5px; line-height: 1.4; color: var(--body); }
+.kind-result { margin-top: 16px; font: 800 21px/1.28 var(--heading); color: var(--done); }
+.kind-form { display: block; margin-top: 12px; font: 400 16.5px/1.4 var(--text); color: var(--body); }
+.kind-rule { display: grid; place-items: center; min-height: 64px; padding: 10px 14px; border-radius: 14px; background: #edf3f6; color: var(--ink); font-size: 15.5px; line-height: 1.35; text-align: center; text-wrap: balance; }
+.kinds-band .foot-pill { margin-top: 44px; font-size: 18px; }
+
+@media (max-width: 1279px) {
+  .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 22px; }
+}
+@media (max-width: 759px) {
+  .kinds { grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 30px; }
+  .kind { gap: 0; padding: 0 0 16px; background: #fff; border-radius: 16px; box-shadow: var(--card-shadow); }
+  .kind-card { box-shadow: none; padding: 16px 16px 4px; }
+  .kind-top { flex-direction: row; align-items: center; gap: 12px; }
+  .kind-top .chip { min-height: 28px; font-size: 14px; border-radius: 8px; }
+  .kind-name { font-size: 13px; letter-spacing: .14em; }
+  .kind h3 { margin-top: 10px; font-size: 20px; }
+  .kind .role { display: inline; color: var(--ink); font-weight: 800; }
+  .kind .role-dot { display: inline; }
+  .kind-calc { margin-top: 6px; font-size: 16px; }
+  .kind-result { margin-top: 6px; font-size: 18px; }
+  .kind-form { margin-top: 6px; font-size: 16px; }
+  .kind-rule { justify-self: start; place-items: start; width: fit-content; max-width: calc(100% - 32px); min-height: 0; margin: 12px 16px 0; padding: 6px 12px; border-radius: 10px; font-size: 14px; text-align: left; }
+}
+
+/* 04: the Toast source card feeding the run preview; each change row carries its own note behind a dotted leader.
+   On a phone the source sits above the run and each note goes under its label. */
+.prepared { display: grid; grid-template-columns: minmax(0, 320px) 64px minmax(0, 1fr); align-items: start; margin-top: 52px; }
+.toast { padding: 24px 28px 26px; border-radius: 16px; display: grid; gap: 8px; font-size: 20px; color: var(--ink); }
+.toast-name { color: var(--muted); font-weight: 500; }
+.toast .ok { margin-top: 4px; font-size: 18px; font-weight: 500; }
+.feed { align-self: start; margin-top: 98px; justify-self: center; width: 40px; height: 3px; border-radius: 2px; background: var(--teal); position: relative; }
+.feed::after { content: ''; position: absolute; right: -2px; top: -7px; width: 15px; height: 15px; border-top: 3px solid var(--teal); border-right: 3px solid var(--teal); border-radius: 2px; transform: rotate(45deg); }
+.run-card { padding: 18px 28px 22px; border-radius: 18px; }
+.run-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; font-size: 18px; color: var(--body); }
+.run-head .chip { font-size: 20px; min-height: 44px; padding: 6px 18px; border-radius: 12px; }
+.run-sum { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 24px; margin-top: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--hair); font-size: 21px; color: var(--ink); }
+.run-sum .ok { font-weight: 600; }
+.changes { margin-top: 4px; }
+.changes thead th { padding: 14px 0 10px; font: 700 14px/1.3 var(--text); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); border-bottom: 1px solid var(--hair); }
+.changes thead th + th { color: var(--forest); padding-left: 4px; }
+.changes tbody th { position: relative; width: 44%; padding: 16px 0; font-size: 19px; font-weight: 500; vertical-align: top; color: var(--ink); }
+.changes tbody td { padding: 14px 0 14px 4px; font-size: 17.5px; line-height: 1.42; color: var(--body); vertical-align: top; }
+.changes tbody tr + tr :is(th, td) { border-top: 1px solid var(--hair); }
+.changes .row-l { display: flex; align-items: center; gap: 16px; padding-right: 22px; }
+.changes .leader { flex: 1 1 40px; max-width: 130px; height: 12px; background: radial-gradient(circle, var(--teal) 1.1px, transparent 1.6px) 0 50% / 7px 4px repeat-x; position: relative; }
+.changes .leader::after { content: ''; position: absolute; right: -2px; top: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--teal); }
+.run-foot { margin-top: 4px; padding-top: 18px; border-top: 1px solid var(--hair); font-size: 20px; color: var(--done); }
+.run-foot b { font-weight: 700; }
+
+@media (max-width: 1279px) {
+  .changes tbody th { width: 40%; font-size: 18px; }
+}
+@media (max-width: 1023px) {
+  .prepared { grid-template-columns: minmax(0, 1fr); justify-items: stretch; gap: 0; }
+  .toast { justify-self: start; width: min(100%, 420px); }
+  .feed { margin: 14px 0 14px 60px; justify-self: start; width: 3px; height: 34px; }
+  .feed::after { right: auto; top: auto; bottom: -2px; left: -6px; transform: rotate(135deg); }
+}
+@media (max-width: 759px) {
+  .prepared { margin-top: 30px; }
+  .toast { font-size: 17px; gap: 4px; padding: 18px 20px; }
+  .toast .ok { font-size: 15.5px; }
+  .run-card { padding: 16px 16px 18px; }
+  .run-head { font-size: 15px; gap: 8px 12px; }
+  .run-head .chip { font-size: 15px; min-height: 32px; padding: 4px 12px; border-radius: 10px; }
+  .run-sum { font-size: 16.5px; }
+  .changes thead { display: none; }
+  .changes, .changes tbody, .changes tr, .changes th, .changes td { display: block; width: auto; }
+  .changes tbody tr { padding: 12px 0; }
+  .changes tbody tr + tr { border-top: 1px solid var(--hair); }
+  .changes tbody tr + tr :is(th, td) { border-top: 0; }
+  .changes tbody th { width: auto; padding: 0; font-size: 16.5px; font-weight: 600; }
+  .changes .row-l { padding-right: 0; }
+  .changes .leader { display: none; }
+  .changes tbody td { padding: 4px 0 0; font-size: 15.5px; }
+  .run-foot { font-size: 16px; }
+}

@@ -340,6 +340,51 @@ The desk's ENV-001–030 remain intact. The following maps every table-stakes in
 | Outside contractor payments; cancellation before deadline; commuter benefits; private payday notifications | ENV-013, ENV-034, ENV-019, ENV-022, ENV-044 |
 | AutoPilot comparator and unchanged-run human alternative | ENV-045, ENV-046; exact per-run human approval remains mandatory |
 | SSA SSNVS, UI SIDES and verification partners | ENV-071, ENV-069, ENV-068 |
+## Homepage claims
+
+The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved hero G and page s1) shows the product this contract builds toward (owner, 17 October 2026: the homepage may show the product we are building toward). Every capability claim it makes is listed here with its clauses and how far the code is. No payroll clause is in code yet, so every capability claim is contract, not yet in code. Brand names (Gusto, ADP RUN, Paychex Flex, Toast, QuickBooks Time, QuickBooks Online, Xero, Guideline, EFTPS) appear as plain text only; none is a partnership.
+
+| Section | Claim on the page | Clauses | Status | Code |
+| --- | --- | --- | --- | --- |
+| 01 Hero | Turns hours, tips and salaries into every paycheck (gross to net for hourly, salaried and tipped staff) | ENV-006, ENV-008, ENV-009 | contract, not yet in code |  |
+| 01 Hero | Moves net pay and taxes on payday | ENV-011, ENV-035 | contract, not yet in code |  |
+| 01 Hero | Files every federal, state and local return | ENV-014, ENV-015 | contract, not yet in code |  |
+| 01 Hero | W-2s and 1099s | ENV-016, ENV-013 | contract, not yet in code |  |
+| 01 Hero | One bookkeeper runs four clients' payrolls (58 people) in one workspace | ENV-029, ENV-032 | contract, not yet in code |  |
+| 01 Hero, 07 | A contractor's TIN mismatch blocks payment until the W-9 is corrected and matched | ENV-013 | contract, not yet in code |  |
+| 01 Hero, 07, 13 | A new bank account is held, confirmed on the person's verified phone and approved before pay goes to it | ENV-004, ENV-034 | contract, not yet in code |  |
+| 01 Hero, 03, 04 | Child support and a creditor order withheld in priority order within the federal limit, then remitted | ENV-018 | contract, not yet in code |  |
+| 01 Hero, 08 | A remote move registers the new state's accounts (Colorado withholding, unemployment, FAMLI, Denver OPT) before payday | ENV-002, ENV-007, ENV-015, ENV-060 | contract, not yet in code |  |
+| 02 | Weekly, biweekly, semimonthly and monthly schedules side by side with an approval cutoff | ENV-005, ENV-011 | contract, not yet in code |  |
+| 02, 04, 05 | Each business owner approves their own run; the bookkeeper approves filings | ENV-028, ENV-034 | contract, not yet in code |  |
+| 02, 06 | Journals posted to QuickBooks Online and Xero | ENV-023 | contract, not yet in code |  |
+| 03 | Tipped minimum-wage top-up (Ohio $11.00 minimum, $5.50 tipped) | ENV-009, ENV-006 | contract, not yet in code |  |
+| 03, 09 | FLSA overtime at 1.5× over 40 hours | ENV-006 | contract, not yet in code |  |
+| 03 | A Saturday payday moved to Friday | ENV-005 | contract, not yet in code |  |
+| 03, 08 | One month's salary split between two states by workdays | ENV-007 | contract, not yet in code |  |
+| 03 | Every stub line linked to its rule and rate | ENV-006, ENV-070 | contract, not yet in code |  |
+| 04 | Hours and tips imported from Toast overnight | ENV-008, ENV-009 | contract, not yet in code |  |
+| 04 | The agent prepares the run and writes one plain line for every change since the last run | ENV-059, ENV-010 | contract, not yet in code |  |
+| 04 | Ohio new-hire report filed for a new hire | ENV-017 | contract, not yet in code |  |
+| 04 | A rate change carried from its effective date | ENV-033 | contract, not yet in code |  |
+| 04 | Stubs in Spanish | ENV-022 | contract, not yet in code |  |
+| 05 | A duplicated timesheet import is stopped before approval, with the people and the money at stake, and re-previewed after the fix | ENV-008, ENV-010 | contract, not yet in code |  |
+| 06 | Each run proven to the cent: register, bank debit, tax deposits, 401(k) remittance and ledger agree | ENV-038, ENV-061 | contract, not yet in code |  |
+| 06 | Bank funding of net pay, taxes and 401(k) | ENV-011 | contract, not yet in code |  |
+| 06 | EFTPS, Ohio and Columbus deposits accepted | ENV-014, ENV-015 | contract, not yet in code |  |
+| 06 | 401(k) contributions remitted to Guideline | ENV-019 | contract, not yet in code |  |
+| 08 | A jurisdiction register of every tax account with its dates | ENV-001 | contract, not yet in code |  |
+| 08 | Address change made in the employee portal | ENV-022 | contract, not yet in code |  |
+| 10 | Q3 Form 941 for four businesses filed and accepted by the IRS | ENV-014 | contract, not yet in code |  |
+| 10 | Ohio unemployment wage reports filed and accepted | ENV-015 | contract, not yet in code |  |
+| 11 | An IRS failure-to-deposit notice matched to the deposit, reply drafted, signed by the owner and closed with $0.00 owed | ENV-025, ENV-062, ENV-014 | contract, not yet in code |  |
+| 12 | A mid-quarter switch from Paychex Flex: year-to-date import and its last payroll rerun line by line to the cent | ENV-026, ENV-064 | contract, not yet in code |  |
+| 12 | The reporting-agent authorization (Form 8655) signed by the owner | ENV-037, ENV-014 | contract, not yet in code |  |
+| 12 | Also moves in from Gusto and ADP RUN | ENV-026 | contract, not yet in code |  |
+| 13 | Fri Nov 13: four runs, 60 people paid, the new client's first run | ENV-005, ENV-011, ENV-026 | contract, not yet in code |  |
+| 01 Hero, 13 | 100% free, open source alternative to Gusto, ADP RUN and Paychex Flex | ENV-026 | code (licence); move-in: contract, not yet in code | `LICENSE` (MIT), `src/site/run.json` |
+| 12, 01 Run Envelope | One line starts Envelope on your computer (`npx -y @runeditrun/rer dev just-every/run-envelope`) | ENV-050 | partly | `src/site/run.json`, `/run` (Base's foundation starts; payroll is not built) |
+
 ## Status
 
 Judged from the code and tests at commit `bb36d7612d6ee448a022e32df94cad323ea186a4` (20 October 2026).

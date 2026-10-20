@@ -1,0 +1,211 @@
+/* 05 Pre-run check, 06 Reconciled, 07 Pay protected and 08 Registered. */
+
+/* 05: the event rail beside the two overlapping batch cards and the callout, on the dark forest band. */
+.precheck { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 520px); gap: 40px 56px; align-items: start; margin-top: 36px; }
+.rail { position: relative; display: grid; gap: 22px; padding-left: 52px; }
+.rail-step { position: relative; }
+.rail-step::before { content: ''; position: absolute; left: -52px; top: 5px; width: 22px; height: 22px; border-radius: 50%; background: #cbd8dd; }
+.rail-step + .rail-step::after { content: ''; position: absolute; left: -42px; top: -26px; width: 3px; height: 30px; background: #cbd8dd; }
+.rail-step--bad::before { background: #f4514e; }
+.rail-step--good::before { background: #25da6b; }
+.rail-step--good::after { background: #25da6b; }
+.rail-step p { font-size: 21px; line-height: 1.42; color: #eef6f3; }
+.rail-step b { font-weight: 700; color: #fff; }
+.rail-step--bad p, .rail-step--bad b { color: #ff6a64; }
+.band--forest .ck { color: #25da6b; }
+.batches { position: relative; display: grid; padding-top: 4px; }
+.batch { border-radius: 16px; background: #fff; color: var(--ink); padding: 18px 26px 16px; box-shadow: 0 20px 40px -18px rgba(0, 0, 0, .55); }
+.batch-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; font-size: 22px; font-weight: 650; }
+.batch table { margin-top: 8px; }
+.batch :is(th, td) { padding: 10px 0; font-size: 19px; border-top: 1px solid var(--hair); }
+.batch td { text-align: right; }
+.batch--dup { width: 88%; justify-self: end; padding-bottom: 70px; box-shadow: 0 0 0 4px #e5443f, 0 20px 40px -18px rgba(0, 0, 0, .55); }
+.batch--dup .batch-title { color: #d42c2c; }
+.batch--kept { width: 84%; margin-top: -52px; padding-bottom: 34px; position: relative; }
+.batch--kept::after { content: '•••'; display: block; padding-top: 8px; color: #b7c1c8; letter-spacing: .2em; font-size: 18px; }
+.callout { justify-self: end; width: 70%; margin-top: -24px; position: relative; padding: 18px 24px; border-radius: 12px; background: #fff; color: var(--ink); font-size: 21px; line-height: 1.35; box-shadow: inset 8px 0 0 #e5443f, 0 20px 40px -18px rgba(0, 0, 0, .55); padding-left: 32px; }
+.callout b { font-weight: 700; }
+
+@media (max-width: 1179px) {
+  .precheck { grid-template-columns: minmax(0, 1fr); }
+  .batches { max-width: 560px; }
+}
+@media (max-width: 759px) {
+  .precheck { margin-top: 28px; gap: 32px; }
+  .rail { gap: 16px; padding-left: 36px; }
+  .rail-step::before { left: -36px; top: 4px; width: 18px; height: 18px; }
+  .rail-step + .rail-step::after { left: -28px; top: -18px; height: 22px; }
+  .rail-step p { font-size: 16px; }
+  .batch { padding: 14px 16px 12px; }
+  .batch-title { font-size: 17px; }
+  .batch :is(th, td) { font-size: 16px; padding: 8px 0; }
+  .batch--dup { width: 92%; }
+  .batch--dup { padding-bottom: 44px; }
+  .batch--kept { width: 92%; margin-top: -30px; padding-bottom: 24px; }
+  .callout { width: 92%; font-size: 16.5px; margin-top: -14px; padding: 14px 16px 14px 24px; }
+}
+
+/* 06: the stub at the hub, three cards left and right tied to it by dotted connectors, and the strip of all four
+   runs. Below 1180 the stub leads and the cards follow two a row; on a phone they chain one under another. */
+.hub { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px) minmax(0, 1fr); gap: 0 64px; align-items: center; margin-top: 44px; }
+.hub-side { display: grid; gap: 28px; }
+.spoke { position: relative; padding: 20px 24px 22px; border-radius: 16px; }
+.spoke h3 { font: 800 21px/1.3 var(--heading); color: var(--ink); }
+.spoke p { margin-top: 8px; font-size: 18px; line-height: 1.45; color: var(--ink); }
+.spoke .small { font-size: 15px; color: var(--muted); }
+.spoke::after { content: ''; position: absolute; top: 50%; width: 64px; height: 3px; background: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px) 0 50% / 8px 3px repeat-x; }
+.spoke--l::after { right: -64px; }
+.spoke--r::after { left: -64px; }
+.cursors { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 16px; }
+.cursor { display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; border-radius: 12px; font-size: 17px; color: var(--ink); }
+.cursor svg { width: 13px; height: 17px; color: #172033; }
+.cursor--kim { background: #e2f6fb; }
+.cursor--walt { background: #e6f5ea; }
+.spoke .hand { margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; font: 600 30px/1 Caveat, 'Bradley Hand', cursive; color: var(--done); transform: rotate(-3deg); }
+.hand .ck { width: .8em; height: .8em; }
+.stub { padding: 22px 22px 22px; border-radius: 18px; }
+.stub > .chip { font-size: 19px; min-height: 42px; padding: 6px 16px; border-radius: 10px; }
+.stub-who { margin-top: 12px; padding-bottom: 12px; font-size: 16px; color: var(--ink); border-bottom: 1px solid var(--hair); }
+.stub :is(th, td) { padding: 8px 0; font-size: 16.5px; color: var(--ink); border-bottom: 1px solid var(--hair); }
+.stub td { text-align: right; }
+.stub tfoot :is(th, td) { padding-top: 14px; font-size: 21px; font-weight: 700; border-bottom: 0; border-top: 2px solid var(--hair); }
+.stub-paid { margin-top: 8px; font: 800 21px/1.3 var(--heading); }
+.runs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.3fr); margin-top: 44px; padding: 18px 0; border-radius: 16px; }
+.runs li { display: grid; align-content: center; justify-items: start; gap: 8px; padding: 4px 30px; }
+.runs li + li { border-left: 1px solid var(--hair); }
+.runs li p { font-size: 18px; color: var(--ink); }
+.runs .chip { font-size: 18px; min-height: 38px; padding: 5px 16px; border-radius: 10px; }
+.runs .runs-total p { font: 800 23px/1.3 var(--heading); color: var(--done); }
+
+@media (max-width: 1179px) {
+  .hub { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+  .stub { grid-column: 1 / -1; grid-row: 1; justify-self: center; width: min(100%, 420px); }
+  .hub-side { gap: 22px; align-content: start; }
+  .spoke::after { display: none; }
+  .runs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
+  .runs li:nth-child(3) { border-left: 0; }
+}
+@media (max-width: 759px) {
+  .hub { grid-template-columns: minmax(0, 1fr); gap: 26px; margin-top: 30px; }
+  .stub { width: 100%; }
+  .hub-side { gap: 26px; }
+  .spoke { padding: 16px 16px 18px; }
+  .spoke h3 { font-size: 18px; }
+  .spoke p { font-size: 15.5px; }
+  .spoke .small { font-size: 13.5px; }
+  .spoke::after { display: block; left: 50%; right: auto; top: -26px; width: 3px; height: 26px; margin-left: -1.5px; background: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px) 50% 0 / 3px 7px repeat-y; }
+  .hub-side--l .spoke:first-child::after { top: -26px; }
+  .cursor { font-size: 14px; padding: 6px 12px; }
+  .spoke .hand { font-size: 25px; }
+  .stub :is(th, td) { font-size: 15.5px; }
+  .stub tfoot :is(th, td), .stub-paid { font-size: 18px; }
+  .runs { grid-template-columns: minmax(0, 1fr); margin-top: 26px; padding: 6px 16px; gap: 0; }
+  .runs li { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px 0; }
+  .runs li + li { border-left: 0; border-top: 1px solid var(--hair); }
+  .runs-total { grid-template-columns: minmax(0, 1fr) !important; }
+  .runs li p { font-size: 15px; }
+  .runs .chip { font-size: 13.5px; min-height: 28px; padding: 4px 10px; }
+  .runs .runs-total p { font-size: 18px; }
+}
+
+/* 07: two equal cards, each a timeline from a red start to a green end, with the text exchange on Mia's. */
+.guards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 44px; }
+.guard { padding: 26px 30px 30px; border-radius: 20px; }
+.guard-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 20px; color: var(--ink); }
+.guard-head .chip { font-size: 21px; min-height: 48px; padding: 6px 20px; border-radius: 12px; }
+.guard-head b { font-weight: 650; }
+.timeline { margin-top: 24px; display: grid; gap: 22px; }
+.tl { position: relative; padding-left: 36px; }
+.tl::before { content: ''; position: absolute; left: 0; top: 5px; width: 18px; height: 18px; border-radius: 50%; background: #c6d0d9; }
+.tl + .tl::after { content: ''; position: absolute; left: 8px; top: -23px; width: 2px; height: 26px; background: #c6d0d9; }
+.tl--bad::before { background: #ef3b3b; }
+.tl--good::before { background: var(--done); }
+.tl p { font-size: 18px; line-height: 1.45; color: var(--ink); }
+.tl--bad p { color: var(--red); font-weight: 600; }
+.tl--good p { color: var(--done); font-weight: 650; }
+.sms { display: grid; gap: 12px; margin-top: 14px; }
+.sms-in { justify-self: start; max-width: 460px; padding: 10px 20px 14px; border-radius: 18px 18px 18px 4px; background: #e8edf1; font-size: 18px; color: var(--ink); }
+.sms-in span { display: block; margin-bottom: 4px; font-size: 14.5px; color: var(--muted); }
+.sms-out { justify-self: end; display: flex; align-items: flex-end; gap: 12px; }
+.sms-bubble { padding: 12px 22px; border-radius: 18px 18px 4px 18px; background: var(--teal); color: #fff; font-size: 18px; }
+.sms-out time { font-size: 15px; color: var(--muted); }
+
+@media (max-width: 1023px) {
+  .guards { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 759px) {
+  .guards { margin-top: 30px; gap: 16px; }
+  .guard { padding: 18px 16px 20px; }
+  .guard-head { font-size: 16px; gap: 8px 12px; }
+  .guard-head .chip { font-size: 15px; min-height: 32px; padding: 4px 12px; border-radius: 10px; }
+  .timeline { gap: 16px; margin-top: 18px; }
+  .tl { padding-left: 28px; }
+  .tl::before { width: 15px; height: 15px; }
+  .tl + .tl::after { left: 7px; top: -17px; height: 20px; }
+  .tl p { font-size: 15.5px; }
+  .sms-in, .sms-bubble { font-size: 15.5px; }
+  .sms-in span, .sms-out time { font-size: 13px; }
+}
+
+/* 08: the three-point date rail, the jurisdiction register and Sam's October as one bar drawn from 7 of 22. */
+.dates { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 44px; padding-top: 34px; }
+.dates::before { content: ''; position: absolute; left: 8px; right: 0; top: 8px; height: 3px; background: #cfe5dc; }
+.dates li { position: relative; }
+.dates li::before { content: ''; position: absolute; left: 0; top: -34px; width: 19px; height: 19px; border-radius: 50%; background: var(--forest); }
+.dates .when { font-size: 18px; font-weight: 700; color: var(--ink); }
+.dates p + p { margin-top: 4px; font-size: 17px; line-height: 1.45; color: var(--body); }
+.registered { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; margin-top: 40px; align-items: start; }
+.register, .split { padding: 24px 32px 28px; border-radius: 20px; }
+.register h3 { display: flex; align-items: center; gap: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--hair); font: 800 28px/1.2 var(--heading); color: var(--ink); }
+.register h3 .chip { font-size: 21px; min-height: 42px; padding: 6px 20px; border-radius: 999px; }
+.register :is(th, td) { padding: 11px 0; border-bottom: 1px solid var(--hair); font-size: 19px; color: var(--ink); }
+.register tr:last-child :is(th, td) { border-bottom: 0; }
+.register td { text-align: right; }
+.state { display: inline-block; padding: 5px 16px; border-radius: 999px; background: #eceff2; font-size: 15.5px; color: var(--ink); white-space: nowrap; }
+.state--ok { background: var(--done); color: #fff; font-weight: 600; }
+.state--ok .ck { color: #fff; }
+.split h3 { font: 800 31px/1.2 var(--heading); color: var(--ink); }
+.split { --ohio: calc(7 / 22 * 100%); }
+.split-bar { display: grid; grid-template-columns: var(--ohio) 1fr; margin-top: 22px; border-radius: 12px; overflow: hidden; color: #fff; }
+.split-bar p { display: grid; gap: 2px; padding: 10px 14px 10px 22px; min-width: 0; }
+.split-bar span { font-size: 17px; opacity: .92; }
+.split-bar b { font-size: 21px; font-weight: 700; }
+.split-bar small, .split-scale { display: none; }
+.split-oh { background: linear-gradient(90deg, #3a63a8, #4c71b4); }
+.split-co { background: linear-gradient(90deg, #13a7a3, #1fbcb4); }
+.split-caps { display: grid; grid-template-columns: var(--ohio) 1fr; margin-top: 8px; font-size: 16px; color: var(--muted); }
+.split-caps span { padding-left: 22px; }
+.split-stub { margin-top: 22px; padding: 14px 0; border-block: 1px solid var(--hair); font-size: 16.5px; color: var(--ink); }
+.ready { width: fit-content; max-width: 100%; margin: 20px auto 0; padding: 14px 40px; border-radius: 999px; background: var(--done); color: #fff; font-size: 20px; font-weight: 700; text-align: center; }
+.ready .ck { color: #fff; }
+
+@media (max-width: 1279px) {
+  .registered { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 759px) {
+  .dates { grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 30px; padding: 0 0 0 32px; }
+  .dates::before { left: 7px; right: auto; top: 10px; bottom: 10px; width: 3px; height: auto; }
+  .dates li::before { left: -32px; top: 3px; width: 17px; height: 17px; }
+  .dates .when { font-size: 16px; }
+  .dates p + p { font-size: 15.5px; }
+  .registered { margin-top: 28px; gap: 16px; }
+  .register, .split { padding: 18px 16px 20px; }
+  .register h3 { font-size: 21px; gap: 12px; }
+  .register h3 .chip { font-size: 15px; min-height: 32px; padding: 4px 12px; }
+  .register :is(th, td) { font-size: 15.5px; }
+  .register td { padding-left: 10px; }
+  .state { padding: 4px 10px; font-size: 13.5px; }
+  .split h3 { font-size: 22px; }
+  .split-bar { grid-template-columns: minmax(0, 1fr); }
+  .split-bar p { padding: 10px 14px; }
+  .split-bar span { font-size: 14.5px; }
+  .split-bar b { font-size: 18px; }
+  .split-caps { display: none; }
+  .split-bar small { display: block; font-size: 14px; opacity: .92; }
+  .split-scale { display: grid; grid-template-columns: var(--ohio) 1fr; height: 12px; margin-top: 18px; border-radius: 6px; overflow: hidden; }
+  .split-scale span:first-child { background: #3a63a8; }
+  .split-scale span:last-child { background: #13a7a3; }
+  .split-bar { margin-top: 10px; }
+  .split-stub { font-size: 15px; }
+  .ready { padding: 12px 20px; font-size: 16px; border-radius: 18px; }
+}

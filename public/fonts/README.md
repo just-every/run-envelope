@@ -14,3 +14,10 @@ at weights 400, 500 and 700. Ascent, descent and line gap match Outfit's
 1000, -260 and 0 per 1000 units, divided by each scale. Matching metrics reduces
 layout movement; different glyph designs cannot have identical widths in every
 piece of text. Recalculate the fallback and preload when changing the brand font.
+
+The run site (`src/site`) adds three faces, each self-hosted from Fontsource under
+the SIL Open Font License 1.1 with its licence beside it: Nunito (variable, Latin
+and Latin Extended) for headings and the Envelope wordmark, Inter (variable, Latin
+and Latin Extended) for body text and tabular figures, and Caveat 600 (Latin) for
+the homepage's one handwritten note. Upstreams: https://github.com/googlefonts/nunito,
+https://github.com/rsms/inter and https://github.com/googlefonts/caveat.

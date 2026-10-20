@@ -154,7 +154,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "450289cc7748074a5ef63e3961c3bc8ea5abbb35572b77167ba2e8c332be16d8",
+      "sha256": "002fad9958b6112e81b795ec3e89e20f0d7118a031a918bc7c1e5b6d727acb44",
       "executable": false
     },
     "deploy-site.json": {
@@ -262,11 +262,11 @@
       "executable": false
     },
     "public/brand/mark.svg": {
-      "sha256": "c2c2a7325e51067c043bbd8a945e830ba6caeea4ca298615e310a931a58a181d",
+      "sha256": "aa7e32cef0581507c4e8fd98d3da005d8e68cd2835f2a53e44c5b9ab11696347",
       "executable": false
     },
     "public/fonts/fonts.css": {
-      "sha256": "54e7fe8d3bf3b18338a9613769090602af4c38f596a5dc8408a204d4900447f1",
+      "sha256": "388de36b4f4a5b7e2d9cd602fb8b430b053a701e52b80081f48bc057cddf5af3",
       "executable": false
     },
     "public/fonts/outfit/LICENSE.txt": {
@@ -282,7 +282,7 @@
       "executable": false
     },
     "public/fonts/README.md": {
-      "sha256": "f89bdce214a6b69aa9cf8d9a49059abd95c5f4124a1e6924085eff9e07f654fa",
+      "sha256": "8da5f2b01ed020da28927d0304ac68d1e50fe64c596321182d0754cd06e40a64",
       "executable": false
     },
     "public/rer-theme.css": {
@@ -1386,7 +1386,7 @@
       "executable": false
     },
     "src/site/pages.ts": {
-      "sha256": "195c0fe16721c3e22642f65d6e0b42b21a6f8dcadeb65eff88260a8ffd38c5d2",
+      "sha256": "1040c373f521033f3294d5fe102996c1ffb5d08f025a66da7774db2156b4861a",
       "executable": false
     },
     "src/site/run.json": {

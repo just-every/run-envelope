@@ -1,0 +1,215 @@
+/* 09 Interlude, 10 Quarterly, 11 Notice, 12 Switching and 13 Closing. */
+
+/* 09 and 13: the clay scenes on the aqua token, full width, with HTML over and under them. */
+.scene { position: relative; background: var(--aqua); }
+.scene-art img { width: 100%; height: auto; }
+.scene--interlude .scene-art { width: min(100%, 1920px); margin-inline: auto; }
+.scene-tag { position: absolute; right: max(4.2%, calc(50% - 960px + 4.2%)); bottom: 7%; padding: 15px 22px; border-radius: 14px; font-size: 19px; color: var(--ink); }
+.scene--closing { padding-bottom: 72px; }
+.scene--closing .scene-art { width: min(100%, 1920px); margin-inline: auto; }
+.close-cards { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 8px; }
+.close-card { padding: 18px 22px 20px; border-radius: 16px; }
+.close-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.close-chips .chip { min-height: 26px; padding: 3px 11px; border-radius: 999px; font-size: 13.5px; }
+.close-one { margin-top: 10px; font-size: 18px; font-weight: 600; color: var(--ink); }
+.close-two { margin-top: 4px; font-size: 17px; color: var(--body); }
+.scene--closing .display { margin-top: 56px; text-align: center; font-size: 76px; }
+.close-free { margin-top: 26px; text-align: center; font-size: 24px; color: var(--ink); }
+.close-actions { margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.close-actions .run { min-width: 304px; }
+
+@media (max-width: 1179px) {
+  .close-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scene--closing .display { font-size: 60px; }
+}
+@media (max-width: 759px) {
+  .scene-tag { position: static; margin: 4px 16px 0; padding: 12px 16px; font-size: 15.5px; }
+  .scene--interlude { padding-bottom: 40px; }
+  .scene--closing { padding-bottom: 48px; }
+  .close-cards { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+  .close-card { padding: 14px 16px 16px; }
+  .close-one { font-size: 16px; }
+  .close-two { font-size: 15px; }
+  .scene--closing .display { margin-top: 40px; font-size: 40px; }
+  .close-free { font-size: 18px; margin-top: 16px; }
+  .close-actions { margin-top: 22px; }
+  .close-actions .run { width: 100%; min-width: 0; }
+}
+
+/* 10: four Form 941 pages dealt across the width, staggered and slightly turned, each with its Ohio wage report
+   behind; two a row below 1180 and stacked, slightly overlapped, on a phone. */
+.forms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: 44px; padding: 0 6px; }
+.f941 { position: relative; display: grid; }
+.f941:nth-child(1) { transform: rotate(-1.2deg); }
+.f941:nth-child(2) { transform: rotate(-2deg) translateY(24px); margin-left: -6px; }
+.f941:nth-child(3) { transform: rotate(-1.4deg) translateY(10px); margin-left: -6px; }
+.f941:nth-child(4) { transform: rotate(-2.2deg) translateY(36px); margin-left: -6px; }
+.ohio { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; width: 94%; margin-left: 2%; padding: 14px 16px 30px; line-height: 1.3; border-radius: 6px 6px 0 0; background: #fff; box-shadow: 0 1px 2px rgba(20, 60, 70, .1), 0 6px 18px -10px rgba(20, 70, 80, .3); font-size: 14px; color: var(--ink); transform: rotate(-2deg); }
+.pill-ok { display: inline-block; padding: 3px 10px; border-radius: 6px; background: #e3f6e8; color: var(--done); font-size: 14px; font-weight: 650; }
+.f941-page { position: relative; margin-top: -22px; padding: 26px 20px 22px; border-radius: 6px; display: grid; justify-items: start; }
+.f941-q { position: absolute; right: 22px; top: 22px; padding: 4px 12px; border: 1.5px solid #3c4655; border-radius: 4px; font-size: 15px; color: var(--ink); }
+.f941-page h3 { font: 800 34px/1.1 var(--heading); color: #0f1a2b; letter-spacing: -.01em; }
+.f941-sub { margin-top: 6px; font-size: 14px; color: var(--ink); }
+.f941-page .chip { justify-self: end; margin-top: 14px; font-size: 15.5px; min-height: 34px; padding: 5px 16px; border-radius: 6px; }
+.f941-page table { margin-top: 12px; border: 1px solid #9aa4b0; }
+.f941-page :is(th, td) { padding: 9px 10px; border: 1px solid #9aa4b0; font-size: 15px; line-height: 1.3; color: var(--ink); vertical-align: middle; }
+.f941-page th { width: 34px; text-align: center; }
+.f941-page td:last-child { text-align: right; white-space: nowrap; }
+.pill-ok--big { margin-top: 18px; padding: 7px 16px; border-radius: 8px; font-size: 19px; }
+.q-rail { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-top: 96px; padding-top: 30px; }
+.q-rail::before { content: ''; position: absolute; left: 8px; right: 8px; top: 8px; height: 2px; background: #c8d2da; }
+.q-rail li { position: relative; font-size: 18px; line-height: 1.4; color: var(--ink); }
+.q-rail li::before { content: ''; position: absolute; left: 0; top: -30px; width: 19px; height: 19px; border-radius: 50%; background: #aeb8c2; }
+.q-rail li.ok::before { background: #138a43; }
+.q-rail li:nth-child(2), .q-rail li:nth-child(3) { text-align: center; }
+.q-rail li:nth-child(2)::before, .q-rail li:nth-child(3)::before { left: 50%; margin-left: -9.5px; }
+.q-rail li.due { text-align: right; color: var(--muted); }
+.q-rail li.due::before { left: auto; right: 0; }
+.muted { color: var(--muted); }
+
+@media (max-width: 1279px) {
+  .forms { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 24px; }
+  .f941:nth-child(n) { margin-left: 0; }
+}
+@media (max-width: 1179px) {
+  .q-rail { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 64px; padding: 0 0 0 34px; }
+  .q-rail::before { left: 8px; right: auto; top: 10px; bottom: 10px; width: 2px; height: auto; }
+  .q-rail li:nth-child(n), .q-rail li.due { text-align: left; }
+  .q-rail li:nth-child(n)::before { left: -34px; right: auto; top: 2px; margin-left: 0; }
+}
+@media (max-width: 759px) {
+  .forms { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 30px; padding: 0 4px; }
+  .f941:nth-child(n) { transform: rotate(-1deg); margin-top: -8px; }
+  .f941:nth-child(even) { transform: rotate(1deg); }
+  .f941:first-child { margin-top: 0; }
+  .ohio { font-size: 13px; padding: 10px 14px 26px; }
+  .pill-ok { font-size: 13px; }
+  .f941-page { padding: 20px 14px 16px; }
+  .f941-page h3 { font-size: 28px; }
+  .f941-sub { font-size: 13px; }
+  .f941-q { right: 14px; top: 18px; font-size: 13.5px; }
+  .f941-page :is(th, td) { font-size: 14px; padding: 7px 8px; }
+  .pill-ok--big { font-size: 16px; }
+  .q-rail { margin-top: 48px; padding-left: 32px; }
+  .q-rail::before { left: 7px; }
+  .q-rail li { font-size: 15.5px; }
+  .q-rail li:nth-child(n)::before { left: -32px; width: 17px; height: 17px; }
+}
+
+/* 11: the notice page with its ringed line, the agent's three margin notes tied to it, the matched EFTPS record and
+   the timeline to the closing letter. */
+.notice-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 410px); gap: 24px 76px; align-items: start; margin-top: 40px; }
+.notice { position: relative; padding: 36px 40px 64px; border-radius: 4px; display: grid; gap: 10px; font-size: 18.5px; color: var(--ink); }
+.ringed { position: relative; margin: 12px 0; padding: 8px 0; }
+.ringed::before { content: ''; position: absolute; inset: -4px -18px; border: 2px solid #e2312c; border-radius: 999px; transform: rotate(-.5deg); }
+.ringed::after { content: ''; position: absolute; right: -36px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: var(--teal); }
+.margin .eyebrow { margin-top: -30px; font-size: 15px; }
+.notes { display: grid; gap: 22px; margin-top: 18px; }
+.notes li { position: relative; padding: 18px 26px; border-radius: 12px; }
+.notes p { font-size: 19px; line-height: 1.45; color: var(--ink); }
+.notes li::before { content: ''; position: absolute; left: -52px; top: 50%; width: 52px; height: 3px; background: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px) 0 50% / 7px 3px repeat-x; }
+.notes li::after { content: ''; position: absolute; left: -6px; top: 50%; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%; background: var(--teal); }
+.eftps { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 22px; padding: 16px 22px; border-radius: 10px; font-size: 19px; color: var(--ink); }
+.eftps .chip { font-size: 19px; min-height: 42px; padding: 6px 20px; border-radius: 12px; }
+.eftps b { font-weight: 700; color: var(--ink); }
+.n-rail { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.25fr); gap: 20px; margin-top: 30px; padding-top: 34px; }
+.n-rail::before { content: ''; position: absolute; left: 10px; right: 26%; top: 10px; height: 3px; background: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px) 0 50% / 7px 3px repeat-x; }
+.n-rail li { position: relative; font-size: 18px; line-height: 1.45; color: var(--ink); }
+.n-rail li::before { content: ''; position: absolute; left: 0; top: -34px; width: 22px; height: 22px; border-radius: 50%; background: #1aa7a2; }
+.n-rail .closed { margin-top: -34px; padding: 22px 28px 20px 52px; border-radius: 22px; background: #11603f; color: #fff; font-size: 19px; font-weight: 600; }
+.n-rail .closed::before { left: 16px; top: 26px; background: transparent; border: 3px solid #fff; width: 22px; height: 22px; }
+.n-rail .closed .ck { color: #fff; }
+
+@media (max-width: 1179px) {
+  .notice-row { grid-template-columns: minmax(0, 1fr); }
+  .margin .eyebrow { margin-top: 0; }
+  .notes li::before, .notes li::after, .ringed::after { display: none; }
+  .n-rail { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0 0 0 36px; }
+  .n-rail::before { left: 10px; right: auto; top: 12px; bottom: 40px; width: 3px; height: auto; background: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px) 50% 0 / 3px 7px repeat-y; }
+  .n-rail li::before { left: -36px; top: 1px; }
+  .n-rail .closed { justify-self: start; margin: 4px 0 0 -36px; }
+  .n-rail .closed::before { left: 16px; top: 22px; }
+}
+@media (max-width: 759px) {
+  .notice { padding: 22px 18px 26px; font-size: 15.5px; gap: 8px; }
+  .ringed::before { inset: -4px -10px; border-radius: 26px; }
+  .notes { gap: 12px; }
+  .notes li { padding: 14px 16px; }
+  .notes p { font-size: 15.5px; }
+  .eftps { padding: 14px 16px; font-size: 15.5px; gap: 10px 14px; }
+  .eftps .chip { font-size: 14px; min-height: 30px; padding: 4px 12px; }
+  .n-rail { padding-left: 32px; }
+  .n-rail::before { left: 7px; }
+  .n-rail li { font-size: 15.5px; }
+  .n-rail li::before { left: -32px; top: 2px; width: 17px; height: 17px; }
+  .n-rail .closed { margin-left: -32px; padding: 14px 16px 14px 44px; font-size: 15.5px; border-radius: 16px; }
+  .n-rail .closed::before { left: 14px; top: 16px; width: 17px; height: 17px; }
+}
+
+/* 12: eleven checked paychecks, the four-stop rail, Hannah Price's paycheck matched line by line, what carried over
+   and the one terminal line. */
+.tiles { display: grid; grid-template-columns: repeat(11, minmax(0, 56px)); justify-content: center; gap: 20px; margin-top: 36px; }
+.tiles li { display: grid; place-items: center; aspect-ratio: 1; border-radius: 12px; background: #e9f6ee; box-shadow: 0 6px 14px -10px rgba(20, 90, 50, .5); }
+.tiles .ck { width: 28px; height: 28px; }
+.tiles-sum { margin-top: 22px; text-align: center; font-size: 21px; color: var(--ink); }
+.tiles-sum b { font-weight: 700; }
+.switch { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr) minmax(0, 1fr); gap: 24px; margin-top: 36px; align-items: start; }
+.stops { position: relative; display: grid; gap: 26px; padding: 30px 28px 32px 72px; border-radius: 16px; }
+.stops::before { content: ''; position: absolute; left: 40px; top: 44px; bottom: 60px; width: 3px; background: #8fcdbd; }
+.stops li { position: relative; font-size: 18px; line-height: 1.45; color: var(--ink); }
+.stops li::before { content: ''; position: absolute; left: -41px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--done); }
+.stops b { font-weight: 700; }
+.rerun { padding: 18px 26px 22px; border-radius: 16px; }
+.rerun > .chip { font-size: 19px; min-height: 42px; padding: 6px 18px; border-radius: 999px; }
+.rerun h3 { margin-top: 8px; font: 700 19px/1.3 var(--text); color: var(--ink); }
+.rerun h3 span { font-weight: 400; }
+.rerun table { margin-top: 14px; }
+.rerun thead th { padding-bottom: 8px; font-size: 15px; font-weight: 400; color: var(--body); text-align: right; }
+.rerun :is(tbody, tfoot) :is(th, td) { padding: 6px 0; white-space: nowrap; font-size: 18px; color: var(--ink); }
+.rerun :is(tbody, tfoot) td { text-align: right; }
+.rerun .eq { width: 56px; text-align: center !important; color: var(--done); font-weight: 700; }
+.rerun tfoot :is(th, td) { padding-top: 14px; border-top: 1px solid var(--hair); font-size: 21px; font-weight: 700; }
+.rerun tfoot td:last-child { color: var(--ink); }
+.switch-side { display: grid; gap: 22px; }
+.carried { padding: 22px 26px 26px; border-radius: 16px; }
+.carried h3 { font: 800 25px/1.2 var(--heading); color: var(--ink); }
+.carried p { margin-top: 12px; font-size: 18px; line-height: 1.45; color: var(--ink); }
+.carried p + p { margin-top: 18px; }
+.term { padding: 26px 26px 24px; border-radius: 16px; background: #13252e; color: #e8f2f2; }
+.term pre { font: 500 19px/1.45 'SF Mono', Menlo, Consolas, monospace; white-space: normal; overflow-wrap: anywhere; }
+.term .prompt { color: #9aa9ae; }
+.term-ok { margin-top: 12px; font: 500 19px/1.45 'SF Mono', Menlo, Consolas, monospace; color: #4fe08a; }
+.term-ok .ck, .site .term-ok .ck { color: #4fe08a; margin-right: 6px; }
+.also { margin-top: 30px; text-align: center; font-size: 18px; color: var(--body); }
+
+@media (max-width: 1023px) {
+  .tiles { gap: 12px; }
+}
+@media (max-width: 1279px) {
+  .switch { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .rerun { grid-column: 1 / -1; grid-row: 1; justify-self: center; width: min(100%, 620px); }
+}
+@media (max-width: 759px) {
+  .tiles { gap: 6px; margin-top: 26px; }
+  .tiles li { border-radius: 8px; }
+  .tiles .ck { width: 17px; height: 17px; }
+  .tiles-sum { font-size: 16px; }
+  .switch { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 26px; }
+  .stops { padding: 20px 16px 22px 50px; gap: 16px; }
+  .stops::before { left: 26px; top: 30px; bottom: 44px; }
+  .stops li { font-size: 15.5px; }
+  .stops li::before { left: -32px; width: 17px; height: 17px; }
+  .rerun { padding: 16px 14px 18px; }
+  .rerun > .chip { font-size: 15px; min-height: 32px; padding: 4px 12px; }
+  .rerun h3 { font-size: 16.5px; }
+  .rerun thead th { font-size: 13px; }
+  .rerun :is(tbody, tfoot) :is(th, td) { font-size: 15px; }
+  .rerun .eq { width: 26px; }
+  .rerun tfoot :is(th, td) { font-size: 16.5px; }
+  .carried { padding: 18px 16px 20px; }
+  .carried h3 { font-size: 21px; }
+  .carried p { font-size: 15.5px; }
+  .term { padding: 18px 16px; }
+  .term pre, .term-ok { font-size: 15px; }
+  .also { font-size: 15.5px; }
+}
