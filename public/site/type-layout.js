@@ -1,13 +1,28 @@
-// Group the final command words with markup, preserving every copied character.
+// Keep command tokens whole using markup; preserve the exact copied whitespace.
 for (const code of document.querySelectorAll('pre > code')) {
   if (code.children.length) continue
-  const text = code.textContent
-  const match = /\S+[^\S\n]+\S+(?=\s*$)/.exec(text)
+  const parts = code.textContent.split(/(\s+)/)
+  const content = document.createDocumentFragment()
+  for (let i = 0; i < parts.length; i++) {
+    let text = parts[i]
+    if (/^\s*$/.test(text)) { content.append(document.createTextNode(text)); continue }
+    if ((/^(?:\||&&)$/.test(text) || /^\d+(?:\.\d+)?$/.test(text) && /^(?:h|min|hours|servers|days|GiB|MiB)[,.]?$/.test(parts[i + 2] || '')) && parts[i + 2]) { text += parts[i + 1] + parts[i + 2]; i += 2 }
+    const span = document.createElement('span')
+    span.style.whiteSpace = 'nowrap'; span.textContent = text; content.append(span)
+  }
+  code.replaceChildren(content)
+}
+// Group the ending of an inline command without changing its text or its larger existing groups.
+for (const code of document.querySelectorAll('code')) {
+  if ([...code.querySelectorAll('.code-word')].some(word => /\s/.test(word.textContent))) continue
+  const text = code.textContent, match = /\S+[^\S\n]+\S+(?=\s*$)/.exec(text)
   if (!match) continue
-  const span = document.createElement('span')
-  span.style.whiteSpace = 'nowrap'
-  span.textContent = match[0]
-  code.replaceChildren(document.createTextNode(text.slice(0, match.index)), span, document.createTextNode(text.slice(match.index + match[0].length)))
+  const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT), nodes = []
+  for (let node; (node = walker.nextNode());) nodes.push(node)
+  const locate = offset => { for (const node of nodes) { if (offset <= node.length) return [node, offset]; offset -= node.length } }
+  const start = locate(match.index), end = locate(match.index + match[0].length)
+  const range = document.createRange(); range.setStart(...start); range.setEnd(...end)
+  const span = document.createElement('span'); span.style.whiteSpace = 'nowrap'; span.append(range.extractContents()); range.insertNode(span)
 }
 // Keep paragraph endings together across inline markup, including the docs and run shells.
 for (const block of document.querySelectorAll('p,th,td,h1,h2,h3,h4,li')) {

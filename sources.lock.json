@@ -546,7 +546,7 @@
       "executable": false
     },
     "public/site/type-layout.js": {
-      "sha256": "70416f1e9999851a69284d2d36a94ea9247fb9ef32b3c7bae8ae7f6dca174ab9",
+      "sha256": "5a3223e5c55cc70f0f44dc86357543f6d60f237c1631f36844b2a550599fd1b9",
       "executable": false
     },
     "README.md": {
@@ -1666,7 +1666,7 @@
       "executable": false
     },
     "src/site/landing/parts.ts": {
-      "sha256": "32167f7e946573466efdef8f01ff4b06109a509dc1b5ccc5080bcd7e666a12f5",
+      "sha256": "9cff0cbdcfb69829cfea5270b52327a59c590f95edef4d81720a956eda55b816",
       "executable": false
     },
     "src/site/landing/precheck.ts": {
@@ -1734,7 +1734,7 @@
       "executable": false
     },
     "src/site/styles/returns.css": {
-      "sha256": "e627fdefd36b1544f099fc5935942bfd816072429f9fa575c4b6a2c4ed110df2",
+      "sha256": "1b7d526aab4fb6b02abc2ea184799a2e9f3506e8de485d1aa22c80c2ac162811",
       "executable": false
     },
     "src/site/styles/site.css": {
@@ -1742,7 +1742,7 @@
       "executable": false
     },
     "src/site/styles/week.css": {
-      "sha256": "652e94a1a73a79fd82e71dc9e17915732d2759f30e12f5f95872542beddf60bc",
+      "sha256": "d5eb40e2bbcfb8840f2806b3c3bab52157af88b0329fe37e5bcaf25623f2ff4f",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {
