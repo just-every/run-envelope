@@ -6,7 +6,7 @@ export const alternative = '100% free, open source alternative to Gusto, ADP RUN
 export const identity: EditionIdentity = {
   product: branding.name,
   deployment: branding.name,
-  purpose: 'Small-business payroll.',
+  purpose: '{deployment}: small-business payroll.',
   tagline: 'Small-business payroll.',
   signInPath: '/signin',
   runSite: `https://${site.domain}`,
