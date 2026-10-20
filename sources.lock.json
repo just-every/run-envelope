@@ -1730,19 +1730,19 @@
       "executable": false
     },
     "src/site/styles/proof.css": {
-      "sha256": "8167cd8dbe358066f8b984ce7dac0f60c77b912c88683d2818739f65e4b54aeb",
+      "sha256": "2f3fc7b2e56a8b5605b6d7f3e433ee139cb8d3ae8d244c33a432f5ef318d8ef9",
       "executable": false
     },
     "src/site/styles/returns.css": {
-      "sha256": "deb0696147ec2a99fafb5044fb6d32ee3deb263f48567d834177cab11de5aab3",
+      "sha256": "481dfca1f22b5991f03e0ee18a0eb91cce490c249055f64cc0e841d0a45692aa",
       "executable": false
     },
     "src/site/styles/site.css": {
-      "sha256": "4e9b22f6ee935e2c38526479b70fca6c327b3ac79eca92d99f48b5061e5568b4",
+      "sha256": "192c388cd1b4d458d4473fe0f9142c604416120d4bafedbf59932f443a161483",
       "executable": false
     },
     "src/site/styles/week.css": {
-      "sha256": "a3c1954bc481f9fb07d8d8cebbd8962fefef11137e9dfe34891bee9dd2d2a7c7",
+      "sha256": "640151282d124212680e49b57b4a514cfe6aaba0b7d0d59cc5a706cd1ef46dfb",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {

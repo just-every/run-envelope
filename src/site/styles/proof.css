@@ -68,7 +68,7 @@
 .stub { padding: 22px 22px 22px; border-radius: 18px; }
 .stub > .chip { font-size: 19px; min-height: 42px; padding: 6px 16px; border-radius: 10px; }
 .stub-who { margin-top: 12px; padding-bottom: 12px; font-size: 16px; color: var(--ink); border-bottom: 1px solid var(--hair); }
-.stub :is(th, td) { padding: 8px 0; font-size: 16.5px; color: var(--ink); border-bottom: 1px solid var(--hair); }
+.stub :is(th, td) { padding: 6px 0; font-size: 16.5px; color: var(--ink); border-bottom: 1px solid var(--hair); }
 .stub td { text-align: right; }
 .stub tfoot :is(th, td) { padding-top: 14px; font-size: 21px; font-weight: 700; border-bottom: 0; border-top: 2px solid var(--hair); }
 .stub-paid { margin-top: 8px; font: 800 21px/1.3 var(--heading); }
@@ -113,11 +113,11 @@
 
 /* 07: two equal cards, each a timeline from a red start to a green end, with the text exchange on Mia's. */
 .guards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 32px; }
-.guard { padding: 26px 30px 30px; border-radius: 20px; }
+.guard { padding: 22px 30px 24px; border-radius: 20px; }
 .guard-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 20px; color: var(--ink); }
 .guard-head .chip { font-size: 21px; min-height: 48px; padding: 6px 20px; border-radius: 12px; }
 .guard-head b { font-weight: 650; }
-.timeline { --timeline-gap: 22px; margin-top: 24px; display: grid; gap: var(--timeline-gap); }
+.timeline { --timeline-gap: 16px; margin-top: 20px; display: grid; gap: var(--timeline-gap); }
 .tl { position: relative; padding-left: 36px; }
 .tl::before { content: ''; position: absolute; z-index: 1; left: 0; top: 5px; width: 18px; height: 18px; border-radius: 50%; background: #c6d0d9; }
 .tl:not(:last-child)::after { content: ''; position: absolute; left: 8px; top: 14px; width: 2px; height: calc(100% + var(--timeline-gap)); background: #c6d0d9; }

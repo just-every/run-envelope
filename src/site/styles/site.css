@@ -64,7 +64,7 @@
 .display .l1, .display .l2 { display: block; }
 .display .l1 { color: var(--forest); }
 .display .l2 { color: var(--teal); }
-.lede { margin-top: 22px; max-width: 54ch; font-size: 23px; line-height: 1.42; color: var(--body); text-wrap: pretty; }
+.lede { margin-top: 18px; max-width: 54ch; font-size: 23px; line-height: 1.42; color: var(--body); text-wrap: pretty; }
 .band--forest .eyebrow { color: #5dc3b9; }
 .band--forest .display .l1 { color: #fff; }
 .band--forest .display .l2 { color: #4edbd9; }
@@ -85,7 +85,7 @@
 }
 
 /* Pills under a section */
-.foot-pill { width: fit-content; max-width: 100%; margin: 40px auto 0; padding: 14px 30px; border-radius: 999px; background: var(--aqua); color: var(--ink); font-size: 18px; font-weight: 500; text-align: center; text-wrap: balance; }
+.foot-pill { width: fit-content; max-width: 100%; margin: 32px auto 0; padding: 14px 30px; border-radius: 999px; background: var(--aqua); color: var(--ink); font-size: 18px; font-weight: 500; text-align: center; text-wrap: balance; }
 .foot-pill--ok { background: #fff; box-shadow: var(--card-shadow); color: var(--done); font-weight: 650; font-size: 21px; }
 
 /* Header: mark 9, the rounded wordmark, Docs, Contract, Source */
@@ -151,3 +151,5 @@
 
 .flow-separator { display: inline-block !important; width: .4em; height: 1em; vertical-align: -.16em; fill: currentColor; }
 .flow-separator.at-wrap { visibility: hidden; }
+
+@media (min-width: 1280px) { .kinds-band, .prepared-band, .reconciled-band, .protected-band, .switching-band { padding-block: 24px; } }
