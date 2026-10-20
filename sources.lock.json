@@ -546,7 +546,7 @@
       "executable": false
     },
     "public/site/type-layout.js": {
-      "sha256": "1f26a9ce1dab9b891c6b05e2a4b94c08f93f5b11ab8b463c30f4cc2dd67c5d3e",
+      "sha256": "ab49d72077911db103103299fe543a48e003435fb1bab989be9a1b46efa9381a",
       "executable": false
     },
     "README.md": {
@@ -1646,7 +1646,7 @@
       "executable": false
     },
     "src/site/docs.ts": {
-      "sha256": "03bf736a2a2201bf2fdd9a1e42474634bb0e2b5946382999dda6e81d87af70e2",
+      "sha256": "30ed2c310a68b7d1b5aa83de60981a41e100701992e0dadc1b9950908a633ff6",
       "executable": false
     },
     "src/site/landing/hero.ts": {
@@ -1706,7 +1706,7 @@
       "executable": false
     },
     "src/site/pages.ts": {
-      "sha256": "8409fdd2a65e119e95f942c726bfcc85a7b5b04309123f0eb24c947a9d094697",
+      "sha256": "b04ff8029acc2d80bb33434c6c799b161f0162360fe66f7f336f67dfe8a1ae5d",
       "executable": false
     },
     "src/site/raw.d.ts": {
@@ -1722,7 +1722,7 @@
       "executable": false
     },
     "src/site/styles/docs.css": {
-      "sha256": "19dd21c723ef05aeb4cd51aae43156d1ea6381bbb07b4f10ef226e92829fd3e3",
+      "sha256": "66a0fa2eab66b4c7a9ae9b04046d9400b905eb0fc65662ca528233539d7cce6d",
       "executable": false
     },
     "src/site/styles/hero.css": {

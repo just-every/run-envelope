@@ -1,3 +1,17 @@
+// Keep paragraph endings together across inline markup, including the docs and run shells.
+for (const block of document.querySelectorAll('p,th,td,h1,h2,h3,h4,li')) {
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
+  const nodes = []
+  for (let node; (node = walker.nextNode());) if (!node.parentElement.closest('svg,script,style')) nodes.push(node)
+  const text = nodes.map(node => node.data).join('')
+  const ending = /[ \u00a0](?=\S+\s*$)/.exec(text)
+  if (!ending || ending[0] !== ' ') continue
+  let offset = ending.index
+  for (const node of nodes) {
+    if (offset < node.length) { node.data = node.data.slice(0, offset) + '\u00a0' + node.data.slice(offset + 1); break }
+    offset -= node.length
+  }
+}
 // Decorative dividers disappear at a wrap, retaining the same line metrics.
 const separators = [...document.querySelectorAll('.flow-separator')]
 function edge(node, forward) {

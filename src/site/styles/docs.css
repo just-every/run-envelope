@@ -18,9 +18,9 @@
 .docs-guide h1 { margin-bottom: 30px; }
 .docs-guide ul { padding-left: 24px; list-style: disc; }
 .docs-guide li + li { margin-top: 14px; }
-.docs-guide code { padding: 2px 5px; border-radius: 5px; background: #edf6f5; color: #164c42; font: .88em/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: break-spaces; overflow-wrap: anywhere; }
+.docs-guide code { padding: 2px 5px; border-radius: 5px; background: #edf6f5; color: #164c42; font: .88em/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: normal; overflow-wrap: break-word; }
 .docs-guide pre { max-width: 100%; padding: 20px; border: 1px solid #cde7e2; border-radius: 14px; background: var(--aqua); white-space: pre-wrap; overflow-wrap: anywhere; }
-.docs-guide pre code { padding: 0; background: transparent; }
+.docs-guide pre code { white-space: pre-wrap; padding: 0; background: transparent; }
 @media (max-width: 759px) {
  .docs { margin-top: 32px; margin-bottom: 48px; }
  .docs-intro { padding: 26px 22px; border-radius: 18px; }

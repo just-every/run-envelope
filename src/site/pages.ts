@@ -22,7 +22,7 @@ export function sitePages({ styles = [], contract }: Partial<SiteContext> = {}):
  return {
   pages: [
    { path: '/', html: landingHtml(links, run.clone, styles) },
-   { path: '/run', html: runPageHtml(identity, data, contract) },
+   { path: '/run', html: runPageHtml(identity, data, contract).replace('</body>', '<script type="module" src="/site/type-layout.js"></script></body>') },
    ...docsPages(links, styles),
    ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract) }] : []),
    { path: '/404', html: siteNotFoundHtml(identity, data, contract) },
