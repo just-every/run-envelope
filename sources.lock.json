@@ -257,16 +257,80 @@
       "sha256": "f96efb0f4c6d9f79e313dfb6ef90f3f36960b2576e05f0d5073c47f7208ae2e4",
       "executable": false
     },
+    "public/apple-touch-icon.png": {
+      "sha256": "4d7585ca86a963f48c949e5a4c811b61e941147180ff75af7a817cef94163a9e",
+      "executable": false
+    },
     "public/brand/band.svg": {
       "sha256": "595e6226645ca8873d4e06c4417a7f42c2e6940094ab06baa4be6fc74e8fa1e3",
+      "executable": false
+    },
+    "public/brand/favicon-16.png": {
+      "sha256": "cd5c1176dba83f7d05aea4a6c23688de544a263375b808e0a0a570fa4e249317",
+      "executable": false
+    },
+    "public/brand/favicon-16.svg": {
+      "sha256": "71bd2766c7f469e5ca8be1fe82d21c438fa850bb133d35b8538154ab0b3ca47a",
+      "executable": false
+    },
+    "public/brand/favicon-32.png": {
+      "sha256": "f678ed08349798d0c641f49cb746098beddde7d183fc28720bdecd069b811a40",
+      "executable": false
+    },
+    "public/brand/icon-192.png": {
+      "sha256": "ba409b274c9783f39838c8f260f9a9ca69c6ddda19bb8f96f1ae62a271c81a1a",
+      "executable": false
+    },
+    "public/brand/icon-512.png": {
+      "sha256": "66a6e428ea54a688ebe79c8527bc0977db910f65aaa9b5212c6c8894a8e69020",
       "executable": false
     },
     "public/brand/mark.svg": {
       "sha256": "aa7e32cef0581507c4e8fd98d3da005d8e68cd2835f2a53e44c5b9ab11696347",
       "executable": false
     },
+    "public/favicon-32.svg": {
+      "sha256": "16506b91bd341cf28807693ff05f422b8e99cceb596b4185c7f11988ef4869da",
+      "executable": false
+    },
+    "public/favicon.ico": {
+      "sha256": "e41c6762e4cf0a2bec2d3557c2c982b08d8777b2db74fae32a1ccddec3e1bf6b",
+      "executable": false
+    },
+    "public/fonts/caveat/caveat-latin-600-normal.woff2": {
+      "sha256": "d51e2283010e661d9f3dafdc9ff4b82b2ebcb2f7aa43ca48a105f5f68d46cc32",
+      "executable": false
+    },
+    "public/fonts/caveat/LICENSE.txt": {
+      "sha256": "163a2b400e16916ad3196296c946c526d0efce6baf22a2164269ffc62fb9f671",
+      "executable": false
+    },
     "public/fonts/fonts.css": {
       "sha256": "388de36b4f4a5b7e2d9cd602fb8b430b053a701e52b80081f48bc057cddf5af3",
+      "executable": false
+    },
+    "public/fonts/inter/inter-latin-ext-wght-normal.woff2": {
+      "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+      "executable": false
+    },
+    "public/fonts/inter/inter-latin-wght-normal.woff2": {
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+      "executable": false
+    },
+    "public/fonts/inter/LICENSE.txt": {
+      "sha256": "3b0a5fca3d17942cde889069889dedbbbd075e9b599968c82a95f4d944e9b345",
+      "executable": false
+    },
+    "public/fonts/nunito/LICENSE.txt": {
+      "sha256": "40991bfa02ac620aae16dc527f3c47765a25e43f270d4c301ee6ab663a8d9015",
+      "executable": false
+    },
+    "public/fonts/nunito/nunito-latin-ext-wght-normal.woff2": {
+      "sha256": "2c8d792869818ecb253a46bc3c63c7013df7aac2f69291c3c85e5cdc94160960",
+      "executable": false
+    },
+    "public/fonts/nunito/nunito-latin-wght-normal.woff2": {
+      "sha256": "ba344451eab25b217a165363b1982048a5e5830a0daf36577973955a04cac793",
       "executable": false
     },
     "public/fonts/outfit/LICENSE.txt": {
@@ -287,6 +351,190 @@
     },
     "public/rer-theme.css": {
       "sha256": "a959e0a17df8abb03a123c04eb773b5e9183d426ed7f43424f8622d02433ddb1",
+      "executable": false
+    },
+    "public/site/closing-1152.avif": {
+      "sha256": "db14db5a3e20a93d68a7f70924d2d72fcdfe899f3e0f5b83f0c181d234cfd0f5",
+      "executable": false
+    },
+    "public/site/closing-1152.webp": {
+      "sha256": "4629693c7c53c2f02bd8b23a09a2600b6cb98eafcf81078fb5fa9c38603c9f20",
+      "executable": false
+    },
+    "public/site/closing-1536.avif": {
+      "sha256": "65bf554d648ac7a37821fa99ab5548e18bd385d7df2d087a13846e8b656c4502",
+      "executable": false
+    },
+    "public/site/closing-1536.webp": {
+      "sha256": "86afa37985173c685ec3330eb9265b81ca9681ed25d18f6947c8e9096f8a1d55",
+      "executable": false
+    },
+    "public/site/closing-2304.avif": {
+      "sha256": "eb6f07206d78d7c29aa5418ed69a82b94681d7f89a3a4043f4b128d89fbe6c52",
+      "executable": false
+    },
+    "public/site/closing-2304.webp": {
+      "sha256": "f3179907895ca9378621c04ae26dcf1f384e9cfd4ede33e196f6ff676b3302ac",
+      "executable": false
+    },
+    "public/site/closing-3072.avif": {
+      "sha256": "31a7000fae4c55f82019e4cb4665a85bac4bd9912954396fa6dcdca3987d66e7",
+      "executable": false
+    },
+    "public/site/closing-3072.webp": {
+      "sha256": "be10a8d07cb3639e576fb2d81a4074e399fd4adee52e850f817859596c1845e1",
+      "executable": false
+    },
+    "public/site/closing-768.avif": {
+      "sha256": "dcf2a3daaca9bd92634f32ebe8ce77bb429aa80e44649985a3df21e53d7b827a",
+      "executable": false
+    },
+    "public/site/closing-768.webp": {
+      "sha256": "9e08ef1dfc4d072332fa3e98011f00c1a4addc6b38ec60729f6e0edf5ae81eaa",
+      "executable": false
+    },
+    "public/site/closing-phone-1170.avif": {
+      "sha256": "a8ced803b32e5b1d7e01d88504b974b36fb96f1b08d933cb773a6489d75b3299",
+      "executable": false
+    },
+    "public/site/closing-phone-1170.webp": {
+      "sha256": "d3c3760ea18775cdb50da145e667d2592d12f56ab5e187a06f0d47069fa5f0b0",
+      "executable": false
+    },
+    "public/site/closing-phone-390.avif": {
+      "sha256": "c86d1690825054e079cd83cb2e10d95dc688cd4bc8e6bc3445ab186c1551c12c",
+      "executable": false
+    },
+    "public/site/closing-phone-390.webp": {
+      "sha256": "e851cbe0e5fa7221e8e94b0b5e090994297fe777f4dc4a356974f1fc9e43203e",
+      "executable": false
+    },
+    "public/site/closing-phone-780.avif": {
+      "sha256": "a8c0503505315800934287832f94f3c4f505fd2991337c1ab71f5b336d98ae4f",
+      "executable": false
+    },
+    "public/site/closing-phone-780.webp": {
+      "sha256": "a5c68ff9c6ee6d72acec759b40f437ae87e4a419b4bb719a7d7a984625455272",
+      "executable": false
+    },
+    "public/site/hero-1236.avif": {
+      "sha256": "3e4c9d4a1ec7061fdd85f114bfd8c6bfa5896307918ab69beb1bd4fd4c7c1ee9",
+      "executable": false
+    },
+    "public/site/hero-1236.webp": {
+      "sha256": "823fdefa6f3341fee2738bf1427af114f123bb940728816f77175ab6685f292d",
+      "executable": false
+    },
+    "public/site/hero-1854.avif": {
+      "sha256": "c9420bbced335e27e83b0f486422246e88bc6752a17c03771c39cb09ad825643",
+      "executable": false
+    },
+    "public/site/hero-1854.webp": {
+      "sha256": "d3e76e2ad17225e869d9c1c9eea8497593fd52c9a1615d04373c02699d4f1e63",
+      "executable": false
+    },
+    "public/site/hero-2472.avif": {
+      "sha256": "a0d12e27f00c7ea31c59ea7121eb2859f02de820ffc629c6f1fa54e1c86b944d",
+      "executable": false
+    },
+    "public/site/hero-2472.webp": {
+      "sha256": "3fb82d207f8071aa8c8e8d81e73fc6f1d9358b088eb48ed3eed83cb070c10eb7",
+      "executable": false
+    },
+    "public/site/hero-800.avif": {
+      "sha256": "10a8f3f039f7767bdee4a9aeee63d43ee383be4e0ac90d8da2cc25173d7383d4",
+      "executable": false
+    },
+    "public/site/hero-800.webp": {
+      "sha256": "cf30cec57b72168cdbd544ec48f1823768c066c360386b59b958b01d5af691e4",
+      "executable": false
+    },
+    "public/site/hero-phone-1170.avif": {
+      "sha256": "8409d97dbe7f1b28ec332c50cd2fc8cbe14f3c23f0a5e4da138fba4ef8979bdb",
+      "executable": false
+    },
+    "public/site/hero-phone-1170.webp": {
+      "sha256": "79256302f2fe62b71ae59cef7d75b4c7d2da2a3754f41db3b2564db0f190b7c2",
+      "executable": false
+    },
+    "public/site/hero-phone-390.avif": {
+      "sha256": "baf8d586c0d9ca3c39dcbc9f125e69b1956343b3256df6611a2a3537ab3cb46d",
+      "executable": false
+    },
+    "public/site/hero-phone-390.webp": {
+      "sha256": "f695acb1e3e30d91cf6b1d88be51fc4c6d8d56abd172ddd3e2f890a549d3979c",
+      "executable": false
+    },
+    "public/site/hero-phone-780.avif": {
+      "sha256": "80fa55aa607d48969e623055aae647ea17587200742f72f762837ef1d59258bf",
+      "executable": false
+    },
+    "public/site/hero-phone-780.webp": {
+      "sha256": "ff55b642fce0d2b622e497c75e856cf65bb849ca6234e05aab8e693192ff981d",
+      "executable": false
+    },
+    "public/site/interlude-1152.avif": {
+      "sha256": "514a20eea0b5617dbc092abe54b9635cbebd366bdbe2c55ef2401aea19645cf3",
+      "executable": false
+    },
+    "public/site/interlude-1152.webp": {
+      "sha256": "a680474b77f343eac2ba565b79a976468ff29479b6054c4bc1153bf2ec726075",
+      "executable": false
+    },
+    "public/site/interlude-1536.avif": {
+      "sha256": "cc26b1ce5eec24d38976d3344e633338980ded906b43a4ca230d4299fcc021ee",
+      "executable": false
+    },
+    "public/site/interlude-1536.webp": {
+      "sha256": "f893f7aeff2caf034ab1a12f4c622de8be34d21368399167a1f1378f89e86a4a",
+      "executable": false
+    },
+    "public/site/interlude-2304.avif": {
+      "sha256": "785a33116abf904da0fc393331af36f3582e6d02f71968bc4319f2966063418f",
+      "executable": false
+    },
+    "public/site/interlude-2304.webp": {
+      "sha256": "d70df5cc2c2185df0374951b5b23ad52f3858d1b4f04ad653c9a477c72b0ad8d",
+      "executable": false
+    },
+    "public/site/interlude-3072.avif": {
+      "sha256": "ea5d4c157d2bd62819d8fe9f4dacfd590694c07485df32a1fe896f8fb8d2b626",
+      "executable": false
+    },
+    "public/site/interlude-3072.webp": {
+      "sha256": "1e1f7645beaee551e7d1391c80a204b23d97c48e52c4102fbf211eabd62b9999",
+      "executable": false
+    },
+    "public/site/interlude-768.avif": {
+      "sha256": "077a1148a7c74b0b3922862813cb56b1796f65f8630f981acc785b30db94e963",
+      "executable": false
+    },
+    "public/site/interlude-768.webp": {
+      "sha256": "1a5bf72b7c0a19feb5249417b343a22a1814d35d2e69fb513da9b62c87c59f12",
+      "executable": false
+    },
+    "public/site/interlude-phone-1170.avif": {
+      "sha256": "2173b92046eada470f02a00000adfe4e99f46a1c7bfeab6dcca0927e2b49921b",
+      "executable": false
+    },
+    "public/site/interlude-phone-1170.webp": {
+      "sha256": "14d1d5295df7717f3ae08391049403a5f59f382dfb7b996e1351f6750ef115d4",
+      "executable": false
+    },
+    "public/site/interlude-phone-390.avif": {
+      "sha256": "54eb7202435c9a7d4df8b7eaac58c38b2cab4c6b834973d4dc9806b3082232b8",
+      "executable": false
+    },
+    "public/site/interlude-phone-390.webp": {
+      "sha256": "82f19ff6b2a3dd261373c842140069bd1f8d82b92d8d3d73ff57d55920da58ab",
+      "executable": false
+    },
+    "public/site/interlude-phone-780.avif": {
+      "sha256": "1893cdc4f90aba426a5ad02808fc15eb03aca242447712df9749aff08b203377",
+      "executable": false
+    },
+    "public/site/interlude-phone-780.webp": {
+      "sha256": "253ede0c36ae0aab263d6f0958f837599500b2b9906ec8b4ed8cc93d384c68f6",
       "executable": false
     },
     "README.md": {
@@ -1385,12 +1633,92 @@
       "sha256": "281b7233245da5ea6ff5fa4c3857fa83a8f02d49318c407663883f7c9dbca572",
       "executable": false
     },
+    "src/site/landing/hero.ts": {
+      "sha256": "045157fe5e7b88181c3b06e527ed7dca5ffa9b43a050f4ceb0775e85df3b621a",
+      "executable": false
+    },
+    "src/site/landing/index.ts": {
+      "sha256": "5aaf15ff328e90bfcd2dc7715410cf695dce876555714ad602cc64062b91f4ab",
+      "executable": false
+    },
+    "src/site/landing/kinds.ts": {
+      "sha256": "18b07d7932b07e9f26cb695ac5ce87b44021f7a7616c8440de84d7d0c5711866",
+      "executable": false
+    },
+    "src/site/landing/notice.ts": {
+      "sha256": "43cbe6c0a443fc21f2eb768a96c9de479eb22d3f89b482e65594fcea3a53fe99",
+      "executable": false
+    },
+    "src/site/landing/parts.ts": {
+      "sha256": "4cfc7e4179b2f907cc69616a0a98bcd54196c191af40d6ffce448e3c3df69e4f",
+      "executable": false
+    },
+    "src/site/landing/precheck.ts": {
+      "sha256": "e432569cc3bdffe42d16e6758142aa99b555454cdbb28ddbef2ad1a246d0e6a3",
+      "executable": false
+    },
+    "src/site/landing/prepared.ts": {
+      "sha256": "4a204992a08359b7157d9921f65c5885aecb2ca00441c683b63040ce4432b6e9",
+      "executable": false
+    },
+    "src/site/landing/protected.ts": {
+      "sha256": "50a1dc2691e2f8cc943c3c3b4d1bbfcb41896505928ddcab112e2c67e5e3f2db",
+      "executable": false
+    },
+    "src/site/landing/quarterly.ts": {
+      "sha256": "8d396ae93cb6a07aa2ca14df2c53eef1b49355be507a0683f30497ea54504335",
+      "executable": false
+    },
+    "src/site/landing/reconciled.ts": {
+      "sha256": "d6142773a9bf6456e8b0c98faba4ffe078c2a68f160882b46d69cec0587d6782",
+      "executable": false
+    },
+    "src/site/landing/registered.ts": {
+      "sha256": "32c6c097210464506e3ff8a8bb6ab87b8499604df012ecd3a6a02fde73e91b29",
+      "executable": false
+    },
+    "src/site/landing/scenes.ts": {
+      "sha256": "3a7a1a57df5d634ac122b81e797990cbf0ac5cb4b3b91764ab5638dc7a93112f",
+      "executable": false
+    },
+    "src/site/landing/switching.ts": {
+      "sha256": "7b544747d1a6769cac5e2a491a34f7ab3db9e77d66086719369ccae113229f97",
+      "executable": false
+    },
+    "src/site/landing/week.ts": {
+      "sha256": "2b9c9c8c832fdc28cfa296800e74109a366fa51c6edd45b1bc38c64d46aa079f",
+      "executable": false
+    },
     "src/site/pages.ts": {
       "sha256": "1040c373f521033f3294d5fe102996c1ffb5d08f025a66da7774db2156b4861a",
       "executable": false
     },
     "src/site/run.json": {
       "sha256": "7183115581c7602b1e79d44cf44a50c13ceb85010e89f3da83cb341bc7f642d3",
+      "executable": false
+    },
+    "src/site/shell/frame.ts": {
+      "sha256": "be3598cfd017f812e36756b795332178ae2c9ab6ea1e220d30dc585a6965ccac",
+      "executable": false
+    },
+    "src/site/styles/hero.css": {
+      "sha256": "999a17258160792014c65a8bdf1b9474570cea0b720dcaa3577c0c74e50c8768",
+      "executable": false
+    },
+    "src/site/styles/proof.css": {
+      "sha256": "9821b34afe780b59eec043816762262d402f7aa7b2b0a8c682c1bb3aa9fb3a64",
+      "executable": false
+    },
+    "src/site/styles/returns.css": {
+      "sha256": "8dc94f5d276dbf592251c5f5ad0698af2607867b19bd00b1a0369110415750fe",
+      "executable": false
+    },
+    "src/site/styles/site.css": {
+      "sha256": "099ba6732a2bc03c8080642425129edabdfcd2f20bb4e25de003f92dd3986223",
+      "executable": false
+    },
+    "src/site/styles/week.css": {
+      "sha256": "0bebb88b4611c83388fdd5fcb3f6fdf1579b01462ca4469b8532da223e237e78",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {
