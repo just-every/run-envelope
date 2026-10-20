@@ -4,7 +4,7 @@ import { section, head, chip, done, keep, dot, businessName, type Business } fro
 
 const form = (business: Business, wages: string, taxes: string) => `<li class="f941 f941--${business}"><p class="ohio">${keep('Ohio unemployment wage report · Q3 2026')} <span class="pill-ok">${done('accepted')}</span></p>`
  + `<article class="f941-page" aria-label="${businessName[business]} Form 941"><p class="f941-q">${keep('Q3 2026')}</p><h3>Form 941</h3><p class="f941-sub">Employer’s QUARTERLY Federal Tax Return</p>${chip(business)}`
- + `<table><tbody><tr><th scope="row">2</th><td>Wages, tips and other compensation</td><td>${wages}</td></tr><tr><th scope="row">12</th><td>Total taxes</td><td>${taxes}</td></tr>`
+ + `<table><tbody><tr><th scope="row">2</th><td>Wages, tips and other compensation</td><td>${wages}</td></tr><tr><th scope="row">12</th><td>Total taxes</td><td>${taxes}</td></tr>`
  + `<tr><th scope="row">13</th><td>Total deposits</td><td>${taxes}</td></tr><tr><th scope="row">14</th><td>Balance due</td><td>$0.00</td></tr></tbody></table>`
  + `<p class="pill-ok pill-ok--big">${done('IRS accepted')}</p></article></li>`
 const stop = (body: string, tone = '') => `<li${tone ? ` class="${tone}"` : ''}><p>${body}</p></li>`

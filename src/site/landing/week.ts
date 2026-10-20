@@ -10,7 +10,7 @@ export function weekSection() {
  const days = day('Mon Oct 26',
   event(all4, done(`Q3 Form 941${dot}IRS accepted 11:02 am`))
   + event(chip('rosa'), done(`Toast hours and tips in${dot}run prepared`))
-  + event(chip('northpaw'), keep(`Ana Flores${dot}TIN mismatch${dot}payment blocked`), 'bad'))
+  + event(chip('northpaw'), keep(`Ana Flores${dot}TIN mismatch${dot}payment blocked`), 'bad'))
   + day('Tue Oct 27',
    event(chip('northpaw'), done(`Ana’s W-9 corrected${dot}TIN matched 9:31 am`))
    + event(chip('brightside'), done('Dr. Lena Brooks approved 10:05 am'))

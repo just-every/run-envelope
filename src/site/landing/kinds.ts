@@ -12,7 +12,7 @@ export function kindsSection() {
  const cards = pay('rosa', 'Tipped', 'Jade Park', 'server', ['week of Oct 18', '30 h × $5.50 + $142.00 tips = $307.00'], `→ ${done('topped up $23.00 to $330.00')}`, 'Ohio $11.00 minimum, $5.50 tipped')
   + pay('kessler', 'Overtime', 'Dev Patel', 'plumber', ['Oct 19–25', '40 h × $32.00 + 6 h × $48.00'], done('= $1,568.00'), 'FLSA overtime, 1.5× over 40 h')
   + pay('brightside', 'Salary', 'Mia Torres', 'dental hygienist', [`Oct 16–31${dot}$3,400.00`, '401(k) 6% $204.00'], done('Sat Oct 31 payday moved to Fri'), 'Saturday payday → Friday')
-  + pay('northpaw', 'Two states', 'Sam Rivera', 'designer', [`October${dot}$7,500.00`, '= Ohio $2,386.36'], done('+ Colorado $5,113.64'), '7 of 22 workdays in Columbus')
+  + pay('northpaw', 'Two states', 'Sam Rivera', 'designer', [`October${dot}$7,500.00`, '= Ohio $2,386.36'], done('+ Colorado $5,113.64'), '7 of 22 workdays in Columbus')
   + pay('northpaw', 'Contractor', 'Ana Flores', 'sign painter', ['3 storefront signs × $800.00'], `${done('= $2,400.00')}<span class="kind-form">1099-NEC</span>`, done('IRS TIN match'))
   + pay('rosa', 'Garnished', 'Marcus Hill', 'line cook', ['child support $262.00', '+ creditor $150.00 = $412.00'], `${done('limit $415.00')}${dot}remitted`, 'support first, 25% of disposable pay')
  return section('kinds-title', 'white',

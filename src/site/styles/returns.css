@@ -167,7 +167,7 @@
 .rerun h3 { margin-top: 8px; font: 700 19px/1.3 var(--text); color: var(--ink); }
 .rerun h3 span { font-weight: 400; }
 .rerun table { margin-top: 14px; }
-.rerun thead th { text-wrap: balance; padding-bottom: 8px; font-size: 13px; font-weight: 400; color: var(--body); text-align: right; }
+.rerun thead th { text-wrap: balance; max-width: 140px; padding-bottom: 8px; font-size: 13px; font-weight: 400; color: var(--body); text-align: right; }
 .rerun :is(tbody, tfoot) :is(th, td) { padding: 6px 0; white-space: nowrap; font-size: 18px; color: var(--ink); }
 .rerun :is(tbody, tfoot) td { text-align: right; }
 .rerun .eq { width: 56px; text-align: center !important; color: var(--done); font-weight: 700; }
@@ -205,7 +205,7 @@
   .rerun { padding: 16px 14px 18px; }
   .rerun > .chip { font-size: 15px; min-height: 32px; padding: 4px 12px; }
   .rerun h3 { font-size: 16.5px; }
-  .rerun thead th { text-wrap: balance; font-size: 13px; }
+  .rerun thead th { text-wrap: balance; max-width: 140px; font-size: 13px; }
   .rerun :is(tbody, tfoot) :is(th, td) { font-size: 15px; }
   .rerun .eq { width: 26px; }
   .rerun tfoot :is(th, td) { font-size: 16.5px; }

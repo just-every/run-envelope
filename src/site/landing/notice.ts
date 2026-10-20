@@ -9,14 +9,14 @@ export function noticeSection() {
  const page = '<article class="notice" aria-label="IRS notice">'
   + `<p>${keep('Notice dated Mon Oct 5')}</p><p>${keep(`Kessler Plumbing${dot}Form 941${dot}tax period Jun 30, 2026`)}</p>`
   + '<p>We didn’t find a deposit of $5,118.62 for this period.</p><p>A 10% failure-to-deposit penalty applies.</p>'
-  + `<p class="ringed"><span>${keep(`Unpaid $5,118.62${dot}failure-to-deposit penalty $511.86${dot}total $5,630.48 plus interest`)}</span></p>`
+  + `<p class="ringed"><span>${keep(`Unpaid $5,118.62${dot}failure-to-deposit penalty $511.86${dot}total $5,630.48 plus interest`)}</span></p>`
   + `<p>${keep('Pay by Mon Oct 26 to avoid more interest.')}</p></article>`
  const notes = `<div class="margin"><p class="eyebrow">${keep('Agent · 8:43 am Fri Oct 9')}</p><ul class="notes">`
   + note(`Deposit found: EFTPS Wed Jul 1${dot}$5,118.62${dot}for the Fri Jun 26 payroll`)
   + note(`Filed under Q3 2026${dot}Q3 shows the same $5,118.62 extra`)
   + note('Reply drafted: move the deposit to Q2 and remove the penalty') + '</ul></div>'
  const record = `<p class="eftps">${chip('kessler')}<span>${keep(`EFTPS${dot}Wed Jul 1${dot}$5,118.62${dot}Form 941${dot}applied to Q3 2026${dot}`)}<b class="ok">${done('matched')}</b></span></p>`
- const rail = stop(keep(`Fri Oct 9, 8:40 am${dot}scanned by Kim`)) + stop(keep(`8:43 am${dot}matched and drafted`))
+ const rail = stop(keep(`Fri Oct 9, 8:40 am${dot}scanned by Kim`)) + stop(keep(`8:43 am${dot}matched and drafted`))
   + stop(`${keep('Tue Oct 13, 10:50 am')}${dot}${done('Walt Kessler signed')}${dot}${keep('sent 11:10 am')}`)
   + `<li class="closed"><p>${done(`Mon Nov 9${dot}IRS letter: deposit moved to Q2${dot}penalty removed${dot}$0.00 owed`)}</p></li>`
  return section('notice-title', 'aqua',

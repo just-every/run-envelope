@@ -15,7 +15,7 @@ export function reconciledSection() {
   + spoke('l', `Bank${dot}funded Wed Oct 28`, `<p>${done('$24,444.06 = net $17,236.80 + taxes $6,526.86 + 401(k) $680.40')}</p>`
    + `<p class="cursors"><span class="cursor cursor--kim">Kim${dot}bookkeeper${pointer}</span><span class="cursor cursor--walt">Walt${dot}owner${pointer}</span></p>`
    + `<p class="hand">to the cent <svg class="ck" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.8 8.7l3.4 3.3 7-7.6" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></p>`, ' spoke--bank')
- const right = spoke('r', 'Deposits', `<p>${keep(`EFTPS $5,430.84${dot}Ohio $499.98${dot}Columbus $567.00${dot}`)}<span class="ok">${done('accepted Fri Oct 30')}</span></p><p class="small">federal and Ohio unemployment $29.04 set aside for the quarter</p>`)
+ const right = spoke('r', 'Deposits', `<p>${keep(`EFTPS $5,430.84${dot}Ohio $499.98${dot}Columbus $567.00${dot}`)}<span class="ok">${done('accepted Fri Oct 30')}</span></p><p class="small">federal and Ohio unemployment $29.04 set aside for the quarter</p>`)
   + spoke('r', `401(k)${dot}Guideline`, `<p>${keep(`$680.40${dot}14 contributions${dot}`)}${done('accepted')}</p>`)
   + spoke('r', `Journal${dot}QuickBooks Online`, `<p>${keep('debits $24,444.06 = credits $24,444.06')}</p><p>${done('cash line = bank debit')}</p>`)
  return section('reconciled-title', 'white',

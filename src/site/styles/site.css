@@ -37,7 +37,7 @@
 .site p { text-wrap: pretty; }
 .site table { border-collapse: collapse; width: 100%; }
 .site :where(th, td) { padding: 0; text-align: left; font-weight: inherit; }
-.site td, .amount { font-variant-numeric: tabular-nums lining-nums; }
+.stub td, .batch td, .rerun td, .f941-page td:last-child, .amount { font-variant-numeric: tabular-nums lining-nums; }
 .nw { white-space: nowrap; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .wrap { width: min(100% - 2 * var(--gutter), 1392px); margin-inline: auto; }
@@ -53,7 +53,7 @@
 .bad { color: var(--red); }
 
 /* Bands alternate aqua and white; 05 is the one dark forest band */
-.band { padding: 48px 0 56px; }
+.band { padding: 32px 0 40px; }
 .band--aqua { background: var(--aqua); }
 .band--white { background: #fff; }
 .band--forest { background: var(--band-forest); color: #e6f4ef; }
@@ -148,3 +148,6 @@
   .bar nav { gap: 6px 12px; font-size: 14.5px; }
   .display { font-size: 29px; }
 }
+
+.flow-separator { display: inline-block !important; width: .4em; height: 1em; vertical-align: -.16em; fill: currentColor; }
+.flow-separator.at-wrap { visibility: hidden; }

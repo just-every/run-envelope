@@ -2,8 +2,8 @@
 // never start a line, and copy that keeps its dates, times and figures with their units.
 
 /** Separators travel with both adjacent words, never dangling at either line edge. */
-export const dot = ' · '
-export const to = ' → '
+export const dot = ' · '
+export const to = ' → '
 
 const days = 'Mon|Tue|Wed|Thu|Fri|Sat|Sun'
 const months = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'
@@ -18,10 +18,14 @@ export const keep = (text: string): string => text.split(/(<[^>]*>)/g).map(part 
  .replace(/\b(Q\d) (\d{4})\b/g, '$1 $2')
  .replace(/\b(W)-(\d+)\b|\b(1099)-(NEC)\b|\b(new)-(hire)\b/g, value => value.replace('-', '\u2060-\u2060'))
  .replace(/([\p{L}][\p{L}’'()%-]*) (\$[\d,.]+)/gu, '$1 $2')
- .replace(/\b([A-Z][a-zA-Z.’’]+) ([A-Z][a-zA-Z.’’]+)\b/g, '$1 $2')
- .replace(/[ \u00a0]([·→])[ \u00a0]/g, ' $1 ')
+ .replace(/(\d), ([A-Z])/g, '$1, $2')
+ .replace(/([A-Za-z])–([A-Za-z])/g, '$1\u2060–\u2060$2')
+ .replace(/\b([A-Z][a-zA-Z]+) ([A-Z][a-zA-Z]+)\b/g, '$1 $2')
+
  .replace(/ ([+−×=]) /g, ' $1 ')
 ).join('')
+
+export const finish = (html: string) => keep(html).split(/(<[^>]*>)/g).map(part => part.startsWith('<') ? part : part.replace(/[ \u00a0]*·[ \u00a0]*/g, ' <svg class="flow-separator" viewBox="0 0 8 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/></svg> ')).join('')
 
 /** A title whose last two words stay together, so its last line is never one word. */
 export const tail = (text: string) => text.replace(/ (?=\S+$)/, '\u00a0')
