@@ -1,10 +1,10 @@
-// The run site's document, header and footer for Envelope's homepage. Static HTML with no script. Icons are Base's
+// The run site's document, header and footer for Envelope's homepage. Shared static HTML shell. Icons are Base's
 // frozen head of the mark's favicons (public/favicon.ico, favicon-32.svg, apple-touch-icon.png).
 import { iconHead } from '../../base/icon-head'
 
 export const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 
-/** Where the header, the hero and the closing link. `docs` is the repository's run guide until the site carries /docs. */
+/** Where the header, the hero and the closing link. `docs` is the public run guide. */
 export interface SiteLinks { repository: string; docs: string; demo: string; contract: boolean }
 
 /** One page: the faces and tokens from the public folder, then the site's compiled stylesheets. */

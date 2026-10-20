@@ -21,3 +21,6 @@ and Latin Extended) for headings and the Envelope wordmark, Inter (variable, Lat
 and Latin Extended) for body text and tabular figures, and Caveat 600 (Latin) for
 the homepage's one handwritten note. Upstreams: https://github.com/googlefonts/nunito,
 https://github.com/rsms/inter and https://github.com/googlefonts/caveat.
+
+Inter's U+2192 is shipped in `inter/inter-symbols-wght-normal.woff2`, subset from
+https://github.com/rsms/inter/blob/master/docs/font-files/InterVariable.woff2.

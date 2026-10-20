@@ -22,5 +22,5 @@ export function noticeSection() {
  return section('notice-title', 'aqua',
   head('notice-title', 'Notice · Kessler Plumbing · Fri Oct 9 – Mon Nov 9, ET', 'An IRS notice on Friday.', 'Closed with $0.00 owed.',
    'The agent found the “missing” deposit, applied by the IRS to the wrong quarter, and drafted the reply. Walt signed it, and the IRS agreed.')
-  + `<div class="notice-row">${page}${notes}</div>${record}<ol class="n-rail">${rail}</ol>`, 'notice-band')
+  + `<div class="notice-row"><svg class="note-links" aria-hidden="true"></svg>${page}${notes}</div><script type="module" src="/site/notice-connectors.js"></script>${record}<ol class="n-rail">${rail}</ol>`, 'notice-band')
 }

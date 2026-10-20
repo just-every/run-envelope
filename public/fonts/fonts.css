@@ -125,3 +125,13 @@ button, input, select, textarea { font-family: inherit; }
   descent-override: 24%;
   line-gap-override: 0%;
 }
+
+/* Inter's arrow, subset from the upstream variable face under the same OFL. */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter/inter-symbols-wght-normal.woff2') format('woff2');
+  unicode-range: U+2192;
+}

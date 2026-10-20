@@ -1,0 +1,32 @@
+.docs { width: min(100% - 2 * var(--gutter), 860px); margin: 48px auto 80px; overflow-wrap: anywhere; }
+.docs h1, .docs h2, .docs h3 { color: var(--forest); font-family: var(--heading); font-weight: 850; line-height: 1.15; text-wrap: balance; }
+.docs h1 { font-size: clamp(36px, 5vw, 60px); letter-spacing: -.035em; }
+.docs h2 { font-size: 30px; letter-spacing: -.02em; }
+.docs h3 { font-size: 24px; }
+.docs a { color: #0e6a66; }
+.docs-intro { padding: 40px; border-radius: 24px; background: var(--aqua); }
+.docs-intro h1 { margin-top: 14px; }
+.docs-intro > p:last-child { margin-top: 20px; max-width: 48ch; color: var(--body); font-size: 20px; }
+.docs-index { margin-top: 40px; padding: 32px; border: 1px solid var(--hair); border-radius: 20px; }
+.docs-index > p { margin-top: 12px; color: var(--body); }
+.docs-index ul { margin-top: 24px; display: grid; gap: 14px; }
+.docs-index li a { display: inline-block; padding-block: 4px; }
+.docs-breadcrumb { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 36px; color: var(--body); font-size: 15px; }
+.docs-guide { color: var(--body); line-height: 1.75; }
+.docs-guide > * + * { margin-top: 22px; }
+.docs-guide h2 { margin-top: 52px; padding-top: 24px; border-top: 1px solid var(--hair); scroll-margin-top: 24px; }
+.docs-guide h1 { margin-bottom: 30px; }
+.docs-guide ul { padding-left: 24px; list-style: disc; }
+.docs-guide li + li { margin-top: 14px; }
+.docs-guide code { padding: 2px 5px; border-radius: 5px; background: #edf6f5; color: #164c42; font: .88em/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: break-spaces; overflow-wrap: anywhere; }
+.docs-guide pre { max-width: 100%; padding: 20px; border: 1px solid #cde7e2; border-radius: 14px; background: var(--aqua); white-space: pre-wrap; overflow-wrap: anywhere; }
+.docs-guide pre code { padding: 0; background: transparent; }
+@media (max-width: 759px) {
+ .docs { margin-top: 32px; margin-bottom: 48px; }
+ .docs-intro { padding: 26px 22px; border-radius: 18px; }
+ .docs-intro > p:last-child { font-size: 18px; }
+ .docs-index { margin-top: 24px; padding: 24px 22px; }
+ .docs h2 { font-size: 27px; }
+ .docs-guide pre { padding: 16px; }
+ .docs-breadcrumb { margin-bottom: 28px; }
+}

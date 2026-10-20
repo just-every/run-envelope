@@ -1,23 +1,27 @@
 // Parts every section shares: business chips in each client's colour, the one heavy done-green check, separators that
 // never start a line, and copy that keeps its dates, times and figures with their units.
 
-/** " · " that stays with the word before it, so no line starts with a separator. */
-export const dot = ' · '
-/** " → " that stays with the word before it. */
-export const to = ' → '
+/** Separators travel with both adjacent words, never dangling at either line edge. */
+export const dot = ' · '
+export const to = ' → '
 
 const days = 'Mon|Tue|Wed|Thu|Fri|Sat|Sun'
 const months = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'
-/** Keep "Fri Oct 30", "Oct 11–24", "10:14 am", "552 h", "7 h 30 min" and "Q3 2026" whole. */
-export const keep = (text: string) => text
- .replace(new RegExp(`\\b((?:${days}) )?(${months}) (\\d{1,2})\\b`, 'g'), (_, day = '', month, n) => `${day.replace(' ', ' ')}${month} ${n}`)
+const date = `(?:(?:${days}) )?(?:${months}) \\d{1,2}`
+/** Preserve reading units while leaving prose proportional and free to wrap between phrases. */
+export const keep = (text: string): string => text.split(/(<[^>]*>)/g).map(part => part.startsWith('<') ? part : part
+ .replace(new RegExp(`\\b${date}(?: ?[–−] ?(?:${date}|\\d{1,2}))?`, 'g'), value => value.replace(/ /g, ' ').replace(/([–−])/g, '\u2060$1\u2060'))
  .replace(/\b(\d{1,2}:\d{2}) (am|pm|AM|PM)\b/g, '$1 $2')
- .replace(/(\d) (h|min|workdays|people|paid|returns|runs|kinds)\b/g, '$1 $2')
+ .replace(/\b(\d+) h (\d+) min\b/g, '$1 h $2 min')
  .replace(/\b(\d+) of (\d+)\b/g, '$1 of $2')
+ .replace(/(\d) ([A-Za-z]+)/g, '$1 $2')
  .replace(/\b(Q\d) (\d{4})\b/g, '$1 $2')
- .replace(/ – /g, ' – ')
- .replace(/ ([·→+−×]) /g, ' $1 ')
- .replace(/ = /g, ' = ')
+ .replace(/\b(W)-(\d+)\b|\b(1099)-(NEC)\b|\b(new)-(hire)\b/g, value => value.replace('-', '\u2060-\u2060'))
+ .replace(/([\p{L}][\p{L}’'()%-]*) (\$[\d,.]+)/gu, '$1 $2')
+ .replace(/\b([A-Z][a-zA-Z.’’]+) ([A-Z][a-zA-Z.’’]+)\b/g, '$1 $2')
+ .replace(/[ \u00a0]([·→])[ \u00a0]/g, ' $1 ')
+ .replace(/ ([+−×=]) /g, ' $1 ')
+).join('')
 
 /** A title whose last two words stay together, so its last line is never one word. */
 export const tail = (text: string) => text.replace(/ (?=\S+$)/, '\u00a0')
@@ -37,7 +41,7 @@ export const CHECK = '<svg class="ck" viewBox="0 0 16 16" role="img" aria-label=
 /** Copy ending in the check; the last word and the check never part. */
 export const done = (text: string) => {
  const kept = keep(text)
- const at = kept.lastIndexOf(' ')
+ const at = Math.max(kept.lastIndexOf(' '), kept.lastIndexOf(' '))
  return `${kept.slice(0, at + 1)}<span class="nw">${kept.slice(at + 1)} ${CHECK}</span>`
 }
 

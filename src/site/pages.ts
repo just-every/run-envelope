@@ -6,6 +6,8 @@ import './styles/hero.css'
 import './styles/week.css'
 import './styles/proof.css'
 import './styles/returns.css'
+import './styles/docs.css'
+import { docsPages } from './docs'
 import { contractPageHtml } from '../base/contract-page'
 import { runPageHtml, siteNotFoundHtml, type RunData, type SiteBuild, type SiteContext } from '../base/run-site'
 import { identity } from '../identity'
@@ -15,13 +17,13 @@ import { landingHtml } from './landing'
 
 export function sitePages({ styles = [], contract }: Partial<SiteContext> = {}): SiteBuild {
  const data: RunData = run
- // The site has no /docs yet: Docs and "Read the docs" open the repository's run guide, and "Try the demo" opens
- // /run until a hosted demo serves.
- const links: SiteLinks = { repository: run.repository, docs: `${run.repository}/blob/main/RUN-LOCALLY.md`, demo: '/run', contract: Boolean(contract) }
+ // Documentation uses the repository's run guide; the demo action opens /run.
+ const links: SiteLinks = { repository: run.repository, docs: '/docs', demo: '/run', contract: Boolean(contract) }
  return {
   pages: [
    { path: '/', html: landingHtml(links, run.clone, styles) },
    { path: '/run', html: runPageHtml(identity, data, contract) },
+   ...docsPages(links, styles),
    ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract) }] : []),
    { path: '/404', html: siteNotFoundHtml(identity, data, contract) },
   ],

@@ -15,7 +15,7 @@ export function preparedSection() {
  const run = '<article class="run-card" aria-label="Rosa’s Taquería run preview">'
   + `<p class="run-head">${chip('rosa')}<span>${keep(`biweekly${dot}Oct 11–24${dot}payday Fri Oct 30`)}</span></p>`
   + `<p class="run-sum"><span>${keep(`22 people${dot}gross <b>$41,860.00</b>${dot}net <b>$34,499.00</b>`)}</span><span class="ok">${keep('+$1,212.40 vs Fri Oct 16')}</span></p>`
-  + `<table class="changes"><thead><tr><th scope="col">Change</th><th scope="col">${keep('Prepared Mon Oct 26, 7:00 am')}</th></tr></thead><tbody>${rows}</tbody></table>`
+  + `<p class="prepared-at">${keep('Prepared Mon Oct 26, 7:00 am')}</p><table class="changes"><thead><tr><th scope="col">Change</th><th scope="col">${keep('Prepared Mon Oct 26, 7:00 am')}</th></tr></thead><tbody>${rows}</tbody></table>`
   + `<p class="run-foot"><span class="ok"><b>Rosa Medina approved</b>${dot}${done('Wed Oct 28, 3:40 pm')}</span>${dot}22 stubs${dot}9 in Spanish</p></article>`
  return section('prepared-title', 'aqua',
   `<div class="right">${head('prepared-title', 'Run prepared · Rosa’s Taquería · Sun Oct 25 – Wed Oct 28, ET', 'Every change, explained.', 'Rosa approved on Wednesday.',

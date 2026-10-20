@@ -25,7 +25,7 @@
   --text: Inter, Arial, sans-serif;
   margin: 0; background: #fff; color: var(--ink);
   font: 400 17px/1.5 var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-  font-variant-numeric: tabular-nums lining-nums; overflow-x: clip;
+  font-variant-numeric: proportional-nums lining-nums; overflow-x: clip;
 }
 .site :where(*, *::before, *::after) { box-sizing: border-box; }
 .site :where(h1, h2, h3, p, ul, ol, figure, table, pre) { margin: 0; }
@@ -34,8 +34,10 @@
 .site :where(img, svg) { display: block; }
 .site :focus-visible { outline: 3px solid var(--forest); outline-offset: 3px; border-radius: 6px; }
 .site :where(b, strong) { font-weight: 650; }
+.site p { text-wrap: pretty; }
 .site table { border-collapse: collapse; width: 100%; }
 .site :where(th, td) { padding: 0; text-align: left; font-weight: inherit; }
+.site td, .amount { font-variant-numeric: tabular-nums lining-nums; }
 .nw { white-space: nowrap; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .wrap { width: min(100% - 2 * var(--gutter), 1392px); margin-inline: auto; }
@@ -51,7 +53,7 @@
 .bad { color: var(--red); }
 
 /* Bands alternate aqua and white; 05 is the one dark forest band */
-.band { padding: 104px 0 112px; }
+.band { padding: 48px 0 56px; }
 .band--aqua { background: var(--aqua); }
 .band--white { background: #fff; }
 .band--forest { background: var(--band-forest); color: #e6f4ef; }
@@ -112,7 +114,7 @@
   .site { --gutter: 40px; }
   .display { font-size: 64px; }
   .lede { font-size: 20px; }
-  .band { padding: 88px 0 96px; }
+  .band { padding: 60px 0 64px; }
 }
 @media (max-width: 1023px) {
   .display { font-size: 54px; }
@@ -120,7 +122,7 @@
 }
 @media (max-width: 759px) {
   .site { --gutter: 16px; font-size: 16px; }
-  .band { padding: 60px 0 68px; }
+  .band { padding: 44px 0 48px; }
   .eyebrow { font-size: 13px; letter-spacing: .12em; }
   .display { margin-top: 10px; font-size: 32px; line-height: 1.06; letter-spacing: -.025em; }
   .lede { margin-top: 14px; font-size: 17px; }

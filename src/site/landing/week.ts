@@ -27,7 +27,7 @@ export function weekSection() {
    + `<li class="ev"><p>${done(`Every deposit accepted${dot}4 journals posted${dot}QuickBooks Online × 2, Xero × 2`)}</p></li>`, ' day--payday')
  return section('week-title', 'aqua',
   `<div class="center">${head('week-title', 'Payday week · High Street, Columbus · Mon Oct 26 – Fri Oct 30, ET', 'Kim runs four payrolls.', '58 people paid on time.',
-   'Kim Sorensen keeps the books for four High Street businesses on four pay schedules.')}</div>`
+   'Kim Sorensen keeps the books for four High Street businesses on four pay schedules. Each owner approved their own run.')}</div>`
   + `<ul class="legend" aria-label="Pay schedules">${legend('kessler', 'weekly')}${legend('rosa', 'biweekly')}${legend('brightside', 'semimonthly')}${legend('northpaw', 'monthly')}</ul>`
   + `<ol class="days">${days}</ol>`, 'week')
 }
