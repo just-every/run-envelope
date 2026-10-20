@@ -46,7 +46,7 @@
 
 /* 03: six cards in a row, each with its business chip, kind, person, calculation, green result and, under the card,
    a grey rule chip; three a row below 1280 and stacked whole on a phone with the rule inside the card. */
-.kinds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; margin-top: 36px; }
+.kinds { display: grid; grid-template-columns: minmax(0, .97fr) minmax(0, .97fr) minmax(0, 1.08fr) minmax(0, 1.17fr) minmax(0, .94fr) minmax(0, 1.17fr); gap: 18px; margin-top: 36px; }
 .kind { display: flex; flex-direction: column; gap: 18px; }
 .kind-card { flex: 1; padding: 16px 14px 18px; border-radius: 16px; }
 .kind-top { display: flex; flex-direction: column; gap: 14px; }

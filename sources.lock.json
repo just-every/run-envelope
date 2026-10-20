@@ -1666,7 +1666,7 @@
       "executable": false
     },
     "src/site/landing/parts.ts": {
-      "sha256": "bd5d7643e8597929291d1403d69452048545931c178bdf459dd86863ca44cb03",
+      "sha256": "32167f7e946573466efdef8f01ff4b06109a509dc1b5ccc5080bcd7e666a12f5",
       "executable": false
     },
     "src/site/landing/precheck.ts": {
@@ -1682,7 +1682,7 @@
       "executable": false
     },
     "src/site/landing/quarterly.ts": {
-      "sha256": "974f955533ab6c2963a3f9d3f7aa5685eb22d61540f26fbc7eff809391bc794f",
+      "sha256": "c2b49edd92b46704a253291f1a3959d6e03d71a11ec50dc6262091ac88f970ad",
       "executable": false
     },
     "src/site/landing/reconciled.ts": {
@@ -1734,7 +1734,7 @@
       "executable": false
     },
     "src/site/styles/returns.css": {
-      "sha256": "481dfca1f22b5991f03e0ee18a0eb91cce490c249055f64cc0e841d0a45692aa",
+      "sha256": "6bfa297951bb3f2086d72015923b1d079f0bc718745744f7fe82718c572829ec",
       "executable": false
     },
     "src/site/styles/site.css": {
@@ -1742,7 +1742,7 @@
       "executable": false
     },
     "src/site/styles/week.css": {
-      "sha256": "640151282d124212680e49b57b4a514cfe6aaba0b7d0d59cc5a706cd1ef46dfb",
+      "sha256": "652e94a1a73a79fd82e71dc9e17915732d2759f30e12f5f95872542beddf60bc",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {

@@ -2,7 +2,7 @@
 // unemployment wage report behind it, and the foot rail from Kim's approval to the Mon Nov 2 deadline.
 import { section, head, chip, done, keep, dot, businessName, type Business } from './parts'
 
-const form = (business: Business, wages: string, taxes: string) => `<li class="f941 f941--${business}"><p class="ohio">${keep('Ohio unemployment wage report · Q3 2026')} <span class="pill-ok">${done('accepted')}</span></p>`
+const form = (business: Business, wages: string, taxes: string) => `<li class="f941 f941--${business}"><p class="ohio">${done('Ohio unemployment wage report · Q3 2026 · accepted')}</p>`
  + `<article class="f941-page" aria-label="${businessName[business]} Form 941"><p class="f941-q">${keep('Q3 2026')}</p><h3>Form 941</h3><p class="f941-sub">Employer’s QUARTERLY Federal Tax Return</p>${chip(business)}`
  + `<table><tbody><tr><th scope="row">2</th><td>Wages, tips and other compensation</td><td>${wages}</td></tr><tr><th scope="row">12</th><td>Total taxes</td><td>${taxes}</td></tr>`
  + `<tr><th scope="row">13</th><td>Total deposits</td><td>${taxes}</td></tr><tr><th scope="row">14</th><td>Balance due</td><td>$0.00</td></tr></tbody></table>`

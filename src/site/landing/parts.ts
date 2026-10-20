@@ -7,6 +7,7 @@ export const to = ' → '
 
 const days = 'Mon|Tue|Wed|Thu|Fri|Sat|Sun'
 const months = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'
+const units = 'h|min|workdays|people|paid|returns|runs|kinds|differences|registrations|journals|current|former|timesheets|servers|cooks|stubs|clients|days|contributions|signs|businesses|paychecks|overtime|tips|GiB|MiB|turns|seconds|minutes|workers|accounts|hours|filed|line'
 const date = `(?:(?:${days}) )?(?:${months}) \\d{1,2}`
 /** Preserve reading units while leaving prose proportional and free to wrap between phrases. */
 export function keep(text: string): string {
@@ -23,7 +24,8 @@ export function keep(text: string): string {
  .replace(/\b(\d{1,2}:\d{2}) (am|pm|AM|PM)\b/g, '$1 $2')
  .replace(/\b(\d+) h (\d+) min\b/g, '$1 h $2 min')
  .replace(/\b(\d+) of (\d+)\b/g, '$1 of $2')
- .replace(/(?<![$\d.,])(\d+(?:\.\d+)?) ([A-Za-z]+)/g, '$1 $2')
+ .replace(new RegExp(`(?<![$\\d.,])(\\d+(?:\\.\\d+)?) (${units})\\b`, 'g'), '$1 $2')
+ .replace(/(\$[\d,.]+) (tips|net)\b/g, '$1 $2')
  .replace(/\b(Q\d) (\d{4})\b/g, '$1 $2')
  .replace(/\b(W)-(\d+)\b|\b(1099)-(NEC)\b|\b(new)-(hire)\b/g, value => value.replace('-', '\u2060-\u2060'))
  .replace(/([\p{L}][\p{L}’'()%-]*) (\$[\d,.]+)/gu, '$1 $2')
