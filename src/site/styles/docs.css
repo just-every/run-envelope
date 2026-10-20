@@ -30,3 +30,5 @@
  .docs-guide pre { padding: 16px; }
  .docs-breadcrumb { margin-bottom: 28px; }
 }
+
+.docs-guide .code-token { display: inline-block; max-width: 100%; white-space: nowrap; vertical-align: bottom; }

@@ -14,7 +14,7 @@ export const keep = (text: string): string => text.split(/(<[^>]*>)/g).map(part 
  .replace(/\b(\d{1,2}:\d{2}) (am|pm|AM|PM)\b/g, '$1 $2')
  .replace(/\b(\d+) h (\d+) min\b/g, '$1 h $2 min')
  .replace(/\b(\d+) of (\d+)\b/g, '$1 of $2')
- .replace(/(\d) ([A-Za-z]+)/g, '$1 $2')
+ .replace(/(?<![$\d.,])(\d+(?:\.\d+)?) ([A-Za-z]+)/g, '$1 $2')
  .replace(/\b(Q\d) (\d{4})\b/g, '$1 $2')
  .replace(/\b(W)-(\d+)\b|\b(1099)-(NEC)\b|\b(new)-(hire)\b/g, value => value.replace('-', '\u2060-\u2060'))
  .replace(/([\p{L}][\p{L}’'()%-]*) (\$[\d,.]+)/gu, '$1 $2')
@@ -22,6 +22,8 @@ export const keep = (text: string): string => text.split(/(<[^>]*>)/g).map(part 
  .replace(/([A-Za-z])–([A-Za-z])/g, '$1\u2060–\u2060$2')
  .replace(/\b([A-Z][a-zA-Z]+) ([A-Z][a-zA-Z]+)\b/g, '$1 $2')
 
+ .replace(/([^\s\u2060])-(?=[^\s\u2060])/g, '$1\u2060-\u2060')
+ .replace(/→ /g, '→ ')
  .replace(/ ([+−×=]) /g, ' $1 ')
 ).join('')
 

@@ -56,12 +56,12 @@
 .kind .role { display: block; font-weight: 700; color: var(--body); }
 .kind .role-dot { display: none; }
 .kind-calc { margin-top: 12px; display: grid; gap: 2px; font-size: 15.5px; line-height: 1.4; color: var(--body); }
-.kind-result { margin-top: 16px; font: 800 21px/1.28 var(--heading); color: var(--done); }
+.kind-result { margin-top: 16px; font: 800 19px/1.28 var(--heading); color: var(--done); }
 .kind-form { display: block; margin-top: 12px; font: 400 16.5px/1.4 var(--text); color: var(--body); }
 .kind-rule { display: block; align-content: center; min-height: 64px; padding: 10px 14px; border-radius: 14px; background: #edf3f6; color: var(--ink); font-size: 14px; line-height: 1.35; text-align: center; text-wrap: balance; }
 .kinds-band .foot-pill { margin-top: 44px; font-size: 18px; }
 
-@media (max-width: 1279px) {
+@media (max-width: 1439px) {
   .kinds { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 22px; }
 }
 @media (max-width: 759px) {

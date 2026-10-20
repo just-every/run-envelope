@@ -546,7 +546,7 @@
       "executable": false
     },
     "public/site/type-layout.js": {
-      "sha256": "ab49d72077911db103103299fe543a48e003435fb1bab989be9a1b46efa9381a",
+      "sha256": "a1ac2af84bfbe5c19b3eb7aa7342e75ae4004968d577f6d0a2824148870a3426",
       "executable": false
     },
     "README.md": {
@@ -1646,7 +1646,7 @@
       "executable": false
     },
     "src/site/docs.ts": {
-      "sha256": "30ed2c310a68b7d1b5aa83de60981a41e100701992e0dadc1b9950908a633ff6",
+      "sha256": "323df26938db137c4e7c20bc45100f01f0b9a9295f349eec161e1e86beab6b83",
       "executable": false
     },
     "src/site/landing/hero.ts": {
@@ -1666,7 +1666,7 @@
       "executable": false
     },
     "src/site/landing/parts.ts": {
-      "sha256": "70212eac55bf0c6346b521e52af8390a6262ba47a3d04491ec1e122415a76d58",
+      "sha256": "824bf0579cb4387178b8620d4aa1f472a82c02e7427565878e75cac1551d646d",
       "executable": false
     },
     "src/site/landing/precheck.ts": {
@@ -1722,7 +1722,7 @@
       "executable": false
     },
     "src/site/styles/docs.css": {
-      "sha256": "66a0fa2eab66b4c7a9ae9b04046d9400b905eb0fc65662ca528233539d7cce6d",
+      "sha256": "43b8ecdabc57475c3c7eeb88fcc92e2a67dc10687e06a5767ccdea066bf03d8b",
       "executable": false
     },
     "src/site/styles/hero.css": {
@@ -1730,11 +1730,11 @@
       "executable": false
     },
     "src/site/styles/proof.css": {
-      "sha256": "0cbf9887cff033797cdae81f4ac647c9bd87335ed559e6549ac26371e0c89de9",
+      "sha256": "8167cd8dbe358066f8b984ce7dac0f60c77b912c88683d2818739f65e4b54aeb",
       "executable": false
     },
     "src/site/styles/returns.css": {
-      "sha256": "6d80dfe02032ba1abcac199679cf916de3ab63bd197dd441448d3c3abbdac5b3",
+      "sha256": "deb0696147ec2a99fafb5044fb6d32ee3deb263f48567d834177cab11de5aab3",
       "executable": false
     },
     "src/site/styles/site.css": {
@@ -1742,7 +1742,7 @@
       "executable": false
     },
     "src/site/styles/week.css": {
-      "sha256": "ee99cc6ee61b1297ce85bb6bcab66e6df7fa084e0abad7ebe681caa40c78c2fd",
+      "sha256": "a3c1954bc481f9fb07d8d8cebbd8962fefef11137e9dfe34891bee9dd2d2a7c7",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {

@@ -59,7 +59,7 @@
 .spoke--l::after { right: -64px; }
 .spoke--r::after { left: -64px; }
 .cursors { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 16px; }
-.cursor { display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; border-radius: 12px; font-size: 17px; color: var(--ink); }
+.cursor { display: inline-flex; align-items: center; gap: 4px; padding: 8px 10px; border-radius: 12px; font-size: 14px; color: var(--ink); }
 .cursor svg { width: 13px; height: 17px; color: #172033; }
 .cursor--kim { background: #e2f6fb; }
 .cursor--walt { background: #e6f5ea; }

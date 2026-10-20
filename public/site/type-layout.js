@@ -1,5 +1,5 @@
 // Keep paragraph endings together across inline markup, including the docs and run shells.
-for (const block of document.querySelectorAll('p,th,td,h1,h2,h3,h4,li')) {
+for (const block of document.querySelectorAll('p,th,td,h1,h2,h3,h4,li,pre')) {
   const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
   const nodes = []
   for (let node; (node = walker.nextNode());) if (!node.parentElement.closest('svg,script,style')) nodes.push(node)

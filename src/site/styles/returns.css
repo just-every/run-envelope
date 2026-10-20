@@ -44,7 +44,7 @@
 .f941:nth-child(2) { transform: rotate(-2deg) translateY(24px); margin-left: -6px; }
 .f941:nth-child(3) { transform: rotate(-1.4deg) translateY(10px); margin-left: -6px; }
 .f941:nth-child(4) { transform: rotate(-2.2deg) translateY(36px); margin-left: -6px; }
-.ohio { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; width: 94%; margin-left: 2%; padding: 14px 16px 30px; line-height: 1.3; border-radius: 6px 6px 0 0; background: #fff; box-shadow: 0 1px 2px rgba(20, 60, 70, .1), 0 6px 18px -10px rgba(20, 70, 80, .3); font-size: 14px; color: var(--ink); transform: rotate(-2deg); }
+.ohio { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 6px 10px; width: 100%; margin-left: 0; padding: 12px 6px 30px; line-height: 1.3; border-radius: 6px 6px 0 0; background: #fff; box-shadow: 0 1px 2px rgba(20, 60, 70, .1), 0 6px 18px -10px rgba(20, 70, 80, .3); font-size: 13px; color: var(--ink); transform: rotate(-2deg); }
 .pill-ok { display: inline-block; padding: 3px 10px; border-radius: 6px; background: #e3f6e8; color: var(--done); font-size: 14px; font-weight: 650; }
 .f941-page { position: relative; margin-top: -22px; padding: 26px 20px 22px; border-radius: 6px; display: grid; justify-items: start; }
 .f941-q { position: absolute; right: 22px; top: 22px; padding: 4px 12px; border: 1.5px solid #3c4655; border-radius: 4px; font-size: 15px; color: var(--ink); }
@@ -67,7 +67,7 @@
 .q-rail li.due::before { left: auto; right: 0; }
 .muted { color: var(--muted); }
 
-@media (max-width: 1279px) {
+@media (max-width: 1439px) {
   .forms { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 24px; }
   .f941:nth-child(n) { margin-left: 0; }
 }
@@ -107,7 +107,7 @@
 .notes { display: grid; gap: 22px; margin-top: 18px; }
 .notes li { position: relative; padding: 18px 26px; border-radius: 12px; }
 .notes p { font-size: 19px; line-height: 1.45; color: var(--ink); }
-.note-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; color: var(--teal); }
+.note-links { z-index: 1; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; color: var(--teal); }
 .note-links path { fill: none; stroke: currentColor; stroke-width: 2.5px; stroke-dasharray: .1 7; stroke-linecap: round; }
 .notes li::after { content: ''; position: absolute; left: -6px; top: 50%; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%; background: var(--teal); }
 .eftps { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 22px; padding: 16px 22px; border-radius: 10px; font-size: 19px; color: var(--ink); }
@@ -216,3 +216,5 @@
   .term pre, .term-ok { font-size: 15px; }
   .also { font-size: 15.5px; }
 }
+
+.ohio .pill-ok { flex: none; padding: 3px 6px; font-size: 13px; }
