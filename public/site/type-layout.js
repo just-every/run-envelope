@@ -14,6 +14,7 @@ for (const code of document.querySelectorAll('pre > code')) {
 }
 // Group the ending of an inline command without changing its text or its larger existing groups.
 for (const code of document.querySelectorAll('code')) {
+  if (code.closest('pre')) continue
   if ([...code.querySelectorAll('.code-word')].some(word => /\s/.test(word.textContent))) continue
   const text = code.textContent, match = /\S+[^\S\n]+\S+(?=\s*$)/.exec(text)
   if (!match) continue
