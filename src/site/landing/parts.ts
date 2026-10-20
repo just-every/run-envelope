@@ -9,7 +9,16 @@ const days = 'Mon|Tue|Wed|Thu|Fri|Sat|Sun'
 const months = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec'
 const date = `(?:(?:${days}) )?(?:${months}) \\d{1,2}`
 /** Preserve reading units while leaving prose proportional and free to wrap between phrases. */
-export const keep = (text: string): string => text.split(/(<[^>]*>)/g).map(part => part.startsWith('<') ? part : part
+export function keep(text: string): string {
+ let literal = 0
+ return text.split(/(<[^>]*>)/g).map(part => {
+  if (part.startsWith('<')) {
+   if (/^<\/(?:pre|code|script|style)\b/i.test(part)) literal--
+   else if (/^<(?:pre|code|script|style)\b/i.test(part)) literal++
+   return part
+  }
+  if (literal) return part
+  return part
  .replace(new RegExp(`\\b${date}(?: ?[–−] ?(?:${date}|\\d{1,2}))?`, 'g'), value => value.replace(/ /g, ' ').replace(/([–−])/g, '\u2060$1\u2060'))
  .replace(/\b(\d{1,2}:\d{2}) (am|pm|AM|PM)\b/g, '$1 $2')
  .replace(/\b(\d+) h (\d+) min\b/g, '$1 h $2 min')
@@ -25,7 +34,8 @@ export const keep = (text: string): string => text.split(/(<[^>]*>)/g).map(part 
  .replace(/([^\s\u2060])-(?=[^\s\u2060])/g, '$1\u2060-\u2060')
  .replace(/→ /g, '→ ')
  .replace(/ ([+−×=]) /g, ' $1 ')
-).join('')
+ }).join('')
+}
 
 export const finish = (html: string) => keep(html).split(/(<[^>]*>)/g).map(part => part.startsWith('<') ? part : part.replace(/[ \u00a0]*·[ \u00a0]*/g, ' <svg class="flow-separator" viewBox="0 0 8 20" aria-hidden="true"><circle cx="4" cy="10" r="1.6"/></svg> ')).join('')
 

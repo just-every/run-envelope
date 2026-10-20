@@ -546,7 +546,7 @@
       "executable": false
     },
     "public/site/type-layout.js": {
-      "sha256": "a1ac2af84bfbe5c19b3eb7aa7342e75ae4004968d577f6d0a2824148870a3426",
+      "sha256": "70416f1e9999851a69284d2d36a94ea9247fb9ef32b3c7bae8ae7f6dca174ab9",
       "executable": false
     },
     "README.md": {
@@ -1646,7 +1646,7 @@
       "executable": false
     },
     "src/site/docs.ts": {
-      "sha256": "323df26938db137c4e7c20bc45100f01f0b9a9295f349eec161e1e86beab6b83",
+      "sha256": "139f53787d52f2ad0cd6ecb8644cdf28a40f4e1bed0d16fc9b5d9001b58d0dd1",
       "executable": false
     },
     "src/site/landing/hero.ts": {
@@ -1666,7 +1666,7 @@
       "executable": false
     },
     "src/site/landing/parts.ts": {
-      "sha256": "824bf0579cb4387178b8620d4aa1f472a82c02e7427565878e75cac1551d646d",
+      "sha256": "bd5d7643e8597929291d1403d69452048545931c178bdf459dd86863ca44cb03",
       "executable": false
     },
     "src/site/landing/precheck.ts": {

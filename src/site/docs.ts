@@ -9,7 +9,7 @@ function inline(source: string): string {
  let html = '', end = 0
  for (const match of source.matchAll(tokens)) {
   html += escape(keep(source.slice(end, match.index)))
-  if (match[1]) html += `<code>${escape(keep(match[1])).replace(/[^ \n]+/g, token => `<span class="code-token">${token}</span>`)}</code>`
+  if (match[1]) html += `<code>${escape(match[1]).replace(/[^ \n]+/g, token => `<span class="code-token">${token}</span>`)}</code>`
   else if (match[2]) html += `<strong>${escape(match[2])}</strong>`
   else {
    const href = match[4]

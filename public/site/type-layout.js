@@ -1,8 +1,19 @@
+// Group the final command words with markup, preserving every copied character.
+for (const code of document.querySelectorAll('pre > code')) {
+  if (code.children.length) continue
+  const text = code.textContent
+  const match = /\S+[^\S\n]+\S+(?=\s*$)/.exec(text)
+  if (!match) continue
+  const span = document.createElement('span')
+  span.style.whiteSpace = 'nowrap'
+  span.textContent = match[0]
+  code.replaceChildren(document.createTextNode(text.slice(0, match.index)), span, document.createTextNode(text.slice(match.index + match[0].length)))
+}
 // Keep paragraph endings together across inline markup, including the docs and run shells.
-for (const block of document.querySelectorAll('p,th,td,h1,h2,h3,h4,li,pre')) {
+for (const block of document.querySelectorAll('p,th,td,h1,h2,h3,h4,li')) {
   const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
   const nodes = []
-  for (let node; (node = walker.nextNode());) if (!node.parentElement.closest('svg,script,style')) nodes.push(node)
+  for (let node; (node = walker.nextNode());) if (!node.parentElement.closest('svg,script,style,code,pre')) nodes.push(node)
   const text = nodes.map(node => node.data).join('')
   const ending = /[ \u00a0](?=\S+\s*$)/.exec(text)
   if (!ending || ending[0] !== ' ') continue
