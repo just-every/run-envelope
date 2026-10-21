@@ -342,11 +342,11 @@
       "executable": false
     },
     "public/look/app.css": {
-      "sha256": "2e16d7f3b4173374b8ce4eec6855006d6c2b2379c362170d32671d5df5a0d2c9",
+      "sha256": "1f3257d800e475219236a7be5f995736aed8eb936593770473f14d540fde4f68",
       "executable": false
     },
     "public/look/controls.css": {
-      "sha256": "c7062a9c1fd6c9e608b6f584576f6144841b3604378841eea7ff5bc0260e6e15",
+      "sha256": "3f7f30a35a9ebe069a0cb0ed476349480c585156a73cb3e35415d948441d5243",
       "executable": false
     },
     "public/look/envelope.css": {
@@ -354,7 +354,7 @@
       "executable": false
     },
     "public/look/frames.css": {
-      "sha256": "3dbb2b5e2662a85ed643c20b9ddc6061e506692ceab7192ba69a0ecaae270c21",
+      "sha256": "37f1a7156f76e16addf635d854da97814b034c022f68dcac5984c5241d8d6a70",
       "executable": false
     },
     "public/look/tokens.css": {
