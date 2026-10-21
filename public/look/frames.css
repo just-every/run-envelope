@@ -1,7 +1,7 @@
-/* Base's documents in Envelope's look. Base's own styles follow this file, so each rule names Base's markup one step
-   deeper than Base does. A frame (sign-in, its confirmation, sign-in settings, Finish setup and the local hand-off
-   page) is a main whose first child is the brand line: the page wears the app's ground, the brand line becomes the
-   app's slim floating bar and the main a white card under it. */
+/* Base's documents in Envelope's look. Base's own styles come before or after this file depending on the document,
+   so each rule names Base's markup one step deeper than Base does. A frame (sign-in, its confirmation, sign-in
+   settings, Finish setup and the local hand-off page) is a main whose first child is the brand line: the page wears
+   the app's ground, the brand line becomes the app's slim floating bar and the main a white card under it. */
 
 /* Frames: the page */
 html:has(> body > main > :is(.brand, .rer-brand):first-child) { min-height: 100%; background: var(--aqua) var(--ground) no-repeat; color-scheme: light; }
