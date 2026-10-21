@@ -14,6 +14,7 @@ import {
   exactReviewPage,
   rulesPage,
   ruleReviewPage,
+  weeklyFrequencyRefusalPage,
 } from './workspace/pages'
 import { Schedules } from './workspace/schedules'
 import { PayItems } from './workspace/pay-items'
@@ -303,8 +304,19 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'schedules') {
         const schedules = new Schedules(new WorkspaceStore(records))
         if (post) {
-          const saved = await schedules.save(actor, value)
-          response = ui ? redirect(base + '/schedules') : json(saved, 201)
+          try {
+            const saved = await schedules.save(actor, value)
+            response = ui ? redirect(base + '/schedules') : json(saved, 201)
+          } catch (error) {
+            if (
+              !(error instanceof PayrollError) ||
+              error.code !== 'ny_manual_weekly_required'
+            )
+              throw error
+            response = ui
+              ? weeklyFrequencyRefusalPage(session, companies, actor)
+              : json({ error: error.code, alternative: { frequency: 'weekly' } }, 400)
+          }
         } else {
           const result = await schedules.read(actor)
           response = ui

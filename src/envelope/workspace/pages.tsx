@@ -1049,3 +1049,32 @@ export function ruleReviewPage(
     </Card>,
   )
 }
+
+export function weeklyFrequencyRefusalPage(
+  session: Session,
+  companies: Company[],
+  actor: Actor,
+) {
+  const response = page(
+    session,
+    'Weekly pay is required',
+    companies,
+    actor.company,
+    <Card title="Choose a lawful pay frequency">
+      <div role="alert">
+        <p>
+          A New York manual worker must be paid weekly unless an actual valid agency
+          exception covers this worker and these dates. A warning acknowledgement cannot
+          waive that requirement.
+        </p>
+        <p>
+          <a className="btn" href={companyPath(actor.company) + '/schedules'}>
+            Choose a weekly schedule
+          </a>
+        </p>
+      </div>
+      <p>No schedule proposal was saved.</p>
+    </Card>,
+  )
+  return new Response(response.body, { status: 400, headers: response.headers })
+}

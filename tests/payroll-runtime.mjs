@@ -1814,11 +1814,64 @@ export async function scheduleJourney({ origin, cookie }) {
     assert.deepEqual(result.eligibility.availableSpeeds, [])
     assert.equal(result.eligibility.fundingDeadline, null)
     assert.equal(result.eligibility.fees, null)
+    const refused = await call(door, {
+      ...entry,
+      id: 'synthetic-envelope-61',
+      frequency: 'biweekly',
+      payDate: '2026-06-26',
+    })
+    assert.equal(refused.status, 400)
+    assert.deepEqual(
+      await refused.json(),
+      { error: 'ny_manual_weekly_required', alternative: { frequency: 'weekly' } },
+      'a valid payday reaches the occupation rule and offers the weekly alternative',
+    )
+    await page.goto(origin + screen)
+    const refusedForm = page.locator('form[action$="/schedules"]')
+    for (const [key, val] of Object.entries({
+      ...entry,
+      frequency: 'biweekly',
+      payDate: '2026-06-26',
+    })) {
+      const field = refusedForm.locator(`[name="${key}"]`)
+      if ((await field.getAttribute('type')) === 'hidden') continue
+      if ((await field.evaluate((el) => el.tagName)) === 'SELECT')
+        await field.selectOption(String(val))
+      else await field.fill(String(val))
+    }
+    const refusedResponse = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().endsWith('/schedules'),
+    )
+    await page
+      .getByRole('button', { name: 'Prepare calendar proposal', exact: true })
+      .click()
+    assert.equal((await refusedResponse).status(), 400)
+    await page.getByRole('alert').waitFor()
+    assert.match(
+      await page.getByRole('alert').innerText(),
+      /New York manual worker.*weekly/s,
+    )
+    await page
+      .getByRole('link', { name: 'Choose a weekly schedule', exact: true })
+      .waitFor()
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 })
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      )
+      await page.screenshot({
+        path: join(
+          process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',
+          `schedules-weekly-refusal-${width}.png`,
+        ),
+        fullPage: true,
+      })
+    }
     assert.equal(
-      (await call(door, { ...entry, id: 'synthetic-envelope-61', frequency: 'biweekly' }))
-        .status,
-      400,
-      'NY manual biweekly requires scoped actual exception',
+      (await data(door)).history.length,
+      1,
+      'refused native/API requests never save a biweekly proposal',
     )
     const exception = {
       ...entry,

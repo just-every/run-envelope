@@ -17,7 +17,9 @@ Only New York assigned-location frequency proposals are currently implemented.
 Manual workers require weekly pay unless an official agency exception reference
 is supplied for this exact worker and the entire period/payday. The fields are
 `exceptionRef`, `exceptionPersonId`, `exceptionFrom`, `exceptionThrough`. A warning
-flag cannot waive frequency law. Entered references still require actual agency
+flag cannot waive frequency law. NY manual-worker refusals return the exact
+`ny_manual_weekly_required` error and `alternative.frequency=weekly`; the native
+refusal offers a link to choose a weekly schedule and saves no proposal. Entered references still require actual agency
 verification before use in payroll. Clerical monthly and unknown occupations
 refuse. Other states and multiple work-state verification remain unimplemented.
 
