@@ -13,6 +13,8 @@ const theme = { href: '/rer-theme.css', productName: branding.name, accentColor:
 
 export interface Bindings {
  DB: D1Database
+ /** Independent base64 256-bit AES key; absent payroll custody fails closed. */
+ ENVELOPE_RECORD_KEY?: string
  /** Built browser files; hosted deploys run the Worker first (staticAssetResponse). */
  ASSETS?: Fetcher
  RER_DEPLOY_SOURCE?: string

@@ -659,7 +659,7 @@
       "executable": false
     },
     "src/auth.server.ts": {
-      "sha256": "b34ac2ee68488ed7d04a0061a67284ddaf54eabe9d6edc3782778b4f44b372f1",
+      "sha256": "5c5fdde645db2c9a1979498c469e692c95b9967508034e32e425ce38aab4fcf4",
       "executable": false
     },
     "src/base/actor.ts": {
@@ -1667,7 +1667,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "2e0f707a0b8dcc6af900e7af0eb1947a276dd975ab0855f44608c1995540cebc",
+      "sha256": "b9ab09585d845c428b75ad025e9e95456f97abf5da500222be7f309a81467bb2",
       "executable": false
     },
     "src/site/docs.ts": {
@@ -1775,7 +1775,7 @@
       "executable": false
     },
     "src/ui/bar.tsx": {
-      "sha256": "df81c48149110ec3802aabe2b67065e340bd96c939aab5670475a34ba221f4bb",
+      "sha256": "d049dd5cd54866dd8674061ef2eaf787e5208c52794677c39d528c4270050efa",
       "executable": false
     },
     "src/ui/chips.tsx": {
@@ -1823,7 +1823,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "7126bef6ed87c556c2201c18a8c46eeaca44834e6cea6c3be40f9448cadb3bb7",
+      "sha256": "16efc3ea72a3f4c3f8c17f2c03fdedfb23fe9885ba02c8a2358cef3c53c8ec88",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

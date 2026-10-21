@@ -8,7 +8,7 @@ export function AppBar({ viewer, home = '/app' }: { viewer?: Viewer; home?: stri
  return <header className="bar">
   <a className="lockup" href={home}><img src="/brand/mark.svg" alt="" width={40} height={40} /><span data-rer-name>{branding.name}</span></a>
   {viewer && <div className="bar-end">
-   {viewer.role === 'owner' && <a className="bar-link" href="/auth/settings/identity">Settings</a>}
+   {viewer.role === 'owner' && <a className="bar-link" href="/app/envelope">Settings</a>}
    <p className="person"><span className="avatar" aria-hidden="true">{initials(viewer.displayName)}</span><span className="person-name"><b>{viewer.displayName}</b>{role && <small>{role}</small>}</span></p>
   </div>}
  </header>

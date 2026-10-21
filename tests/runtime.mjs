@@ -7,6 +7,7 @@ import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { payrollJourney } from './payroll-runtime.mjs'
 
 const socket = createServer()
 await new Promise(resolve => socket.listen(0, '127.0.0.1', resolve))
@@ -19,7 +20,7 @@ execFileSync(process.execPath, ['node_modules/wrangler/bin/wrangler.js', 'd1', '
 // A loopback installation with its owner's settings, so the owner's first run can be walked through the public doors.
 const origin = `http://127.0.0.1:${port}`
 const setupToken = randomBytes(32).toString('hex')
-const settings = { AUTH_LOCAL: 'true', AUTH_ORIGIN: origin, OWNER_EMAIL: 'owner@example.com', SESSION_SECRET: randomBytes(32).toString('hex'), SETUP_TOKEN: setupToken }
+const settings = { AUTH_LOCAL: 'true', AUTH_ORIGIN: origin, OWNER_EMAIL: 'owner@example.com', SESSION_SECRET: randomBytes(32).toString('hex'), SETUP_TOKEN: setupToken, ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64') }
 const worker = spawn(process.execPath, ['node_modules/wrangler/bin/wrangler.js', 'dev', '--inspector-port', '0', '--local', '--persist-to', persist, '--ip', '127.0.0.1', '--config', 'dist/server/wrangler.json', '--port', String(port), ...Object.entries(settings).flatMap(([name, value]) => ['--var', `${name}:${value}`])], { stdio: ['ignore', 'pipe', 'pipe'] })
 let output = ''
 worker.stdout.on('data', chunk => { output += chunk })
@@ -59,6 +60,8 @@ try {
   assert.equal(home.status, 200, await home.clone().text())
   assert.match(home.headers.get('content-type'), /^text\/html/)
   console.log('APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home')
+  const sql = command => JSON.parse(execFileSync(process.execPath, ['node_modules/wrangler/bin/wrangler.js', 'd1', 'execute', 'foundation', '--local', '--persist-to', persist, '--config', 'dist/server/wrangler.json', '--json', '--command', command], { encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } })).flatMap(result => result.results)
+  await payrollJourney({origin,cookie,settings,sql})
 } finally {
   worker.kill('SIGTERM')
   await new Promise(resolve => worker.exitCode !== null ? resolve() : worker.once('exit', resolve))
