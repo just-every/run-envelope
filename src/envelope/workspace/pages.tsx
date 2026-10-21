@@ -11,15 +11,17 @@ const NamedSelect = ({
   label,
   choices,
   value,
+  required = true,
 }: {
   name: string
   label: string
   choices: { id: string; name: string }[]
   value?: string
+  required?: boolean
 }) => (
   <label className="field">
     <span>{label}</span>
-    <select name={name} aria-label={label} defaultValue={value} required>
+    <select name={name} aria-label={label} defaultValue={value} required={required}>
       {choices.map((c) => (
         <option key={c.id} value={c.id}>
           {c.name}
@@ -449,6 +451,7 @@ export function schedulesPage(
           <NamedSelect
             name="exceptionPersonId"
             label="Exception worker"
+            required={false}
             choices={[{ id: '', name: 'No exception' }, ...people]}
             value={selected?.data.exceptionRef ? selected.data.personId : ''}
           />
@@ -473,7 +476,11 @@ export function schedulesPage(
         {Object.entries(result.sources).map(([name, url]) => (
           <p key={name}>
             <a href={url} rel="noreferrer">
-              {name}
+              {{
+                holidays: 'Federal Reserve banking holidays',
+                newYork: 'New York pay frequency',
+                scope: 'State payday requirements',
+              }[name] ?? name}
             </a>
           </p>
         ))}

@@ -877,7 +877,7 @@
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "07f600e20645909fcf21db9116c4e34e295e5ff63e375fd2bc9246a2afaec32c",
+      "sha256": "2b3ee491d4f42a2d028aabc1c066dcd82ba37a3d7267dbdf9c2fe37ed3da45a5",
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
