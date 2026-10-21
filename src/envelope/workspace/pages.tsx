@@ -4,6 +4,7 @@ import type { Company, Person } from '../records'
 import { page,Card,Field,Hidden,Submit,Select,companyPath } from '../pages'
 import type { Allocations } from './allocations'
 import { Schedules,payFrequencies,timeZones } from './schedules'
+import { Rules,ruleFamilies } from './rules'
 import { states } from '../setup'
 
 export function allocationsPage(session:Session,companies:Company[],actor:Actor,person:Person,history:Awaited<ReturnType<Allocations['read']>>,preview?:Awaited<ReturnType<Allocations['preview']>>) {
@@ -80,7 +81,7 @@ export function schedulesPage(session:Session,companies:Company[],actor:Actor,pe
 }
 export function workspacePage(session:Session,companies:Company[],actor?:Actor,people:Person[]=[]) {
  return page(session,'Payroll preparation',companies,actor?.company,<>
-  <Card title="Preparation settings"><p>Effective inputs and previews are available. No payment, filing or complete tax calculation is authorized here.</p>{actor?<><p><a href={companyPath(actor.company)}>Company records and access</a> · <a href={companyPath(actor.company)+'/schedules'}>Pay schedules</a> · <a href={companyPath(actor.company)+'/pay-settings'}>Pay items and reviewed changes</a></p>{people.map(p=><p key={p.id}><a href={companyPath(actor.company)+'/people/'+p.id+'/allocations'}>{p.name} · Work and residence</a></p>)}</>:companies.map(c=><p key={c.id}><a href={companyPath(c.id)+'/workspace'}>{c.name} · Preparation</a></p>)}</Card>
+  <Card title="Preparation settings"><p>Effective inputs and previews are available. No payment, filing or complete tax calculation is authorized here.</p>{actor?<><p><a href={companyPath(actor.company)}>Company records and access</a> · <a href={companyPath(actor.company)+'/schedules'}>Pay schedules</a> · <a href={companyPath(actor.company)+'/pay-settings'}>Pay items and reviewed changes</a> · <a href={companyPath(actor.company)+'/rules'}>Rule editions and deadlines</a></p>{people.map(p=><p key={p.id}><a href={companyPath(actor.company)+'/people/'+p.id+'/allocations'}>{p.name} · Work and residence</a></p>)}</>:companies.map(c=><p key={c.id}><a href={companyPath(c.id)+'/workspace'}>{c.name} · Preparation</a></p>)}</Card>
  </>)
 }
 
@@ -115,4 +116,29 @@ export function exactReviewPage(session:Session,companies:Company[],actor:Actor,
  const base=companyPath(actor.company)+'/pay-settings'
  const details=(value:unknown):import('react').ReactNode=>Array.isArray(value)?<ol>{value.map((v,i)=><li key={i}>{details(v)}</li>)}</ol>:value&&typeof value==='object'?<dl>{Object.entries(value).map(([k,v])=><div key={k}><dt>{k.replace(/([A-Z])/g,' $1')}</dt><dd>{details(v)}</dd></div>)}</dl>:String(value)
  return page(session,'Review exact payroll setup',companies,actor.company,<Card title={String(row.data.name??row.id)}><p>Version {row.version}. Review these exact people, periods and terms. This decision does not approve or dispatch a pay run.</p>{details(row.data)}<form method="post" action={base+'/'+row.kind+'/'+row.id+'/approve'}><Hidden name="version" value={row.version}/><Hidden name="reviewToken" value={row.reviewToken}/><Submit primary>Approve this exact setup</Submit></form><p><a href={base}>Return without approving</a></p></Card>)
+}
+
+export function rulesPage(session:Session,companies:Company[],actor:Actor,result:Awaited<ReturnType<Rules['read']>>) {
+ const base=companyPath(actor.company)+'/rules',person=(id:string)=>result.duties.find(p=>p.id===id)?.name??'Duty owner unavailable'
+ return page(session,'Rule editions and deadlines',companies,actor.company,<>
+  <Card title="Official sources and named decisions"><p><a href={companyPath(actor.company)+'/workspace'}>Payroll preparation</a></p><p>{result.explanation}</p><p>Rule administration records proposals and human decisions. It cannot authorize a payment or treat an upload as wages received.</p></Card>
+  <Card title="Compliance duties">{!result.obligations.length&&<p>No rule duties recorded.</p>}{result.obligations.map(o=><article key={o.id+':'+o.version}><h3>{result.history.find(r=>r.id===o.id&&r.version===o.version)?.data.name} · {o.proposedMutation}</h3><p>Owner: {person(o.ownerId)}. Backup: {person(o.backupId)}. Approval due {o.approvalDue}. Wage deadline {o.wageDeadline}.</p><p>{o.missedInternalApprovalDeadline?'Missed internal approval deadline retained.':'Internal approval deadline not missed.'} {o.escalation==='backup-action-required'?'Backup action is required.':''}</p><p>{o.wageDuty}</p><p>Payment receipt: unavailable.</p></article>)}</Card>
+  <Card title="Source editions and candidate impact">{!result.history.length&&<p>No sourced rule editions yet.</p>}{result.history.map(r=><article key={r.id+':'+r.version}><h3>{r.data.name} · {r.data.edition} · v{r.version}</h3><p>{r.data.state} {r.data.locality} · {r.data.family} · {r.data.determination} · {r.data.effectiveFrom}–{r.data.effectiveThrough} · {r.data.value} {r.data.unit}</p><p><a href={r.data.sourceUrl} rel="noreferrer">{r.data.sourceTitle}</a> · published {r.data.publishedDate} · custody {r.data.sourceRef}</p><p>{r.approvedBy?'Reviewed by '+person(r.approvedBy):'Awaiting named human review'}{r.withdrawnBy?' · withdrawn':''}</p>{!r.approvedBy&&!r.withdrawnBy&&result.history.find(x=>x.id===r.id)?.version===r.version&&<p><a href={base+'/review/'+r.id}>Review {r.data.name}</a></p>}{result.impacts.filter(i=>i.id===r.id&&i.version===r.version).map(i=><div key={i.id}><p>Candidate people: {i.people.map(p=>p.name).join(', ')||'None identified from current assigned locations'}. {i.drafts.length} candidate earnings drafts. Historical/multiple-work-state and local coverage remains unproved.</p></div>)}</article>)}</Card>
+  {result.missingFinalFuta.length>0&&<Card title="Final FUTA determination missing"><p>Years: {result.missingFinalFuta.join(', ')}. An approved forecast is not a final rate. Last year's final notice is not substituted.</p></Card>}
+  <Card title="Record a rule proposal"><form className="field" method="post" action={base}>
+   <Field name="id" label="Rule record ID"/><Field name="version" label="Previous rule version (0 for new)" type="number" value={0}/><Field name="name" label="Rule name"/>
+   <Select name="family" label="Rule family" choices={ruleFamilies}/><Select name="state" label="Rule jurisdiction" choices={['US',...states]}/><Field name="locality" label="City / local jurisdiction" required={false}/>
+   <Field name="effectiveFrom" label="Rule effective from" type="date"/><Field name="effectiveThrough" label="Rule effective through" type="date"/><Field name="publishedDate" label="Official publication date" type="date"/>
+   <Field name="sourceTitle" label="Official source title" maxLength={240}/><Field name="sourceUrl" label="Official government source URL" type="url" maxLength={1000}/><Field name="sourceRef" label="Source document custody reference" maxLength={500}/>
+   <Field name="edition" label="Source edition"/><Field name="taxYear" label="Tax year" type="number"/><Select name="determination" label="Determination" choices={['provisional','final']}/><Field name="value" label="Published rule value"/><Select name="unit" label="Published unit" choices={['USD/hour','USD/year','cents/hour','percent','USD/week','calendar-rule']}/>
+   <label className="field"><span>Accountable person</span><select name="ownerId" required>{result.duties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+   <label className="field"><span>Backup person</span><select name="backupId" required>{result.duties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+   <Field name="approvalDue" label="Internal approval due (UTC, YYYY-MM-DDTHH:MM:SSZ)"/><Field name="wageDeadline" label="Legal wage deadline (UTC, YYYY-MM-DDTHH:MM:SSZ)"/>
+   <p>WA L&I, OR WBF, HI plan-share and FUTA proposals need their additional documented API fields. An incomplete proposal refuses.</p><Submit primary>Record sourced proposal</Submit>
+  </form></Card>
+ </>)
+}
+export function ruleReviewPage(session:Session,companies:Company[],actor:Actor,row:import('./store').Revision & {reviewToken:string}) {
+ const base=companyPath(actor.company)+'/rules'
+ return page(session,'Review exact source edition',companies,actor.company,<Card title={String(row.data.name)}><p>Version {row.version}. A forecast remains provisional after review. This decision cannot approve payroll or delay a wage deadline.</p><dl>{Object.entries(row.data).map(([k,v])=><div key={k}><dt>{k.replace(/([A-Z])/g,' $1')}</dt><dd>{typeof v==='object'?Object.entries(v??{}).map(([name,value])=><p key={name}>{name}: {String(value)}</p>):String(v)}</dd></div>)}</dl><form method="post" action={base+'/'+row.id+'/approve'}><Hidden name="version" value={row.version}/><Hidden name="reviewToken" value={row.reviewToken}/><Submit primary>Approve this exact source edition</Submit></form><p><a href={base}>Return without approving</a></p></Card>)
 }

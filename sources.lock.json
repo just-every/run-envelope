@@ -200,6 +200,10 @@
       "sha256": "c99109e503183b3ca058c4f8584474b4112edb62d332816445d1cc6222b2bd16",
       "executable": false
     },
+    "docs/payroll-rule-editions.md": {
+      "sha256": "ce192320b80483a2ce9478e11128418defeb42a692907968dbaeaa74a75b0c97",
+      "executable": false
+    },
     "docs/payroll-schedules.md": {
       "sha256": "731e2cdd3f819d37213b8a6b5d1f55195fe8bc2efea78bdd85f794a0b7661416",
       "executable": false
@@ -845,7 +849,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "fa4bb8a00dd73b20619f4e82adfb894bd6b8c5306aa10028124db6a5c3a99b0a",
+      "sha256": "517d71ccd66842129645032db8cb10a84f1ae5f1cfedc116a6896f4e2bfc2d8f",
       "executable": false
     },
     "src/envelope/pages.tsx": {
@@ -873,11 +877,15 @@
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "6f59001860c6b3c9a6cb1023dcb9ffa0ac16f5c31b7396d4dcbb9a0967a7edd5",
+      "sha256": "80d483b4b6abbd08c4141c1f5c66b65f3049b43e0150a7caf1cca55a8229533f",
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
       "sha256": "c6043c7dbd1ae9c505f56d8c88ad2a8cab626b8bd6fd015b5f6d665db051f40c",
+      "executable": false
+    },
+    "src/envelope/workspace/rules.ts": {
+      "sha256": "bc504ac731d76671b9d7eb704d6ff089dd3fac188e4478e3df1a972ff28f0034",
       "executable": false
     },
     "src/envelope/workspace/schedules.ts": {
@@ -885,7 +893,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "f2b9221ee59cf5e4dfc9e81564115b00ee69389a40bc06f5bed735d2e2da5c8f",
+      "sha256": "6c3318f8148863ae68c5d3cc997a57f589d4a1d4ae4beadbb61f5196c804e196",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -1925,11 +1933,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "9ae9cb3c8663549b6e1934de8390336b2c5cacfe94d6563b7011ae7c07fbeb02",
+      "sha256": "385c0c9b0fe765b017998eb3e87baf8fdaf5303adabaae2f54475a55668fb653",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "ef992a9deb485471a2ed6ea717f54ba122440ea042d5bdb843166d89b7bd1db2",
+      "sha256": "6e4a100576f4f594ef579afadff6b21ec76de271cb451edc81b5995af5f67fa8",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

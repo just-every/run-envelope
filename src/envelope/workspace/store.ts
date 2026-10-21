@@ -5,7 +5,7 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind = 'residence' | 'work' | 'election' | 'schedule' | 'pay-item' | 'pay-change' | 'rule' | 'group' | 'earnings-run'
 export interface Revision<T = Input> {
   id: string; kind: Kind; version: number; personId: string | null; personVersion: number | null
-  sourcesCurrent: number; data: T; createdBy: string; createdAt: number; approvedBy: string | null; withdrawnBy: string | null
+  sourcesCurrent: number; data: T; createdBy: string; createdAt: number; approvedBy: string | null; approvedAt: number | null; withdrawnBy: string | null
 }
 export const revision = (v: unknown) => v === 0 || v === '0' ? 0 : integer(v)
 export const choice = (v: unknown, options: readonly string[]) => {
@@ -50,6 +50,7 @@ export class WorkspaceStore {
       ...(audited ? [auditStatement(this.records.env, actor, event, `workspace.${kind}.read`, personId ?? actor.company, actor.grant.version)] : []),
       this.records.statement(`SELECT v.object_id AS id,v.kind,v.version,v.person_id AS personId,v.person_version AS personVersion,v.cipher,v.created_by AS createdBy,v.created_at AS createdAt,(${currentSources('v')}) AS sourcesCurrent,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedBy,
+        (SELECT occurred_at FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedAt,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn') AS withdrawnBy
         FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND ${personId ? 'v.person_id=?' : 'v.person_id IS NULL'} AND ${f.sql}
         ${audited ? 'AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)' : ''}

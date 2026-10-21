@@ -9,7 +9,7 @@ import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { payrollJourney, missingKeyJourney, allocationJourney, scheduleJourney, payItemsJourney } from './payroll-runtime.mjs'
+import { payrollJourney, missingKeyJourney, allocationJourney, scheduleJourney, payItemsJourney, rulesJourney } from './payroll-runtime.mjs'
 
 const socket = createServer()
 await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve))
@@ -174,10 +174,11 @@ try {
     ).flatMap((result) => result.results)
 
   const selected = process.env.ENVELOPE_JOURNEYS?.split(',')
-  if (selected?.some(name => !['records','allocations','schedules','pay-items'].includes(name))) throw Error('Unknown payroll journey')
+  if (selected?.some(name => !['records','allocations','schedules','pay-items','rules'].includes(name))) throw Error('Unknown payroll journey')
   if (!selected || selected.includes('allocations')) await allocationJourney({ origin, cookie, sql })
   if (!selected || selected.includes('schedules')) await scheduleJourney({ origin, cookie })
   if (!selected || selected.includes('pay-items')) await payItemsJourney({ origin, cookie, sql })
+  if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
   if (!selected || selected.includes('records')) {
     const records = await payrollJourney({ origin, cookie, settings, sql })
     await stopWorker()

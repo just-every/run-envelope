@@ -6,9 +6,10 @@ import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
 import { WorkspaceStore } from './workspace/store'
 import { Allocations } from './workspace/allocations'
-import { allocationsPage, schedulesPage, workspacePage, paySettingsPage, exactReviewPage } from './workspace/pages'
+import { allocationsPage, schedulesPage, workspacePage, paySettingsPage, exactReviewPage, rulesPage, ruleReviewPage } from './workspace/pages'
 import { Schedules } from './workspace/schedules'
 import { PayItems } from './workspace/pay-items'
+import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
 import { PayrollError } from './security'
 import {
@@ -290,6 +291,21 @@ export async function payrollResponse(
           const result = await schedules.read(actor)
           response = ui ? schedulesPage(session,companies,actor,await records.people(actor),result) : json(result)
         }
+      } else if (tail[0] === 'rules') {
+        const store = new WorkspaceStore(records), rules = new Rules(store)
+        if (!post && tail.length === 1) {
+          const result = await rules.read(actor,url.searchParams.get('asOf') ?? undefined)
+          response = ui ? rulesPage(session,companies,actor,result) : json(result)
+        } else if (post && tail.length === 1) {
+          const saved = await rules.save(actor,value)
+          response = ui ? redirect(base+'/rules') : json(saved,201)
+        } else if (!post && tail.length === 3 && tail[1] === 'review') {
+          const row = await store.review(actor,'rule',tail[2])
+          response = ui ? ruleReviewPage(session,companies,actor,row) : json(row)
+        } else if (post && tail.length === 3 && ['approve','withdraw'].includes(tail[2])) {
+          const result = await store.decide(actor,'rule',tail[1],value,undefined,tail[2] === 'withdraw')
+          response = ui ? redirect(base+'/rules') : json(result)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'pay-settings') {
         const store = new WorkspaceStore(records), pay = new PayItems(store)
         if (!post && tail.length === 1) {

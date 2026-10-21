@@ -1443,3 +1443,59 @@ export async function payItemsJourney({origin,cookie,sql}) {
   console.log('REVIEWED-PAY-ITEMS passed: native group/bulk review, taxable allowance/accountable-plan distinction, exact salary proration and sourced hourly earnings, invalid tax/stale source refusals, one-use human decision, withdrawal, immutable persisted earnings and source invalidation; no pretend settlement; 1440/390. Full taxability, first payable run and post-settlement correction remain unproved.')
  }finally{await browser.close()}
 }
+
+/** RULE-EDITIONS: public source administration, exact decisions and retained duty clocks. */
+export async function rulesJourney({origin,cookie,sql}) {
+ const call=async(path,body)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+ const data=async(path,body,status=200)=>{const r=await call(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
+ const c=await data('/api/envelope/companies',{name:'Synthetic rule administration',ein:'00-0000090'},201),base='/api/envelope/companies/'+c.id
+ const owner=(await sql("SELECT id FROM oa_operators WHERE email='owner@example.com'"))[0].id,backup='synthetic-envelope-90'
+ await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${backup}','synthetic-envelope-90@example.com','Synthetic backup reviewer','member','active',1,1)`)
+ await data(base+'/grants',{operatorId:backup,version:0,role:'approver',locations:['*'],fields:['compensation'],actions:['records:read','rates:approve']})
+ const loc=await data(base+'/locations',{name:'New York City office',state:'NY'},201)
+ await data(base+'/people',{name:'Synthetic affected worker',locationId:loc.id},201)
+ const door=base+'/rules',screen=door.replace('/api/','/app/')
+ const rule={id:'synthetic-envelope-91',version:0,name:'NYC minimum wage source',family:'city-minimum-wage',state:'NY',locality:'New York City',effectiveFrom:'2025-01-01',effectiveThrough:'2025-12-31',publishedDate:'2024-12-01',sourceTitle:'Synthetic official-source fixture',sourceUrl:'https://dol.ny.gov/minimum-wage-0',sourceRef:'synthetic-envelope-92',edition:'2025',taxYear:2025,determination:'final',value:'16.50',unit:'USD/hour',ownerId:owner,backupId:backup,approvalDue:'2024-12-26T17:00:00Z',wageDeadline:'2025-01-10T23:59:59Z'}
+ const approve=async(id)=>{const r=await data(door+'/review/'+id);return data(door+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+ const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ try {
+  const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+  const capture=async(label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
+  await capture('rule-editions-empty')
+  const form=page.locator('form[action$="/rules"]')
+  for(const [key,val] of Object.entries(rule)){const field=form.locator(`[name="${key}"]`);if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(String(val));else await field.fill(String(val))}
+  await page.getByRole('button',{name:'Record sourced proposal',exact:true}).click();await page.waitForURL(origin+screen)
+  await capture('rule-edition-review',screen+'/review/'+rule.id)
+  await page.getByRole('button',{name:'Approve this exact source edition',exact:true}).click();await page.waitForURL(origin+screen)
+  let result=await data(door+'?asOf=2025-06-01T00:00:00Z');assert.equal(result.active[0].data.value,'16.50')
+  const raise={...rule,version:1,effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',publishedDate:'2025-12-01',edition:'2026',taxYear:2026,value:'17.00',approvalDue:'2025-12-26T17:00:00Z',wageDeadline:'2026-01-09T23:59:59Z'}
+  await data(door,raise,201)
+  result=await data(door+'?asOf=2026-01-02T00:00:00Z')
+  assert.equal(result.active.length,0,'unapproved wage mutation cannot apply')
+  assert.equal(result.obligations[0].escalation,'backup-action-required');assert.equal(result.obligations[0].proposedMutation,'held-pending-human-decision');assert.equal(result.obligations[0].paymentReceipt,null)
+  assert.equal(result.impacts[0].people.length,1);assert.equal(result.impacts[0].scope,'candidate-impact-only')
+  await capture('rule-duty-overdue',screen+'?asOf=2026-01-02T00:00:00Z')
+  await approve(rule.id)
+  result=await data(door+'?asOf=2026-01-02T00:00:00Z');assert.equal(result.active[0].data.value,'17.00');assert.equal(result.obligations[0].missedInternalApprovalDeadline,true,'late named approval does not erase the original missed deadline')
+  result=await data(door+'?asOf=2025-06-01T00:00:00Z');assert.equal(result.active[0].data.value,'16.50','prior effective source edition remains available')
+  const common={...raise,version:0,locality:'',value:'1.8',unit:'cents/hour'}
+  for(const proposal of [
+    {...common,id:'synthetic-envelope-93',name:'WA L&I revised class source',family:'wa-li',state:'WA',sourceUrl:'https://www.lni.wa.gov/insurance/rates-risk-classes/',details:{riskClass:'synthetic-envelope-94',totalRate:'1.8',employeeRate:'0.4',hoursMethod:'wa-160-month'}},
+    {...common,id:'synthetic-envelope-95',name:'OR WBF new-year source',family:'or-wbf',state:'OR',sourceUrl:'https://www.oregon.gov/dcbs/cost/Pages/wbf.aspx',details:{totalRate:'1.8',employeeRate:'0.9',hoursMethod:'actual',rounding:'nearest-cent-per-report'}},
+    {...common,id:'synthetic-envelope-96',name:'Retroactive SUI source',family:'sui',state:'NY',value:'2.4',unit:'percent',sourceUrl:'https://dol.ny.gov/unemployment-insurance-rate-information'},
+  ]){await data(door,proposal,201);await approve(proposal.id)}
+  const futa={...common,id:'synthetic-envelope-97',name:'Potential FUTA reduction',family:'futa',state:'CA',determination:'provisional',value:'1.5',unit:'percent',sourceUrl:'https://oui.doleta.gov/unemploy/futa_credit.asp',details:{reduction:'1.5',bcr:'0',addOn:'0'}}
+  await data(door,futa,201);await approve(futa.id)
+  result=await data(door+'?asOf=2026-10-21T00:00:00Z');assert.ok(result.missingFinalFuta.includes(2026));assert.equal(result.active.some(r=>r.id===futa.id),false,'reviewed forecast is still not final')
+  assert.equal((await call(door,{...futa,version:1,determination:'final'})).status,400,'a final FUTA label without a final notice refuses')
+  await data(door,{...futa,version:1,determination:'final',details:{...futa.details,finalNoticeRef:'synthetic-envelope-98'}},201);await approve(futa.id)
+  result=await data(door+'?asOf=2026-10-21T00:00:00Z');assert.deepEqual(result.missingFinalFuta,[]);assert.ok(result.active.some(r=>r.id===futa.id))
+  const before=await sql('SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit')
+  for(const change of [{sourceUrl:'http://dol.ny.gov/minimum-wage-0'},{backupId:owner},{approvalDue:'2026-02-30T12:00:00Z'}])assert.equal((await call(door,{...rule,id:'synthetic-envelope-99',...change})).status,400)
+  assert.deepEqual(await sql('SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit'),before,'invalid source/deadline/duty proposals create no data or audit')
+  await capture('rule-editions-specialized')
+  const fresh=await data(door);assert.equal(fresh.history.filter(r=>r.id===rule.id).length,2);assert.equal(fresh.calculationApplied,false)
+  await context.close()
+  console.log('RULE-EDITIONS passed: native official-source proposal and exact human review; January edition boundary/history; overdue proposal/backup and retained missed deadline; candidate people; WA L&I/OR WBF/retro SUI editions; reviewed FUTA forecast excluded until final-notice-backed version; invalid-source/deadline refusals; 1440/390. Complete rule coverage, calculated impacts and receipt-proven timely payment remain unproved.')
+ }finally{await browser.close()}
+}
