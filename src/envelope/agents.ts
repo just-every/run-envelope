@@ -20,7 +20,7 @@ interface AgentGrant {
   expires_at: number
   version: number
 }
-const metadataColumns = `id,name,sponsor_id AS sponsorId,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,revoked_at AS revokedAt,version`
+const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,revoked_at AS revokedAt,version`
 const uuid = () => crypto.randomUUID()
 const list = (value: unknown, allowed: readonly string[]) => {
   const entries = Array.isArray(value)
@@ -214,6 +214,15 @@ export class AgentTools {
         .first())
     )
       throw new PayrollError('agent_authority_revoked', 403)
+    const window = Math.floor(Date.now() / 60000)
+    const count = await env.DB.prepare(
+      `INSERT INTO oa_limits(key,window,count) SELECT ?,?,1 WHERE ${f.sql}
+      ON CONFLICT(key) DO UPDATE SET window=excluded.window,count=CASE WHEN oa_limits.window=excluded.window THEN oa_limits.count+1 ELSE 1 END RETURNING count`,
+    )
+      .bind('envelope-agent:' + row.id, window, ...f.args)
+      .first<{ count: number }>()
+    if (!count) throw new PayrollError('agent_authority_revoked', 403)
+    if (count.count > 120) throw new PayrollError('agent_rate_limited', 429)
     return tools
   }
   fence() {

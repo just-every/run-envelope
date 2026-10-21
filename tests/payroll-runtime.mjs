@@ -913,6 +913,70 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       assert.equal((await mcp('draft.read', { companyId: a, draftId: draft.id })).status, 403)
     })
     assert.deepEqual(await businessSnapshot(), initialBusiness)
+    const racing = await data(
+      company + '/agents',
+      { ...credentialInput, name: 'synthetic-envelope-19' },
+      cookie,
+      201,
+    )
+    let streamController
+    const complete = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: {
+        name: 'draft.prepare',
+        arguments: { ...draftInput, requestKey: 'synthetic-envelope-20' },
+      },
+    })
+    const streaming = new ReadableStream({
+      start(controller) {
+        streamController = controller
+        controller.enqueue(new TextEncoder().encode(complete.slice(0, -1)))
+      },
+    })
+    const pending = fetch(origin + '/api/envelope/mcp', {
+      method: 'POST',
+      duplex: 'half',
+      headers: {
+        authorization: 'Bearer ' + racing.token,
+        origin,
+        'content-type': 'application/json',
+      },
+      body: streaming,
+    })
+    try {
+      let started = false
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const logs = (await data(company + '/agents')).access
+        if (logs.some((a) => a.credentialId === racing.id && a.action === 'transport.open')) {
+          started = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+      assert.equal(
+        started,
+        true,
+        'public access log proves authentication before the suspended body completes',
+      )
+      const beforeRace = await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts')
+      await data(company + '/agents/' + racing.id + '/revoke', { version: 1 })
+      streamController.enqueue(new TextEncoder().encode(complete.slice(-1)))
+      streamController.close()
+      const refused = await pending
+      assert.equal(refused.status, 409, await refused.clone().text())
+      assert.deepEqual(
+        await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts'),
+        beforeRace,
+        'revocation during an authenticated in-flight request prevents the draft write',
+      )
+    } finally {
+      try {
+        streamController.close()
+      } catch {}
+      await pending.catch(() => {})
+    }
     const temporary = await data(
       company + '/agents',
       { ...credentialInput, name: 'synthetic-envelope-16' },
@@ -938,6 +1002,96 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         'bank custody rechecks fresh identity proof',
       ),
     )
+    // A genuinely confirmed native identity sponsors a separate company. Base
+    // identity removal/reinstatement must not revive the credential or session.
+    const sponsorId = 'synthetic-envelope-21',
+      sponsorLink = randomBytes(32).toString('base64url'),
+      sponsorHash = await hashToken(settings.SESSION_SECRET, 'link', sponsorLink)
+    const expiredLink = randomBytes(32).toString('base64url'),
+      expiredHash = await hashToken(settings.SESSION_SECRET, 'link', expiredLink)
+    await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${sponsorId}','synthetic-envelope-21@example.com','Synthetic payroll sponsor','owner','active',1,1);
+      INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at) VALUES ('synthetic-envelope-22','${sponsorHash}','magic','${sponsorId}',1,'/app',${Date.now()},${Date.now() + 600000}),('synthetic-envelope-23','${expiredHash}','magic','${sponsorId}',1,'/app',1,2)`)
+    assert.equal((await call('/auth/confirm', '', { token: expiredLink })).status, 400)
+    const native = await call('/auth/confirm', '', { token: sponsorLink })
+    assert.equal(native.status, 303, await native.clone().text())
+    const sponsorCookie = native.headers.get('set-cookie').split(';')[0]
+    assert.equal(
+      (await call('/auth/confirm', '', { token: sponsorLink })).status,
+      400,
+      'native sign-in link is single use',
+    )
+    assert.deepEqual(
+      await data(base, undefined, sponsorCookie),
+      [],
+      'new identity alone receives no payroll companies',
+    )
+    const sponsoredCompany = await data(
+      base,
+      { name: 'Synthetic sponsor company', ein: '00-0000004' },
+      sponsorCookie,
+      201,
+    )
+    const sponsored = await data(
+      base + '/' + sponsoredCompany.id + '/agents',
+      {
+        name: 'synthetic-envelope-24',
+        hours: 1,
+        actions: ['records:read'],
+        fields: [],
+        locations: ['*'],
+      },
+      sponsorCookie,
+      201,
+    )
+    assert.equal(
+      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token)).status,
+      200,
+    )
+    await sql(
+      `UPDATE oa_step_up_challenges SET consumed_at=${Date.now()} WHERE id='synthetic-envelope-15'`,
+    )
+    const remove = await call('/auth/operator/status', cookie, {
+      operatorId: sponsorId,
+      status: 'inactive',
+    })
+    assert.equal(remove.status, 200, await remove.clone().text())
+    assert.equal(
+      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token)).status,
+      403,
+    )
+    assert.equal((await call(base, sponsorCookie)).status, 401)
+    assert.equal(
+      (
+        await call('/auth/operator/status', cookie, {
+          operatorId: sponsorId,
+          status: 'active',
+        })
+      ).status,
+      200,
+    )
+    assert.equal(
+      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token)).status,
+      403,
+      'reactivating the sponsor never revives old credentials',
+    )
+    assert.equal((await call(base, sponsorCookie)).status, 401)
+    const signout = await call('/auth/signout', actors.accountant.cookie, {})
+    assert.equal(signout.status, 200, await signout.clone().text())
+    await noWrite(async () => {
+      assert.equal(
+        (await call(company + '/people/' + maria.id, actors.accountant.cookie)).status,
+        401,
+      )
+      assert.equal(
+        (
+          await call(
+            company + '/people/' + maria.id + '/private/bank',
+            actors.accountant.cookie,
+          )
+        ).status,
+        401,
+      )
+    })
     assert.equal(
       (await call('/auth/magic-link', '', { email: 'owner@example.com' })).status,
       503,
@@ -948,10 +1102,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       503,
     )
     console.log(
-      'PAYROLL-IDENTITY passed: same-session single-use public proof confirmation, expired-proof/client-flag bank and credential refusals, unavailable-mail refusal; full OIDC/MFA/form/release journeys remain unproved',
+      'PAYROLL-IDENTITY passed: single-use native sign-in and session-bound proof, sign-out/download revocation, expired-proof/client-flag bank and credential refusals, unavailable-mail refusal; full OIDC/MFA/form/release journeys remain unproved',
     )
     console.log(
-      'AGENT-DRAFTS passed: settings issuance, current sponsor, hashed secret, company/location/action/field/provider denials, persisted reviewed-rate MCP draft, replay consistency, access attribution and immediate revocation/expiry; approved dispatch remains unavailable',
+      'AGENT-DRAFTS passed: settings issuance, current sponsor, hashed secret, company/location/action/field/provider denials, persisted reviewed-rate MCP draft, replay consistency, access attribution and in-flight revocation, sponsor removal/reinstatement and expiry; approved dispatch remains unavailable',
     )
     const audit = await data(company + '/audit')
     for (const action of [

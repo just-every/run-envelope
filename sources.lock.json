@@ -184,8 +184,16 @@
       "sha256": "3e98e12b6b34f3a99d483f05b9aed4f90fec3f13a3d405bf18687d4167720f81",
       "executable": false
     },
+    "docs/payroll-agents.md": {
+      "sha256": "9c0a4d6c9cb847ea3dbac611979a4b3a7062fe2dc8a3973e2b472626801d6010",
+      "executable": false
+    },
     "docs/payroll-records.md": {
-      "sha256": "d879446903f487822ab42424e4d4d73c53dbb652c11a3c3d98ad4c1accd6ce4e",
+      "sha256": "c99109e503183b3ca058c4f8584474b4112edb62d332816445d1cc6222b2bd16",
+      "executable": false
+    },
+    "docs/payroll-setup.md": {
+      "sha256": "22d97433cf220d897b55d6855edb94a5eb433bfd216d7ad6536a1af948a3da47",
       "executable": false
     },
     "edition.json": {
@@ -809,15 +817,15 @@
       "executable": false
     },
     "src/envelope/agent-pages.tsx": {
-      "sha256": "054d5211b5d8c86c15eef43457be8d7f98028cabdece8a524e8e4ba5700239c4",
+      "sha256": "cac8b10b31744303cd979bdd077b327ed3d36551ab8c3265d1da3974e8faceff",
       "executable": false
     },
     "src/envelope/agents.ts": {
-      "sha256": "00c178390cc41149d02567983e57fa884a112e15fa516d6b48278977d25ab5fb",
+      "sha256": "212d8ecc23849cba2625181d0fef4f6ea8226995ccf975c66587c332058a668c",
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "495906c7124f515918b3ca0a246c65144db9f477c5837f85503c9b3ccc21c119",
+      "sha256": "2f27e6051ef0f9f68a8d9c7c32534adbdac08ed868eb1179b792c8742d83634c",
       "executable": false
     },
     "src/envelope/pages.tsx": {
@@ -833,7 +841,7 @@
       "executable": false
     },
     "src/envelope/setup.ts": {
-      "sha256": "1d4a4839448694ecf97cd4acdcabffc5eddfd2caf55cab7a1c4e6f6bd047fc51",
+      "sha256": "837e8be44104ca639d1f5bc976304c78542031109ceff11f50918009555c91ba",
       "executable": false
     },
     "src/envelope/step-up.ts": {
@@ -1877,7 +1885,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "85549db83ce51373ed2ca9e26ae364e527c2636851365b30cf798b75a93bfcc3",
+      "sha256": "3dc748ae288eee5593ac9fb257b6a7cc7e5708ea4e8bb8a7fee4891b8eabdd2e",
       "executable": false
     },
     "tests/runtime.mjs": {

@@ -10,9 +10,13 @@ export function agentsPage(
   actor: Actor,
   locations: { id: string; name: string }[],
   grants: Record<string, unknown>[],
-  access: Record<string, unknown>[],
 ) {
   const base = companyPath(actor.company) + '/agents'
+  const labels: Record<string, string> = {
+    'records:read': 'View person records',
+    'drafts:prepare': 'Prepare run inputs',
+    'drafts:read': 'Read run inputs',
+  }
   return page(
     session,
     'Agent credentials',
@@ -41,7 +45,7 @@ export function agentsPage(
             {agentActions.map((a) => (
               <label className="field" key={a}>
                 <span>
-                  <input type="checkbox" name="actions" value={a} /> {a}
+                  <input type="checkbox" name="actions" value={a} /> {labels[a]}
                 </span>
               </label>
             ))}
@@ -75,10 +79,19 @@ export function agentsPage(
           grants.map((g) => (
             <div key={String(g.id)}>
               <p>
-                {String(g.name)} · sponsor {String(g.sponsorId)} ·{' '}
-                {JSON.parse(String(g.actions)).join(', ')} · fields{' '}
-                {JSON.parse(String(g.fields)).join(', ') || 'none'} · locations{' '}
-                {JSON.parse(String(g.locations)).join(', ')} · providers/models: none · expires{' '}
+                {String(g.name)} · sponsor {String(g.sponsorName)} ·{' '}
+                {JSON.parse(String(g.actions))
+                  .map((a: string) => labels[a])
+                  .join(', ')}{' '}
+                · fields {JSON.parse(String(g.fields)).join(', ') || 'none'} · locations{' '}
+                {JSON.parse(String(g.locations))
+                  .map((id: string) =>
+                    id === '*'
+                      ? 'All company locations'
+                      : (locations.find((l) => l.id === id)?.name ?? 'Unavailable location'),
+                  )
+                  .join(', ')}{' '}
+                · providers/models: none · expires{' '}
                 {new Date(Number(g.expiresAt)).toISOString()} ·{' '}
                 {g.revokedAt
                   ? 'Revoked'
@@ -103,19 +116,11 @@ export function agentsPage(
           </a>
         </p>
       </Card>
-      <Card title="Recent permitted agent access">
-        {access.length ? (
-          access.map((a, i) => (
-            <p key={i}>
-              {String(a.action)} · credential {String(a.credentialId)} · sponsor{' '}
-              {String(a.sponsorId)} · target {String(a.targetId)} ·{' '}
-              {new Date(Number(a.occurredAt)).toISOString()}
-            </p>
-          ))
-        ) : (
-          <p>No permitted tool access recorded.</p>
-        )}
-      </Card>
+      <p>
+        <a className="btn" href={`/api/envelope/companies/${actor.company}/agents/access`}>
+          Download attributed agent access
+        </a>
+      </p>
     </>,
   )
 }

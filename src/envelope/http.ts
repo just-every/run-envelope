@@ -84,6 +84,7 @@ export async function payrollResponse(
     api = url.pathname.startsWith('/api/envelope/')
   if (!ui && !api) return null
   let session
+  let rpcId: string | number | null = null
   try {
     if (
       url.origin !== env.AUTH_ORIGIN ||
@@ -109,14 +110,25 @@ export async function payrollResponse(
       const bearer = request.headers.get('authorization')
       if (!bearer?.startsWith('Bearer '))
         throw new PayrollError('agent_authentication_required', 401)
-      const agent = await AgentTools.authenticate(env, bearer.slice(7)),
-        message = await input(request)
+      if (request.headers.get('content-type')?.split(';')[0] !== 'application/json')
+        throw new PayrollError('unsupported_content_type', 415)
+      const agent = await AgentTools.authenticate(env, bearer.slice(7))
+      const opened = await agent.log('transport.open', agent.grant.id).run()
+      if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked', 403)
+      const message = await input(request)
+      if (
+        message.jsonrpc === '2.0' &&
+        message.method === 'notifications/initialized' &&
+        !Object.hasOwn(message, 'id')
+      )
+        return new Response(null, { status: 202, headers })
       if (
         message.jsonrpc !== '2.0' ||
         !(typeof message.id === 'string' || typeof message.id === 'number') ||
         !Number.isFinite(typeof message.id === 'number' ? message.id : 0)
       )
         throw new PayrollError('invalid_mcp_request')
+      rpcId = message.id as string | number
       let result: unknown
       if (message.method === 'initialize')
         result = {
@@ -269,15 +281,14 @@ export async function payrollResponse(
           const grants = await agents.list(actor),
             access = await agents.access(actor)
           response = ui
-            ? agentsPage(
-                session,
-                companies,
-                actor,
-                await records.locations(actor),
-                grants,
-                access,
-              )
+            ? agentsPage(session, companies, actor, await records.locations(actor), grants)
             : json({ grants, access })
+        } else if (tail.join('/') === 'agents/access' && !post) {
+          response = json(await agents.access(actor))
+          response.headers.set(
+            'content-disposition',
+            'attachment; filename="agent-access.json"',
+          )
         } else if (tail.length === 3 && tail[2] === 'revoke' && post) {
           const revoked = await agents.revoke(actor, tail[1], value)
           response = ui ? redirect(base + '/agents') : json(revoked)
@@ -383,6 +394,15 @@ export async function payrollResponse(
     const known = error instanceof PayrollError,
       code = known ? error.code : 'payroll_unavailable',
       status = known ? error.status : 503
+    if (url.pathname === '/api/envelope/mcp')
+      return json(
+        {
+          jsonrpc: '2.0',
+          id: rpcId,
+          error: { code: status === 400 ? -32602 : -32000, message: code },
+        },
+        status,
+      )
     if (ui && session) {
       const response = errorPage(session, code)
       return new Response(request.method === 'HEAD' ? null : response.body, {

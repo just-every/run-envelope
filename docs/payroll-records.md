@@ -34,7 +34,7 @@ fresh nonce and company/person/kind authenticated context. Default responses
 return masks, kind and version, never ciphertext or full private values. A full
 read needs both private-read and the exact field grant, and creates an actor,
 time and record-version audit event. Downloads are inert plain-text attachments.
-Bank-document storage also requires bank-edit permission; it records documentary
+Bank-document storage also requires bank-edit permission and fresh app-local email proof; it records documentary
 custody, not a verified destination, approved bank change or debit authorization.
 The current text-only door accepts at most 16,000 characters; PDF/binary files
 and their document lifecycle are not implemented.
@@ -61,8 +61,10 @@ review once and advances the person version atomically with the decision/audit.
 Concurrent replay, an intervening approved rate, grant change or revoked session
 cannot apply stale authority. The read API returns the historical proposals and
 named decisions; there is no wage calculation or claim of applied paycheck rates.
-Pay-run approval, bank step-up, agent credentials and dispatch rechecks remain
-obligations of ENV-030/034/051/052 and the corresponding product doors.
+Fresh proof now guards bank-document storage and credential issuance; see
+[Sponsored payroll preparation](payroll-agents.md). Actual bank changes, pay-run
+approval and dispatch rechecks remain obligations of ENV-004/011/030/034/051/052.
+[Effective setup records](payroll-setup.md) documents the company register.
 
 ## HTTP API
 
@@ -75,7 +77,7 @@ IDs are server-generated. Responses are JSON unless specified.
 - `GET /`: list currently granted companies (legal name and masked EIN suffix).
 - `POST /`: installation owner creates `{name, ein}` (`12-3456789` format).
 - `GET /:company`: granted company, permitted locations and people.
-- `POST /:company/locations`: company owner creates `{name}`.
+- `POST /:company/locations`: company owner creates `{name, state?}` (50-state/DC code).
 - `GET /:company/grants`: company owner inspects current grant versions.
 - `POST /:company/grants`: `{operatorId, version, role, locations, fields, actions}`;
   version 0 creates, a current positive version replaces. Existing invited/active

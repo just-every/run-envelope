@@ -323,7 +323,7 @@ export class CompanySetup {
       // This register never claims tax calculation, agency confirmation or payment readiness.
       ready: false,
       readinessReason:
-        'Agency confirmation, complete official coverage, calculation and authorized payroll/remittance proof remain required. Account/grant delays alone must not hold lawful wages.',
+        'Payroll calculation, complete jurisdiction coverage and bank/agency connections are not available yet. Saved setup evidence does not authorize payments or filings. A missing tax account alone must never hold lawful wages.',
     }
   }
 }
