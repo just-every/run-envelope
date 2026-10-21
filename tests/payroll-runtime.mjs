@@ -35,7 +35,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     actors[name] = { id, cookie: `${localCookieName('operator_session_local', origin)}=${token}` }
   }
   const snapshot = () =>
-    await sql(
+    sql(
       `SELECT (SELECT COUNT(*) FROM env_companies) AS companies,(SELECT COUNT(*) FROM env_grants) AS grants,(SELECT SUM(version) FROM env_grants) AS grantVersions,(SELECT COUNT(*) FROM env_people) AS people,(SELECT SUM(version) FROM env_people) AS personVersions,(SELECT COUNT(*) FROM env_private_records) AS privateRecords,(SELECT SUM(version) FROM env_private_records) AS privateVersions,(SELECT COUNT(*) FROM env_rate_proposals) AS rates,(SELECT COUNT(*) FROM env_rate_proposals WHERE approved_at IS NOT NULL) AS approved,(SELECT COUNT(*) FROM env_audit) AS audit,(SELECT COUNT(*) FROM env_rate_reviews) AS reviews`,
     )
   const noWrite = async (fn) => {
