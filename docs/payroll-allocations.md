@@ -8,11 +8,11 @@ not authorize these doors. Every response is private and uncached.
 
 POST `residence`, `work` or `election` under that path to append a revision. Each
 request supplies an `id` and the current `version` (zero for a new ID). Residence
-uses inclusive `from`/`through`, `state`, `locality`, `evidence` and `owner`.
+uses inclusive `from`/`through`, `state`, `locality`, `evidence`. Review responsibility is assigned to the authenticated recording human; client-supplied `owner` names cannot assign or impersonate another person.
 Work uses `day`, physical `state`/`locality`, actual `minutes`, `earnedCents`,
-`officeState`, `nyReason`, optional necessity `evidence`, `sourceRef` and `owner`.
+`officeState`, `nyReason`, optional necessity `evidence`, `sourceRef`.
 Election uses inclusive dates, `residentState`, `workState`, `form` (NJ-165 or
-REV-419EX), signed certificate custody `evidence` and `owner`. Entered references
+REV-419EX), signed certificate custody `evidence`. Review responsibility is assigned to the authenticated recording human; client-supplied `owner` names cannot assign or impersonate another person. Entered references
 are evidence records, not electronic signature verification or an agency receipt.
 For a move, revise the earlier residence's end date and add the new residence;
 working in another state does not change residence. Old revisions remain encrypted.

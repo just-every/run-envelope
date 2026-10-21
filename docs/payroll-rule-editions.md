@@ -33,7 +33,7 @@ Specialized `details`:
 - `futa`: `reduction`, `bcr`, `addOn`, optional `waiverRef`; a final determination
   additionally requires `finalNoticeRef`.
 
-These source fields are not the complete hour/share/reporting calculations.
+These source fields are not the complete hour/share/reporting calculations. Retained earnings snapshots include the relevant recorded rule IDs/versions; changing an intersecting edition requires a new earnings preview while a nonintersecting prior-year snapshot stays current. This is not approval or dispatch invalidation for a payable run.
 GET excludes provisional FUTA from active final editions and names each recorded
 year missing an approved final notice. It never borrows last year's final rate.
 Historical effective source editions remain inspectable after a new-year change.

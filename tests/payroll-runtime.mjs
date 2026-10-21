@@ -1383,7 +1383,11 @@ export async function allocationJourney({ origin, cookie, sql, settings }) {
   )
   const door = base + '/people/' + person.id + '/allocations',
     screen = door.replace('/api/', '/app/')
-  const owner = 'Synthetic payroll reviewer',
+  const owner = (
+      await sql(
+        "SELECT display_name AS name FROM oa_operators WHERE email='owner@example.com'",
+      )
+    )[0].name,
     evidence = 'synthetic-envelope-40'
   const residence = {
     id: 'synthetic-envelope-41',
@@ -1521,6 +1525,13 @@ export async function allocationJourney({ origin, cookie, sql, settings }) {
     assert.ok(
       preview.holds.some((h) => /local EIT/.test(h.reason) && h.owner === owner),
       'reciprocity cannot waive PA locals',
+    )
+    const actualOwner = (
+      await sql("SELECT id FROM oa_operators WHERE email='owner@example.com'")
+    )[0].id
+    assert.ok(
+      preview.holds.every((h) => h.ownerId === actualOwner),
+      'unresolved work is assigned to an actual authenticated human, never a client-supplied owner name',
     )
     assert.equal(preview.taxAmounts, null)
     assert.equal(preview.netPay, null)

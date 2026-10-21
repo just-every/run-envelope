@@ -170,11 +170,10 @@ export function allocationsPage(
             maxLength={500}
             value={residence?.data.evidence}
           />
-          <Field
-            name="owner"
-            label="Residence review owner"
-            value={residence?.data.owner ?? session.operator.displayName}
-          />
+          <>
+            <Hidden name="owner" value={session.operator.displayName} />
+            <p>Review responsibility: {session.operator.displayName}.</p>
+          </>
           <Submit>Record effective residence</Submit>
         </form>
       </Card>
@@ -243,11 +242,10 @@ export function allocationsPage(
             label="Approved work / earnings source reference"
             value={work?.data.sourceRef}
           />
-          <Field
-            name="owner"
-            label="Work allocation review owner"
-            value={work?.data.owner ?? session.operator.displayName}
-          />
+          <>
+            <Hidden name="owner" value={session.operator.displayName} />
+            <p>Review responsibility: {session.operator.displayName}.</p>
+          </>
           <Submit>Record sourced work day</Submit>
         </form>
       </Card>
@@ -304,11 +302,10 @@ export function allocationsPage(
             maxLength={500}
             value={election?.data.evidence}
           />
-          <Field
-            name="owner"
-            label="Election review owner"
-            value={election?.data.owner ?? session.operator.displayName}
-          />
+          <>
+            <Hidden name="owner" value={session.operator.displayName} />
+            <p>Review responsibility: {session.operator.displayName}.</p>
+          </>
           <Submit>Record signed election reference</Submit>
         </form>
       </Card>

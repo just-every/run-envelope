@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "67758e6b0f10bf81eb713327f1116d7c230fe9002ccd846233b2fe9c81756cc2",
+      "sha256": "e38ee0868099a910b3745fa494197853c78411041b2cf4018dbc772ece2a9cd7",
       "executable": false
     },
     "deploy-demo.json": {
@@ -189,11 +189,11 @@
       "executable": false
     },
     "docs/payroll-allocations.md": {
-      "sha256": "58ac153839bdb0df738a1574c083a7882a1bbb682d14dc5eb6aa0611a03b21c9",
+      "sha256": "a39ac7ce8ac8466cb29fc81288cba03f56ee4898a572e3ffea37fb85c3beaa49",
       "executable": false
     },
     "docs/payroll-pay-items.md": {
-      "sha256": "53bcdc2850bd4af4b937a6e4566f59f4a8083250b7b66f68f8bc3212662298df",
+      "sha256": "91272c8024163b6d0e09a4cdec30cbad33516823ff288cb49df587aded0f0b5a",
       "executable": false
     },
     "docs/payroll-records.md": {
@@ -201,7 +201,7 @@
       "executable": false
     },
     "docs/payroll-rule-editions.md": {
-      "sha256": "ce192320b80483a2ce9478e11128418defeb42a692907968dbaeaa74a75b0c97",
+      "sha256": "5f761ccb9355e0a788e36773b59156b2edfa2c8300afe11dad5bccf3012bd459",
       "executable": false
     },
     "docs/payroll-schedules.md": {
@@ -873,11 +873,11 @@
       "executable": false
     },
     "src/envelope/workspace/allocations.ts": {
-      "sha256": "467464818b05caa7f65028ed56a8f0d58dc2ed3c79defac08b0bf3b233ed755c",
+      "sha256": "0e1bb090e8f3cacaafe3299e4649a1f73eca6e68317f631fd7f614cd8b2868a4",
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "2b3ee491d4f42a2d028aabc1c066dcd82ba37a3d7267dbdf9c2fe37ed3da45a5",
+      "sha256": "6aa47dac1b7d6274a4c19b3518a0cd88451fc91a00a0b9ce187c61a81c3bff8d",
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
@@ -1933,7 +1933,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "608b73ee802e9c312bbe38f2528a2367885de08bce43cc7ddda9b05910834426",
+      "sha256": "8766e4a6fb1f59c06b8b3c652dc4ccb69da8ff053213995e317d1a5e1100eb97",
       "executable": false
     },
     "tests/runtime.mjs": {

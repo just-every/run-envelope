@@ -42,7 +42,7 @@ salary deduction. A later clause must verify the employment policy and legal bas
 
 POST `/earnings-run` with the same fields plus `id`/prior `version` retains an
 immutable draft with exact setup/work sources. GET the settings to reload it.
-New or withdrawn setup marks affected group drafts `changed-repreview-required`;
+New or withdrawn setup and period-relevant recorded rules mark affected group drafts `changed-repreview-required`;
 the stored original is preserved. POST `/{kind}/{id}/withdraw` with exact version
 to undo approved setup for future preparation. Withdrawal cannot rewrite settled
 checks. True post-settlement corrections, lawful deduction limits, complete tax

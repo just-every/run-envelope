@@ -46,6 +46,7 @@ export interface Residence {
   locality: string
   evidence: string
   owner: string
+  ownerId: string
 }
 export interface WorkDay {
   day: string
@@ -58,6 +59,7 @@ export interface WorkDay {
   evidence: string
   sourceRef: string
   owner: string
+  ownerId: string
 }
 export interface Election {
   from: string
@@ -67,6 +69,7 @@ export interface Election {
   form: string
   evidence: string
   owner: string
+  ownerId: string
 }
 const range = (input: Input) => {
   const from = date(input.from),
@@ -89,7 +92,8 @@ export class Allocations {
     if (kind !== 'work') requireAction(actor, 'private:write', person.locationId, 'tax')
     const id = objectId(input.id),
       version = revision(input.version),
-      owner = text(input.owner, 120)
+      owner = actor.session.operator.displayName,
+      ownerId = actor.session.operator.id
     let data: Residence | WorkDay | Election
     if (kind === 'residence')
       data = {
@@ -98,6 +102,7 @@ export class Allocations {
         locality: text(input.locality, 120),
         evidence: text(input.evidence, 500),
         owner,
+        ownerId,
       }
     else if (kind === 'work') {
       const minutes = integer(input.minutes),
@@ -127,6 +132,7 @@ export class Allocations {
         evidence,
         sourceRef: text(input.sourceRef, 240),
         owner,
+        ownerId,
       }
     } else {
       const residentState = state(input.residentState),
@@ -148,6 +154,7 @@ export class Allocations {
         form,
         evidence: text(input.evidence, 500),
         owner,
+        ownerId,
       }
     }
     return this.store.append(actor, kind, id, version, data, personId, kind === 'work')
@@ -166,8 +173,13 @@ export class Allocations {
     if (from > through || (Date.parse(through) - Date.parse(from)) / 86400000 > 366)
       throw new PayrollError('invalid_preview_period')
     const history = await this.read(actor, personId)
-    const holds: { day: string; reason: string; owner: string; sourceIds: string[] }[] =
-      []
+    const holds: {
+      day: string
+      reason: string
+      owner: string
+      ownerId: string
+      sourceIds: string[]
+    }[] = []
     const allocations: {
       day: string
       earnedCents: number
@@ -189,6 +201,7 @@ export class Allocations {
         day: from,
         reason: 'No sourced work allocations in the period.',
         owner: actor.session.operator.displayName,
+        ownerId: actor.session.operator.id,
         sourceIds: [],
       })
     for (const row of work) {
@@ -196,7 +209,13 @@ export class Allocations {
         rs = residents.filter((r) => r.data.from <= w.day && r.data.through >= w.day),
         sources = [row.id + ':' + row.version, ...rs.map((r) => r.id + ':' + r.version)]
       const hold = (reason: string) =>
-        holds.push({ day: w.day, reason, owner: w.owner, sourceIds: sources })
+        holds.push({
+          day: w.day,
+          reason,
+          owner: w.owner,
+          ownerId: w.ownerId,
+          sourceIds: sources,
+        })
       if (rs.length !== 1) {
         hold(
           rs.length
