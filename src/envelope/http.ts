@@ -1,6 +1,8 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { AgentSettings, AgentTools } from './agents'
+import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
 import { PayrollError } from './security'
 import {
@@ -90,7 +92,121 @@ export async function payrollResponse(
     )
       throw new PayrollError('invalid_host', 403)
     if (!['GET', 'HEAD', 'POST'].includes(request.method))
-      return new Response(null, { status: 405, headers: { ...headers, allow: 'GET, HEAD, POST' } })
+      return new Response(null, {
+        status: 405,
+        headers: { ...headers, allow: 'GET, HEAD, POST' },
+      })
+    if (url.pathname === '/api/envelope/mcp') {
+      if (request.method !== 'POST')
+        return new Response(null, { status: 405, headers: { ...headers, allow: 'POST' } })
+      if (
+        request.headers.get('sec-fetch-site') === 'cross-site' ||
+        (request.headers.has('origin') && request.headers.get('origin') !== env.AUTH_ORIGIN)
+      )
+        throw new PayrollError('invalid_origin', 403)
+      if (request.headers.has('cookie'))
+        throw new PayrollError('ambiguous_authentication', 403)
+      const bearer = request.headers.get('authorization')
+      if (!bearer?.startsWith('Bearer '))
+        throw new PayrollError('agent_authentication_required', 401)
+      const agent = await AgentTools.authenticate(env, bearer.slice(7)),
+        message = await input(request)
+      if (
+        message.jsonrpc !== '2.0' ||
+        !(typeof message.id === 'string' || typeof message.id === 'number') ||
+        !Number.isFinite(typeof message.id === 'number' ? message.id : 0)
+      )
+        throw new PayrollError('invalid_mcp_request')
+      let result: unknown
+      if (message.method === 'initialize')
+        result = {
+          protocolVersion: '2025-03-26',
+          capabilities: { tools: {} },
+          serverInfo: { name: 'envelope', version: '0.1.0' },
+        }
+      else if (message.method === 'tools/list') {
+        const scopes = JSON.parse(agent.grant.actions)
+        result = {
+          tools: [
+            {
+              name: 'records.list',
+              action: 'records:read',
+              description: 'Read up to 100 scoped person records; no private values.',
+              properties: { companyId: { type: 'string' } },
+              required: ['companyId'],
+            },
+            {
+              name: 'draft.prepare',
+              action: 'drafts:prepare',
+              description:
+                'Persist one uncalculated run-input proposal from a current person and reviewed effective rate. Never approves, calculates tax or dispatches.',
+              properties: {
+                companyId: { type: 'string' },
+                personId: { type: 'string' },
+                minutes: { type: 'integer', minimum: 1, maximum: 44640 },
+                periodStart: { type: 'string' },
+                periodEnd: { type: 'string' },
+                payDate: { type: 'string' },
+                sourceRef: { type: 'string' },
+                requestKey: { type: 'string' },
+              },
+              required: [
+                'companyId',
+                'personId',
+                'minutes',
+                'periodStart',
+                'periodEnd',
+                'payDate',
+                'sourceRef',
+                'requestKey',
+              ],
+            },
+            {
+              name: 'draft.read',
+              action: 'drafts:read',
+              description: 'Read scoped uncalculated proposal and source/rate references.',
+              properties: { companyId: { type: 'string' }, draftId: { type: 'string' } },
+              required: ['companyId', 'draftId'],
+            },
+          ]
+            .filter((t) => scopes.includes(t.action))
+            .map(({ name, description, properties, required }) => ({
+              name,
+              description,
+              inputSchema: {
+                type: 'object',
+                properties,
+                required,
+                additionalProperties: false,
+              },
+            })),
+        }
+      } else if (message.method === 'tools/call') {
+        const params = message.params as Input
+        if (
+          !params ||
+          typeof params !== 'object' ||
+          Array.isArray(params) ||
+          Object.keys(params).some((k) => !['name', 'arguments'].includes(k))
+        )
+          throw new PayrollError('invalid_mcp_request')
+        const args = params.arguments as Input
+        if (!args || typeof args !== 'object' || Array.isArray(args))
+          throw new PayrollError('invalid_mcp_request')
+        const value =
+          params.name === 'records.list'
+            ? await agent.records(args)
+            : params.name === 'draft.prepare'
+              ? await agent.prepare(args)
+              : params.name === 'draft.read'
+                ? await agent.readDraft(args)
+                : (() => {
+                    throw new PayrollError('agent_tool_denied', 403)
+                  })()
+        result = { content: [{ type: 'text', text: JSON.stringify(value) }] }
+      } else throw new PayrollError('agent_tool_denied', 403)
+      return json({ jsonrpc: '2.0', id: message.id, result })
+    }
     session = await auth.getSession(request)
     if (!session)
       return ui && request.method !== 'POST'
@@ -98,7 +214,9 @@ export async function payrollResponse(
         : json({ error: 'authentication_required' }, 401)
     if (!['native', 'oidc', 'dev'].includes(session.kind))
       throw new PayrollError('human_session_required', 403)
-    if (!(await env.DB.prepare('SELECT singleton FROM oa_first_run WHERE singleton=1').first()))
+    if (
+      !(await env.DB.prepare('SELECT singleton FROM oa_first_run WHERE singleton=1').first())
+    )
       throw new PayrollError('finish_setup_required', 409)
     if (
       request.method === 'POST' &&
@@ -140,10 +258,40 @@ export async function payrollResponse(
         response = ui
           ? companyPage(session, companies, company, actor, locations, people)
           : json({ company, locations, people })
+      } else if (tail[0] === 'agents') {
+        const agents = new AgentSettings(records)
+        if (tail.length === 1 && post) {
+          const issued = await agents.issue(actor, value)
+          response = ui
+            ? issuedAgentPage(session, companies, actor, issued)
+            : json(issued, 201)
+        } else if (tail.length === 1 && !post) {
+          const grants = await agents.list(actor),
+            access = await agents.access(actor)
+          response = ui
+            ? agentsPage(
+                session,
+                companies,
+                actor,
+                await records.locations(actor),
+                grants,
+                access,
+              )
+            : json({ grants, access })
+        } else if (tail.length === 3 && tail[2] === 'revoke' && post) {
+          const revoked = await agents.revoke(actor, tail[1], value)
+          response = ui ? redirect(base + '/agents') : json(revoked)
+        } else throw new PayrollError('not_found', 404)
+      } else if (tail.join('/') === 'drafts' && !post) {
+        const drafts = await new AgentSettings(records).drafts(actor)
+        response = ui ? draftsPage(session, companies, actor, drafts) : json(drafts)
       } else if (tail[0] === 'setup') {
         const setup = new CompanySetup(records)
         if (!post && tail.length === 1) {
-          const register = await setup.read(actor, url.searchParams.get('asOf') ?? new Date().toISOString().slice(0, 10))
+          const register = await setup.read(
+            actor,
+            url.searchParams.get('asOf') ?? new Date().toISOString().slice(0, 10),
+          )
           response = ui ? setupPage(session, companies, actor, register) : json(register)
         } else if (post && tail.join('/') === 'setup/profile') {
           const saved = await setup.saveProfile(actor, value)
@@ -214,7 +362,10 @@ export async function payrollResponse(
         response = ui ? redirect(base) : json(approved)
       } else if (!ui && tail.join('/') === 'audit' && !post) {
         response = json(await records.audit(actor))
-        response.headers.set('content-disposition', 'attachment; filename="payroll-audit.json"')
+        response.headers.set(
+          'content-disposition',
+          'attachment; filename="payroll-audit.json"',
+        )
       } else if (!ui && tail.join('/') === 'export' && !post) {
         response = new Response(await records.export(actor), {
           headers: {

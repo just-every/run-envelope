@@ -268,6 +268,10 @@
       "sha256": "0371a89a92a1b5b4b784fec13ed01fc5967b59c81d7ddb8cbd765fd8139c82e3",
       "executable": false
     },
+    "migrations/core/0018_agent_drafts.sql": {
+      "sha256": "021b9a58807b456eeedef9b23db23274bc8e2bc4fa54b4ecfe1c3075e1f667ba",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "5dce7856fac22b695fc39b505e90971b52044c076d2935837a57c73bf01b427e",
       "executable": false
@@ -637,7 +641,7 @@
       "executable": false
     },
     "scripts/installer/local.mjs": {
-      "sha256": "adf98d0aa41eea92e0833fa47737b8775fc4af96df0ea029b4ac9a5e1f6dd4dd",
+      "sha256": "b85c770a5b11a743bc9fe8625ac75935cd643a0b47251557d91614784a520aaf",
       "executable": false
     },
     "scripts/installer/seed.mjs": {
@@ -804,16 +808,24 @@
       "sha256": "708a9f697c41a976129eb44b7b5641bde9a62082c59e5d73e689123079514278",
       "executable": false
     },
+    "src/envelope/agent-pages.tsx": {
+      "sha256": "054d5211b5d8c86c15eef43457be8d7f98028cabdece8a524e8e4ba5700239c4",
+      "executable": false
+    },
+    "src/envelope/agents.ts": {
+      "sha256": "00c178390cc41149d02567983e57fa884a112e15fa516d6b48278977d25ab5fb",
+      "executable": false
+    },
     "src/envelope/http.ts": {
-      "sha256": "a47652662f665a582d3b074a8ba58e23874bfc83d114db9652b451ef679e981e",
+      "sha256": "495906c7124f515918b3ca0a246c65144db9f477c5837f85503c9b3ccc21c119",
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "2e239cd917bdffaa4e4adba20851b057adb1c207421ccf0481097374480b04ca",
+      "sha256": "a9546ff19d1ba692cddfb6986059226f6c94eeb488fc2b03a58d1e6120d38497",
       "executable": false
     },
     "src/envelope/records.ts": {
-      "sha256": "b07071612829938cf3b31b63aab5668587dc6cefb1701917ea0930673fb0fa8e",
+      "sha256": "56b4a2758c85ec9a0cbfb7918cf2c266e6562fcdd4522b4e27429f109967c1a2",
       "executable": false
     },
     "src/envelope/security.ts": {
@@ -821,7 +833,11 @@
       "executable": false
     },
     "src/envelope/setup.ts": {
-      "sha256": "9c1cd0fe38b2e486cc2fcf60e3732a54a7c8b7eebd7211218f16b5be258c64b4",
+      "sha256": "1d4a4839448694ecf97cd4acdcabffc5eddfd2caf55cab7a1c4e6f6bd047fc51",
+      "executable": false
+    },
+    "src/envelope/step-up.ts": {
+      "sha256": "9a408f2bc9b0fe4e95d003c7c9588920aa389f1f9a0636aff79648ed73d70e32",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -1861,7 +1877,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "79c175bf3fe105d88292ed788d51a83b562c6197e220f273853c6dd02bea88a0",
+      "sha256": "85549db83ce51373ed2ca9e26ae364e527c2636851365b30cf798b75a93bfcc3",
       "executable": false
     },
     "tests/runtime.mjs": {

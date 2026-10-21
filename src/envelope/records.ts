@@ -12,6 +12,7 @@ import {
   auditStatement,
   type Actor,
 } from './access'
+import { stepUpFence, requirePayrollProof } from './step-up'
 import { states } from './setup'
 import { PayrollError, text, integer, date, recordKey, seal, unseal } from './security'
 
@@ -171,7 +172,10 @@ export class Records {
         : typeof value === 'string' && value
           ? value.split(',').map((v) => v.trim())
           : []
-      if (items.length > 50 || items.some((v) => typeof v !== 'string' || !choices.includes(v)))
+      if (
+        items.length > 50 ||
+        items.some((v) => typeof v !== 'string' || !choices.includes(v))
+      )
         throw new PayrollError('invalid_scope')
       return [...new Set(items)]
     }
@@ -320,7 +324,13 @@ export class Records {
       f = fence(actor)
     if (!['ssn', 'bank', 'tax'].includes(kind)) throw new PayrollError('invalid_kind')
     requireAction(actor, 'private:write', person.locationId, kind)
-    if (kind === 'bank') requireAction(actor, 'bank:edit', person.locationId, kind)
+    if (kind === 'bank') {
+      requireAction(actor, 'bank:edit', person.locationId, kind)
+      await requirePayrollProof(this.env, actor)
+      const proof = stepUpFence(actor)
+      f.sql += ` AND ${proof.sql}`
+      f.args.push(...proof.args)
+    }
     const version = input.version === 0 || input.version === '0' ? 0 : integer(input.version),
       cipher = await seal(
         await recordKey(this.env.ENVELOPE_RECORD_KEY),
@@ -555,7 +565,8 @@ export class Records {
   async audit(actor: Actor) {
     requireAction(actor, 'audit:read')
     // Location-scoped readers must not infer other locations through audit IDs.
-    if (!actor.grant.locations.includes('*')) throw new PayrollError('payroll_access_denied', 403)
+    if (!actor.grant.locations.includes('*'))
+      throw new PayrollError('payroll_access_denied', 403)
     const f = fence(actor)
     return (
       await this.statement(
