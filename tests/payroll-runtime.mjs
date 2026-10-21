@@ -29,20 +29,20 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       id = `synthetic-envelope-${name}`,
       session = `synthetic-envelope-session-${name}`
     const hash = await hashToken(settings.SESSION_SECRET, 'session', token)
-    sql(
+    await sql(
       `INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${id}','${name}@example.com','${name}','${name === 'outsider' ? 'admin' : 'member'}','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('${session}','${hash}','${id}',1,'native',${Date.now()},${Date.now() + 3600000});`,
     )
     actors[name] = { id, cookie: `${localCookieName('operator_session_local', origin)}=${token}` }
   }
   const snapshot = () =>
-    sql(
+    await sql(
       `SELECT (SELECT COUNT(*) FROM env_companies) AS companies,(SELECT COUNT(*) FROM env_grants) AS grants,(SELECT SUM(version) FROM env_grants) AS grantVersions,(SELECT COUNT(*) FROM env_people) AS people,(SELECT SUM(version) FROM env_people) AS personVersions,(SELECT COUNT(*) FROM env_private_records) AS privateRecords,(SELECT SUM(version) FROM env_private_records) AS privateVersions,(SELECT COUNT(*) FROM env_rate_proposals) AS rates,(SELECT COUNT(*) FROM env_rate_proposals WHERE approved_at IS NOT NULL) AS approved,(SELECT COUNT(*) FROM env_audit) AS audit,(SELECT COUNT(*) FROM env_rate_reviews) AS reviews`,
     )
   const noWrite = async (fn) => {
-    const before = snapshot()
+    const before = await snapshot()
     await fn()
     assert.deepEqual(
-      snapshot(),
+      await snapshot(),
       before,
       'refused requests must create no records, revisions, decisions or audit events',
     )
@@ -217,8 +217,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         ),
       )
     }
-    const privateRows = sql('SELECT cipher FROM env_private_records'),
-      companyRows = sql('SELECT ein_cipher FROM env_companies')
+    const privateRows = await sql('SELECT cipher FROM env_private_records'),
+      companyRows = await sql('SELECT ein_cipher FROM env_companies')
     for (const value of [
       'synthetic-envelope-1',
       'synthetic-envelope-2',
@@ -311,6 +311,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       undefined,
       actors.accountant.cookie,
     )
+    assert.equal(accountant.privateRecords.length, 0, 'ungranted private-field metadata is absent')
     assert.equal(
       Object.hasOwn(accountant, 'rates'),
       false,
@@ -408,7 +409,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     )
     const freshToken = randomBytes(32).toString('base64url'),
       freshHash = await hashToken(settings.SESSION_SECRET, 'session', freshToken)
-    sql(
+    await sql(
       `INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-session-accountant-fresh','${freshHash}','${actors.accountant.id}',1,'native',${Date.now()},${Date.now() + 3600000})`,
     )
     actors.accountant.cookie = `${localCookieName('operator_session_local', origin)}=${freshToken}`

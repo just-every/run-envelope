@@ -2,7 +2,8 @@ import { queuedEntrypoint } from '@runeditrun/rer/queued-entry'
 const queued = await queuedEntrypoint(import.meta.url, 'verify:runtime')
 if (queued !== null) process.exit(queued)
 import assert from 'node:assert/strict'
-import { execFileSync, spawn } from 'node:child_process'
+import { execFile, execFileSync, spawn } from 'node:child_process'
+import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
@@ -147,27 +148,31 @@ try {
   console.log(
     'APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home',
   )
-  const sql = (command) =>
+  const execute = promisify(execFile)
+  const sql = async (command) =>
     JSON.parse(
-      execFileSync(
-        process.execPath,
-        [
-          'node_modules/wrangler/bin/wrangler.js',
-          'd1',
-          'execute',
-          'foundation',
-          '--local',
-          '--persist-to',
-          persist,
-          '--config',
-          'dist/server/wrangler.json',
-          '--json',
-          '--command',
-          command,
-        ],
-        { encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } },
-      ),
+      (
+        await execute(
+          process.execPath,
+          [
+            'node_modules/wrangler/bin/wrangler.js',
+            'd1',
+            'execute',
+            'foundation',
+            '--local',
+            '--persist-to',
+            persist,
+            '--config',
+            'dist/server/wrangler.json',
+            '--json',
+            '--command',
+            command,
+          ],
+          { encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } },
+        )
+      ).stdout,
     ).flatMap((result) => result.results)
+
   const records = await payrollJourney({ origin, cookie, settings, sql })
   await stopWorker()
   const withoutKey = { ...settings }
