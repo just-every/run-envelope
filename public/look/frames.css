@@ -68,7 +68,6 @@ html[data-state] { min-height: 100%; background: var(--aqua) var(--ground) no-re
 html[data-state] body { background: none; color: var(--ink); font-family: var(--text); }
 html[data-state] .door { padding-top: 16vh; padding-bottom: 36vh; }
 html[data-state] .door-art { height: 32vh; min-height: 170px; }
-html[data-state] .door-art img { object-fit: contain; object-position: center bottom; }
 html[data-state] .door-card { max-width: 680px; }
 html[data-state] h1 { font-size: clamp(46px, 6vw, 72px); }
 html[data-state] .lockup { gap: .26em; color: var(--lockup); }
