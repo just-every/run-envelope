@@ -9,7 +9,14 @@ import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { payrollJourney, missingKeyJourney, allocationJourney, scheduleJourney, payItemsJourney, rulesJourney } from './payroll-runtime.mjs'
+import {
+  payrollJourney,
+  missingKeyJourney,
+  allocationJourney,
+  scheduleJourney,
+  payItemsJourney,
+  rulesJourney,
+} from './payroll-runtime.mjs'
 
 const socket = createServer()
 await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve))
@@ -63,7 +70,10 @@ function launch(bindings) {
       'dist/server/wrangler.json',
       '--port',
       String(port),
-      ...Object.entries(bindings).flatMap(([name, value]) => ['--var', `${name}:${value}`]),
+      ...Object.entries(bindings).flatMap(([name, value]) => [
+        '--var',
+        `${name}:${value}`,
+      ]),
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   )
@@ -116,7 +126,9 @@ try {
   ])
   const document = await fetch(origin)
   assert.equal(document.status, 200)
-  const branding = JSON.parse(await readFile(new URL('../src/branding.json', import.meta.url)))
+  const branding = JSON.parse(
+    await readFile(new URL('../src/branding.json', import.meta.url)),
+  )
   assert.ok((await document.text()).includes(branding.name))
   for (const path of ['/missing', '/health/extra', '/api', '/api/missing']) {
     assert.equal((await fetch(`${origin}${path}`)).status, 404, path)
@@ -126,7 +138,8 @@ try {
   )
 
   // The owner's first run: claim the installation with the setup token, finish setup, then open the app home.
-  const manual = (path, init = {}) => fetch(`${origin}${path}`, { redirect: 'manual', ...init })
+  const manual = (path, init = {}) =>
+    fetch(`${origin}${path}`, { redirect: 'manual', ...init })
   assert.equal((await manual('/app')).headers.get('location'), '/signin')
   const claim = await manual('/auth/bootstrap', {
     method: 'POST',
@@ -135,7 +148,10 @@ try {
   })
   assert.equal(claim.status, 303, await claim.text())
   const cookie = claim.headers.get('set-cookie').split(';')[0]
-  assert.equal((await manual('/app', { headers: { cookie } })).headers.get('location'), '/setup')
+  assert.equal(
+    (await manual('/app', { headers: { cookie } })).headers.get('location'),
+    '/setup',
+  )
   const finished = await manual('/setup', {
     method: 'POST',
     headers: { cookie, origin, 'content-type': 'application/x-www-form-urlencoded' },
@@ -168,16 +184,28 @@ try {
             '--command',
             command,
           ],
-          { encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } },
+          {
+            encoding: 'utf8',
+            env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' },
+          },
         )
       ).stdout,
     ).flatMap((result) => result.results)
 
   const selected = process.env.ENVELOPE_JOURNEYS?.split(',')
-  if (selected?.some(name => !['records','allocations','schedules','pay-items','rules'].includes(name))) throw Error('Unknown payroll journey')
-  if (!selected || selected.includes('allocations')) await allocationJourney({ origin, cookie, sql })
-  if (!selected || selected.includes('schedules')) await scheduleJourney({ origin, cookie })
-  if (!selected || selected.includes('pay-items')) await payItemsJourney({ origin, cookie, sql })
+  if (
+    selected?.some(
+      (name) =>
+        !['records', 'allocations', 'schedules', 'pay-items', 'rules'].includes(name),
+    )
+  )
+    throw Error('Unknown payroll journey')
+  if (!selected || selected.includes('allocations'))
+    await allocationJourney({ origin, cookie, sql, settings })
+  if (!selected || selected.includes('schedules'))
+    await scheduleJourney({ origin, cookie })
+  if (!selected || selected.includes('pay-items'))
+    await payItemsJourney({ origin, cookie, sql })
   if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
   if (!selected || selected.includes('records')) {
     const records = await payrollJourney({ origin, cookie, settings, sql })
@@ -187,11 +215,14 @@ try {
     worker = launch(withoutKey)
     await waitForWorker()
     await records.noWrite(async () => {
-      const response = await records.call('/api/envelope/companies', cookie, {name:'Held company',ein:'00-0000003'})
-      assert.equal(response.status,503)
-      assert.deepEqual(await response.json(),{error:'payroll_record_key_required'})
+      const response = await records.call('/api/envelope/companies', cookie, {
+        name: 'Held company',
+        ein: '00-0000003',
+      })
+      assert.equal(response.status, 503)
+      assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
     })
-    await missingKeyJourney({origin,cookie,noWrite:records.noWrite})
+    await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
   }
 } finally {
   await stopWorker()

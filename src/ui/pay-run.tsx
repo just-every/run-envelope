@@ -30,7 +30,13 @@ const SLIP: SlipRow[] = [
 // The app home: the signed-in person's pay run (owner pick A). Payroll is not built yet (CONTRACT.md: every clause
 // missing), so this is the screen's empty state in the pick's composition: no businesses in the chips, an empty open
 // check in front of the deck, the slip with no run, and choices that open what exists today.
-export function PayRunHome({ viewer, companies = [] }: { viewer: Viewer; companies?: Company[] }) {
+export function PayRunHome({
+  viewer,
+  companies = [],
+}: {
+  viewer: Viewer
+  companies?: Company[]
+}) {
   return (
     <>
       <div className="app-wrap">
@@ -41,7 +47,9 @@ export function PayRunHome({ viewer, companies = [] }: { viewer: Viewer; compani
           clients={companies.map((company, index) => ({
             name: company.name,
             status: 'Company records',
-            colour: (['goldenrod', 'forest', 'teal', 'slate', 'violet'] as const)[index % 5],
+            colour: (['goldenrod', 'forest', 'teal', 'slate', 'violet'] as const)[
+              index % 5
+            ],
             href: `/app/envelope/companies/${company.id}`,
           }))}
         />
@@ -63,8 +71,8 @@ export function PayRunHome({ viewer, companies = [] }: { viewer: Viewer; compani
               deductions={DEDUCTIONS}
               tag={
                 <Tag>
-                  Company records and payroll settings are available. Pay runs are still being
-                  built. Choose a company to review its records.
+                  Company records and payroll settings are available. Pay runs are still
+                  being built. Choose a company to review its records.
                 </Tag>
               }
               choices={
@@ -72,7 +80,9 @@ export function PayRunHome({ viewer, companies = [] }: { viewer: Viewer; compani
                   <a className="btn btn--primary" href={`${identity.runSite}/contract`}>
                     See what's built →
                   </a>
-                  <a className="btn" href="/app/envelope/workspace">Payroll preparation</a>
+                  <a className="btn" href="/app/envelope/workspace">
+                    Payroll preparation
+                  </a>
                   <a className="btn" href={`${identity.runSite}/docs`}>
                     Read the docs
                   </a>

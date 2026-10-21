@@ -84,7 +84,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
           true,
           'keyboard focus reaches the app navigation',
         )
-        await page.screenshot({ path: join(proof, `${label}-${width}.png`), fullPage: true })
+        await page.screenshot({
+          path: join(proof, `${label}-${width}.png`),
+          fullPage: true,
+        })
         assert.equal(
           await page.locator('script:not([type="application/json"])').count(),
           0,
@@ -92,7 +95,9 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         )
         const images = await page
           .locator('img')
-          .evaluateAll((imgs) => imgs.every((img) => img.complete && img.naturalWidth > 0))
+          .evaluateAll((imgs) =>
+            imgs.every((img) => img.complete && img.naturalWidth > 0),
+          )
         assert.equal(images, true)
       }
     }
@@ -102,7 +107,9 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       .getByLabel('Legal company name', { exact: true })
       .fill('Rosa’s California Kitchen')
     await page.getByLabel('EIN (12-3456789)', { exact: true }).fill('00-0000001')
-    await page.getByRole('button', { name: 'Create company records', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Create company records', exact: true })
+      .click()
     await page.waitForURL(/\/app\/envelope\/companies\//)
     const a = page.url().split('/').at(-1),
       b = (
@@ -191,7 +198,12 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await data(company + '/setup/jurisdictions', jurisdiction, cookie, 201)
     await data(
       company + '/setup/profile',
-      { ...profile, version: 1, effectiveDate: '2026-07-01', depositSchedule: 'semiweekly' },
+      {
+        ...profile,
+        version: 1,
+        effectiveDate: '2026-07-01',
+        depositSchedule: 'semiweekly',
+      },
       cookie,
       201,
     )
@@ -253,12 +265,18 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       'sourceTitle',
     ])
       assert.equal(currentSetup.profile[key], profile[key], key)
-    const profileCipher = JSON.stringify(await sql('SELECT cipher FROM env_company_setup'))
+    const profileCipher = JSON.stringify(
+      await sql('SELECT cipher FROM env_company_setup'),
+    )
     assert.equal(profileCipher.includes(profile.responsibleContact), false)
     assert.equal(profileCipher.includes(profile.address), false)
     assert.equal(currentSetup.profiles.length, 2)
     assert.deepEqual(currentSetup.remittanceHolds, [
-      { code: 'PA-SUI', scope: 'jurisdiction-deposit-and-filing', reason: 'account-pending' },
+      {
+        code: 'PA-SUI',
+        scope: 'jurisdiction-deposit-and-filing',
+        reason: 'account-pending',
+      },
     ])
     await data(
       company + '/setup/jurisdictions',
@@ -313,7 +331,12 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       cookie,
       201,
     )
-    await data(company + '/locations', { name: 'Portland, Oregon', state: 'OR' }, cookie, 201)
+    await data(
+      company + '/locations',
+      { name: 'Portland, Oregon', state: 'OR' },
+      cookie,
+      201,
+    )
     const funds = await data(company + '/setup')
     assert.deepEqual(funds.requirements.map((r) => r.code).sort(), ['OR-WBF', 'WA-LI'])
     assert.ok(funds.requirements.every((r) => !r.recorded))
@@ -373,8 +396,14 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await noWrite(async () => {
       assert.equal((await call(company, actors.outsider.cookie)).status, 403)
       assert.equal((await call(other, actors.approver.cookie)).status, 403)
-      assert.equal((await call(company + '/grants', actors.accountant.cookie)).status, 403)
-      assert.equal((await call(company + '/export', actors.accountant.cookie)).status, 403)
+      assert.equal(
+        (await call(company + '/grants', actors.accountant.cookie)).status,
+        403,
+      )
+      assert.equal(
+        (await call(company + '/export', actors.accountant.cookie)).status,
+        403,
+      )
       assert.equal(
         (await call(company + '/people/' + dev.id, actors.approver.cookie)).status,
         404,
@@ -418,7 +447,9 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await page
       .getByLabel('ssn private text (not shown again)', { exact: true })
       .fill('synthetic-envelope-1')
-    await page.getByRole('button', { name: 'Store encrypted ssn record', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Store encrypted ssn record', exact: true })
+      .click()
     await page.waitForURL(origin + screen + '/people/' + maria.id)
     await noWrite(async () =>
       assert.equal(
@@ -518,21 +549,29 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       )
       assert.equal(
         (
-          await call(company + '/people/' + maria.id + '/private', actors.accountant.cookie, {
-            kind: 'bank',
-            value: 'synthetic-envelope-5',
-            version: 1,
-          })
+          await call(
+            company + '/people/' + maria.id + '/private',
+            actors.accountant.cookie,
+            {
+              kind: 'bank',
+              value: 'synthetic-envelope-5',
+              version: 1,
+            },
+          )
         ).status,
         403,
       )
       assert.equal(
         (
-          await call(company + '/people/' + maria.id + '/rates', actors.accountant.cookie, {
-            version: 1,
-            hourlyCents: 2000,
-            effectiveDate: '2026-10-21',
-          })
+          await call(
+            company + '/people/' + maria.id + '/rates',
+            actors.accountant.cookie,
+            {
+              version: 1,
+              hourlyCents: 2000,
+              effectiveDate: '2026-10-21',
+            },
+          )
         ).status,
         403,
       )
@@ -564,7 +603,9 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await capture(screen + '/people/' + maria.id, 'private-masked')
     await capture(screen + '/rates/' + proposal.id, 'rate-review')
     // Native form POST consumes the exact session-bound review from the screen.
-    await page.getByRole('button', { name: 'Approve this exact rate', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Approve this exact rate', exact: true })
+      .click()
     await page.waitForURL(origin + screen)
     const approved = await data(company + '/people/' + maria.id)
     assert.equal(approved.version, 2)
@@ -642,9 +683,13 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await noWrite(async () => {
       assert.equal(
         (
-          await call(company + '/rates/' + stale.id + '/approve', actors.approver.cookie, {
-            reviewToken: oldReview.reviewToken,
-          })
+          await call(
+            company + '/rates/' + stale.id + '/approve',
+            actors.approver.cookie,
+            {
+              reviewToken: oldReview.reviewToken,
+            },
+          )
         ).status,
         401,
       )
@@ -684,7 +729,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       actions: ['records:read', 'private:read', 'private:write', 'export'],
     })
     await noWrite(async () =>
-      assert.equal((await call(company + '/people/' + maria.id, accountantOld)).status, 401),
+      assert.equal(
+        (await call(company + '/people/' + maria.id, accountantOld)).status,
+        401,
+      ),
     )
     const freshToken = randomBytes(32).toString('base64url'),
       freshHash = await hashToken(settings.SESSION_SECRET, 'session', freshToken)
@@ -715,11 +763,15 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       )
       assert.equal(
         (
-          await call(company + '/people/' + maria.id + '/private', actors.accountant.cookie, {
-            kind: 'bank',
-            value: 'synthetic-envelope-5',
-            version: 1,
-          })
+          await call(
+            company + '/people/' + maria.id + '/private',
+            actors.accountant.cookie,
+            {
+              kind: 'bank',
+              value: 'synthetic-envelope-5',
+              version: 1,
+            },
+          )
         ).status,
         403,
       )
@@ -752,7 +804,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     )
     await noWrite(async () =>
       assert.equal(
-        (await call(company + '/agents', cookie, { ...credentialInput, mfa: true })).status,
+        (await call(company + '/agents', cookie, { ...credentialInput, mfa: true }))
+          .status,
         403,
         'expired identity proof cannot mint credentials',
       ),
@@ -771,9 +824,13 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       await page.locator(`input[name="actions"][value="${action}"]`).check()
     await page.locator(`input[name="locations"][value="${ca.id}"]`).check()
     await page
-      .getByLabel('Reviewed compensation for draft preparation and reading', { exact: true })
+      .getByLabel('Reviewed compensation for draft preparation and reading', {
+        exact: true,
+      })
       .check()
-    await page.getByRole('button', { name: 'Issue sponsored credential', exact: true }).click()
+    await page
+      .getByRole('button', { name: 'Issue sponsored credential', exact: true })
+      .click()
     await page.getByLabel('One-time credential', { exact: true }).waitFor()
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 })
@@ -832,7 +889,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       false,
       'location filter applies to MCP records',
     )
-    assert.doesNotMatch(JSON.stringify(agentPeople), /synthetic-envelope-[123]|hourlyCents/)
+    assert.doesNotMatch(
+      JSON.stringify(agentPeople),
+      /synthetic-envelope-[123]|hourlyCents/,
+    )
     const draftInput = {
       companyId: a,
       personId: maria.id,
@@ -877,7 +937,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         409,
         'idempotency key cannot authorize changed input',
       )
-      assert.equal((await mcp('draft.prepare', { ...draftInput, approved: true })).status, 400)
+      assert.equal(
+        (await mcp('draft.prepare', { ...draftInput, approved: true })).status,
+        400,
+      )
       for (const name of [
         'private.ssn.export',
         'pay.approve',
@@ -898,9 +961,12 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
           403,
           name,
         )
-      const confused = await fetch(origin + company + '/people/' + maria.id + '/private/ssn', {
-        headers: { cookie, authorization: 'Bearer ' + agentToken },
-      })
+      const confused = await fetch(
+        origin + company + '/people/' + maria.id + '/private/ssn',
+        {
+          headers: { cookie, authorization: 'Bearer ' + agentToken },
+        },
+      )
       assert.equal(
         confused.status,
         403,
@@ -911,7 +977,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         401,
       )
       assert.equal(
-        (await call(company + '/agents', actors.accountant.cookie, credentialInput)).status,
+        (await call(company + '/agents', actors.accountant.cookie, credentialInput))
+          .status,
         403,
       )
       assert.equal(
@@ -965,11 +1032,18 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await page.waitForURL(origin + screen + '/agents')
     await noWrite(async () => {
       assert.equal(
-        (await mcp('draft.prepare', { ...draftInput, requestKey: 'synthetic-envelope-12' }))
-          .status,
+        (
+          await mcp('draft.prepare', {
+            ...draftInput,
+            requestKey: 'synthetic-envelope-12',
+          })
+        ).status,
         403,
       )
-      assert.equal((await mcp('draft.read', { companyId: a, draftId: draft.id })).status, 403)
+      assert.equal(
+        (await mcp('draft.read', { companyId: a, draftId: draft.id })).status,
+        403,
+      )
     })
     assert.deepEqual(await businessSnapshot(), initialBusiness)
     const racing = await data(
@@ -1008,7 +1082,9 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       let started = false
       for (let attempt = 0; attempt < 50; attempt++) {
         const logs = (await data(company + '/agents')).access
-        if (logs.some((a) => a.credentialId === racing.id && a.action === 'transport.open')) {
+        if (
+          logs.some((a) => a.credentialId === racing.id && a.action === 'transport.open')
+        ) {
           started = true
           break
         }
@@ -1043,7 +1119,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       201,
     )
     await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${temporary.id}'`)
-    assert.equal((await mcp('records.list', { companyId: a }, temporary.token)).status, 403)
+    assert.equal(
+      (await mcp('records.list', { companyId: a }, temporary.token)).status,
+      403,
+    )
     await sql(
       "UPDATE oa_step_up_challenges SET consumed_at=1 WHERE id='synthetic-envelope-15'",
     )
@@ -1103,7 +1182,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       201,
     )
     assert.equal(
-      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token)).status,
+      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token))
+        .status,
       200,
     )
     await sql(
@@ -1115,7 +1195,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     })
     assert.equal(remove.status, 200, await remove.clone().text())
     assert.equal(
-      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token)).status,
+      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token))
+        .status,
       403,
     )
     assert.equal((await call(base, sponsorCookie)).status, 401)
@@ -1129,7 +1210,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       200,
     )
     assert.equal(
-      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token)).status,
+      (await mcp('records.list', { companyId: sponsoredCompany.id }, sponsored.token))
+        .status,
       403,
       'reactivating the sponsor never revives old credentials',
     )
@@ -1205,7 +1287,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     assert.equal(outputLeaks(audit), false)
     // Cross-company private record IDs must not resolve or create audit writes.
     await noWrite(async () =>
-      assert.equal((await call(other + '/people/' + maria.id + '/private/ssn')).status, 404),
+      assert.equal(
+        (await call(other + '/people/' + maria.id + '/private/ssn')).status,
+        404,
+      ),
     )
     console.log(
       'PAYROLL-RECORDS passed: explicit grants, company/location/field refusals, encrypted/masked custody, native exact rate review, no-write refusals, immediate old-session revocation and attributed audit; browser proof at 1440/390',
@@ -1240,7 +1325,9 @@ export async function missingKeyJourney({ origin, cookie, noWrite }) {
       await page.getByLabel('EIN (12-3456789)', { exact: true }).fill('00-0000003')
       await noWrite(async () => {
         const response = page.waitForResponse((r) => r.request().method() === 'POST')
-        await page.getByRole('button', { name: 'Create company records', exact: true }).click()
+        await page
+          .getByRole('button', { name: 'Create company records', exact: true })
+          .click()
         assert.equal((await response).status(), 503)
       })
       assert.match(
@@ -1264,238 +1351,1253 @@ export async function missingKeyJourney({ origin, cookie, noWrite }) {
   }
 }
 
-
 /** LOCATION-ALLOCATIONS: actual change API, encrypted history and native preview. */
-export async function allocationJourney({origin,cookie,sql}) {
-  const request=async(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
-  const data=async(path,body,status=200)=>{const r=await request(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
-  const company=await data('/api/envelope/companies',{name:'Synthetic multistate works',ein:'00-0000040'},201), base='/api/envelope/companies/'+company.id
-  const location=await data(base+'/locations',{name:'New Jersey office',state:'NJ'},201)
-  const person=await data(base+'/people',{name:'Synthetic NJ to PA worker',locationId:location.id},201)
-  const door=base+'/people/'+person.id+'/allocations', screen=door.replace('/api/','/app/')
-  const owner='Synthetic payroll reviewer', evidence='synthetic-envelope-40'
-  const residence={id:'synthetic-envelope-41',version:0,from:'2026-01-01',through:'2026-03-14',state:'NJ',locality:'Newark',owner,evidence}
-  const work={id:'synthetic-envelope-43',version:0,day:'2026-03-13',state:'NJ',locality:'Newark',minutes:480,earnedCents:20001,officeState:'NJ',nyReason:'not-applicable',sourceRef:'synthetic-envelope-44',owner}
-  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+export async function allocationJourney({ origin, cookie, sql, settings }) {
+  const request = async (path, body, who = cookie) =>
+    fetch(origin + path, {
+      method: body === undefined ? 'GET' : 'POST',
+      redirect: 'manual',
+      headers: { cookie: who, origin, 'content-type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+  const data = async (path, body, status = 200) => {
+    const r = await request(path, body)
+    assert.equal(r.status, status, await r.clone().text())
+    return r.json()
+  }
+  const company = await data(
+      '/api/envelope/companies',
+      { name: 'Synthetic multistate works', ein: '00-0000040' },
+      201,
+    ),
+    base = '/api/envelope/companies/' + company.id
+  const location = await data(
+    base + '/locations',
+    { name: 'New Jersey office', state: 'NJ' },
+    201,
+  )
+  const person = await data(
+    base + '/people',
+    { name: 'Synthetic NJ to PA worker', locationId: location.id },
+    201,
+  )
+  const door = base + '/people/' + person.id + '/allocations',
+    screen = door.replace('/api/', '/app/')
+  const owner = 'Synthetic payroll reviewer',
+    evidence = 'synthetic-envelope-40'
+  const residence = {
+    id: 'synthetic-envelope-41',
+    version: 0,
+    from: '2026-01-01',
+    through: '2026-03-14',
+    state: 'NJ',
+    locality: 'Newark',
+    owner,
+    evidence,
+  }
+  const work = {
+    id: 'synthetic-envelope-43',
+    version: 0,
+    day: '2026-03-13',
+    state: 'NJ',
+    locality: 'Newark',
+    minutes: 480,
+    earnedCents: 20001,
+    officeState: 'NJ',
+    nyReason: 'not-applicable',
+    sourceRef: 'synthetic-envelope-44',
+    owner,
+  }
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--use-mock-keychain', '--password-store=basic'],
+  })
   try {
-    const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
-    const capture=async(label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal((await page.locator('h1').count()),1);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
+    const context = await browser.newContext(),
+      [name, value] = cookie.split('=')
+    await context.addCookies([{ name, value, url: origin }])
+    const page = await context.newPage()
+    const capture = async (label, path = screen) => {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 })
+        await page.goto(origin + path)
+        assert.equal(await page.locator('h1').count(), 1)
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+        )
+        await page.keyboard.press('Tab')
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.tagName),
+          'A',
+          'keyboard reaches native app navigation',
+        )
+        await page.screenshot({
+          path: join(
+            process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',
+            `${label}-${width}.png`,
+          ),
+          fullPage: true,
+        })
+      }
+    }
     await capture('locations-empty')
     // Enter residence through the native form, rather than preloading application records.
-    const form=page.locator('form[action$="/residence"]')
-    for(const [key,val] of Object.entries(residence)){const field=form.locator(`[name="${key}"]`);if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(String(val));else await field.fill(String(val))}
-    await page.getByRole('button',{name:'Record effective residence',exact:true}).click();await page.waitForURL(origin+screen)
-    await data(door+'/residence',{...residence,id:'synthetic-envelope-42',from:'2026-03-15',through:'2026-12-31',state:'PA',locality:'Pittsburgh'},201)
-    await data(door+'/work',work,201)
-    await data(door+'/work',{...work,id:'synthetic-envelope-45',day:'2026-03-16',earnedCents:20002},201)
-    await data(door+'/work',{...work,id:'synthetic-envelope-46',day:'2026-03-17',state:'PA',locality:'Pittsburgh',officeState:'NY',nyReason:'convenience',earnedCents:20003},201)
-    const election={id:'synthetic-envelope-47',version:0,from:'2026-03-15',through:'2026-12-31',residentState:'PA',workState:'NJ',form:'NJ-165',owner,evidence:'synthetic-envelope-48'}
-    await data(door+'/election',election,201)
-    const preview=await data(door+'?from=2026-03-01&through=2026-03-31')
-    assert.equal(preview.totalWorkCents,60006);assert.equal(preview.allocatedWorkCents,60006)
-    assert.deepEqual(preview.allocations.map(a=>a.residentState),['NJ','PA','PA'])
-    assert.deepEqual(preview.allocations[1].stateWageBases.map(b=>b.state),['PA'],'NJ-165 removes NJ state wage withholding base after the move')
-    assert.deepEqual(preview.allocations[2].stateWageBases.map(b=>b.state),['PA','NY'],'convenience day retains NY source base')
-    assert.equal(preview.allocations[1].electionId,election.id)
-    assert.ok(preview.holds.some(h=>/local EIT/.test(h.reason)&&h.owner===owner),'reciprocity cannot waive PA locals')
-    assert.equal(preview.taxAmounts,null);assert.equal(preview.netPay,null);assert.equal(preview.paymentReady,false)
-    const approved=JSON.stringify(preview.allocations)
-    assert.equal(JSON.stringify((await data(door+'?from=2026-03-01&through=2026-03-31')).allocations),approved,'reload preserves exact dates, cents and rule/election provenance')
-    await capture('locations-move-preview',screen+'?from=2026-03-01&through=2026-03-31')
-    await data(door+'/work',{...work,id:'synthetic-envelope-46',version:1,day:'2026-03-17',state:'PA',locality:'Pittsburgh',officeState:'NY',nyReason:'employer-necessity',evidence:'synthetic-envelope-49'},201)
-    const necessity=await data(door+'?from=2026-03-17&through=2026-03-17')
-    assert.deepEqual(necessity.allocations[0].stateWageBases.map(b=>b.state),['PA'])
-    await data(door+'/work',{...work,id:'synthetic-envelope-50',day:'2026-04-01',officeState:'NY',nyReason:'undetermined'},201)
-    assert.match((await data(door+'?from=2026-04-01&through=2026-04-01')).holds[0].reason,/New York/)
-    await data(door+'/residence',{...residence,id:'synthetic-envelope-51',from:'2026-03-16',through:'2026-03-16',state:'NJ'},201)
-    const conflict=await data(door+'?from=2026-03-16&through=2026-03-16');assert.equal(conflict.allocations.length,0);assert.match(conflict.holds[0].reason,/Contradictory/)
-    await capture('locations-assigned-hold',screen+'?from=2026-03-16&through=2026-03-16')
-    const snapshot=()=>sql('SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS revisions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit')
-    const before=await snapshot()
-    for(const [path,body,status] of [
-      [door+'/residence',residence,409],
-      [door+'/election',{...election,id:'synthetic-envelope-52',form:'REV-419EX'},400],
-      [door+'/work',{...work,id:'synthetic-envelope-53',officeState:'NY',nyReason:'employer-necessity'},400],
-      [door+'/work',{...work,id:'synthetic-envelope-54',minutes:1441},400],
-    ])assert.equal((await request(path,body)).status,status)
-    assert.deepEqual(await snapshot(),before,'invalid/stale writes do not append data or audit')
-    assert.equal((await request(door,undefined,'')).status,401)
-    const other=await data('/api/envelope/companies',{name:'Synthetic isolated entity',ein:'00-0000041'},201)
-    assert.equal((await request(door.replace(company.id,other.id))).status,404)
-    const stored=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('residence','work','election')"))
-    assert.doesNotMatch(stored,/Pittsburgh|Newark|synthetic-envelope-48/,'location/election custody is encrypted')
-    const history=await data(door);assert.equal(history.work.length,5,'both versions and all source days remain')
+    const form = page.locator('form[action$="/residence"]')
+    for (const [key, val] of Object.entries(residence)) {
+      const field = form.locator(`[name="${key}"]`)
+      if ((await field.getAttribute('type')) === 'hidden') continue
+      if ((await field.evaluate((el) => el.tagName)) === 'SELECT')
+        await field.selectOption(String(val))
+      else await field.fill(String(val))
+    }
+    await page
+      .getByRole('button', { name: 'Record effective residence', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    residence.id = (await data(door)).residence[0].id
+    await data(
+      door + '/residence',
+      {
+        ...residence,
+        id: 'synthetic-envelope-42',
+        from: '2026-03-15',
+        through: '2026-12-31',
+        state: 'PA',
+        locality: 'Pittsburgh',
+      },
+      201,
+    )
+    await data(door + '/work', work, 201)
+    await data(
+      door + '/work',
+      { ...work, id: 'synthetic-envelope-45', day: '2026-03-16', earnedCents: 20002 },
+      201,
+    )
+    await data(
+      door + '/work',
+      {
+        ...work,
+        id: 'synthetic-envelope-46',
+        day: '2026-03-17',
+        state: 'PA',
+        locality: 'Pittsburgh',
+        officeState: 'NY',
+        nyReason: 'convenience',
+        earnedCents: 20003,
+      },
+      201,
+    )
+    const election = {
+      id: 'synthetic-envelope-47',
+      version: 0,
+      from: '2026-03-15',
+      through: '2026-12-31',
+      residentState: 'PA',
+      workState: 'NJ',
+      form: 'NJ-165',
+      owner,
+      evidence: 'synthetic-envelope-48',
+    }
+    await data(door + '/election', election, 201)
+    const preview = await data(door + '?from=2026-03-01&through=2026-03-31')
+    assert.equal(preview.totalWorkCents, 60006)
+    assert.equal(preview.allocatedWorkCents, 60006)
+    assert.deepEqual(
+      preview.allocations.map((a) => a.residentState),
+      ['NJ', 'PA', 'PA'],
+    )
+    assert.deepEqual(
+      preview.allocations[1].stateWageBases.map((b) => b.state),
+      ['PA'],
+      'NJ-165 removes NJ state wage withholding base after the move',
+    )
+    assert.deepEqual(
+      preview.allocations[2].stateWageBases.map((b) => b.state),
+      ['PA', 'NY'],
+      'convenience day retains NY source base',
+    )
+    assert.equal(preview.allocations[1].electionId, election.id)
+    assert.ok(
+      preview.holds.some((h) => /local EIT/.test(h.reason) && h.owner === owner),
+      'reciprocity cannot waive PA locals',
+    )
+    assert.equal(preview.taxAmounts, null)
+    assert.equal(preview.netPay, null)
+    assert.equal(preview.paymentReady, false)
+    const approved = JSON.stringify(preview.allocations)
+    assert.equal(
+      JSON.stringify(
+        (await data(door + '?from=2026-03-01&through=2026-03-31')).allocations,
+      ),
+      approved,
+      'reload preserves exact dates, cents and rule/election provenance',
+    )
+    await capture(
+      'locations-move-preview',
+      screen + '?from=2026-03-01&through=2026-03-31',
+    )
+    await page.goto(origin + screen + '?edit=residence&id=' + residence.id)
+    await page
+      .locator('form[action$="/residence"] input[name="through"]')
+      .fill('2026-03-13')
+    await page
+      .getByRole('button', { name: 'Record effective residence', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    const revisedResidence = (await data(door)).residence.filter(
+      (r) => r.id === residence.id,
+    )
+    assert.equal(revisedResidence[0].version, 2)
+    assert.equal(revisedResidence[0].data.through, '2026-03-13')
+    assert.equal(
+      revisedResidence[1].data.through,
+      '2026-03-14',
+      'native revision preserves prior effective history',
+    )
+    await data(
+      door + '/work',
+      {
+        ...work,
+        id: 'synthetic-envelope-46',
+        version: 1,
+        day: '2026-03-17',
+        state: 'PA',
+        locality: 'Pittsburgh',
+        officeState: 'NY',
+        nyReason: 'employer-necessity',
+        evidence: 'synthetic-envelope-49',
+      },
+      201,
+    )
+    const necessity = await data(door + '?from=2026-03-17&through=2026-03-17')
+    assert.deepEqual(
+      necessity.allocations[0].stateWageBases.map((b) => b.state),
+      ['PA'],
+    )
+    await data(
+      door + '/work',
+      {
+        ...work,
+        id: 'synthetic-envelope-50',
+        day: '2026-04-01',
+        officeState: 'NY',
+        nyReason: 'undetermined',
+      },
+      201,
+    )
+    assert.match(
+      (await data(door + '?from=2026-04-01&through=2026-04-01')).holds[0].reason,
+      /New York/,
+    )
+    await data(
+      door + '/residence',
+      {
+        ...residence,
+        id: 'synthetic-envelope-51',
+        from: '2026-03-16',
+        through: '2026-03-16',
+        state: 'NJ',
+      },
+      201,
+    )
+    const conflict = await data(door + '?from=2026-03-16&through=2026-03-16')
+    assert.equal(conflict.allocations.length, 0)
+    assert.match(conflict.holds[0].reason, /Contradictory/)
+    await capture(
+      'locations-assigned-hold',
+      screen + '?from=2026-03-16&through=2026-03-16',
+    )
+    const snapshot = () =>
+      sql(
+        'SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS revisions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit',
+      )
+    const before = await snapshot()
+    for (const [path, body, status] of [
+      [door + '/residence', residence, 409],
+      [
+        door + '/election',
+        { ...election, id: 'synthetic-envelope-52', form: 'REV-419EX' },
+        400,
+      ],
+      [
+        door + '/work',
+        {
+          ...work,
+          id: 'synthetic-envelope-53',
+          officeState: 'NY',
+          nyReason: 'employer-necessity',
+        },
+        400,
+      ],
+      [door + '/work', { ...work, id: 'synthetic-envelope-54', minutes: 1441 }, 400],
+    ])
+      assert.equal((await request(path, body)).status, status)
+    assert.deepEqual(
+      await snapshot(),
+      before,
+      'invalid/stale writes do not append data or audit',
+    )
+    assert.equal((await request(door, undefined, '')).status, 401)
+    const readerId = 'synthetic-envelope-105',
+      readerToken = randomBytes(32).toString('base64url')
+    const readerHash = await hashToken(settings.SESSION_SECRET, 'session', readerToken)
+    await sql(
+      `INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${readerId}','synthetic-envelope-105@example.com','Synthetic restricted reader','member','active',1,1)`,
+    )
+    await data(base + '/grants', {
+      operatorId: readerId,
+      version: 0,
+      role: 'preparer',
+      locations: ['*'],
+      fields: ['compensation'],
+      actions: ['records:read', 'records:write', 'rates:propose'],
+    })
+    await sql(
+      `INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-106','${readerHash}','${readerId}',1,'native',${Date.now()},${Date.now() + 3600000})`,
+    )
+    const readerCookie = `${localCookieName('operator_session_local', origin)}=${readerToken}`,
+      guard = await snapshot()
+    assert.equal(
+      (await request(door, undefined, readerCookie)).status,
+      403,
+      'compensation access alone does not reveal residence/elections',
+    )
+    assert.equal(
+      (
+        await request(
+          door + '/residence',
+          { ...residence, id: 'synthetic-envelope-107' },
+          readerCookie,
+        )
+      ).status,
+      403,
+      'adding records does not authorize private tax-location edits',
+    )
+    assert.deepEqual(await snapshot(), guard, 'private tax refusals have no writes')
+
+    const other = await data(
+      '/api/envelope/companies',
+      { name: 'Synthetic isolated entity', ein: '00-0000041' },
+      201,
+    )
+    assert.equal((await request(door.replace(company.id, other.id))).status, 404)
+    const stored = JSON.stringify(
+      await sql(
+        "SELECT cipher FROM env_workspace_versions WHERE kind IN ('residence','work','election')",
+      ),
+    )
+    assert.doesNotMatch(
+      stored,
+      /Pittsburgh|Newark|synthetic-envelope-48/,
+      'location/election custody is encrypted',
+    )
+    const history = await data(door)
+    assert.equal(history.work.length, 5, 'both versions and all source days remain')
     await context.close()
-    console.log('LOCATION-ALLOCATIONS passed: native residence entry; NJ-to-PA effective history; out-of-state wages; scoped NJ-165; NY convenience/necessity/unknown; PA-local and contradictory-source owned holds; exact cent bases; encrypted history; stale/cross-company refusals; 1440/390. Full tax/report calculation remains unproved.')
-  }finally{await browser.close()}
+    console.log(
+      'LOCATION-ALLOCATIONS passed: native residence entry; NJ-to-PA effective history; out-of-state wages; scoped NJ-165; NY convenience/necessity/unknown; PA-local and contradictory-source owned holds; exact cent bases; encrypted history; stale/cross-company refusals; 1440/390. Full tax/report calculation remains unproved.',
+    )
+  } finally {
+    await browser.close()
+  }
 }
 
 /** PAY-CALENDARS: native proposals, local boundaries and unavailable rail offers. */
-export async function scheduleJourney({origin,cookie}) {
- const call=async(path,body)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
- const data=async(path,body,status=200)=>{const r=await call(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
- const c=await data('/api/envelope/companies',{name:'Synthetic New York workshop',ein:'00-0000050'},201),base='/api/envelope/companies/'+c.id
- const loc=await data(base+'/locations',{name:'New York workshop',state:'NY'},201),person=await data(base+'/people',{name:'Synthetic NY manual worker',locationId:loc.id},201)
- const door=base+'/schedules', screen=door.replace('/api/','/app/')
- const entry={id:'synthetic-envelope-60',version:0,name:'Weekly workshop',frequency:'weekly',timeZone:'America/New_York',periodStart:'2026-06-08',payDate:'2026-06-19',holidayPolicy:'earlier',personId:person.id,occupation:'manual',workState:'NY'}
- const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
- try{
-  const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
-  const capture=async(label)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+screen);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
-  await capture('schedules-empty')
-  const form=page.locator('form[action$="/schedules"]')
-  for(const [key,val] of Object.entries(entry)){const field=form.locator(`[name="${key}"]`);if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(String(val));else await field.fill(String(val))}
-  await page.getByRole('button',{name:'Prepare calendar proposal',exact:true}).click();await page.waitForURL(origin+screen)
-  let result=await data(door);assert.equal(result.history[0].data.payDate,'2026-06-18','Juneteenth Friday payday moves earlier')
-  assert.deepEqual(result.eligibility.availableSpeeds,[]);assert.equal(result.eligibility.fundingDeadline,null);assert.equal(result.eligibility.fees,null)
-  assert.equal((await call(door,{...entry,id:'synthetic-envelope-61',frequency:'biweekly'})).status,400,'NY manual biweekly requires scoped actual exception')
-  const exception={...entry,id:'synthetic-envelope-62',frequency:'biweekly',payDate:'2026-06-26',exceptionRef:'synthetic-envelope-63',exceptionPersonId:person.id,exceptionFrom:'2026-01-01',exceptionThrough:'2026-12-31'}
-  await data(door,exception,201)
-  for(const change of [{exceptionPersonId:'synthetic-envelope-64'},{exceptionThrough:'2026-06-01'}])assert.equal((await call(door,{...exception,...change,id:'synthetic-envelope-65'})).status,400)
-  for(const [frequency,start,end] of [['semimonthly','2026-06-01','2026-06-15'],['monthly','2026-06-01','2026-06-30']]){
-    await data(door,{...entry,id:'synthetic-envelope-'+frequency,frequency,occupation:'executive',periodStart:start,payDate:'2026-07-02'},201)
-    result=await data(door);assert.equal(result.history.find(r=>r.id==='synthetic-envelope-'+frequency).data.periodEnd,end)
+export async function scheduleJourney({ origin, cookie }) {
+  const call = async (path, body) =>
+    fetch(origin + path, {
+      method: body === undefined ? 'GET' : 'POST',
+      redirect: 'manual',
+      headers: { cookie, origin, 'content-type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+  const data = async (path, body, status = 200) => {
+    const r = await call(path, body)
+    assert.equal(r.status, status, await r.clone().text())
+    return r.json()
   }
-  await data(door,{...entry,id:'synthetic-envelope-66',periodStart:'2026-03-02',payDate:'2026-03-13'},201)
-  result=await data(door);let dst=result.history.find(r=>r.id==='synthetic-envelope-66').data
-  assert.equal((Date.parse(dst.periodEndExclusiveInstant)-Date.parse(dst.periodStartInstant))/3600000,167,'spring local week has 167 elapsed hours')
-  await data(door,{...entry,id:'synthetic-envelope-67',periodStart:'2026-10-26',payDate:'2026-11-06'},201)
-  result=await data(door);dst=result.history.find(r=>r.id==='synthetic-envelope-67').data
-  assert.equal((Date.parse(dst.periodEndExclusiveInstant)-Date.parse(dst.periodStartInstant))/3600000,169,'fall local week has 169 elapsed hours')
-  assert.equal((await call(door,{...entry,id:'synthetic-envelope-68',holidayPolicy:'refuse'})).status,400)
-  assert.equal((await call(door,{...entry,version:0})).status,409,'stale schedule cannot overwrite the reviewed source')
-  await capture('schedules-holidays-dst')
-  await context.close()
-  console.log('PAY-CALENDARS passed: native frequency proposals, NY manual weekly refusal and scoped exception references, four frequencies, Friday bank holiday earlier, DST 167/169-hour local weeks, stale/refuse policy; no disconnected processing offer; 1440/390. Agency exception verification, all-state frequency and live speed/cutoff changes remain unproved.')
- }finally{await browser.close()}
+  const c = await data(
+      '/api/envelope/companies',
+      { name: 'Synthetic New York workshop', ein: '00-0000050' },
+      201,
+    ),
+    base = '/api/envelope/companies/' + c.id
+  const loc = await data(
+      base + '/locations',
+      { name: 'New York workshop', state: 'NY' },
+      201,
+    ),
+    person = await data(
+      base + '/people',
+      { name: 'Synthetic NY manual worker', locationId: loc.id },
+      201,
+    )
+  const door = base + '/schedules',
+    screen = door.replace('/api/', '/app/')
+  const entry = {
+    id: 'synthetic-envelope-60',
+    version: 0,
+    name: 'Weekly workshop',
+    frequency: 'weekly',
+    timeZone: 'America/New_York',
+    periodStart: '2026-06-08',
+    payDate: '2026-06-19',
+    holidayPolicy: 'earlier',
+    personId: person.id,
+    occupation: 'manual',
+    workState: 'NY',
+  }
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--use-mock-keychain', '--password-store=basic'],
+  })
+  try {
+    const context = await browser.newContext(),
+      [name, value] = cookie.split('=')
+    await context.addCookies([{ name, value, url: origin }])
+    const page = await context.newPage()
+    const capture = async (label) => {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 })
+        await page.goto(origin + screen)
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+        )
+        await page.keyboard.press('Tab')
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.tagName),
+          'A',
+          'keyboard reaches native app navigation',
+        )
+        await page.screenshot({
+          path: join(
+            process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',
+            `${label}-${width}.png`,
+          ),
+          fullPage: true,
+        })
+      }
+    }
+    await capture('schedules-empty')
+    const form = page.locator('form[action$="/schedules"]')
+    for (const [key, val] of Object.entries(entry)) {
+      const field = form.locator(`[name="${key}"]`)
+      if ((await field.getAttribute('type')) === 'hidden') continue
+      if ((await field.evaluate((el) => el.tagName)) === 'SELECT')
+        await field.selectOption(String(val))
+      else await field.fill(String(val))
+    }
+    await page
+      .getByRole('button', { name: 'Prepare calendar proposal', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    let result = await data(door)
+    entry.id = result.history[0].id
+    assert.equal(
+      result.history[0].data.payDate,
+      '2026-06-18',
+      'Juneteenth Friday payday moves earlier',
+    )
+    assert.deepEqual(result.eligibility.availableSpeeds, [])
+    assert.equal(result.eligibility.fundingDeadline, null)
+    assert.equal(result.eligibility.fees, null)
+    assert.equal(
+      (await call(door, { ...entry, id: 'synthetic-envelope-61', frequency: 'biweekly' }))
+        .status,
+      400,
+      'NY manual biweekly requires scoped actual exception',
+    )
+    const exception = {
+      ...entry,
+      id: 'synthetic-envelope-62',
+      frequency: 'biweekly',
+      payDate: '2026-06-26',
+      exceptionRef: 'synthetic-envelope-63',
+      exceptionPersonId: person.id,
+      exceptionFrom: '2026-01-01',
+      exceptionThrough: '2026-12-31',
+    }
+    await data(door, exception, 201)
+    for (const change of [
+      { exceptionPersonId: 'synthetic-envelope-64' },
+      { exceptionThrough: '2026-06-01' },
+    ])
+      assert.equal(
+        (await call(door, { ...exception, ...change, id: 'synthetic-envelope-65' }))
+          .status,
+        400,
+      )
+    for (const [frequency, start, end] of [
+      ['semimonthly', '2026-06-01', '2026-06-15'],
+      ['monthly', '2026-06-01', '2026-06-30'],
+    ]) {
+      await data(
+        door,
+        {
+          ...entry,
+          id: 'synthetic-envelope-' + frequency,
+          frequency,
+          occupation: 'executive',
+          periodStart: start,
+          payDate: '2026-07-02',
+        },
+        201,
+      )
+      result = await data(door)
+      assert.equal(
+        result.history.find((r) => r.id === 'synthetic-envelope-' + frequency).data
+          .periodEnd,
+        end,
+      )
+    }
+    await data(
+      door,
+      {
+        ...entry,
+        id: 'synthetic-envelope-66',
+        periodStart: '2026-03-02',
+        payDate: '2026-03-13',
+      },
+      201,
+    )
+    result = await data(door)
+    let dst = result.history.find((r) => r.id === 'synthetic-envelope-66').data
+    assert.equal(
+      (Date.parse(dst.periodEndExclusiveInstant) - Date.parse(dst.periodStartInstant)) /
+        3600000,
+      167,
+      'spring local week has 167 elapsed hours',
+    )
+    await data(
+      door,
+      {
+        ...entry,
+        id: 'synthetic-envelope-67',
+        periodStart: '2026-10-26',
+        payDate: '2026-11-06',
+      },
+      201,
+    )
+    result = await data(door)
+    dst = result.history.find((r) => r.id === 'synthetic-envelope-67').data
+    assert.equal(
+      (Date.parse(dst.periodEndExclusiveInstant) - Date.parse(dst.periodStartInstant)) /
+        3600000,
+      169,
+      'fall local week has 169 elapsed hours',
+    )
+    assert.equal(
+      (
+        await call(door, {
+          ...entry,
+          id: 'synthetic-envelope-68',
+          holidayPolicy: 'refuse',
+        })
+      ).status,
+      400,
+    )
+    assert.equal(
+      (await call(door, { ...entry, version: 0 })).status,
+      409,
+      'stale schedule cannot overwrite the reviewed source',
+    )
+    await capture('schedules-holidays-dst')
+    await context.close()
+    console.log(
+      'PAY-CALENDARS passed: native frequency proposals, NY manual weekly refusal and scoped exception references, four frequencies, Friday bank holiday earlier, DST 167/169-hour local weeks, stale/refuse policy; no disconnected processing offer; 1440/390. Agency exception verification, all-state frequency and live speed/cutoff changes remain unproved.',
+    )
+  } finally {
+    await browser.close()
+  }
 }
 
 /** REVIEWED-PAY-ITEMS: persisted setup versions, human decisions and actual earnings drafts. */
-export async function payItemsJourney({origin,cookie,sql}) {
- const call=async(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
- const data=async(path,body,status=200)=>{const r=await call(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
- const c=await data('/api/envelope/companies',{name:'Synthetic reviewed pay company',ein:'00-0000070'},201),base='/api/envelope/companies/'+c.id
- const loc=await data(base+'/locations',{name:'Synthetic NY office',state:'NY'},201)
- const a=await data(base+'/people',{name:'Synthetic salaried hire',locationId:loc.id},201),b=await data(base+'/people',{name:'Synthetic hourly worker',locationId:loc.id},201)
- const door=base+'/pay-settings',screen=door.replace('/api/','/app/')
- const approve=async(kind,id)=>{const r=await data(door+'/review/'+kind+'/'+id);return data(door+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
- const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
- try {
-  const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
-  const capture=async(label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
-  await capture('pay-settings-empty')
-  const group={id:'synthetic-envelope-70',version:0,name:'Reviewed workshop',people:[a.id,b.id]}
-  await data(door+'/group',group,201)
-  await capture('pay-group-review',screen+'/review/group/'+group.id)
-  await page.getByRole('button',{name:'Approve this exact setup',exact:true}).click();await page.waitForURL(origin+screen)
-  let result=await data(door);assert.ok(result.groups[0].approvedBy)
-  const allowance={id:'synthetic-envelope-71',version:0,name:'Recurring taxable allowance',groupId:group.id,amountCents:10000,taxCode:'w2-cash-earning',effectiveDate:'2026-01-01',recurring:true}
-  assert.equal((await call(door+'/pay-item',{...allowance,taxCode:'invented-exempt-code'})).status,400)
-  await data(door+'/pay-item',allowance,201)
-  const itemReview=await data(door+'/review/pay-item/'+allowance.id)
-  const before=await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions')
-  assert.equal((await call(door+'/pay-item/'+allowance.id+'/approve',{version:1,reviewToken:'synthetic-envelope-72',approvedBy:'an-agent',approved:true})).status,409)
-  assert.deepEqual(await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions'),before,'client approval flags cannot substitute for exact native review')
-  await data(door+'/pay-item/'+allowance.id+'/approve',{version:1,reviewToken:itemReview.reviewToken})
-  assert.equal((await call(door+'/pay-item/'+allowance.id+'/approve',{version:1,reviewToken:itemReview.reviewToken})).status,409,'review is one-use')
-  const reimbursement={...allowance,id:'synthetic-envelope-73',name:'Accountable business expense',amountCents:5000,taxCode:'accountable-reimbursement',evidenceRef:'synthetic-envelope-74',returnExcessBy:'2026-02-28'}
-  assert.equal((await call(door+'/pay-item',{...reimbursement,evidenceRef:''})).status,400)
-  await data(door+'/pay-item',reimbursement,201);await approve('pay-item',reimbursement.id)
-  const items=[{personId:a.id,personVersion:a.version,rateCents:12000000,basis:'annual-salary',employmentFrom:'2026-01-16',employmentThrough:'2026-12-31',unpaidDates:[]},{personId:b.id,personVersion:b.version,rateCents:2500,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2026-12-31',unpaidDates:[]}]
-  const change={id:'synthetic-envelope-75',version:0,name:'Reviewed group rates',groupId:group.id,effectiveDate:'2026-01-01',items}
-  assert.equal((await call(door+'/pay-change',{...change,items:[{...items[0],personVersion:999}]})).status,409)
-  await data(door+'/pay-change',change,201)
-  await capture('bulk-pay-review',screen+'/review/pay-change/'+change.id)
-  await page.getByRole('button',{name:'Approve this exact setup',exact:true}).click();await page.waitForURL(origin+screen)
-  await data(base+'/people/'+b.id+'/allocations/work',{id:'synthetic-envelope-76',version:0,day:'2026-01-20',state:'NY',locality:'New York City',minutes:480,earnedCents:20000,officeState:'NY',nyReason:'not-applicable',sourceRef:'synthetic-envelope-77',owner:'Synthetic payroll reviewer'},201)
-  const period={groupId:group.id,periodStart:'2026-01-01',periodEnd:'2026-01-31',payDate:'2026-02-02',frequency:'monthly'}
-  const preview=await data(door+'/preview',period)
-  assert.equal(preview.people.find(p=>p.id===a.id).earningsCents,516129,'mid-period hire uses 16/31 of one monthly salary, rounded once')
-  assert.equal(preview.people.find(p=>p.id===b.id).earningsCents,20000,'480 sourced minutes use the reviewed hourly rate')
-  assert.equal(preview.people.find(p=>p.id===a.id).taxableCashCents,526129)
-  assert.equal(preview.people.find(p=>p.id===a.id).reimbursementCents,5000)
-  assert.ok(preview.holds.some(h=>/substantiation/.test(h.reason)),'recurring reimbursement does not invent per-period substantiation')
-  assert.equal(preview.netPay,null);assert.equal(preview.paymentReady,false)
-  const draft=await data(door+'/earnings-run',{...period,id:'synthetic-envelope-78',version:0},201)
-  assert.equal(draft.preview.grossCashCents,566129)
-  result=await data(door);assert.equal(result.runs[0].sourceStatus,'current')
-  const oldDraft=JSON.stringify(result.runs[0].data)
-  await capture('pay-settings-earnings')
-  await data(door+'/pay-item/'+allowance.id+'/withdraw',{version:1})
-  result=await data(door);assert.equal(result.runs[0].sourceStatus,'changed-repreview-required');assert.equal(JSON.stringify(result.runs[0].data),oldDraft,'withdrawal never rewrites retained earnings')
-  const revised=await data(door+'/preview',period);assert.equal(revised.people.find(p=>p.id===a.id).taxableCashCents,516129)
-  await data(door+'/pay-item',{...allowance,version:1,amountCents:12000},201)
-  const stale=await data(door+'/review/pay-item/'+allowance.id)
-  await data(door+'/pay-item',{...allowance,version:2,amountCents:13000},201)
-  const snapshot=await sql('SELECT (SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit')
-  assert.equal((await call(door+'/pay-item/'+allowance.id+'/approve',{version:stale.version,reviewToken:stale.reviewToken})).status,409)
-  assert.deepEqual(await sql('SELECT (SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit'),snapshot,'stale review has no writes')
-  assert.equal((await call(door+'/earnings-run/synthetic-envelope-78/approve',{approved:true})).status,404,'uncalculated earnings cannot become approved payroll')
-  assert.equal((await call(door+'/settle',{paid:true})).status,404,'no pretend settlement or correction receipt route')
-  // Current person-source changes invalidate the group and every dependent setup.
-  const rate=await data(base+'/people/'+a.id+'/rates',{version:a.version,hourlyCents:2600,effectiveDate:'2026-02-01'},201)
-  const review=await data(base+'/rates/'+rate.id)
-  await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken})
-  assert.equal((await call(door+'/preview',period)).status,409,'source version changed: group must be reviewed again')
-  await capture('pay-settings-source-changed')
-  await capture('preparation-hub',base.replace('/api/','/app/')+'/workspace')
-  await context.close()
-  console.log('REVIEWED-PAY-ITEMS passed: native group/bulk review, taxable allowance/accountable-plan distinction, exact salary proration and sourced hourly earnings, invalid tax/stale source refusals, one-use human decision, withdrawal, immutable persisted earnings and source invalidation; no pretend settlement; 1440/390. Full taxability, first payable run and post-settlement correction remain unproved.')
- }finally{await browser.close()}
+export async function payItemsJourney({ origin, cookie, sql }) {
+  const call = async (path, body, who = cookie) =>
+    fetch(origin + path, {
+      method: body === undefined ? 'GET' : 'POST',
+      redirect: 'manual',
+      headers: { cookie: who, origin, 'content-type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+  const data = async (path, body, status = 200) => {
+    const r = await call(path, body)
+    assert.equal(r.status, status, await r.clone().text())
+    return r.json()
+  }
+  const c = await data(
+      '/api/envelope/companies',
+      { name: 'Synthetic reviewed pay company', ein: '00-0000070' },
+      201,
+    ),
+    base = '/api/envelope/companies/' + c.id
+  const loc = await data(
+    base + '/locations',
+    { name: 'Synthetic NY office', state: 'NY' },
+    201,
+  )
+  const a = await data(
+      base + '/people',
+      { name: 'Synthetic salaried hire', locationId: loc.id },
+      201,
+    ),
+    b = await data(
+      base + '/people',
+      { name: 'Synthetic hourly worker', locationId: loc.id },
+      201,
+    )
+  const door = base + '/pay-settings',
+    screen = door.replace('/api/', '/app/')
+  const approve = async (kind, id) => {
+    const r = await data(door + '/review/' + kind + '/' + id)
+    return data(door + '/' + kind + '/' + id + '/approve', {
+      version: r.version,
+      reviewToken: r.reviewToken,
+    })
+  }
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--use-mock-keychain', '--password-store=basic'],
+  })
+  try {
+    const context = await browser.newContext(),
+      [name, value] = cookie.split('=')
+    await context.addCookies([{ name, value, url: origin }])
+    const page = await context.newPage()
+    const capture = async (label, path = screen) => {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 })
+        await page.goto(origin + path)
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+          label,
+        )
+        await page.keyboard.press('Tab')
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.tagName),
+          'A',
+          'keyboard reaches native app navigation',
+        )
+        await page.screenshot({
+          path: join(
+            process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',
+            `${label}-${width}.png`,
+          ),
+          fullPage: true,
+        })
+      }
+    }
+    await capture('pay-settings-empty')
+    const group = {
+      id: 'synthetic-envelope-70',
+      version: 0,
+      name: 'Reviewed workshop',
+      people: [a.id, b.id],
+    }
+    await data(door + '/group', group, 201)
+    await capture('pay-group-review', screen + '/review/group/' + group.id)
+    await page
+      .getByRole('button', { name: 'Approve this exact setup', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    let result = await data(door)
+    assert.ok(result.groups[0].approvedBy)
+    const allowance = {
+      id: 'synthetic-envelope-71',
+      version: 0,
+      name: 'Recurring taxable allowance',
+      groupId: group.id,
+      amountCents: 10000,
+      taxCode: 'w2-cash-earning',
+      effectiveDate: '2026-01-01',
+      recurring: true,
+    }
+    assert.equal(
+      (await call(door + '/pay-item', { ...allowance, taxCode: 'invented-exempt-code' }))
+        .status,
+      400,
+    )
+    await data(door + '/pay-item', allowance, 201)
+    const itemReview = await data(door + '/review/pay-item/' + allowance.id)
+    const before = await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions')
+    assert.equal(
+      (
+        await call(door + '/pay-item/' + allowance.id + '/approve', {
+          version: 1,
+          reviewToken: 'synthetic-envelope-72',
+          approvedBy: 'an-agent',
+          approved: true,
+        })
+      ).status,
+      409,
+    )
+    assert.deepEqual(
+      await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions'),
+      before,
+      'client approval flags cannot substitute for exact native review',
+    )
+    await data(door + '/pay-item/' + allowance.id + '/approve', {
+      version: 1,
+      reviewToken: itemReview.reviewToken,
+    })
+    assert.equal(
+      (
+        await call(door + '/pay-item/' + allowance.id + '/approve', {
+          version: 1,
+          reviewToken: itemReview.reviewToken,
+        })
+      ).status,
+      409,
+      'review is one-use',
+    )
+    const reimbursement = {
+      ...allowance,
+      id: 'synthetic-envelope-73',
+      name: 'Accountable business expense',
+      amountCents: 5000,
+      taxCode: 'accountable-reimbursement',
+      evidenceRef: 'synthetic-envelope-74',
+      returnExcessBy: '2026-02-28',
+    }
+    assert.equal(
+      (await call(door + '/pay-item', { ...reimbursement, evidenceRef: '' })).status,
+      400,
+    )
+    await data(door + '/pay-item', reimbursement, 201)
+    await approve('pay-item', reimbursement.id)
+    const items = [
+      {
+        personId: a.id,
+        personVersion: a.version,
+        rateCents: 12000000,
+        basis: 'annual-salary',
+        employmentFrom: '2026-01-16',
+        employmentThrough: '2026-12-31',
+        unpaidDates: [],
+      },
+      {
+        personId: b.id,
+        personVersion: b.version,
+        rateCents: 2500,
+        basis: 'hourly',
+        employmentFrom: '2026-01-01',
+        employmentThrough: '2026-12-31',
+        unpaidDates: [],
+      },
+    ]
+    const change = {
+      id: 'synthetic-envelope-75',
+      version: 0,
+      name: 'Reviewed group rates',
+      groupId: group.id,
+      effectiveDate: '2026-01-01',
+      items,
+    }
+    assert.equal(
+      (
+        await call(door + '/pay-change', {
+          ...change,
+          items: [{ ...items[0], personVersion: 999 }],
+        })
+      ).status,
+      409,
+    )
+    await data(door + '/pay-change', change, 201)
+    await capture('bulk-pay-review', screen + '/review/pay-change/' + change.id)
+    await page
+      .getByRole('button', { name: 'Approve this exact setup', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    await data(
+      base + '/people/' + b.id + '/allocations/work',
+      {
+        id: 'synthetic-envelope-76',
+        version: 0,
+        day: '2026-01-20',
+        state: 'NY',
+        locality: 'New York City',
+        minutes: 480,
+        earnedCents: 20000,
+        officeState: 'NY',
+        nyReason: 'not-applicable',
+        sourceRef: 'synthetic-envelope-77',
+        owner: 'Synthetic payroll reviewer',
+      },
+      201,
+    )
+    const period = {
+      groupId: group.id,
+      periodStart: '2026-01-01',
+      periodEnd: '2026-01-31',
+      payDate: '2026-02-02',
+      frequency: 'monthly',
+    }
+    const preview = await data(door + '/preview', period)
+    assert.equal(
+      preview.people.find((p) => p.id === a.id).earningsCents,
+      516129,
+      'mid-period hire uses 16/31 of one monthly salary, rounded once',
+    )
+    assert.equal(
+      preview.people.find((p) => p.id === b.id).earningsCents,
+      20000,
+      '480 sourced minutes use the reviewed hourly rate',
+    )
+    assert.equal(preview.people.find((p) => p.id === a.id).taxableCashCents, 526129)
+    assert.equal(preview.people.find((p) => p.id === a.id).reimbursementCents, 5000)
+    assert.ok(
+      preview.holds.some((h) => /substantiation/.test(h.reason)),
+      'recurring reimbursement does not invent per-period substantiation',
+    )
+    assert.equal(preview.netPay, null)
+    assert.equal(preview.paymentReady, false)
+    const draft = await data(
+      door + '/earnings-run',
+      { ...period, id: 'synthetic-envelope-78', version: 0 },
+      201,
+    )
+    assert.equal(draft.preview.grossCashCents, 566129)
+    result = await data(door)
+    assert.equal(result.runs[0].sourceStatus, 'current')
+    const oldDraft = JSON.stringify(result.runs[0].data)
+    await capture('pay-settings-earnings')
+    await data(door + '/pay-item/' + allowance.id + '/withdraw', { version: 1 })
+    result = await data(door)
+    assert.equal(result.runs[0].sourceStatus, 'changed-repreview-required')
+    assert.equal(
+      JSON.stringify(result.runs[0].data),
+      oldDraft,
+      'withdrawal never rewrites retained earnings',
+    )
+    const revised = await data(door + '/preview', period)
+    assert.equal(revised.people.find((p) => p.id === a.id).taxableCashCents, 516129)
+    await data(door + '/pay-item', { ...allowance, version: 1, amountCents: 12000 }, 201)
+    const stale = await data(door + '/review/pay-item/' + allowance.id)
+    await data(door + '/pay-item', { ...allowance, version: 2, amountCents: 13000 }, 201)
+    const snapshot = await sql(
+      'SELECT (SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit',
+    )
+    assert.equal(
+      (
+        await call(door + '/pay-item/' + allowance.id + '/approve', {
+          version: stale.version,
+          reviewToken: stale.reviewToken,
+        })
+      ).status,
+      409,
+    )
+    assert.deepEqual(
+      await sql(
+        'SELECT (SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit',
+      ),
+      snapshot,
+      'stale review has no writes',
+    )
+    assert.equal(
+      (
+        await call(door + '/earnings-run/synthetic-envelope-78/approve', {
+          approved: true,
+        })
+      ).status,
+      404,
+      'uncalculated earnings cannot become approved payroll',
+    )
+    assert.equal(
+      (await call(door + '/settle', { paid: true })).status,
+      404,
+      'no pretend settlement or correction receipt route',
+    )
+    // Current person-source changes invalidate the group and every dependent setup.
+    const rate = await data(
+      base + '/people/' + a.id + '/rates',
+      { version: a.version, hourlyCents: 2600, effectiveDate: '2026-02-01' },
+      201,
+    )
+    const review = await data(base + '/rates/' + rate.id)
+    await data(base + '/rates/' + rate.id + '/approve', {
+      reviewToken: review.reviewToken,
+    })
+    assert.equal(
+      (await call(door + '/preview', period)).status,
+      409,
+      'source version changed: group must be reviewed again',
+    )
+    await capture('pay-settings-source-changed')
+    await capture('preparation-hub', base.replace('/api/', '/app/') + '/workspace')
+    await context.close()
+    console.log(
+      'REVIEWED-PAY-ITEMS passed: native group/bulk review, taxable allowance/accountable-plan distinction, exact salary proration and sourced hourly earnings, invalid tax/stale source refusals, one-use human decision, withdrawal, immutable persisted earnings and source invalidation; no pretend settlement; 1440/390. Full taxability, first payable run and post-settlement correction remain unproved.',
+    )
+  } finally {
+    await browser.close()
+  }
 }
 
 /** RULE-EDITIONS: public source administration, exact decisions and retained duty clocks. */
-export async function rulesJourney({origin,cookie,sql}) {
- const call=async(path,body)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
- const data=async(path,body,status=200)=>{const r=await call(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
- const c=await data('/api/envelope/companies',{name:'Synthetic rule administration',ein:'00-0000090'},201),base='/api/envelope/companies/'+c.id
- const owner=(await sql("SELECT id FROM oa_operators WHERE email='owner@example.com'"))[0].id,backup='synthetic-envelope-90'
- await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${backup}','synthetic-envelope-90@example.com','Synthetic backup reviewer','member','active',1,1)`)
- await data(base+'/grants',{operatorId:backup,version:0,role:'approver',locations:['*'],fields:['compensation'],actions:['records:read','rates:approve']})
- const loc=await data(base+'/locations',{name:'New York City office',state:'NY'},201)
- await data(base+'/people',{name:'Synthetic affected worker',locationId:loc.id},201)
- const door=base+'/rules',screen=door.replace('/api/','/app/')
- const rule={id:'synthetic-envelope-91',version:0,name:'NYC minimum wage source',family:'city-minimum-wage',state:'NY',locality:'New York City',effectiveFrom:'2025-01-01',effectiveThrough:'2025-12-31',publishedDate:'2024-12-01',sourceTitle:'Synthetic official-source fixture',sourceUrl:'https://dol.ny.gov/minimum-wage-0',sourceRef:'synthetic-envelope-92',edition:'2025',taxYear:2025,determination:'final',value:'16.50',unit:'USD/hour',ownerId:owner,backupId:backup,approvalDue:'2024-12-26T17:00:00Z',wageDeadline:'2025-01-10T23:59:59Z'}
- const approve=async(id)=>{const r=await data(door+'/review/'+id);return data(door+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
- const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
- try {
-  const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
-  const capture=async(label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
-  await capture('rule-editions-empty')
-  const form=page.locator('form[action$="/rules"]')
-  for(const [key,val] of Object.entries(rule)){const field=form.locator(`[name="${key}"]`);if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(String(val));else await field.fill(String(val))}
-  await page.getByRole('button',{name:'Record sourced proposal',exact:true}).click();await page.waitForURL(origin+screen)
-  await capture('rule-edition-review',screen+'/review/'+rule.id)
-  await page.getByRole('button',{name:'Approve this exact source edition',exact:true}).click();await page.waitForURL(origin+screen)
-  let result=await data(door+'?asOf=2025-06-01T00:00:00Z');assert.equal(result.active[0].data.value,'16.50')
-  const raise={...rule,version:1,effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',publishedDate:'2025-12-01',edition:'2026',taxYear:2026,value:'17.00',approvalDue:'2025-12-26T17:00:00Z',wageDeadline:'2026-01-09T23:59:59Z'}
-  await data(door,raise,201)
-  result=await data(door+'?asOf=2026-01-02T00:00:00Z')
-  assert.equal(result.active.length,0,'unapproved wage mutation cannot apply')
-  assert.equal(result.obligations[0].escalation,'backup-action-required');assert.equal(result.obligations[0].proposedMutation,'held-pending-human-decision');assert.equal(result.obligations[0].paymentReceipt,null)
-  assert.equal(result.impacts[0].people.length,1);assert.equal(result.impacts[0].scope,'candidate-impact-only')
-  await capture('rule-duty-overdue',screen+'?asOf=2026-01-02T00:00:00Z')
-  await approve(rule.id)
-  result=await data(door+'?asOf=2026-01-02T00:00:00Z');assert.equal(result.active[0].data.value,'17.00');assert.equal(result.obligations[0].missedInternalApprovalDeadline,true,'late named approval does not erase the original missed deadline')
-  result=await data(door+'?asOf=2025-06-01T00:00:00Z');assert.equal(result.active[0].data.value,'16.50','prior effective source edition remains available')
-  const common={...raise,version:0,locality:'',value:'1.8',unit:'cents/hour'}
-  for(const proposal of [
-    {...common,id:'synthetic-envelope-93',name:'WA L&I revised class source',family:'wa-li',state:'WA',sourceUrl:'https://www.lni.wa.gov/insurance/rates-risk-classes/',details:{riskClass:'synthetic-envelope-94',totalRate:'1.8',employeeRate:'0.4',hoursMethod:'wa-160-month'}},
-    {...common,id:'synthetic-envelope-95',name:'OR WBF new-year source',family:'or-wbf',state:'OR',sourceUrl:'https://www.oregon.gov/dcbs/cost/Pages/wbf.aspx',details:{totalRate:'1.8',employeeRate:'0.9',hoursMethod:'actual',rounding:'nearest-cent-per-report'}},
-    {...common,id:'synthetic-envelope-96',name:'Retroactive SUI source',family:'sui',state:'NY',value:'2.4',unit:'percent',sourceUrl:'https://dol.ny.gov/unemployment-insurance-rate-information'},
-  ]){await data(door,proposal,201);await approve(proposal.id)}
-  const futa={...common,id:'synthetic-envelope-97',name:'Potential FUTA reduction',family:'futa',state:'CA',determination:'provisional',value:'1.5',unit:'percent',sourceUrl:'https://oui.doleta.gov/unemploy/futa_credit.asp',details:{reduction:'1.5',bcr:'0',addOn:'0'}}
-  await data(door,futa,201);await approve(futa.id)
-  result=await data(door+'?asOf=2026-10-21T00:00:00Z');assert.ok(result.missingFinalFuta.includes(2026));assert.equal(result.active.some(r=>r.id===futa.id),false,'reviewed forecast is still not final')
-  assert.equal((await call(door,{...futa,version:1,determination:'final'})).status,400,'a final FUTA label without a final notice refuses')
-  await data(door,{...futa,version:1,determination:'final',details:{...futa.details,finalNoticeRef:'synthetic-envelope-98'}},201);await approve(futa.id)
-  result=await data(door+'?asOf=2026-10-21T00:00:00Z');assert.deepEqual(result.missingFinalFuta,[]);assert.ok(result.active.some(r=>r.id===futa.id))
-  const before=await sql('SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit')
-  for(const change of [{sourceUrl:'http://dol.ny.gov/minimum-wage-0'},{backupId:owner},{approvalDue:'2026-02-30T12:00:00Z'}])assert.equal((await call(door,{...rule,id:'synthetic-envelope-99',...change})).status,400)
-  assert.deepEqual(await sql('SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit'),before,'invalid source/deadline/duty proposals create no data or audit')
-  await capture('rule-editions-specialized')
-  const fresh=await data(door);assert.equal(fresh.history.filter(r=>r.id===rule.id).length,2);assert.equal(fresh.calculationApplied,false)
-  await context.close()
-  console.log('RULE-EDITIONS passed: native official-source proposal and exact human review; January edition boundary/history; overdue proposal/backup and retained missed deadline; candidate people; WA L&I/OR WBF/retro SUI editions; reviewed FUTA forecast excluded until final-notice-backed version; invalid-source/deadline refusals; 1440/390. Complete rule coverage, calculated impacts and receipt-proven timely payment remain unproved.')
- }finally{await browser.close()}
+export async function rulesJourney({ origin, cookie, sql }) {
+  const call = async (path, body) =>
+    fetch(origin + path, {
+      method: body === undefined ? 'GET' : 'POST',
+      redirect: 'manual',
+      headers: { cookie, origin, 'content-type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+  const data = async (path, body, status = 200) => {
+    const r = await call(path, body)
+    assert.equal(r.status, status, await r.clone().text())
+    return r.json()
+  }
+  const c = await data(
+      '/api/envelope/companies',
+      { name: 'Synthetic rule administration', ein: '00-0000090' },
+      201,
+    ),
+    base = '/api/envelope/companies/' + c.id
+  const owner = (
+      await sql("SELECT id FROM oa_operators WHERE email='owner@example.com'")
+    )[0].id,
+    backup = 'synthetic-envelope-90'
+  await sql(
+    `INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${backup}','synthetic-envelope-90@example.com','Synthetic backup reviewer','member','active',1,1)`,
+  )
+  await data(base + '/grants', {
+    operatorId: backup,
+    version: 0,
+    role: 'approver',
+    locations: ['*'],
+    fields: ['compensation'],
+    actions: ['records:read', 'rates:approve'],
+  })
+  const loc = await data(
+    base + '/locations',
+    { name: 'New York City office', state: 'NY' },
+    201,
+  )
+  const worker = await data(
+    base + '/people',
+    { name: 'Synthetic affected worker', locationId: loc.id },
+    201,
+  )
+  const door = base + '/rules',
+    screen = door.replace('/api/', '/app/')
+  const payDoor = base + '/pay-settings',
+    groupId = 'synthetic-envelope-108',
+    changeId = 'synthetic-envelope-109'
+  const approvePay = async (kind, id) => {
+    const r = await data(payDoor + '/review/' + kind + '/' + id)
+    await data(payDoor + '/' + kind + '/' + id + '/approve', {
+      version: r.version,
+      reviewToken: r.reviewToken,
+    })
+  }
+  await data(
+    payDoor + '/group',
+    { id: groupId, version: 0, name: 'Synthetic affected group', people: [worker.id] },
+    201,
+  )
+  await approvePay('group', groupId)
+  await data(
+    payDoor + '/pay-change',
+    {
+      id: changeId,
+      version: 0,
+      name: 'Synthetic standing salary',
+      groupId,
+      effectiveDate: '2025-01-01',
+      items: [
+        {
+          personId: worker.id,
+          personVersion: worker.version,
+          rateCents: 12000000,
+          basis: 'annual-salary',
+          employmentFrom: '2025-01-01',
+          employmentThrough: '2027-12-31',
+          unpaidDates: [],
+        },
+      ],
+    },
+    201,
+  )
+  await approvePay('pay-change', changeId)
+  const runInput = (year, id, version = 0) => ({
+    id,
+    version,
+    groupId,
+    periodStart: `${year}-01-01`,
+    periodEnd: `${year}-01-31`,
+    payDate: `${year}-02-02`,
+    frequency: 'monthly',
+  })
+  const pastId = 'synthetic-envelope-110',
+    currentId = 'synthetic-envelope-111'
+  await data(payDoor + '/earnings-run', runInput(2025, pastId), 201)
+  await data(payDoor + '/earnings-run', runInput(2026, currentId), 201)
+
+  const rule = {
+    id: 'synthetic-envelope-91',
+    version: 0,
+    name: 'NYC minimum wage source',
+    family: 'city-minimum-wage',
+    state: 'NY',
+    locality: 'New York City',
+    effectiveFrom: '2025-01-01',
+    effectiveThrough: '2025-12-31',
+    publishedDate: '2024-12-01',
+    sourceTitle: 'Synthetic official-source fixture',
+    sourceUrl: 'https://dol.ny.gov/minimum-wage-0',
+    sourceRef: 'synthetic-envelope-92',
+    edition: '2025',
+    taxYear: 2025,
+    determination: 'final',
+    value: '16.50',
+    unit: 'USD/hour',
+    ownerId: owner,
+    backupId: backup,
+    approvalDue: '2024-12-26T17:00:00Z',
+    wageDeadline: '2025-01-10T23:59:59Z',
+  }
+  const approve = async (id) => {
+    const r = await data(door + '/review/' + id)
+    return data(door + '/' + id + '/approve', {
+      version: r.version,
+      reviewToken: r.reviewToken,
+    })
+  }
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--use-mock-keychain', '--password-store=basic'],
+  })
+  try {
+    const context = await browser.newContext(),
+      [name, value] = cookie.split('=')
+    await context.addCookies([{ name, value, url: origin }])
+    const page = await context.newPage()
+    const capture = async (label, path = screen) => {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 1000 })
+        await page.goto(origin + path)
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+          label,
+        )
+        await page.keyboard.press('Tab')
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.tagName),
+          'A',
+          'keyboard reaches native app navigation',
+        )
+        await page.screenshot({
+          path: join(
+            process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',
+            `${label}-${width}.png`,
+          ),
+          fullPage: true,
+        })
+      }
+    }
+    await capture('rule-editions-empty')
+    const form = page.locator('form[action$="/rules"]')
+    for (const [key, val] of Object.entries(rule)) {
+      const field = form.locator(`[name="${key}"]`)
+      if ((await field.getAttribute('type')) === 'hidden') continue
+      if ((await field.evaluate((el) => el.tagName)) === 'SELECT')
+        await field.selectOption(String(val))
+      else await field.fill(String(val))
+    }
+    await page
+      .getByRole('button', { name: 'Record sourced proposal', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    await capture('rule-edition-review', screen + '/review/' + rule.id)
+    await page
+      .getByRole('button', { name: 'Approve this exact source edition', exact: true })
+      .click()
+    await page.waitForURL(origin + screen)
+    let result = await data(door + '?asOf=2025-06-01T00:00:00Z')
+    assert.equal(result.active[0].data.value, '16.50')
+    await data(payDoor + '/earnings-run', runInput(2025, pastId, 1), 201)
+    const pastSnapshot = JSON.stringify(
+      (await data(payDoor)).runs.find((r) => r.id === pastId).data,
+    )
+    const raise = {
+      ...rule,
+      version: 1,
+      effectiveFrom: '2026-01-01',
+      effectiveThrough: '2026-12-31',
+      publishedDate: '2025-12-01',
+      edition: '2026',
+      taxYear: 2026,
+      value: '17.00',
+      approvalDue: '2025-12-26T17:00:00Z',
+      wageDeadline: '2026-01-09T23:59:59Z',
+    }
+    await data(door, raise, 201)
+    let drafts = (await data(payDoor)).runs
+    assert.equal(
+      drafts.find((r) => r.id === pastId).sourceStatus,
+      'current',
+      'new-year source does not invalidate prior-year draft',
+    )
+    assert.equal(
+      drafts.find((r) => r.id === currentId).sourceStatus,
+      'changed-repreview-required',
+      'effective rule proposal invalidates the affected earnings preview',
+    )
+    assert.equal(
+      JSON.stringify(drafts.find((r) => r.id === pastId).data),
+      pastSnapshot,
+      'prior source and cents stay immutable',
+    )
+
+    result = await data(door + '?asOf=2026-01-02T00:00:00Z')
+    assert.equal(result.active.length, 0, 'unapproved wage mutation cannot apply')
+    assert.equal(result.obligations[0].escalation, 'backup-action-required')
+    assert.equal(result.obligations[0].proposedMutation, 'held-pending-human-decision')
+    assert.equal(result.obligations[0].paymentReceipt, null)
+    assert.equal(result.impacts[0].people.length, 1)
+    assert.equal(result.impacts[0].scope, 'candidate-impact-only')
+    assert.deepEqual(
+      result.impacts[0].drafts.map((d) => d.id),
+      [currentId],
+      'candidate impact names the intersecting retained earnings draft',
+    )
+    await capture('rule-duty-overdue', screen + '?asOf=2026-01-02T00:00:00Z')
+    await approve(rule.id)
+    result = await data(door + '?asOf=2026-01-02T00:00:00Z')
+    assert.equal(result.active[0].data.value, '17.00')
+    assert.equal(
+      result.obligations[0].missedInternalApprovalDeadline,
+      true,
+      'late named approval does not erase the original missed deadline',
+    )
+    result = await data(door + '?asOf=2025-06-01T00:00:00Z')
+    assert.equal(
+      result.active[0].data.value,
+      '16.50',
+      'prior effective source edition remains available',
+    )
+    const common = {
+      ...raise,
+      version: 0,
+      locality: '',
+      value: '1.8',
+      unit: 'cents/hour',
+    }
+    for (const proposal of [
+      {
+        ...common,
+        id: 'synthetic-envelope-93',
+        name: 'WA L&I revised class source',
+        family: 'wa-li',
+        state: 'WA',
+        sourceUrl: 'https://www.lni.wa.gov/insurance/rates-risk-classes/',
+        details: {
+          riskClass: 'synthetic-envelope-94',
+          totalRate: '1.8',
+          employeeRate: '0.4',
+          hoursMethod: 'wa-160-month',
+        },
+      },
+      {
+        ...common,
+        id: 'synthetic-envelope-95',
+        name: 'OR WBF new-year source',
+        family: 'or-wbf',
+        state: 'OR',
+        sourceUrl: 'https://www.oregon.gov/dcbs/cost/Pages/wbf.aspx',
+        details: {
+          totalRate: '1.8',
+          employeeRate: '0.9',
+          hoursMethod: 'actual',
+          rounding: 'nearest-cent-per-report',
+        },
+      },
+      {
+        ...common,
+        id: 'synthetic-envelope-96',
+        name: 'Retroactive SUI source',
+        family: 'sui',
+        state: 'NY',
+        value: '2.4',
+        unit: 'percent',
+        sourceUrl: 'https://dol.ny.gov/unemployment-insurance-rate-information',
+      },
+    ]) {
+      await data(door, proposal, 201)
+      await approve(proposal.id)
+    }
+    const futa = {
+      ...common,
+      id: 'synthetic-envelope-97',
+      name: 'Potential FUTA reduction',
+      family: 'futa',
+      state: 'CA',
+      determination: 'provisional',
+      value: '1.5',
+      unit: 'percent',
+      sourceUrl: 'https://oui.doleta.gov/unemploy/futa_credit.asp',
+      details: { reduction: '1.5', bcr: '0', addOn: '0' },
+    }
+    await data(door, futa, 201)
+    await approve(futa.id)
+    result = await data(door + '?asOf=2026-10-21T00:00:00Z')
+    assert.ok(result.missingFinalFuta.includes(2026))
+    assert.equal(
+      result.active.some((r) => r.id === futa.id),
+      false,
+      'reviewed forecast is still not final',
+    )
+    assert.equal(
+      (await call(door, { ...futa, version: 1, determination: 'final' })).status,
+      400,
+      'a final FUTA label without a final notice refuses',
+    )
+    await data(
+      door,
+      {
+        ...futa,
+        version: 1,
+        determination: 'final',
+        details: { ...futa.details, finalNoticeRef: 'synthetic-envelope-98' },
+      },
+      201,
+    )
+    await approve(futa.id)
+    result = await data(door + '?asOf=2026-10-21T00:00:00Z')
+    assert.deepEqual(result.missingFinalFuta, [])
+    assert.ok(result.active.some((r) => r.id === futa.id))
+    const before = await sql(
+      'SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit',
+    )
+    for (const change of [
+      { sourceUrl: 'http://dol.ny.gov/minimum-wage-0' },
+      { backupId: owner },
+      { approvalDue: '2026-02-30T12:00:00Z' },
+    ])
+      assert.equal(
+        (await call(door, { ...rule, id: 'synthetic-envelope-99', ...change })).status,
+        400,
+      )
+    assert.deepEqual(
+      await sql(
+        'SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit',
+      ),
+      before,
+      'invalid source/deadline/duty proposals create no data or audit',
+    )
+    await capture('rule-editions-specialized')
+    const fresh = await data(door)
+    assert.equal(fresh.history.filter((r) => r.id === rule.id).length, 2)
+    assert.equal(fresh.calculationApplied, false)
+    await context.close()
+    console.log(
+      'RULE-EDITIONS passed: native official-source proposal and exact human review; January edition boundary/history; overdue proposal/backup and retained missed deadline; candidate people; WA L&I/OR WBF/retro SUI editions; reviewed FUTA forecast excluded until final-notice-backed version; invalid-source/deadline refusals; 1440/390. Complete rule coverage, calculated impacts and receipt-proven timely payment remain unproved.',
+    )
+  } finally {
+    await browser.close()
+  }
 }
