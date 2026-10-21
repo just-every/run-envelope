@@ -2227,6 +2227,35 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     )
     await capture('pay-settings-source-changed')
     await capture('preparation-hub', base.replace('/api/', '/app/') + '/workspace')
+    // The same business operation at the contracted first-buyer ceiling must
+    // not overflow D1's variable count. This is not a timing benchmark.
+    const members = []
+    for (let n = 0; n < 100; n++)
+      members.push(
+        (
+          await data(
+            base + '/people',
+            { name: 'Synthetic bulk worker ' + n, locationId: loc.id },
+            201,
+          )
+        ).id,
+      )
+    await data(
+      door + '/group',
+      {
+        id: 'synthetic-envelope-112',
+        version: 0,
+        name: '100-person reviewed group',
+        people: members,
+      },
+      201,
+    )
+    await approve('group', 'synthetic-envelope-112')
+    assert.equal(
+      (await data(door)).groups.find((g) => g.id === 'synthetic-envelope-112').data.people
+        .length,
+      100,
+    )
     await context.close()
     console.log(
       'REVIEWED-PAY-ITEMS passed: native group/bulk review, taxable allowance/accountable-plan distinction, exact salary proration and sourced hourly earnings, invalid tax/stale source refusals, one-use human decision, withdrawal, immutable persisted earnings and source invalidation; no pretend settlement; 1440/390. Full taxability, first payable run and post-settlement correction remain unproved.',

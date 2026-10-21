@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d319779b6a7f5d73c53337c4529780370cdb28b76fb60629330b28cadabb3835",
+      "sha256": "67758e6b0f10bf81eb713327f1116d7c230fe9002ccd846233b2fe9c81756cc2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -893,7 +893,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "0559f72d0047d399977cb9026462326c7d4e7e9ca4777ff8bd3ccf54cf88c8c7",
+      "sha256": "5a9ec6af15551a53a6659d2f04e302c7a72a1b3729ac22bcc6d04e7fe149c2d9",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -1933,7 +1933,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "e82339b004d5d2de7b34eff8cebe35e39bb0917119fde301a53d512177566de9",
+      "sha256": "608b73ee802e9c312bbe38f2528a2367885de08bce43cc7ddda9b05910834426",
       "executable": false
     },
     "tests/runtime.mjs": {

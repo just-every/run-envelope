@@ -387,7 +387,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Status updated from public-door runtime assertions in `tests/payroll-runtime.mjs` (21 October 2026). Every target below remains partial where the complete acceptance journey is unproved.
+Judged from the code and tests at commit `1167c765b69b38a1c49a21bfe208cee4208e9a35` (21 October 2026).
 
 No clause is complete payroll or production readiness.
 

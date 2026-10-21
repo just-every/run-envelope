@@ -171,39 +171,22 @@ export class WorkspaceStore {
     if (new Set(pins.map((p) => p.id)).size !== pins.length)
       throw new PayrollError('duplicate_source')
     const deps = sources.objects ?? []
-    const sourceSql =
-      pins
-        .map(
-          () =>
-            'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)',
-        )
-        .join(' ') +
-      deps
-        .map(
-          (d) =>
-            ` AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=? ${d.approved ? "AND EXISTS(SELECT 1 FROM env_workspace_decisions WHERE company_id=? AND kind=? AND object_id=? AND version=? AND decision='approved') AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions WHERE company_id=? AND kind=? AND object_id=? AND version=? AND decision='withdrawn')" : ''}`,
-        )
-        .join(' ')
+    // Constant-size binding sets avoid D1's per-statement variable limit for
+    // genuine 100-person groups and multi-day source collections.
+    const sourceSql = `AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
+      SELECT 1 FROM env_people p WHERE p.company_id=? AND p.id=json_extract(pin.value,'$.id') AND p.version=json_extract(pin.value,'$.version')))
+      AND NOT EXISTS(SELECT 1 FROM json_each(?) src WHERE
+        COALESCE((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=? AND sv.kind=json_extract(src.value,'$.kind') AND sv.object_id=json_extract(src.value,'$.id')),0)!=json_extract(src.value,'$.version')
+        OR (json_extract(src.value,'$.approved')=1 AND (
+          NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='approved')
+          OR EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='withdrawn'))))`
     const sourceArgs = [
-      ...pins.flatMap((p) => [actor.company, p.id, p.version]),
-      ...deps.flatMap((d) => [
-        actor.company,
-        d.kind,
-        d.id,
-        d.version,
-        ...(d.approved
-          ? [
-              actor.company,
-              d.kind,
-              d.id,
-              d.version,
-              actor.company,
-              d.kind,
-              d.id,
-              d.version,
-            ]
-          : []),
-      ]),
+      JSON.stringify(pins),
+      actor.company,
+      JSON.stringify(deps),
+      actor.company,
+      actor.company,
+      actor.company,
     ]
 
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
@@ -243,27 +226,15 @@ export class WorkspaceStore {
           ...sourceArgs,
         ],
       ),
-      ...pins.map((p) =>
-        this.records.statement(
-          `INSERT INTO env_workspace_people(company_id,kind,object_id,version,person_id,person_version) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
-          [actor.company, kind, id, version, p.id, p.version, event],
-        ),
+      this.records.statement(
+        `INSERT INTO env_workspace_people(company_id,kind,object_id,version,person_id,person_version)
+        SELECT ?,?,?,?,json_extract(value,'$.id'),json_extract(value,'$.version') FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
+        [actor.company, kind, id, version, JSON.stringify(pins), event],
       ),
-      ...deps.map((d) =>
-        this.records.statement(
-          `INSERT INTO env_workspace_dependencies(company_id,kind,object_id,version,source_kind,source_id,source_version,needs_approval) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
-          [
-            actor.company,
-            kind,
-            id,
-            version,
-            d.kind,
-            d.id,
-            d.version,
-            d.approved ? 1 : 0,
-            event,
-          ],
-        ),
+      this.records.statement(
+        `INSERT INTO env_workspace_dependencies(company_id,kind,object_id,version,source_kind,source_id,source_version,needs_approval)
+        SELECT ?,?,?,?,json_extract(value,'$.kind'),json_extract(value,'$.id'),json_extract(value,'$.version'),COALESCE(json_extract(value,'$.approved'),0) FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
+        [actor.company, kind, id, version, JSON.stringify(deps), event],
       ),
       auditStatement(
         this.records.env,
