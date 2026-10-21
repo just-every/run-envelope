@@ -68,7 +68,7 @@ html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidd
 }
 .app .field input:focus-visible,
 html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus-visible {
-  border-color: var(--forest); outline: 2px solid transparent; box-shadow: 0 0 0 3px color-mix(in srgb, var(--forest) 30%, transparent);
+  border-color: var(--forest); outline: 2px solid transparent; box-shadow: 0 0 0 1px var(--forest), 0 0 0 5px color-mix(in srgb, var(--forest) 22%, transparent);
 }
 .app input[type="checkbox"],
 html.rer-themed input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin: 1px 0 0; padding: 0; accent-color: var(--forest); }

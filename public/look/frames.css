@@ -37,7 +37,7 @@ body > main:has(> :is(.brand, .rer-brand):first-child) form { display: grid; gap
 body > main:has(> .rer-brand:first-child) form { gap: 18px; }
 body > main:has(> :is(.brand, .rer-brand):first-child) label { display: block; margin: 0 0 8px; }
 body > main:has(> .rer-brand:first-child) label { display: grid; gap: 8px; margin: 0; }
-body > main:has(> :is(.brand, .rer-brand):first-child) form > input:not([type="hidden"]) { margin-bottom: 20px; }
+html.rer-themed body > main:has(> :is(.brand, .rer-brand):first-child) form > input:not([type="hidden"]) { margin-bottom: 20px; }
 body > main:has(> :is(.brand, .rer-brand):first-child) label:has(> input[type="checkbox"]) { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 24px; color: var(--body); font: 500 15.5px/1.45 var(--text); }
 body > main:has(> .rer-brand:first-child) form > p { margin: 0 0 6px; }
 body > main:has(> :is(.brand, .rer-brand):first-child) :is(button, .action) { display: flex; width: 100%; }
