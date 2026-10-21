@@ -6,7 +6,7 @@
 body:has(> .app) { margin: 0; padding: 0; }
 
 /* The slim floating bar: the lockup at left, then what the signed-in person can open */
-.app .bar { display: flex; align-items: center; gap: 12px 24px; min-height: 62px; margin-top: 16px; padding: 10px 12px 10px 20px; border-radius: 20px; background: rgba(255, 255, 255, .94); box-shadow: var(--float-shadow); }
+.app .bar { display: flex; align-items: center; gap: 12px 24px; margin-top: 16px; padding: 10px 12px 10px 20px; }
 .app .bar-end { display: flex; align-items: center; gap: 24px; margin-left: auto; min-width: 0; }
 .app .bar-link { color: var(--ink); font-size: 17px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .app .bar-link:hover { text-decoration: underline; text-underline-offset: 4px; }
@@ -147,9 +147,7 @@ body:has(> .app) { margin: 0; padding: 0; }
 }
 @media (max-width: 759px) {
   .app { --edge: 16px; }
-  .app .bar { min-height: 56px; margin-top: 12px; padding: 8px 8px 8px 14px; border-radius: 16px; }
-  .app .bar .lockup { gap: 9px; font-size: 24px; }
-  .app .bar .lockup img { width: 32px; height: 32px; }
+  .app .bar { margin-top: 12px; padding: 8px 8px 8px 14px; }
   .app .bar-end { gap: 14px; }
   .app .bar-link { font-size: 15px; }
   .app .person-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

@@ -10,21 +10,11 @@ html:has(> body > main > :is(.brand, .rer-brand):first-child) > body {
   color: var(--ink); font: 400 16px/1.55 var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
 
-/* Frames: the card */
-body > main:has(> :is(.brand, .rer-brand):first-child) {
-  box-sizing: border-box; width: 100%; max-width: 520px; margin: 0 auto; padding: 40px 44px 42px;
-  background: var(--paper); border: 0; border-radius: var(--radius-card); box-shadow: var(--card-shadow); color: var(--ink);
-}
+/* Frames: the card (a white card from look/controls.css) */
+body > main:has(> :is(.brand, .rer-brand):first-child) { box-sizing: border-box; width: 100%; max-width: 520px; margin: 0 auto; padding: 40px 44px 42px; border: 0; color: var(--ink); }
 
-/* Frames: the brand line as the slim floating bar, mark 9 beside the wordmark */
-body > main > :is(.brand, .rer-brand):first-child {
-  box-sizing: border-box; position: absolute; top: 16px; left: max(16px, 50% - 696px); right: max(16px, 50% - 696px);
-  display: flex; align-items: center; gap: 12px; min-height: 62px; margin: 0; padding: 10px 20px;
-  border-radius: 20px; background: rgba(255, 255, 255, .94); box-shadow: var(--float-shadow);
-  color: var(--lockup); font: 800 28px/1 var(--heading); letter-spacing: -.02em;
-}
-body > main > :is(.brand, .rer-brand):first-child::before { width: 40px; height: 40px; }
-body > main > :is(.brand, .rer-brand):first-child img { width: 40px; height: 40px; }
+/* Frames: the brand line, drawn as the slim floating bar with the lockup (look/controls.css), across the top */
+body > main > :is(.brand, .rer-brand):first-child { box-sizing: border-box; position: absolute; top: 16px; left: max(16px, 50% - 696px); right: max(16px, 50% - 696px); display: flex; margin: 0; padding: 10px 20px; }
 
 /* Frames: type */
 body > main:has(> :is(.brand, .rer-brand):first-child) > h1 { margin: 0 0 14px; font: 900 34px/1.14 var(--heading); letter-spacing: -.025em; color: var(--forest); text-wrap: balance; }
@@ -56,9 +46,7 @@ body > main:has(> .rer-brand:first-child) dd { margin: 0; color: var(--ink); fon
 @media (max-width: 759px) {
   html:has(> body > main > :is(.brand, .rer-brand):first-child) > body { padding: 92px 16px 40px; }
   body > main:has(> :is(.brand, .rer-brand):first-child) { padding: 28px 20px 30px; border-radius: 20px; }
-  body > main > :is(.brand, .rer-brand):first-child { top: 12px; min-height: 56px; padding: 8px 14px; gap: 9px; border-radius: 16px; font-size: 24px; }
-  body > main > :is(.brand, .rer-brand):first-child::before,
-  body > main > :is(.brand, .rer-brand):first-child img { width: 32px; height: 32px; }
+  body > main > :is(.brand, .rer-brand):first-child { top: 12px; padding: 8px 14px; }
   body > main:has(> :is(.brand, .rer-brand):first-child) > h1 { font-size: 28px; }
 }
 

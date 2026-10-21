@@ -10,12 +10,21 @@
 .app :where(b, strong) { font-weight: 650; }
 .app .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
+/* The slim floating bar: the app's header, and the brand line of Base's frames (look/frames.css places it) */
+.app .bar,
+body > main > :is(.brand, .rer-brand):first-child { min-height: 62px; border-radius: 20px; background: rgba(255, 255, 255, .94); box-shadow: var(--float-shadow); }
+
 /* The lockup: mark 9 beside the heavy rounded wordmark */
-.app .lockup { display: inline-flex; align-items: center; gap: 12px; color: var(--lockup); text-decoration: none; font: 800 28px/1 var(--heading); letter-spacing: -.02em; white-space: nowrap; }
-.app .lockup img { flex: none; display: block; width: 40px; height: 40px; }
+.app .lockup,
+body > main > :is(.brand, .rer-brand):first-child { align-items: center; gap: 12px; color: var(--lockup); font: 800 28px/1 var(--heading); letter-spacing: -.02em; }
+.app .lockup { display: inline-flex; text-decoration: none; white-space: nowrap; }
+.app .lockup img,
+body > main > :is(.brand, .rer-brand):first-child img,
+body > main > :is(.brand, .rer-brand):first-child::before { flex: none; display: block; width: 40px; height: 40px; }
 
 /* White rounded data cards with a soft shadow */
-.app .card { background: var(--paper); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
+.app .card,
+body > main:has(> :is(.brand, .rer-brand):first-child) { background: var(--paper); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
 
 /* The heading: two short lines of heavy rounded type, line one forest, line two teal */
 .app .heading { font: 900 64px/1.04 var(--heading); letter-spacing: -.035em; text-wrap: balance; }
@@ -77,3 +86,13 @@ html.rer-themed input[type="checkbox"] { flex: none; width: 20px; height: 20px; 
 .app :focus-visible,
 html.rer-themed :is(a, button, .action):focus-visible,
 html[data-state] :is(a, .btn):focus-visible { outline: 3px solid var(--forest); outline-offset: 3px; }
+
+@media (max-width: 759px) {
+  .app .bar,
+  body > main > :is(.brand, .rer-brand):first-child { min-height: 56px; border-radius: 16px; }
+  .app .bar .lockup,
+  body > main > :is(.brand, .rer-brand):first-child { gap: 9px; font-size: 24px; }
+  .app .bar .lockup img,
+  body > main > :is(.brand, .rer-brand):first-child img,
+  body > main > :is(.brand, .rer-brand):first-child::before { width: 32px; height: 32px; }
+}
