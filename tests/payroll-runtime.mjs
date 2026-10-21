@@ -110,8 +110,52 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       await (await call('/app', actors.outsider.cookie)).text(),
       /Rosa’s California|Kessler Pennsylvania/,
     )
-    const ca = await data(company + '/locations', { name: 'Oakland, California' }, cookie, 201),
-      pa = await data(company + '/locations', { name: 'Pittsburgh, Pennsylvania' }, cookie, 201)
+    const ca = await data(company + '/locations', { name: 'Oakland, California', state: 'CA' }, cookie, 201),
+      pa = await data(company + '/locations', { name: 'Pittsburgh, Pennsylvania', state: 'PA' }, cookie, 201)
+    // COMPANY-SETUP: real native forms, encrypted append-only effective register.
+    const source = {sourceTitle: 'Synthetic official-source record', sourceUrl: 'https://www.irs.gov/publications/p15', sourceDate: '2026-01-01'}
+    const profile = {version: 0, effectiveDate: '2026-01-01', legalName: 'Rosa’s California Kitchen', dbaName: 'Rosa’s', address: '1 Synthetic Street', responsibleContact: 'Rosa, payroll owner', depositSchedule: 'monthly', lookbackStart: '2024-07-01', lookbackEnd: '2025-06-30', reportingAgentElection: 'pending', bankAuthorization: 'pending', ...source}
+    await page.goto(origin + screen + '/setup')
+    for (const [key, value] of Object.entries(profile)) {
+      const field = page.locator(`form[action$="/setup/profile"] [name="${key}"]`)
+      if (await field.getAttribute('type') === 'hidden') continue
+      if (await field.evaluate(el => el.tagName) === 'SELECT') await field.selectOption(value)
+      else await field.fill(String(value))
+    }
+    await page.getByRole('button', {name:'Record effective company setup', exact:true}).click()
+    await page.waitForURL(origin + screen + '/setup')
+    const jurisdiction = {code:'PA-SUI', version:0, effectiveDate:'2026-01-01', state:'PA', kind:'sui', agency:'Pennsylvania unemployment compensation', registrationStatus:'pending', rate:'3.822', employeeRate:'0', rateBasis:'published-new-employer', wageBaseCents:1000000, depositFrequency:'quarterly', returnFrequency:'quarterly', hoursMethod:'not-applicable', authority:'pending', ...source}
+    await data(company + '/setup/jurisdictions', jurisdiction, cookie, 201)
+    await data(company + '/setup/profile', {...profile, version:1, effectiveDate:'2026-07-01', depositSchedule:'semiweekly'}, cookie, 201)
+    const beforeSetup = await sql('SELECT (SELECT COUNT(*) FROM env_company_setup) AS profiles,(SELECT COUNT(*) FROM env_jurisdictions) AS jurisdictions')
+    await noWrite(async () => {
+      assert.equal((await call(company + '/setup', actors.outsider.cookie)).status, 403)
+      assert.equal((await call(company + '/setup/profile', cookie, profile)).status, 409)
+      assert.equal((await call(company + '/setup/jurisdictions', cookie, {...jurisdiction,code:'PA-EXEMPT',registrationStatus:'exempt'})).status, 400)
+      assert.equal((await call(company + '/setup/jurisdictions', cookie, {...jurisdiction,code:'PA-ISSUED',registrationStatus:'issued-evidence'})).status, 400)
+      assert.equal((await call(other + '/setup/jurisdictions', actors.outsider.cookie, jurisdiction)).status, 403)
+    })
+    assert.deepEqual(await sql('SELECT (SELECT COUNT(*) FROM env_company_setup) AS profiles,(SELECT COUNT(*) FROM env_jurisdictions) AS jurisdictions'),beforeSetup)
+    assert.equal((await data(company + '/setup?asOf=2026-06-30')).profile.depositSchedule,'monthly')
+    const currentSetup = await data(company + '/setup?asOf=2026-07-01')
+    assert.equal(currentSetup.profile.depositSchedule,'semiweekly')
+    assert.equal(currentSetup.profiles.length,2)
+    assert.deepEqual(currentSetup.remittanceHolds,[{code:'PA-SUI',scope:'jurisdiction-deposit-and-filing',reason:'account-pending'}])
+    await data(company + '/setup/jurisdictions', {...jurisdiction,version:1,effectiveDate:'2026-08-01',registrationStatus:'issued-evidence',account:'synthetic-envelope-6',rate:'4.1',rateBasis:'agency-assigned',authority:'evidence-recorded',authorityEvidence:'synthetic-envelope-7'},cookie,201)
+    const reloadedSetup = await data(company + '/setup?asOf=2026-08-01')
+    assert.equal(reloadedSetup.jurisdictions[0].accountMasked,'••••pe-6')
+    assert.equal(reloadedSetup.history.length,2)
+    assert.equal(reloadedSetup.jurisdictions[0].rate,'4.1')
+    assert.equal(JSON.stringify(reloadedSetup).includes('synthetic-envelope-6'),false)
+    assert.equal(JSON.stringify(await sql('SELECT cipher FROM env_jurisdictions')).includes('synthetic-envelope-6'),false)
+    await data(company + '/locations',{name:'Seattle, Washington',state:'WA'},cookie,201)
+    await data(company + '/locations',{name:'Portland, Oregon',state:'OR'},cookie,201)
+    const funds = await data(company + '/setup')
+    assert.deepEqual(funds.requirements.map(r => r.code),['WA-LI','OR-WBF'])
+    assert.ok(funds.requirements.every(r => !r.recorded))
+    assert.equal(funds.ready,false,'private policies and entered evidence cannot grant production readiness')
+    await capture(screen + '/setup','company-tax-setup')
+    console.log('COMPANY-SETUP passed: encrypted effective history, schedules, masked account, remittance-only account holds, WA/OR requirements and stale/cross-company/exemption refusals; no wage or remittance execution claim')
     const names = [
         'María Flores',
         'Dev Patel',

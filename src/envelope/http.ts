@@ -1,8 +1,10 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { CompanySetup } from './setup'
 import { PayrollError } from './security'
 import {
+  setupPage,
   companyIndex,
   companyPage,
   grantsPage,
@@ -138,6 +140,18 @@ export async function payrollResponse(
         response = ui
           ? companyPage(session, companies, company, actor, locations, people)
           : json({ company, locations, people })
+      } else if (tail[0] === 'setup') {
+        const setup = new CompanySetup(records)
+        if (!post && tail.length === 1) {
+          const register = await setup.read(actor, url.searchParams.get('asOf') ?? new Date().toISOString().slice(0, 10))
+          response = ui ? setupPage(session, companies, actor, register) : json(register)
+        } else if (post && tail.join('/') === 'setup/profile') {
+          const saved = await setup.saveProfile(actor, value)
+          response = ui ? redirect(base + '/setup') : json(saved, 201)
+        } else if (post && tail.join('/') === 'setup/jurisdictions') {
+          const saved = await setup.saveJurisdiction(actor, value)
+          response = ui ? redirect(base + '/setup') : json(saved, 201)
+        } else throw new PayrollError('not_found', 404)
       } else if (tail.join('/') === 'locations' && post) {
         const location = await records.createLocation(actor, value)
         response = ui ? redirect(base) : json(location, 201)

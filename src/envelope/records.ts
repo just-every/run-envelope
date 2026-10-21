@@ -12,6 +12,7 @@ import {
   auditStatement,
   type Actor,
 } from './access'
+import { states } from './setup'
 import { PayrollError, text, integer, date, recordKey, seal, unseal } from './security'
 
 export interface Company {
@@ -106,21 +107,23 @@ export class Records {
       l = locationSql(actor, 'id')
     return (
       await this.statement(
-        `SELECT id,name FROM env_locations WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY name,id`,
+        `SELECT id,name,state_code AS state FROM env_locations WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY name,id`,
         [actor.company, ...l.args, ...f.args],
-      ).all<{ id: string; name: string }>()
+      ).all<{ id: string; name: string; state: string | null }>()
     ).results
   }
   async createLocation(actor: Actor, input: Input) {
     if (actor.grant.role !== 'owner') throw new PayrollError('owner_required', 403)
     const id = uuid(),
       name = text(input.name),
+      state = input.state === undefined || input.state === '' ? null : text(input.state),
       f = fence(actor),
       event = uuid()
+    if (state !== null && !states.includes(state)) throw new PayrollError('invalid_state')
     const result = await this.env.DB.batch<Record<string, unknown>>([
       this.statement(
-        `INSERT INTO env_locations(company_id,id,name) SELECT ?,?,? WHERE ${f.sql} RETURNING id`,
-        [actor.company, id, name, ...f.args],
+        `INSERT INTO env_locations(company_id,id,name,state_code) SELECT ?,?,?,? WHERE ${f.sql} RETURNING id`,
+        [actor.company, id, name, state, ...f.args],
       ),
       auditStatement(
         this.env,
@@ -134,7 +137,7 @@ export class Records {
       ),
     ])
     if (!result[0].results.length) throw new PayrollError('authority_changed', 409)
-    return { id, name }
+    return { id, name, state }
   }
   async grants(actor: Actor) {
     if (actor.grant.role !== 'owner') throw new PayrollError('owner_required', 403)

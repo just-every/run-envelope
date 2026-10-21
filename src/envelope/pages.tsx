@@ -6,6 +6,7 @@ import { ClientChips } from '../ui/chips'
 import type { Session } from '../modules/operator-auth/index.mjs'
 import { actions, fields, roles, type Actor } from './access'
 import type { Company, Person } from './records'
+import { states, taxKinds, frequencies, type CompanySetup } from './setup'
 
 const actionLabels: Record<string, string> = {
   'records:read': 'View people',
@@ -22,13 +23,13 @@ const actionLabels: Record<string, string> = {
 }
 
 export const companyPath = (id: string) => `/app/envelope/companies/${encodeURIComponent(id)}`
-const Card = ({ title, children }: { title: string; children: ReactNode }) => (
+export const Card = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="check card">
     <h2 className="check-name">{title}</h2>
     <div className="field">{children}</div>
   </section>
 )
-const Field = ({
+export const Field = ({
   name,
   label,
   type = 'text',
@@ -53,12 +54,12 @@ const Field = ({
     />
   </label>
 )
-const Submit = ({ children, primary = false }: { children: ReactNode; primary?: boolean }) => (
+export const Submit = ({ children, primary = false }: { children: ReactNode; primary?: boolean }) => (
   <button className={`btn${primary ? ' btn--primary' : ''}`} type="submit">
     {children}
   </button>
 )
-const Hidden = ({ name, value }: { name: string; value: string | number }) => (
+export const Hidden = ({ name, value }: { name: string; value: string | number }) => (
   <input type="hidden" name={name} value={value} />
 )
 const can = (actor: Actor, action: string, field?: string) =>
@@ -161,11 +162,10 @@ export function companyPage(
           change payment destinations or authorize a debit.
         </p>
         <div className="choices">
-          {actor.grant.role === 'owner' && (
-            <a className="btn" href={`${base}/grants`}>
-              Payroll grants
-            </a>
-          )}
+          {actor.grant.role === 'owner' && <>
+            <a className="btn" href={`${base}/grants`}>Payroll grants</a>
+            <a className="btn" href={`${base}/setup`}>Company and tax setup</a>
+          </>}
           {can(actor, 'export') && can(actor, 'records:read') && (
             <a className="btn" href={`/api/envelope/companies/${company.id}/export`}>
               Export record register
@@ -213,7 +213,7 @@ export function companyPage(
         )}
         {actor.grant.role === 'owner' && (
           <form className="field" method="post" action={`${base}/locations`}>
-            <Field name="name" label="Location name" />
+            <Field name="name" label="Location name" /><Select name="state" label="State or DC" choices={['', ...states]} />
             <Submit>Add location</Submit>
           </form>
         )}
@@ -542,3 +542,58 @@ export const errorPage = (session: Session, code: string) =>
       </a>
     </Card>,
   )
+
+export const Select = ({name, label, choices, value}: {name: string; label: string; choices: readonly string[]; value?: string}) => <label className="field"><span>{label}</span><select name={name} defaultValue={value} aria-label={label}>{choices.map(c => <option key={c} value={c}>{c || 'Not yet recorded'}</option>)}</select></label>
+const SourceFields = () => <><Field name="sourceTitle" label="Source document title" /><Field name="sourceUrl" label="Official source URL" type="url" /><Field name="sourceDate" label="Source edition date" type="date" /></>
+export function setupPage(session: Session, companies: Company[], actor: Actor, setup: Awaited<ReturnType<CompanySetup['read']>>) {
+ const base = companyPath(actor.company) + '/setup'
+ const profile = setup.profile
+ return page(session, 'Company and tax setup', companies, actor.company, <>
+  <Card title="Effective register">
+   <p>As of {setup.asOf}. {setup.readinessReason}</p>
+   {setup.unknownLocationStates && <p role="status">A work location has no state recorded. Its requirements are unresolved.</p>}
+   {setup.requirements.map(r => <p key={r.code}><strong>{r.code}</strong> · {r.recorded ? 'Evidence recorded; agency confirmation still required.' : 'Missing register entry.'} {r.reason}</p>)}
+   {setup.remittanceHolds.map(r => <p key={r.code}>{r.code}: only this jurisdiction’s deposit and filing are held ({r.reason.replaceAll('-', ' ')}). This is no authority to hold wages. Dated liabilities need a calculated payroll obligation.</p>)}
+   <form className="field" method="get" action={base}><Field name="asOf" label="Inspect register as of" type="date" value={setup.asOf} /><Submit>Inspect effective register</Submit></form>
+  </Card>
+  <Card title="Company setup history">
+   {setup.profiles.length ? setup.profiles.map(p => <p key={p.version}>Version {p.version} · effective {p.effectiveDate} · {p.legalName}, {p.dbaName || 'no DBA'} · {p.address} · contact {p.responsibleContact} · deposit schedule {p.depositSchedule} · lookback {p.lookbackStart} to {p.lookbackEnd} · bank authorization {p.bankAuthorization} · reporting agent {p.reportingAgentElection} · source {p.sourceTitle} ({p.sourceDate}).</p>) : <p>No effective setup history.</p>}
+   <p>Signed evidence records a document reference. It does not verify a bank, enroll an agent or grant permission to debit.</p>
+   <form className="field" method="post" action={base + '/profile'}>
+    <Hidden name="version" value={Math.max(0, ...setup.profiles.map(p => p.version))} />
+    <Field name="effectiveDate" label="Company setup effective date" type="date" />
+    <Field name="legalName" label="Legal name" value={profile?.legalName} />
+    <Field name="dbaName" label="DBA name (optional)" required={false} value={profile?.dbaName} />
+    <Field name="address" label="Company address" value={profile?.address} />
+    <Field name="responsibleContact" label="Responsible contact" value={profile?.responsibleContact} />
+    <Select name="depositSchedule" label="Federal deposit schedule" choices={frequencies} value={profile?.depositSchedule} />
+    <Field name="lookbackStart" label="Lookback start" type="date" /><Field name="lookbackEnd" label="Lookback end" type="date" />
+    <Select name="reportingAgentElection" label="Reporting agent election" choices={['not-elected','pending','signed-evidence']} />
+    <Field name="reportingAgentEvidence" label="Reporting agent document reference (optional)" required={false} />
+    <Select name="bankAuthorization" label="Bank authorization" choices={['missing','pending','signed-evidence']} />
+    <Field name="bankEvidence" label="Bank authorization document reference (optional)" required={false} />
+    <SourceFields /><Submit primary>Record effective company setup</Submit>
+   </form>
+  </Card>
+  <Card title="Jurisdiction history">
+   {setup.history.length ? setup.history.map(j => <p key={j.code + j.version}><strong>{j.code}</strong> · version {j.version}, effective {j.effectiveDate} · {j.agency} · {j.kind} · {j.registrationStatus} {j.accountMasked} · total rate {j.rate}, employee share {j.employeeRate} ({j.rateBasis}) · wage base ${(j.wageBaseCents / 100).toFixed(2)} · deposits {j.depositFrequency}, returns {j.returnFrequency} · hours {j.hoursMethod} · authority {j.authority} · {j.exemptionBasis} · source {j.sourceTitle} ({j.sourceDate}).</p>) : <p>No jurisdiction entries. Missing is never an exemption.</p>}
+   <p>Each code names one account or risk class. Use its latest version to append a change; all prior sources and rates remain. WA salaried-hours consistency and complete national coverage still require validation.</p>
+   <form className="field" method="post" action={base + '/jurisdictions'}>
+    <Field name="code" label="Jurisdiction or risk-class code" /><Field name="version" label="Current version (0 for new code)" type="number" value={0} />
+    <Field name="effectiveDate" label="Jurisdiction effective date" type="date" /><Select name="state" label="Jurisdiction state or DC" choices={states} />
+    <Select name="kind" label="Tax or assessment kind" choices={taxKinds} /><Field name="agency" label="Agency name" />
+    <Select name="registrationStatus" label="Registration status" choices={['missing','pending','issued-evidence','exempt']} />
+    <Field name="account" label="Agency-issued account (masked after saving)" type="password" required={false} />
+    <Field name="exemptionBasis" label="Exemption legal basis (required for exemption)" required={false} />
+    <Field name="rate" label="Total rate (percent or dollars per hour)" value="0" /><Field name="employeeRate" label="Employee share rate" value="0" />
+    <Select name="rateBasis" label="Rate basis" choices={['published-new-employer','agency-assigned','official-table','not-applicable']} />
+    <Field name="wageBaseCents" label="Wage base in cents (0 if not applicable)" type="number" value={0} />
+    <Select name="depositFrequency" label="Deposit frequency" choices={frequencies} /><Select name="returnFrequency" label="Return frequency" choices={frequencies} />
+    <Select name="hoursMethod" label="Hours method" choices={['not-applicable','actual','wa-160-month','or-actual','or-assumed']} />
+    <Select name="authority" label="Agency authority" choices={['missing','pending','evidence-recorded']} />
+    <Field name="authorityEvidence" label="Agency authority document reference (optional)" required={false} /><SourceFields />
+    <Submit>Append jurisdiction evidence</Submit>
+   </form>
+  </Card>
+ </>)
+}
