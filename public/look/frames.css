@@ -13,8 +13,9 @@ html:has(> body > main > :is(.brand, .rer-brand):first-child) > body {
 /* Frames: the card (a white card from look/controls.css) */
 body > main:has(> :is(.brand, .rer-brand):first-child) { box-sizing: border-box; width: 100%; max-width: 520px; margin: 0 auto; padding: 40px 44px 42px; border: 0; color: var(--ink); }
 
-/* Frames: the brand line, drawn as the slim floating bar with the lockup (look/controls.css), across the top */
-body > main > :is(.brand, .rer-brand):first-child { box-sizing: border-box; position: absolute; top: 16px; left: max(16px, 50% - 696px); right: max(16px, 50% - 696px); display: flex; margin: 0; padding: 10px 20px; }
+/* Frames: the brand line, drawn as the slim floating bar with the lockup (look/controls.css), across the top at the
+   app's own width (the page's --edge, look/controls.css) */
+body > main > :is(.brand, .rer-brand):first-child { box-sizing: border-box; position: absolute; top: 16px; left: max(var(--edge), 50% - 696px); right: max(var(--edge), 50% - 696px); display: flex; margin: 0; padding: 10px 20px; }
 
 /* Frames: type */
 body > main:has(> :is(.brand, .rer-brand):first-child) > h1 { margin: 0 0 14px; font: 900 34px/1.14 var(--heading); letter-spacing: -.025em; color: var(--forest); text-wrap: balance; }
@@ -38,7 +39,7 @@ body > main:has(> :is(.brand, .rer-brand):first-child) .divider::before,
 body > main:has(> :is(.brand, .rer-brand):first-child) .divider::after { border-color: var(--hair); }
 body > main:has(> :is(.brand, .rer-brand):first-child) .notice { margin: 0 0 24px; padding: 12px 16px; border: 0; border-radius: 14px; background: var(--sky); color: #102a4c; font-size: 15.5px; }
 body > main:has(> :is(.brand, .rer-brand):first-child) .notice[role="alert"] { background: var(--blush); color: #8c1f1f; }
-body > main:has(> :is(.brand, .rer-brand):first-child) .secondary-link { margin: 18px 0 0; text-align: center; font-size: 15.5px; }
+body > main:has(> :is(.brand, .rer-brand):first-child) p.secondary-link { margin: 24px 0 0; text-align: center; font-size: 15.5px; }
 body > main:has(> .rer-brand:first-child) dl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 0 0 22px; padding: 12px 16px; border-radius: 14px; background: var(--wash); }
 body > main:has(> .rer-brand:first-child) dt { color: var(--muted); font-size: 13.5px; }
 body > main:has(> .rer-brand:first-child) dd { margin: 0; color: var(--ink); font-size: 16.5px; overflow-wrap: anywhere; }
@@ -63,7 +64,7 @@ html[data-state] .word { font-family: var(--heading); font-weight: 900; letter-s
 html[data-state] .door-card > h1 + .credit { margin-top: 20px; color: var(--body); font-size: 18px; line-height: 1.55; }
 html[data-state] .line { margin-top: 30px; color: var(--forest); font: 900 30px/1.2 var(--heading); letter-spacing: -.02em; }
 html[data-state] .btn { min-height: 60px; margin-top: 30px; padding: 0 38px; }
-html[data-state] .credit { color: var(--muted); }
+html[data-state] .credit { color: var(--body); }
 html[data-state] .credit a { color: var(--teal-ink); text-decoration-color: currentColor; }
 @media (max-width: 640px) {
   html[data-state] .door { padding: 120px 16px 200px; }

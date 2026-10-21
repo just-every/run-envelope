@@ -2,7 +2,10 @@
    app's classes live under .app; Base's frame and Lobby controls are named beside them in the same rules, so each
    control is defined once (look/frames.css lays out Base's documents around them). */
 
-/* The page: pale aqua, brightest at the foot, as in the app pick */
+/* The page: pale aqua, brightest at the foot, as in the app pick. --edge is the page's side margin, shared by the
+   app's content and the slim bar of Base's frames (look/frames.css), so every bar is one width at every size. */
+.app,
+html:has(> body > main > :is(.brand, .rer-brand):first-child) { --edge: 40px; }
 .app { display: flow-root; margin: 0; min-height: 100vh; background: var(--aqua) var(--ground) no-repeat; color: var(--ink); font: 400 16px/1.5 var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 .app :where(*, *::before, *::after) { box-sizing: border-box; }
 .app :where(h1, h2, h3, p, ol, ul, dl, dd, figure) { margin: 0; }
@@ -65,29 +68,48 @@ html[data-state] .btn svg { flex: none; width: 20px; height: 20px; }
 .app .link,
 html.rer-themed .secondary-link a { color: var(--teal-ink); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
 
-/* Fields: thin quiet borders and a clear forest focus ring */
+/* Fields: thin quiet borders and a clear forest focus ring; a select takes the same box (its chevron and end padding
+   come from Base's rule below, which only background-color here leaves in place) */
 .app .field { display: grid; gap: 8px; }
 .app .field > span,
 html.rer-themed label { color: var(--ink); font: 600 14.5px/1.35 var(--text); }
-.app .field input,
-html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+.app .field :is(input, select),
+html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+html.rer-themed select {
   box-sizing: border-box; display: block; width: 100%; min-height: 48px; margin: 0; padding: 11px 14px;
-  border: 1px solid var(--field-line); border-radius: var(--radius-control); background: var(--paper); color: var(--ink);
+  border: 1px solid var(--field-line); border-radius: var(--radius-control); background-color: var(--paper); color: var(--ink);
   font: 400 16px/1.4 var(--text);
 }
-.app .field input:focus-visible,
-html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus-visible {
+.app .field :is(input, select):focus-visible,
+html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus-visible,
+html.rer-themed select:focus-visible {
   border-color: var(--forest); outline: 2px solid transparent; box-shadow: 0 0 0 1px var(--forest), 0 0 0 5px color-mix(in srgb, var(--forest) 22%, transparent);
 }
 .app input[type="checkbox"],
-html.rer-themed input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin: 1px 0 0; padding: 0; accent-color: var(--forest); }
+html.rer-themed input[type="checkbox"] { flex: none; width: 24px; height: 24px; margin: 0; padding: 0; accent-color: var(--forest); }
+
+/* Selects: Base's one dropdown rule, copied whole from src/base/select-style.ts as Base's onboarding README ("Select
+   chevron") says a seed with its own stylesheet does, so every document that links the look draws the chevron 14 px
+   inside the border with 40 px of end padding: /app (styles only from the theme and the look), Base's frames, the
+   Lobby and the Run pages. The root document's pageStyle carries the same rule. */
+select:not([multiple],[size]:not([size="1"])){--rer-select-ink:var(--rer-muted,light-dark(#475569,#a8b3c4));appearance:none;-webkit-appearance:none;background-image:linear-gradient(to top right,transparent calc(50% - 1.1px),var(--rer-select-ink) calc(50% - .55px),var(--rer-select-ink) calc(50% + .55px),transparent calc(50% + 1.1px)),linear-gradient(to top left,transparent calc(50% - 1.1px),var(--rer-select-ink) calc(50% - .55px),var(--rer-select-ink) calc(50% + .55px),transparent calc(50% + 1.1px));background-repeat:no-repeat;background-position:right 20px center,right 14px center;background-size:6px 6px;padding-inline-end:40px;text-overflow:ellipsis}
+select:not([multiple],[size]:not([size="1"])):dir(rtl){background-position:left 14px center,left 20px center}
+select:not([multiple],[size]:not([size="1"])):focus-visible{--rer-select-ink:var(--rer-text,light-dark(#172033,#f1f5f9))}
+select:not([multiple],[size]:not([size="1"])):disabled{--rer-select-ink:color-mix(in srgb,var(--rer-muted,light-dark(#475569,#a8b3c4)) 55%,transparent);color:var(--rer-muted,light-dark(#475569,#a8b3c4));cursor:not-allowed}
+@media(forced-colors:active){select:not([multiple],[size]:not([size="1"])){--rer-select-ink:ButtonText}}
 
 /* Focus: a forest ring on every link and button */
 .app :focus-visible,
 html.rer-themed :is(a, button, .action):focus-visible,
 html[data-state] :is(a, .btn):focus-visible { outline: 3px solid var(--forest); outline-offset: 3px; }
 
+@media (max-width: 1279px) {
+  .app,
+  html:has(> body > main > :is(.brand, .rer-brand):first-child) { --edge: 32px; }
+}
 @media (max-width: 759px) {
+  .app,
+  html:has(> body > main > :is(.brand, .rer-brand):first-child) { --edge: 16px; }
   .app .bar,
   body > main > :is(.brand, .rer-brand):first-child { min-height: 56px; border-radius: 16px; }
   .app .bar .lockup,

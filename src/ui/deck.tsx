@@ -10,11 +10,10 @@ export function Deck({ label, children }: { label: string; children: ReactNode }
  </section>
 }
 
-export interface PayLine { label: string; amount: string }
+/** A line of a check; a line with no figure yet shows a dash. */
+export interface PayLine { label: string; amount?: string }
 
-const lines = (items: PayLine[]) => items.length
- ? items.map(item => <p key={item.label} className="check-line"><span>{item.label}</span><span>{item.amount}</span></p>)
- : <p className="check-line"><Amount /></p>
+const lines = (items: PayLine[]) => items.map(item => <p key={item.label} className="check-line"><span>{item.label}</span><Amount value={item.amount} /></p>)
 
 /** An exception on a check: the figure the run would pay, struck, beside the figure it should pay. */
 export interface Flag { was: string; now: string }

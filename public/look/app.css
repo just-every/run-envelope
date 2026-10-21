@@ -1,14 +1,14 @@
 /* The app's screen from owner pick A: one slim floating bar, a row of client chips, the two-line heading, a fanned
    deck of paychecks with the front check open, the run slip beside it and the choices on the open check. No rail,
    count tiles, agent strip, central table or side panel. Sized for 1440 and reflowed to one column at 390. */
-.app { --edge: 40px; --slip: 330px; --check: 714px; }
+.app { --slip: 330px; --check: 714px; }
 .app .app-wrap { width: min(100% - 2 * var(--edge), 1392px); margin-inline: auto; }
 body:has(> .app) { margin: 0; padding: 0; }
 
 /* The slim floating bar: the lockup at left, then what the signed-in person can open */
 .app .bar { display: flex; align-items: center; gap: 12px 24px; margin-top: 16px; padding: 10px 12px 10px 20px; }
 .app .bar-end { display: flex; align-items: center; gap: 24px; margin-left: auto; min-width: 0; }
-.app .bar-link { color: var(--ink); font-size: 17px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.app .bar-link { display: inline-flex; align-items: center; min-height: 40px; color: var(--ink); font-size: 17px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .app .bar-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .app .person { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .app .person-name { display: grid; min-width: 0; line-height: 1.25; }
@@ -39,14 +39,16 @@ body:has(> .app) { margin: 0; padding: 0; }
 .app .deck { grid-column: 1; position: relative; isolation: isolate; margin-top: 18px; padding-top: 18px; }
 
 /* The fan: the deck's other checks standing behind the open one, their tops and right edges showing (offsets and
-   turns from the 12ui conversion of the pick, as fractions of the open check) */
-.app .deck-fan { position: absolute; top: 18px; bottom: 0; left: 0; z-index: -1; width: min(100%, var(--check)); pointer-events: none; }
+   turns from the 12ui conversion of the pick, as fractions of the open check). The fan spans the deck's column and
+   each sheet's right edge sits in the room between the open check and the slip: spread as drawn where that room is
+   at least as wide as at 1440 (.4034 of the check), drawn closer together where it is narrower, never over the slip. */
+.app .deck-fan { --open: min(100%, var(--check)); --room: min(100% - var(--open), var(--open) * .4034); position: absolute; top: 18px; bottom: 0; left: 0; right: 0; z-index: -1; pointer-events: none; }
 .app .deck-fan span { position: absolute; height: 86%; border: 1px solid #e6eef1; border-radius: var(--radius-card); background: linear-gradient(110deg, #fff, #f3f7f8); box-shadow: var(--deck-shadow); }
-.app .deck-fan span:nth-child(1) { top: -26px; left: 5.9%; width: 113%; transform: rotate(-3deg); }
-.app .deck-fan span:nth-child(2) { top: -17px; left: 7.7%; width: 116%; transform: rotate(-1.6deg); }
-.app .deck-fan span:nth-child(3) { top: -4px; left: 10.9%; width: 119%; transform: rotate(-.6deg); }
-.app .deck-fan span:nth-child(4) { top: 17px; left: 13.9%; width: 122.4%; transform: rotate(1deg); }
-.app .deck-fan span:nth-child(5) { top: 29px; left: 16.1%; width: 124.6%; transform: rotate(2deg); }
+.app .deck-fan span:nth-child(1) { top: -26px; left: calc(var(--open) * .059); right: calc(100% - var(--open) - var(--room) * .46852); transform: rotate(-3deg); }
+.app .deck-fan span:nth-child(2) { top: -17px; left: calc(var(--open) * .077); right: calc(100% - var(--open) - var(--room) * .58751); transform: rotate(-1.6deg); }
+.app .deck-fan span:nth-child(3) { top: -4px; left: calc(var(--open) * .109); right: calc(100% - var(--open) - var(--room) * .7412); transform: rotate(-.6deg); }
+.app .deck-fan span:nth-child(4) { top: 17px; left: calc(var(--open) * .139); right: calc(100% - var(--open) - var(--room) * .89985); transform: rotate(1deg); }
+.app .deck-fan span:nth-child(5) { top: 29px; left: calc(var(--open) * .161); right: calc(100% - var(--open) - var(--room) * 1.00892); transform: rotate(2deg); }
 
 /* A paycheck: who, hours and pay, deductions and taxes, net pay; the open check also carries the tag and choices */
 .app .check { position: relative; width: min(100%, var(--check)); padding: 26px 24px 24px; border-radius: 26px; box-shadow: 0 2px 4px rgba(40, 96, 108, .12), 0 16px 30px -8px rgba(40, 124, 132, .3); }
@@ -130,12 +132,13 @@ body:has(> .app) { margin: 0; padding: 0; }
   .app .tab--flagged a { box-shadow: inset -4px 0 0 var(--red), var(--deck-shadow); }
 }
 @media (max-width: 1279px) {
-  .app { --edge: 32px; --slip: 300px; --check: 640px; }
+  .app { --slip: 300px; --check: 640px; }
   .app .heading { font-size: 52px; }
   .app .check-cols { padding-left: 0; }
-  .app .deck-fan span:nth-child(1) { left: 1%; width: 100%; }
-  .app .deck-fan span:nth-child(2) { left: 2%; width: 101.5%; }
-  .app .deck-fan span:nth-child(3) { left: 3%; width: 102.5%; }
+  .app .deck-fan { --room: min(100% - var(--open), var(--open) * .055); }
+  .app .deck-fan span:nth-child(1) { left: calc(var(--open) * .01); right: calc(100% - var(--open) - var(--room) * .18182); }
+  .app .deck-fan span:nth-child(2) { left: calc(var(--open) * .02); right: calc(100% - var(--open) - var(--room) * .63636); }
+  .app .deck-fan span:nth-child(3) { left: calc(var(--open) * .03); right: calc(100% - var(--open) - var(--room)); }
   .app .deck-fan span:nth-child(n + 4) { display: none; }
 }
 @media (max-width: 1023px) {
@@ -146,7 +149,6 @@ body:has(> .app) { margin: 0; padding: 0; }
   .app .deck { padding-top: 0; margin-top: 28px; }
 }
 @media (max-width: 759px) {
-  .app { --edge: 16px; }
   .app .bar { margin-top: 12px; padding: 8px 8px 8px 14px; }
   .app .bar-end { gap: 14px; }
   .app .bar-link { font-size: 15px; }
@@ -177,6 +179,7 @@ body:has(> .app) { margin: 0; padding: 0; }
   .app .tag img { width: 30px; height: 30px; }
   .app .choices { display: grid; gap: 10px; }
   .app .choices .btn { min-height: 48px; padding-inline: 18px; border-radius: 18px; font-size: 17px; }
+  .app .choices .btn--primary { font-size: 19px; }
   .app .payrun > .slip { max-width: none; margin-top: 20px; }
   .app .lost { padding: 32px 0 56px; }
   .app .lost-card { padding: 28px 20px 30px; border-radius: 20px; }

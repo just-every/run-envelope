@@ -179,7 +179,7 @@
       "executable": false
     },
     "docs/LOOK.md": {
-      "sha256": "a1d069f65c02c9935601184ad2ed46a75b6feb73424af48269cee8ecc5cf6f1d",
+      "sha256": "3e98e12b6b34f3a99d483f05b9aed4f90fec3f13a3d405bf18687d4167720f81",
       "executable": false
     },
     "edition.json": {
@@ -355,11 +355,11 @@
       "executable": false
     },
     "public/look/app.css": {
-      "sha256": "1f3257d800e475219236a7be5f995736aed8eb936593770473f14d540fde4f68",
+      "sha256": "918b060b1aac19cedfe8cd6e3877c903b70b1c0615a48f18400073ca4ed79b6a",
       "executable": false
     },
     "public/look/controls.css": {
-      "sha256": "3f7f30a35a9ebe069a0cb0ed476349480c585156a73cb3e35415d948441d5243",
+      "sha256": "04105105369184d807e5df217c4abc712728880e6f2f212d2583db6fae00880d",
       "executable": false
     },
     "public/look/envelope.css": {
@@ -367,7 +367,7 @@
       "executable": false
     },
     "public/look/frames.css": {
-      "sha256": "9583859c1b58a9e0ca949ac5939a1270ad30f7ac4d494951d5258c48cd2e6979",
+      "sha256": "cc552c6a25e2138563ecca5d35c30a4e5cb3717c89d85aaded7a7e44134aee2a",
       "executable": false
     },
     "public/look/tokens.css": {
@@ -1775,7 +1775,7 @@
       "executable": false
     },
     "src/ui/bar.tsx": {
-      "sha256": "1c25c9b52fc10259ce031a94048a9dc88c0c5b1a0d69907037c0f9f8ab6da0fc",
+      "sha256": "df81c48149110ec3802aabe2b67065e340bd96c939aab5670475a34ba221f4bb",
       "executable": false
     },
     "src/ui/chips.tsx": {
@@ -1783,7 +1783,7 @@
       "executable": false
     },
     "src/ui/deck.tsx": {
-      "sha256": "0c32aedf5ac10cc804ab1cfc469f1cae89ce1161411e7cba91dce4a9a0317ab5",
+      "sha256": "22e8af1a4cdb919a3da2e382cc19b4b17666c4842b2ec7a98faf2832f700e177",
       "executable": false
     },
     "src/ui/glyph.tsx": {
@@ -1807,7 +1807,7 @@
       "executable": false
     },
     "src/ui/pay-run.tsx": {
-      "sha256": "1f328e7580644fb86f773b477fc3409f802b4a22a47883314a45273c971aa2c3",
+      "sha256": "bc707b95f2454dd9f0331fc5a98d6854e58b4f287dd3cc5c861bcdbc24679af3",
       "executable": false
     },
     "src/ui/slip.tsx": {
@@ -1815,7 +1815,7 @@
       "executable": false
     },
     "src/ui/viewer.ts": {
-      "sha256": "0617e663bed408812a4480a2428f877e0090edc82086b47620358eb9d4a57d6d",
+      "sha256": "23896ba1331530dc43fb39deb60e5f6432a7a88fc09cbf80499c6f88a84411b2",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {

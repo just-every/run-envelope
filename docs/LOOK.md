@@ -13,7 +13,8 @@ every clause missing); the app home at `/app` shows the pick's composition in it
   count tiles, an agent strip, a central table, a right exception panel or an activity log.
 - **Colour has jobs.** Pale aqua alternating with white, never beige or cream. Forest then teal for the two heading
   lines. Done is done-green text with the one heavy check. **Red only on an exception. Coral only on a screen's one
-  primary action** (`.btn--primary`), set in large bold type so white on coral meets WCAG AA for large text.
+  primary action** (`.btn--primary`), set in large bold type at every width, 19 px bold or more (WCAG's large text
+  is 18.66 px bold), so white on coral (3.3:1) meets WCAG AA for large text.
 - **People are names.** No clay figures in the app (they belong to the homepage's hero, interlude and closing). A
   person is a name and a time, at most initials in a circle (`.avatar`); Dev Patel's one small red wrench on his
   avatar is the app's only clay-style accent.
@@ -23,9 +24,12 @@ every clause missing); the app home at `/app` shows the pick's composition in it
   proportional. A figure that does not exist yet is a dash (`Amount` with no value).
 - **Envelope speaks inline** in its tag (`.tag`), only when a person must read something, and always ends in a
   choice for a named person. It never approves, funds or sends.
-- **Forms** have thin quiet borders (1 px, 3:1 against white) and a forest focus ring. Every `<select>` uses Base's
-  two-gradient chevron (`src/base/select-style.ts`, in the root document's `pageStyle`): 14 px inside the right
-  border with 40 px of end padding. Never an SVG data URI (the frames' CSP blocks it silently).
+- **Forms** have thin quiet borders (1 px, 3:1 against white) and a forest focus ring; checkboxes are 24 px. Every
+  `<select>` uses Base's two-gradient chevron (`src/base/select-style.ts`): 14 px inside the right border with 40 px
+  of end padding. The root document's `pageStyle` carries that rule, and `public/look/controls.css` carries the same
+  rule, copied whole as Base's onboarding README ("Select chevron") says, for every document that links the look:
+  `/app`, Base's frames, the Lobby and the Run pages. A select inside `.field` takes the field's box. Never an SVG
+  data URI (the frames' CSP blocks it silently).
 - **390 wide**: the bar, the chips as one row that scrolls sideways inside itself (never the page), the heading, the
   open check at full width with its tag and buttons stacked (48 px), the other checks as horizontal tabs in a vertical
   stack under it, the run slip last. Body text 14 px or more, nothing under 11 px.
@@ -36,7 +40,7 @@ every clause missing); the app home at `/app` shows the pick's composition in it
 | --- | --- | --- |
 | `public/rer-theme.css` | Base's `--rer-*` tokens (literal values) and every `@font-face` | Every document: the app, Base's sign-in, confirmation, settings and `/setup`, the Lobby, the run site, the installer. The installer reads it with Base's theme grammar, so it holds only `:root { --rer-* }` and `@font-face`. |
 | `public/look/tokens.css` | Envelope's tokens, aliasing the `--rer-*` values so each is written once | Through `look/envelope.css`; the run site links it directly. |
-| `public/look/controls.css` | The page, lockup, cards, heading, buttons, links, fields and focus, shared with Base's frames | Through `look/envelope.css`. |
+| `public/look/controls.css` | The page and its side edge (`--edge`, so the app's bar and the frames' bar are one width), lockup, cards, heading, buttons, links, fields, Base's select rule and focus, shared with Base's frames | Through `look/envelope.css`. |
 | `public/look/app.css` | The app's screen: bar, chips, pay run layout, deck, check, tag, slip, not-found | Through `look/envelope.css`. |
 | `public/look/frames.css` | Base's documents in the look: frames, the Lobby, the run site's Run, contract and not-found pages | Through `look/envelope.css`. |
 | `public/look/envelope.css` | The entry that imports the four above | `src/base/font-head.ts` (root document, `/setup`, auth pages), the edition identity's `fonts` (Lobby, Run pages), the dev entry for the dev sign-in and hand-off pages. |
@@ -74,11 +78,11 @@ every clause missing); the app home at `/app` shows the pick's composition in it
 
 | Component | Classes | Notes |
 | --- | --- | --- |
-| `AppBar({ viewer, home })` | `.bar`, `.lockup`, `.bar-end`, `.bar-link`, `.person`, `.avatar`, `.person-name` | Mark 9 at 40 px (32 px at 390) and the wordmark with `data-rer-name` (Base appends Dev or Demo). Right side: what the person can open (Settings for the owner) and who they are. Search and Ask Envelope go here when they exist: a pill input like `.field input` with a search glyph, and `.bar-link`. |
+| `AppBar({ viewer, home })` | `.bar`, `.lockup`, `.bar-end`, `.bar-link`, `.person`, `.avatar`, `.person-name` | Mark 9 at 40 px (32 px at 390) and the wordmark with `data-rer-name` (Base appends Dev or Demo). Right side: what the person can open (Settings for the owner, a 40 px tall link) and who they are: initials, name and role, the role left out when the name already reads as it. Search and Ask Envelope go here when they exist: a pill input like `.field input` with a search glyph, and `.bar-link`. |
 | `ClientChips({ clients })` | `.chips`, `.chip`, `.chip--goldenrod…violet`, `.chip[aria-current]`, `.chip--none` | One chip per business: name and the run's status ("Open", "with Rosa", "Approved Tue 10:05 am ✓"). The open business has `aria-current` and a white ring. No businesses: one outlined chip that says so. |
 | `Heading({ lead, then, meta })` | `.heading`, `.lead`, `.then`, `.heading-meta` | "Kessler, week of Oct 19." / "Pays Fri Oct 30." then one line of facts. |
-| `Deck({ label, children })` | `.deck`, `.deck-fan` | The fanned checks behind the open one (offsets and turns from the 12ui conversion of the pick). |
-| `Check({ … })` | `.check`, `.check-head`, `.check-name`, `.check-role`, `.check-cols`, `.check-col`, `.check-label`, `.check-line`, `.check-gross`, `.check-foot`, `.check-net` | Who, hours and pay, deductions and taxes, net pay in the mint box; the open check also takes the `Tag` and the choices. |
+| `Deck({ label, children })` | `.deck`, `.deck-fan` | The fanned checks behind the open one (offsets and turns from the 12ui conversion of the pick). Their right edges spread over the room between the open check and the slip, as drawn at 1440 and closer together where the column is narrower; no sheet reaches the slip. |
+| `Check({ … })` | `.check`, `.check-head`, `.check-name`, `.check-role`, `.check-cols`, `.check-col`, `.check-label`, `.check-line`, `.check-gross`, `.check-foot`, `.check-net` | Who, hours and pay, deductions and taxes, net pay in the mint box; the open check also takes the `Tag` and the choices. A `PayLine` with no `amount` shows a dash, so the empty check carries the pick's lines as the slip carries its rows. |
 | `Check` `flag={{ was, now }}` | `.flag` | The exception on a check: a blush pill with the warning, the figure the run would pay struck in red and the figure it should pay ("~~92 h · $3,776.00~~ 46 h · $1,568.00"). |
 | `CheckTabs({ tabs })` | `.tabs`, `.tab`, `.tab--flagged`, `.tab-who`, `.tab-amount` | The run's other checks as horizontal tabs (name, role, amount, then the done check or the red warning), fanned beside the open check from 1280 px and stacked under it below. Each tab links to its check. |
 | `Done`, `Warn` | `.glyph`, `.ck`, `.warn` | The one heavy done check and the exception's warning (`src/ui/glyphs.ts`, shared with the homepage). |
@@ -86,7 +90,7 @@ every clause missing); the app home at `/app` shows the pick's composition in it
 | `Amount({ value })` | `.none` | A figure, or a dash with the text "none" for screen readers. |
 | `RunSlip({ status, rows, when, alert })` | `.slip`, `.slip-title`, `.slip-status`, `.slip-rows`, `.slip-net`, `.slip-total`, `.slip-when`, `.slip-alert` | Gross pay, employee taxes, deductions, net pay (highlighted), employer taxes, total debit and its date; the debit equals net pay plus taxes plus deductions. `alert` is the exception's one red line ("1,104 h · $51,246.00 · $28,566.00 at stake") with Envelope's small tag. |
 | choices | `.choices`, `.btn`, `.btn--primary` | One coral primary, then outlined buttons. On the open check under the tag. |
-| fields | `.field` (a label with `span` and `input`) | Thin border, forest focus ring; checkboxes in forest. |
+| fields | `.field` (a label with `span` and `input` or `select`) | Thin border, forest focus ring; a select adds Base's chevron; checkboxes 24 px in forest. |
 | `NotFound()` | `.lost`, `.lost-card` | Any address the app does not have. |
 
 ## Still to build with the product (from the pick)
