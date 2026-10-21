@@ -18,11 +18,11 @@
 .app .card { background: var(--paper); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
 
 /* The heading: two short lines of heavy rounded type, line one forest, line two teal */
-.app .heading { font: 900 60px/1.04 var(--heading); letter-spacing: -.035em; text-wrap: balance; }
+.app .heading { font: 900 64px/1.04 var(--heading); letter-spacing: -.035em; text-wrap: balance; }
 .app .heading > span { display: block; }
 .app .heading .lead { color: var(--forest); }
-.app .heading .then { color: var(--teal); font-size: .9em; letter-spacing: -.03em; }
-.app .heading-meta { margin-top: 14px; font-size: 20px; line-height: 1.4; color: var(--body); }
+.app .heading .then { color: var(--teal); font-size: .86em; letter-spacing: -.03em; }
+.app .heading-meta { margin-top: 8px; font-size: 20px; line-height: 1.4; color: var(--body); }
 
 /* Buttons: one coral primary per screen in large bold type (white on coral meets AA for large text) and quiet
    outlined secondaries. Base's frame buttons and the Lobby's door button are the same two buttons. */

@@ -1,7 +1,7 @@
 /* The app's screen from owner pick A: one slim floating bar, a row of client chips, the two-line heading, a fanned
    deck of paychecks with the front check open, the run slip beside it and the choices on the open check. No rail,
    count tiles, agent strip, central table or side panel. Sized for 1440 and reflowed to one column at 390. */
-.app { --edge: 40px; --slip: 330px; --check: 720px; }
+.app { --edge: 40px; --slip: 330px; --check: 714px; }
 .app .app-wrap { width: min(100% - 2 * var(--edge), 1392px); margin-inline: auto; }
 body:has(> .app) { margin: 0; padding: 0; }
 
@@ -36,34 +36,34 @@ body:has(> .app) { margin: 0; padding: 0; }
 .app .payrun { display: grid; grid-template-columns: minmax(0, 1fr) var(--slip); grid-template-rows: auto 1fr; column-gap: 28px; margin-top: 26px; padding-bottom: 56px; }
 .app .payrun-head { grid-column: 1; padding-left: 8px; }
 .app .payrun > .slip { grid-column: 2; grid-row: 1 / span 2; align-self: start; margin-top: 30px; }
-.app .deck { grid-column: 1; position: relative; isolation: isolate; margin-top: 36px; padding-top: 34px; }
+.app .deck { grid-column: 1; position: relative; isolation: isolate; margin-top: 18px; padding-top: 18px; }
 
 /* The fan: the deck's other checks standing behind the open one, their tops and right edges showing (offsets and
    turns from the 12ui conversion of the pick, as fractions of the open check) */
-.app .deck-fan { position: absolute; top: 34px; bottom: 0; left: 0; z-index: -1; width: min(100%, var(--check)); pointer-events: none; }
-.app .deck-fan span { position: absolute; height: 94%; border: 1px solid #e6eef1; border-radius: var(--radius-card); background: linear-gradient(110deg, #fff, #f3f7f8); box-shadow: var(--deck-shadow); }
-.app .deck-fan span:nth-child(1) { top: -21px; left: 5.9%; width: 104.2%; transform: rotate(-3deg); }
-.app .deck-fan span:nth-child(2) { top: -12px; left: 7.7%; width: 113%; transform: rotate(-1.6deg); }
-.app .deck-fan span:nth-child(3) { top: 0; left: 10.9%; width: 116.9%; transform: rotate(-.6deg); }
+.app .deck-fan { position: absolute; top: 18px; bottom: 0; left: 0; z-index: -1; width: min(100%, var(--check)); pointer-events: none; }
+.app .deck-fan span { position: absolute; height: 86%; border: 1px solid #e6eef1; border-radius: var(--radius-card); background: linear-gradient(110deg, #fff, #f3f7f8); box-shadow: var(--deck-shadow); }
+.app .deck-fan span:nth-child(1) { top: -26px; left: 5.9%; width: 113%; transform: rotate(-3deg); }
+.app .deck-fan span:nth-child(2) { top: -17px; left: 7.7%; width: 116%; transform: rotate(-1.6deg); }
+.app .deck-fan span:nth-child(3) { top: -4px; left: 10.9%; width: 119%; transform: rotate(-.6deg); }
 .app .deck-fan span:nth-child(4) { top: 17px; left: 13.9%; width: 122.4%; transform: rotate(1deg); }
 .app .deck-fan span:nth-child(5) { top: 29px; left: 16.1%; width: 124.6%; transform: rotate(2deg); }
 
 /* A paycheck: who, hours and pay, deductions and taxes, net pay; the open check also carries the tag and choices */
-.app .check { position: relative; width: min(100%, var(--check)); padding: 28px 30px 26px; border-radius: 26px; box-shadow: 0 2px 4px rgba(40, 96, 108, .12), 0 16px 30px -8px rgba(40, 124, 132, .3); }
+.app .check { position: relative; width: min(100%, var(--check)); padding: 26px 24px 24px; border-radius: 26px; box-shadow: 0 2px 4px rgba(40, 96, 108, .12), 0 16px 30px -8px rgba(40, 124, 132, .3); }
 .app .check-head { display: flex; align-items: center; gap: 18px; }
 .app .check-head .avatar { width: 64px; height: 64px; font-size: 22px; }
 .app .check-name { font: 900 34px/1.1 var(--heading); letter-spacing: -.02em; color: var(--ink); }
 .app .check-role { margin-top: 4px; font-size: 19px; line-height: 1.35; color: var(--body); }
-.app .check-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 22px; padding-left: 82px; }
+.app .check-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 20px; padding-left: 82px; }
 .app .check-col + .check-col { padding-left: 24px; border-left: 1px solid var(--hair); }
 .app .check-label { font: 600 15.5px/1.35 var(--text); color: var(--ink); }
 .app .check-line,
 .app .check-gross { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 16.5px; line-height: 1.4; color: var(--body); }
 .app .check-gross { margin-top: 10px; padding-top: 10px; border-top: 1px solid #cfd8df; font-weight: 700; color: var(--ink); }
-.app .check-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 22px; }
+.app .check-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 20px; }
 .app .check-net { flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 28px; min-width: 240px; padding: 12px 18px; border-radius: 16px; background: var(--mint); font-weight: 700; color: var(--ink); }
 .app .check-net span:last-child { font-size: 22px; }
-.app .check .choices { margin-top: 18px; }
+.app .check .choices { margin-top: 16px; }
 
 /* The tag: Envelope speaks on a check or the slip with mark 9 (its 32 px cut), always ending in a choice for a person */
 .app .tag { position: relative; display: flex; align-items: center; gap: 14px; max-width: 470px; padding: 12px 16px 12px 12px; border-radius: 18px; background: var(--sky); color: #102a4c; font-size: 14.5px; line-height: 1.55; }
@@ -72,13 +72,15 @@ body:has(> .app) { margin: 0; padding: 0; }
 
 /* Choices: the screen's coral primary first, then outlined secondaries */
 .app .choices { display: flex; flex-wrap: wrap; gap: 14px 16px; }
+.app .choices .btn { min-height: 58px; border-radius: 22px; font-size: 20px; }
+.app .choices .btn--primary { font-weight: 700; }
 
 /* The run slip: the run's totals, with cents, and the debit */
-.app .slip { padding: 22px 14px 18px; border-radius: 20px; }
+.app .slip { padding: 22px 14px 20px; border-radius: 18px; }
 .app .slip-title { padding-inline: 8px; font: 800 26px/1.2 var(--heading); letter-spacing: -.01em; color: #062c3b; }
 .app .slip-status { margin-top: 2px; padding-inline: 8px; font-size: 15.5px; color: var(--muted); }
 .app .slip-rows { margin-top: 12px; }
-.app .slip-rows > div { display: flex; justify-content: space-between; gap: 16px; padding: 5px 8px; font-size: 18px; line-height: 1.45; }
+.app .slip-rows > div { display: flex; justify-content: space-between; gap: 16px; padding: 6px 8px; font-size: 18px; line-height: 1.45; }
 .app .slip-rows dd { margin: 0; font-weight: 500; }
 .app .slip-rows > .slip-net { margin: 12px -2px 4px; padding: 9px 10px; border-top: 0; border-radius: 14px; background: var(--mint-band); font-size: 20px; font-weight: 700; }
 .app .slip-rows > .slip-net + div { color: var(--muted); }
@@ -143,7 +145,7 @@ body:has(> .app) { margin: 0; padding: 0; }
   .app .tag::after { display: none; }
   .app .tag img { width: 30px; height: 30px; }
   .app .choices { display: grid; gap: 10px; }
-  .app .choices .btn { min-height: 48px; padding-inline: 18px; }
+  .app .choices .btn { min-height: 48px; padding-inline: 18px; border-radius: 18px; font-size: 17px; }
   .app .payrun > .slip { max-width: none; margin-top: 20px; }
   .app .lost { padding: 32px 0 56px; }
   .app .lost-card { padding: 28px 20px 30px; border-radius: 20px; }
