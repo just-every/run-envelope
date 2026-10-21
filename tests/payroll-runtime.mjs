@@ -158,7 +158,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       bankAuthorization: 'pending',
       ...source,
     }
-    await page.goto(origin + screen + '/setup')
+    await capture(screen + '/setup', 'company-tax-empty')
     for (const [key, value] of Object.entries(profile)) {
       const field = page.locator(`form[action$="/setup/profile"] [name="${key}"]`)
       if ((await field.getAttribute('type')) === 'hidden') continue
@@ -239,6 +239,23 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     )
     const currentSetup = await data(company + '/setup?asOf=2026-07-01')
     assert.equal(currentSetup.profile.depositSchedule, 'semiweekly')
+    for (const key of [
+      'legalName',
+      'dbaName',
+      'address',
+      'responsibleContact',
+      'lookbackStart',
+      'lookbackEnd',
+      'reportingAgentElection',
+      'bankAuthorization',
+      'sourceUrl',
+      'sourceDate',
+      'sourceTitle',
+    ])
+      assert.equal(currentSetup.profile[key], profile[key], key)
+    const profileCipher = JSON.stringify(await sql('SELECT cipher FROM env_company_setup'))
+    assert.equal(profileCipher.includes(profile.responsibleContact), false)
+    assert.equal(profileCipher.includes(profile.address), false)
     assert.equal(currentSetup.profiles.length, 2)
     assert.deepEqual(currentSetup.remittanceHolds, [
       { code: 'PA-SUI', scope: 'jurisdiction-deposit-and-filing', reason: 'account-pending' },
@@ -269,6 +286,26 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         'synthetic-envelope-6',
       ),
       false,
+    )
+    await data(
+      company + '/setup/jurisdictions',
+      {
+        ...jurisdiction,
+        code: 'PA-LOCAL-EXEMPT',
+        kind: 'local',
+        agency: 'Synthetic local agency',
+        registrationStatus: 'exempt',
+        exemptionBasis: 'Synthetic official exemption evidence',
+        rate: '0',
+        rateBasis: 'not-applicable',
+      },
+      cookie,
+      201,
+    )
+    assert.deepEqual(
+      (await data(company + '/setup?asOf=2026-08-01')).remittanceHolds,
+      [],
+      'documented exemption is not an account or authority hold',
     )
     await data(
       company + '/locations',
@@ -723,6 +760,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     await sql(
       `UPDATE oa_step_up_challenges SET consumed_at=${Date.now()} WHERE id='synthetic-envelope-15'`,
     )
+    await capture(screen + '/agents', 'agent-empty')
+    await capture(screen + '/drafts', 'run-input-empty')
     await page.goto(origin + screen + '/agents')
     await page
       .getByLabel('Agent or integration name', { exact: true })
@@ -736,6 +775,18 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       .check()
     await page.getByRole('button', { name: 'Issue sponsored credential', exact: true }).click()
     await page.getByLabel('One-time credential', { exact: true }).waitFor()
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 })
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      )
+      await page.screenshot({
+        path: join(proof, `credential-issued-${width}.png`),
+        fullPage: true,
+        mask: [page.getByLabel('One-time credential', { exact: true })],
+      })
+    }
     const agentToken = await page
       .getByLabel('One-time credential', { exact: true })
       .inputValue()
@@ -1076,7 +1127,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     )
     assert.equal((await call(base, sponsorCookie)).status, 401)
     const signout = await call('/auth/signout', actors.accountant.cookie, {})
-    assert.equal(signout.status, 200, await signout.clone().text())
+    assert.equal(signout.status, 204, await signout.clone().text())
     await noWrite(async () => {
       assert.equal(
         (await call(company + '/people/' + maria.id, actors.accountant.cookie)).status,

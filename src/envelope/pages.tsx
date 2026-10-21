@@ -35,12 +35,14 @@ export const Field = ({
   type = 'text',
   value,
   required = true,
+  maxLength,
 }: {
   name: string
   label: string
   type?: string
   value?: string | number
   required?: boolean
+  maxLength?: number
 }) => (
   <label className="field">
     <span>{label}</span>
@@ -49,7 +51,7 @@ export const Field = ({
       type={type}
       defaultValue={value}
       required={required}
-      maxLength={type === 'password' ? 16000 : 120}
+      maxLength={maxLength ?? (type === 'password' ? 16000 : 120)}
       autoComplete="off"
     />
   </label>
@@ -607,8 +609,8 @@ export const Select = ({
 )
 const SourceFields = () => (
   <>
-    <Field name="sourceTitle" label="Source document title" />
-    <Field name="sourceUrl" label="Official source URL" type="url" />
+    <Field name="sourceTitle" label="Source document title" maxLength={240} />
+    <Field name="sourceUrl" label="Official source URL" type="url" maxLength={1000} />
     <Field name="sourceDate" label="Source edition date" type="date" />
   </>
 )
@@ -687,7 +689,12 @@ export function setupPage(
             required={false}
             value={profile?.dbaName}
           />
-          <Field name="address" label="Company address" value={profile?.address} />
+          <Field
+            name="address"
+            label="Company address"
+            value={profile?.address}
+            maxLength={500}
+          />
           <Field
             name="responsibleContact"
             label="Responsible contact"
@@ -696,7 +703,7 @@ export function setupPage(
           <Select
             name="depositSchedule"
             label="Federal deposit schedule"
-            choices={frequencies}
+            choices={['monthly', 'semiweekly', 'agency-assigned']}
             value={profile?.depositSchedule}
           />
           <Field name="lookbackStart" label="Lookback start" type="date" />

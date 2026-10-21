@@ -117,7 +117,11 @@ export class CompanySetup {
       dbaName: optional(input.dbaName),
       address: text(input.address, 500),
       responsibleContact: text(input.responsibleContact, 240),
-      depositSchedule: choice(input.depositSchedule, frequencies),
+      depositSchedule: choice(input.depositSchedule, [
+        'monthly',
+        'semiweekly',
+        'agency-assigned',
+      ]),
       lookbackStart: date(input.lookbackStart),
       lookbackEnd: date(input.lookbackEnd),
       reportingAgentElection: choice(input.reportingAgentElection, [
@@ -308,9 +312,10 @@ export class CompanySetup {
       remittanceHolds: current
         .filter(
           (r) =>
-            r.registrationStatus === 'missing' ||
-            r.registrationStatus === 'pending' ||
-            r.authority !== 'evidence-recorded',
+            r.registrationStatus !== 'exempt' &&
+            (r.registrationStatus === 'missing' ||
+              r.registrationStatus === 'pending' ||
+              r.authority !== 'evidence-recorded'),
         )
         .map((r) => ({
           code: r.code,
