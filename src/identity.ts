@@ -14,6 +14,7 @@ export const identity: EditionIdentity = {
   theme: '/rer-theme.css',
   mark: '/brand/mark.svg',
   band: '/brand/band.svg',
-  fonts: '/fonts/fonts.css',
+  // Linked before the theme on the Lobby and the Run pages: Envelope's look (the faces are in the theme).
+  fonts: '/look/envelope.css',
   accentColor: branding.primaryColor,
 }

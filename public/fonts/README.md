@@ -1,26 +1,18 @@
 # Fonts
 
-Outfit is self-hosted under the SIL Open Font License 1.1 in
-`outfit/LICENSE.txt`. The Latin and Latin Extended WOFF2 subsets come from
-Fontsource's Outfit distribution; upstream: https://github.com/Outfitio/Outfit-Fonts.
-
-The root document links `/fonts/fonts.css` once, outside the temporary dev SSR
-stylesheet, and preloads only the primary Latin file. Do not import this CSS
-from a component. Every body-font stack uses `--font-body`, including the local
-`Outfit Fallback` before generic fallback fonts; controls inherit it.
-
-Fallback scales use Outfit/Arial advance-width ratios over A-Z, a-z and 0-9
-at weights 400, 500 and 700. Ascent, descent and line gap match Outfit's
-1000, -260 and 0 per 1000 units, divided by each scale. Matching metrics reduces
-layout movement; different glyph designs cannot have identical widths in every
-piece of text. Recalculate the fallback and preload when changing the brand font.
-
-The run site (`src/site`) adds three faces, each self-hosted from Fontsource under
-the SIL Open Font License 1.1 with its licence beside it: Nunito (variable, Latin
-and Latin Extended) for headings and the Envelope wordmark, Inter (variable, Latin
-and Latin Extended) for body text and tabular figures, and Caveat 600 (Latin) for
-the homepage's one handwritten note. Upstreams: https://github.com/googlefonts/nunito,
+Envelope serves three faces, each self-hosted from Fontsource under the SIL Open
+Font License 1.1 with its licence beside it: Nunito (variable, Latin and Latin
+Extended) for headings and the Envelope wordmark, Inter (variable, Latin and
+Latin Extended) for text and tabular figures, and Caveat 600 (Latin) for the
+homepage's one handwritten note. Upstreams: https://github.com/googlefonts/nunito,
 https://github.com/rsms/inter and https://github.com/googlefonts/caveat.
+
+Their `@font-face` rules are in `public/rer-theme.css`, the one stylesheet every
+document links (the app, Base's sign-in, setup and Lobby pages, the run site and
+the installer, which reads the theme with Base's grammar). "Nunito Display" is
+Nunito with its line box fitted to its glyphs, so two tightly led heading lines
+keep separate boxes. Documents preload only the two primary Latin files
+(`src/base/font-head.ts`, `src/site/shell/frame.ts`).
 
 Inter's U+2192 is shipped in `inter/inter-symbols-wght-normal.woff2`, subset from
 https://github.com/rsms/inter/blob/master/docs/font-files/InterVariable.woff2.

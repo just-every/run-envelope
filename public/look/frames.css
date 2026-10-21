@@ -1,0 +1,106 @@
+/* Base's documents in Envelope's look. Base's own styles follow this file, so each rule names Base's markup one step
+   deeper than Base does. A frame (sign-in, its confirmation, sign-in settings, Finish setup and the local hand-off
+   page) is a main whose first child is the brand line: the page wears the app's ground, the brand line becomes the
+   app's slim floating bar and the main a white card under it. */
+
+/* Frames: the page */
+html:has(> body > main > :is(.brand, .rer-brand):first-child) { min-height: 100%; background: var(--aqua) var(--ground) no-repeat; color-scheme: light; }
+html:has(> body > main > :is(.brand, .rer-brand):first-child) > body {
+  box-sizing: border-box; display: block; min-height: 100vh; margin: 0; padding: 116px 16px 56px; background: none;
+  color: var(--ink); font: 400 16px/1.55 var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+
+/* Frames: the card */
+body > main:has(> :is(.brand, .rer-brand):first-child) {
+  box-sizing: border-box; width: 100%; max-width: 520px; margin: 0 auto; padding: 40px 44px 42px;
+  background: var(--paper); border: 0; border-radius: var(--radius-card); box-shadow: var(--card-shadow); color: var(--ink);
+}
+
+/* Frames: the brand line as the slim floating bar, mark 9 beside the wordmark */
+body > main > :is(.brand, .rer-brand):first-child {
+  box-sizing: border-box; position: absolute; top: 16px; left: max(16px, 50% - 696px); right: max(16px, 50% - 696px);
+  display: flex; align-items: center; gap: 12px; min-height: 62px; margin: 0; padding: 10px 20px;
+  border-radius: 20px; background: rgba(255, 255, 255, .94); box-shadow: var(--float-shadow);
+  color: var(--lockup); font: 800 28px/1 var(--heading); letter-spacing: -.02em;
+}
+body > main > :is(.brand, .rer-brand):first-child::before { width: 40px; height: 40px; }
+body > main > :is(.brand, .rer-brand):first-child img { width: 40px; height: 40px; }
+
+/* Frames: type */
+body > main:has(> :is(.brand, .rer-brand):first-child) > h1 { margin: 0 0 14px; font: 900 34px/1.14 var(--heading); letter-spacing: -.025em; color: var(--forest); text-wrap: balance; }
+body > main:has(> :is(.brand, .rer-brand):first-child) h2 { margin: 30px 0 12px; font: 800 22px/1.25 var(--heading); color: var(--ink); }
+body > main:has(> :is(.brand, .rer-brand):first-child) p:not(.brand, .rer-brand) { margin: 0 0 22px; color: var(--body); font-size: 16.5px; line-height: 1.6; }
+body > main:has(> :is(.brand, .rer-brand):first-child) > p:not(.brand, .rer-brand):last-child { margin-bottom: 0; }
+
+/* Frames: forms, choices and notices */
+body > main:has(> :is(.brand, .rer-brand):first-child) form { display: grid; gap: 0; margin: 0; }
+body > main:has(> .rer-brand:first-child) form { gap: 18px; }
+body > main:has(> :is(.brand, .rer-brand):first-child) label { display: block; margin: 0 0 8px; }
+body > main:has(> .rer-brand:first-child) label { display: grid; gap: 8px; margin: 0; }
+body > main:has(> :is(.brand, .rer-brand):first-child) form > input:not([type="hidden"]) { margin-bottom: 20px; }
+body > main:has(> :is(.brand, .rer-brand):first-child) label:has(> input[type="checkbox"]) { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 24px; color: var(--body); font: 500 15.5px/1.45 var(--text); }
+body > main:has(> .rer-brand:first-child) form > p { margin: 0 0 6px; }
+body > main:has(> :is(.brand, .rer-brand):first-child) :is(button, .action) { display: flex; width: 100%; }
+body > main:has(> :is(.brand, .rer-brand):first-child) .stack { display: grid; gap: 12px; margin: 0 0 24px; }
+body > main:has(> :is(.brand, .rer-brand):first-child) .stack:last-child { margin-bottom: 0; }
+body > main:has(> :is(.brand, .rer-brand):first-child) .divider { color: var(--muted); }
+body > main:has(> :is(.brand, .rer-brand):first-child) .divider::before,
+body > main:has(> :is(.brand, .rer-brand):first-child) .divider::after { border-color: var(--hair); }
+body > main:has(> :is(.brand, .rer-brand):first-child) .notice { margin: 0 0 24px; padding: 12px 16px; border: 0; border-radius: 14px; background: var(--sky); color: #102a4c; font-size: 15.5px; }
+body > main:has(> :is(.brand, .rer-brand):first-child) .notice[role="alert"] { background: var(--blush); color: #8c1f1f; }
+body > main:has(> :is(.brand, .rer-brand):first-child) .secondary-link { margin: 18px 0 0; text-align: center; font-size: 15.5px; }
+body > main:has(> .rer-brand:first-child) dl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 0 0 22px; padding: 12px 16px; border-radius: 14px; background: var(--wash); }
+body > main:has(> .rer-brand:first-child) dt { color: var(--muted); font-size: 13.5px; }
+body > main:has(> .rer-brand:first-child) dd { margin: 0; color: var(--ink); font-size: 16.5px; overflow-wrap: anywhere; }
+
+@media (max-width: 759px) {
+  html:has(> body > main > :is(.brand, .rer-brand):first-child) > body { padding: 92px 16px 40px; }
+  body > main:has(> :is(.brand, .rer-brand):first-child) { padding: 28px 20px 30px; border-radius: 20px; }
+  body > main > :is(.brand, .rer-brand):first-child { top: 12px; min-height: 56px; padding: 8px 14px; gap: 9px; border-radius: 16px; font-size: 24px; }
+  body > main > :is(.brand, .rer-brand):first-child::before,
+  body > main > :is(.brand, .rer-brand):first-child img { width: 32px; height: 32px; }
+  body > main:has(> :is(.brand, .rer-brand):first-child) > h1 { font-size: 28px; }
+}
+
+/* The Lobby (an installation's /): the door on the app's ground, the lockup, one line and the coral button over the
+   deck drawn along the floor */
+html[data-state] { min-height: 100%; background: var(--aqua) var(--ground) no-repeat; }
+html[data-state] body { background: none; color: var(--ink); font-family: var(--text); }
+html[data-state] .door { padding-top: 16vh; padding-bottom: 36vh; }
+html[data-state] .door-art { height: 32vh; min-height: 170px; }
+html[data-state] .door-art img { object-fit: contain; object-position: center bottom; }
+html[data-state] .door-card { max-width: 680px; }
+html[data-state] h1 { font-size: clamp(46px, 6vw, 72px); }
+html[data-state] .lockup { gap: .26em; color: var(--lockup); }
+html[data-state] .word { font-family: var(--heading); font-weight: 900; letter-spacing: -.035em; }
+html[data-state] .door-card > h1 + .credit { margin-top: 20px; color: var(--body); font-size: 18px; line-height: 1.55; }
+html[data-state] .line { margin-top: 30px; color: var(--forest); font: 900 30px/1.2 var(--heading); letter-spacing: -.02em; }
+html[data-state] .btn { min-height: 60px; margin-top: 30px; padding: 0 38px; }
+html[data-state] .credit { color: var(--muted); }
+html[data-state] .credit a { color: var(--teal-ink); text-decoration-color: currentColor; }
+@media (max-width: 640px) {
+  html[data-state] .door { padding: 120px 16px 200px; }
+  html[data-state] .door-art { height: 180px; min-height: 0; }
+  html[data-state] h1 { font-size: min(52px, 12vw); }
+  html[data-state] .door-card > h1 + .credit { font-size: 16px; }
+  html[data-state] .line { font-size: 24px; }
+  html[data-state] .btn { min-height: 56px; }
+}
+
+/* The run site's Base pages (Run, contract, not found): the lockup and headings in the heavy rounded face, white cards
+   on the aqua ground, forest step numbers and the terminal's dark card */
+body:not(.site):has(> header.bar > a.brand) { background: var(--aqua) var(--ground) no-repeat; color: var(--ink); font-family: var(--text); }
+body:not(.site) > header.bar > a.brand { color: var(--lockup); font: 800 30px/1 var(--heading); letter-spacing: -.02em; }
+body:not(.site) > header.bar nav { font-size: 18px; }
+body:not(.site) > main :is(.intro, .hero) > h1 { color: var(--forest); font-family: var(--heading); font-weight: 900; letter-spacing: -.035em; }
+body:not(.site) > main h1 { color: var(--forest); font-weight: 900; }
+body:not(.site) > main .sub { color: var(--body); }
+body:not(.site) > main .step { border: 0; background: var(--paper); box-shadow: var(--card-shadow); backdrop-filter: none; }
+body:not(.site) > main .step h2 { font-weight: 800; color: var(--ink); }
+body:not(.site) > main .num { background: var(--forest); color: #fff; font-weight: 900; }
+body:not(.site) > main .card { border-color: var(--hair); box-shadow: var(--card-shadow); }
+body:not(.site) > main .link { color: var(--teal-ink); }
+@media (max-width: 760px) {
+  body:not(.site) > header.bar > a.brand { font-size: 24px; }
+  body:not(.site) > header.bar nav { font-size: 15.5px; }
+}

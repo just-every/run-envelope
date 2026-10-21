@@ -1,28 +1,9 @@
-/* Envelope's run site: tokens, the page frame, type, header, footer, chips, cards and actions. The look is the approved
-   hero's: pale aqua alternating with crisp white, a heavy rounded heading face in forest and teal, white rounded data
-   cards with ink text, one heavy done-green check, red only on an exception and coral only on Run Envelope. Sizes are
-   set for 1440 and scale down. */
+/* Envelope's run site: the page frame, type, header, footer, chips, cards and actions, on the tokens in
+   public/look/tokens.css. The look is the approved hero's: pale aqua alternating with crisp white, a heavy rounded
+   heading face in forest and teal, white rounded data cards with ink text, one heavy done-green check, red only on an
+   exception and coral only on Run Envelope. Sizes are set for 1440 and scale down. */
 .site {
-  --aqua: #e1faf9;
-  --forest: #126340;
-  --teal: #12a8a5;
-  --done: #0b6c2a;
-  --red: #d42c2c;
-  --coral: #f65457;
-  --ink: #1d2a44;
-  --body: #3d4a5e;
-  --muted: #627084;
-  --hair: #dde5ea;
-  --band-forest: #0c4e37;
-  --rosa: #b97f05;
-  --kessler: #126340;
-  --brightside: #0b939b;
-  --northpaw: #2a5ba5;
-  --arch: #6b3f99;
-  --card-shadow: 0 1px 2px rgba(20, 60, 70, .06), 0 10px 30px -12px rgba(20, 70, 80, .2);
   --gutter: 48px;
-  --heading: 'Nunito Display', Nunito, 'Arial Rounded MT Bold', Arial, sans-serif;
-  --text: Inter, Arial, sans-serif;
   margin: 0; background: #fff; color: var(--ink);
   font: 400 17px/1.5 var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   font-variant-numeric: proportional-nums lining-nums; overflow-x: clip;
@@ -72,11 +53,11 @@
 
 /* One chip component: a rounded pill in the business colour with its name in white */
 .chip { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 12px; border-radius: 8px; color: #fff; font: 650 14.5px/1.2 var(--text); white-space: nowrap; }
-.chip--rosa { background: var(--rosa); }
-.chip--kessler { background: var(--kessler); }
-.chip--brightside { background: var(--brightside); }
-.chip--northpaw { background: var(--northpaw); }
-.chip--arch { background: var(--arch); }
+.chip--rosa { background: var(--chip-goldenrod); }
+.chip--kessler { background: var(--chip-forest); }
+.chip--brightside { background: var(--chip-teal); }
+.chip--northpaw { background: var(--chip-slate); }
+.chip--arch { background: var(--chip-violet); }
 .chip--all { background: #e6ebef; color: var(--ink); }
 
 /* White rounded data cards */

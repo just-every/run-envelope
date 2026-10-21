@@ -27,6 +27,6 @@ export function sitePages({ styles = [], contract }: Partial<SiteContext> = {}):
    ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, data, contract) }] : []),
    { path: '/404', html: siteNotFoundHtml(identity, data, contract) },
   ],
-  assets: ['rer-theme.css', 'fonts', 'brand', 'site', 'favicon.ico', 'favicon-32.svg', 'apple-touch-icon.png'],
+  assets: ['rer-theme.css', 'look', 'fonts', 'brand', 'site', 'favicon.ico', 'favicon-32.svg', 'apple-touch-icon.png'],
  }
 }

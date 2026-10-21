@@ -7,12 +7,12 @@ export const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': 
 /** Where the header, the hero and the closing link. `docs` is the public run guide. */
 export interface SiteLinks { repository: string; docs: string; demo: string; contract: boolean }
 
-/** One page: the faces and tokens from the public folder, then the site's compiled stylesheets. */
+/** One page: the faces (/rer-theme.css) and Envelope's tokens (/look/tokens.css), then the site's compiled stylesheets. */
 export function siteDocument(title: string, description: string, styles: string[], body: string) {
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title><meta name="description" content="${escape(description)}">`
   + `<meta name="theme-color" content="#e1faf9"><meta property="og:type" content="website"><meta property="og:site_name" content="Envelope"><meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}">${iconHead}`
   + '<link rel="preload" href="/fonts/nunito/nunito-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin="anonymous"><link rel="preload" href="/fonts/inter/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin="anonymous">'
-  + `<link rel="stylesheet" href="/fonts/fonts.css">${styles.map(href => `<link rel="stylesheet" href="${escape(href)}">`).join('')}</head>`
+  + `<link rel="stylesheet" href="/rer-theme.css"><link rel="stylesheet" href="/look/tokens.css">${styles.map(href => `<link rel="stylesheet" href="${escape(href)}">`).join('')}</head>`
   + `<body class="site">${body}</body></html>`
 }
 

@@ -1,0 +1,79 @@
+/* Envelope's controls: the page, the lockup, white cards, the two-line heading, buttons, links, fields and focus. The
+   app's classes live under .app; Base's frame and Lobby controls are named beside them in the same rules, so each
+   control is defined once (look/frames.css lays out Base's documents around them). */
+
+/* The page: pale aqua, brightest at the foot, as in the app pick */
+.app { display: flow-root; margin: 0; min-height: 100vh; background: var(--aqua) var(--ground) no-repeat; color: var(--ink); font: 400 16px/1.5 var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.app :where(*, *::before, *::after) { box-sizing: border-box; }
+.app :where(h1, h2, h3, p, ol, ul, dl, dd, figure) { margin: 0; }
+.app :where(ol, ul) { padding: 0; list-style: none; }
+.app :where(b, strong) { font-weight: 650; }
+.app .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The lockup: mark 9 beside the heavy rounded wordmark */
+.app .lockup { display: inline-flex; align-items: center; gap: 12px; color: var(--lockup); text-decoration: none; font: 800 28px/1 var(--heading); letter-spacing: -.02em; white-space: nowrap; }
+.app .lockup img { flex: none; display: block; width: 40px; height: 40px; }
+
+/* White rounded data cards with a soft shadow */
+.app .card { background: var(--paper); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
+
+/* The heading: two short lines of heavy rounded type, line one forest, line two teal */
+.app .heading { font: 900 60px/1.04 var(--heading); letter-spacing: -.035em; text-wrap: balance; }
+.app .heading > span { display: block; }
+.app .heading .lead { color: var(--forest); }
+.app .heading .then { color: var(--teal); font-size: .9em; letter-spacing: -.03em; }
+.app .heading-meta { margin-top: 14px; font-size: 20px; line-height: 1.4; color: var(--body); }
+
+/* Buttons: one coral primary per screen in large bold type (white on coral meets AA for large text) and quiet
+   outlined secondaries. Base's frame buttons and the Lobby's door button are the same two buttons. */
+.app .btn,
+html.rer-themed :is(button, .action),
+html[data-state] .btn {
+  box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 56px; margin: 0; padding: 0 30px; border: 1.5px solid #9aa7b2; border-radius: 999px;
+  background: var(--paper); color: var(--ink); font: 500 17px/1.2 var(--text); text-align: center; text-decoration: none;
+  cursor: pointer; box-shadow: none; transition: background-color .15s, border-color .15s;
+}
+.app .btn:hover,
+html.rer-themed :is(button, .action):hover { background: var(--wash); border-color: var(--muted); box-shadow: none; }
+.app .btn--primary,
+html.rer-themed main > form button:not(.secondary),
+html.rer-themed main > .action,
+html.rer-themed .stack > .action:first-child,
+html[data-state] .btn {
+  border-color: var(--coral); background: var(--coral); color: #fff; font: 700 19px/1.2 var(--text);
+  box-shadow: 0 12px 22px -14px rgba(200, 50, 55, .75);
+}
+.app .btn--primary:hover,
+html.rer-themed main > form button:not(.secondary):hover,
+html.rer-themed main > .action:hover,
+html.rer-themed .stack > .action:first-child:hover,
+html[data-state] .btn:hover { border-color: var(--coral-hover); background: var(--coral-hover); }
+.app .btn svg,
+html[data-state] .btn svg { flex: none; width: 20px; height: 20px; }
+
+/* Links */
+.app .link,
+html.rer-themed .secondary-link a { color: var(--teal-ink); font-weight: 500; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+
+/* Fields: thin quiet borders and a clear forest focus ring */
+.app .field { display: grid; gap: 8px; }
+.app .field > span,
+html.rer-themed label { color: var(--ink); font: 600 14.5px/1.35 var(--text); }
+.app .field input,
+html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+  box-sizing: border-box; display: block; width: 100%; min-height: 48px; margin: 0; padding: 11px 14px;
+  border: 1px solid var(--field-line); border-radius: var(--radius-control); background: var(--paper); color: var(--ink);
+  font: 400 16px/1.4 var(--text);
+}
+.app .field input:focus-visible,
+html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus-visible {
+  border-color: var(--forest); outline: 2px solid transparent; box-shadow: 0 0 0 3px color-mix(in srgb, var(--forest) 30%, transparent);
+}
+.app input[type="checkbox"],
+html.rer-themed input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin: 1px 0 0; padding: 0; accent-color: var(--forest); }
+
+/* Focus: a forest ring on every link and button */
+.app :focus-visible,
+html.rer-themed :is(a, button, .action):focus-visible,
+html[data-state] :is(a, .btn):focus-visible { outline: 3px solid var(--forest); outline-offset: 3px; }

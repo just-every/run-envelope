@@ -1,0 +1,62 @@
+/* Envelope's tokens, defined once: the app, Base's frames and pages (look/*.css) and the run site (src/site/styles)
+   read them. The values Base also reads keep Base's names in /rer-theme.css and are aliased here, so every value is
+   written once. The look is the approved hero's and the app pick's: pale aqua alternating with crisp white (never
+   beige), heavy rounded headings in forest and teal, ink text on white rounded cards, one heavy done-green check,
+   red only on an exception and coral only on a screen's one primary action. */
+:root {
+  /* Grounds and surfaces */
+  --aqua: var(--rer-page);
+  --paper: var(--rer-surface);
+  --ground: radial-gradient(130% 95% at 42% 58%, #cff3f3 0%, var(--aqua) 52%, #f4fdfd 100%);
+  --mint: #e0f6f3;
+  --mint-band: #d6f1ea;
+  --sky: #e9f4fe;
+  --blush: #fdeeee;
+  --wash: #f5f9fa;
+
+  /* Ink */
+  --ink: var(--rer-text);
+  --body: #3d4a5e;
+  --muted: var(--rer-muted);
+  --hair: #dde5ea;
+  --field-line: var(--rer-border);
+  --lockup: #08362f;
+
+  /* Brand */
+  --forest: var(--rer-focus);
+  --teal: #12a8a5;
+  --teal-ink: var(--rer-link);
+  --done: var(--rer-done);
+  --red: #d42c2c;
+  --coral: #f65457;
+  --coral-hover: #ec4447;
+  --band-forest: #0c4e37;
+  --terminal: #13252e;
+  --terminal-ink: #e8f2f2;
+
+  /* Business chips, a solid pill in the business's colour with its name in white, assigned in this order */
+  --chip-goldenrod: #b97f05;
+  --chip-forest: var(--forest);
+  --chip-teal: #0b939b;
+  --chip-slate: #2a5ba5;
+  --chip-violet: #6b3f99;
+
+  /* Faces */
+  --heading: var(--rer-font-heading);
+  --text: var(--rer-font-body);
+  --mono: 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Shape and depth */
+  --card-shadow: 0 1px 2px rgba(20, 60, 70, .06), 0 10px 30px -12px rgba(20, 70, 80, .2);
+  --float-shadow: 0 1px 2px rgba(20, 60, 70, .05), 0 16px 36px -20px rgba(20, 90, 100, .32);
+  --deck-shadow: 0 2px 4px rgba(40, 96, 108, .12), 0 14px 26px -6px rgba(40, 124, 132, .22);
+  --radius-card: 24px;
+  --radius-control: 12px;
+
+  /* Base reads these beside its theme tokens; the installer's theme grammar has no place for them in /rer-theme.css */
+  --rer-font-mono: var(--mono);
+  --rer-code-background: var(--terminal);
+  --rer-code-text: var(--terminal-ink);
+  --rer-wordmark-weight: 800;
+  --rer-wordmark-tracking: -.02em;
+}

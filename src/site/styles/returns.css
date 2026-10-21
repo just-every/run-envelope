@@ -178,10 +178,10 @@
 .carried h3 { font: 800 25px/1.2 var(--heading); color: var(--ink); }
 .carried p { margin-top: 12px; font-size: 18px; line-height: 1.45; color: var(--ink); }
 .carried p + p { margin-top: 18px; }
-.term { padding: 26px 26px 24px; border-radius: 16px; background: #13252e; color: #e8f2f2; }
-.term pre { font: 500 19px/1.45 'SF Mono', Menlo, Consolas, monospace; white-space: normal; overflow-wrap: anywhere; }
+.term { padding: 26px 26px 24px; border-radius: 16px; background: var(--terminal); color: var(--terminal-ink); }
+.term pre { font: 500 19px/1.45 var(--mono); white-space: normal; overflow-wrap: anywhere; }
 .term .prompt { color: #9aa9ae; }
-.term-ok { margin-top: 12px; font: 500 19px/1.45 'SF Mono', Menlo, Consolas, monospace; color: #4fe08a; }
+.term-ok { margin-top: 12px; font: 500 19px/1.45 var(--mono); color: #4fe08a; }
 .term-ok .ck, .site .term-ok .ck { color: #4fe08a; margin-right: 6px; }
 .also { margin-top: 30px; text-align: center; font-size: 18px; color: var(--body); }
 

@@ -1,25 +1,102 @@
-/* This edition's declared theme. The installer, sign-in, confirmation, /setup
-   read these --rer-* tokens; the app serves this file and its fonts.
-   Buttons keep the colour chosen at setup (src/branding.json primaryColor)
-   because no --rer-accent is declared here; declare --rer-accent and
-   --rer-accent-text together to fix them instead. */
+/* Envelope's theme for Base: the --rer-* tokens that sign-in, its confirmation, /setup, the Lobby, the Run and
+   contract pages and the installer read, and every face Envelope serves. The installer reads this file with Base's
+   theme grammar (only :root --rer-* tokens with literal values, and @font-face rules), so Envelope's own tokens in
+   public/look/tokens.css alias these instead of repeating them. Faces: Nunito for headings and the wordmark, Inter
+   for text and tabular figures, Caveat for the homepage's one hand note (SIL Open Font License 1.1, from
+   Fontsource, licences in public/fonts). */
+:root {
+  --rer-font-body: Inter, Arial, sans-serif;
+  --rer-font-heading: 'Nunito Display', Nunito, 'Arial Rounded MT Bold', Arial, sans-serif;
+  --rer-page: #e1faf9;
+  --rer-surface: #ffffff;
+  --rer-text: #1d2a44;
+  --rer-muted: #627084;
+  --rer-border: #86939f;
+  --rer-focus: #126340;
+  --rer-link: #0e6a66;
+  --rer-radius: 18px;
+  --rer-logo: url('/brand/mark.svg');
+  --rer-done: #0b6c2a;
+  --rer-done-ink: #0b6c2a;
+  --rer-on-done: #ffffff;
+  --rer-partial: #8a5d00;
+  --rer-partial-ink: #8a5d00;
+  --rer-on-partial: #ffffff;
+  --rer-missing: #5e6c7f;
+  --rer-missing-ink: #5e6c7f;
+  --rer-on-missing: #ffffff;
+}
+
 @font-face {
-  font-family: Outfit;
+  font-family: Nunito;
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/outfit/outfit-latin-wght-normal.woff2') format('woff2');
+  src: url('/fonts/nunito/nunito-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-:root {
-  --rer-font-body: Outfit, Arial, sans-serif;
-  --rer-font-heading: Outfit, Arial, sans-serif;
-  --rer-page: #f4f6f5;
-  --rer-surface: #ffffff;
-  --rer-text: #1b2724;
-  --rer-muted: #4a5a55;
-  --rer-border: #6b7c76;
-  --rer-focus: #1b2724;
-  --rer-link: #1f5f52;
-  --rer-radius: 12px;
-  --rer-logo: url('/brand/mark.svg');
+@font-face {
+  font-family: Nunito;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Nunito for set headings, with its line box fitted to its glyphs (caps and ascenders about 0.78 em, descenders about
+   0.24 em) so two tightly led heading lines keep separate boxes. Same files as Nunito. */
+@font-face {
+  font-family: 'Nunito Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  ascent-override: 80%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Nunito Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/nunito/nunito-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  ascent-override: 80%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter/inter-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Inter's arrow, subset from the upstream variable face under the same OFL. */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter/inter-symbols-wght-normal.woff2') format('woff2');
+  unicode-range: U+2192;
+}
+@font-face {
+  font-family: Caveat;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/caveat/caveat-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
