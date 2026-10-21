@@ -17,8 +17,8 @@ import { landingHtml } from './landing'
 
 export function sitePages({ styles = [], contract }: Partial<SiteContext> = {}): SiteBuild {
  const data: RunData = run
- // Documentation uses the repository's run guide; the demo action opens /run.
- const links: SiteLinks = { repository: run.repository, docs: '/docs', demo: '/run', contract: Boolean(contract) }
+ // Documentation uses the repository's run guide; the demo action opens Envelope's live demo.
+ const links: SiteLinks = { repository: run.repository, docs: '/docs', demo: 'https://demo.run-envelope.com/', contract: Boolean(contract) }
  return {
   pages: [
    { path: '/', html: landingHtml(links, run.clone, styles) },
