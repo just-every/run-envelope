@@ -91,4 +91,7 @@ body:not(.site) > main .link { color: var(--teal-ink); }
 @media (max-width: 760px) {
   body:not(.site) > header.bar > a.brand { font-size: 24px; }
   body:not(.site) > header.bar nav { font-size: 15.5px; }
+  /* The facts line ("Source: … · MIT license") stays on one line at 390 with every platform's Inter metrics, so no
+     line ends on its "·" */
+  body:not(.site) > main .facts { font-size: 12.5px; }
 }
