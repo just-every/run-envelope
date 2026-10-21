@@ -2,10 +2,10 @@ import type { Records, Input } from '../records'
 import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
-export type Kind = 'residence' | 'work' | 'election' | 'schedule' | 'pay-item' | 'pay-change' | 'rule'
+export type Kind = 'residence' | 'work' | 'election' | 'schedule' | 'pay-item' | 'pay-change' | 'rule' | 'group' | 'earnings-run'
 export interface Revision<T = Input> {
   id: string; kind: Kind; version: number; personId: string | null; personVersion: number | null
-  data: T; createdBy: string; createdAt: number; approvedBy: string | null; withdrawnBy: string | null
+  sourcesCurrent: number; data: T; createdBy: string; createdAt: number; approvedBy: string | null; withdrawnBy: string | null
 }
 export const revision = (v: unknown) => v === 0 || v === '0' ? 0 : integer(v)
 export const choice = (v: unknown, options: readonly string[]) => {
@@ -20,6 +20,14 @@ export const objectId = (v: unknown) => {
   return id
 }
 export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), b => b.toString(16).padStart(2, '0')).join('')
+
+export interface Sources {people?:{id:string;version:number}[];objects?:{kind:Kind;id:string;version:number;approved?:boolean}[]}
+const currentSources = (alias:string) => `NOT EXISTS(SELECT 1 FROM env_workspace_people sp WHERE sp.company_id=${alias}.company_id AND sp.kind=${alias}.kind AND sp.object_id=${alias}.object_id AND sp.version=${alias}.version
+  AND NOT EXISTS(SELECT 1 FROM env_people p WHERE p.company_id=sp.company_id AND p.id=sp.person_id AND p.version=sp.person_version))
+  AND NOT EXISTS(SELECT 1 FROM env_workspace_dependencies dep WHERE dep.company_id=${alias}.company_id AND dep.kind=${alias}.kind AND dep.object_id=${alias}.object_id AND dep.version=${alias}.version
+  AND ((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=dep.company_id AND sv.kind=dep.source_kind AND sv.object_id=dep.source_id)!=dep.source_version
+    OR (dep.needs_approval=1 AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions sd WHERE sd.company_id=dep.company_id AND sd.kind=dep.source_kind AND sd.object_id=dep.source_id AND sd.version=dep.source_version AND sd.decision='approved'))
+    OR EXISTS(SELECT 1 FROM env_workspace_decisions sd WHERE sd.company_id=dep.company_id AND sd.kind=dep.source_kind AND sd.object_id=dep.source_id AND sd.version=dep.source_version AND sd.decision='withdrawn')))`
 
 /** Uses existing payroll powers; no cookie role, agent flag or client-supplied actor. */
 export class WorkspaceStore {
@@ -40,7 +48,7 @@ export class WorkspaceStore {
     const f = fence(actor), event = crypto.randomUUID()
     const result = await this.records.env.DB.batch<Record<string, unknown>>([
       ...(audited ? [auditStatement(this.records.env, actor, event, `workspace.${kind}.read`, personId ?? actor.company, actor.grant.version)] : []),
-      this.records.statement(`SELECT v.object_id AS id,v.kind,v.version,v.person_id AS personId,v.person_version AS personVersion,v.cipher,v.created_by AS createdBy,v.created_at AS createdAt,
+      this.records.statement(`SELECT v.object_id AS id,v.kind,v.version,v.person_id AS personId,v.person_version AS personVersion,v.cipher,v.created_by AS createdBy,v.created_at AS createdAt,(${currentSources('v')}) AS sourcesCurrent,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedBy,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn') AS withdrawnBy
         FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND ${personId ? 'v.person_id=?' : 'v.person_id IS NULL'} AND ${f.sql}
@@ -55,10 +63,16 @@ export class WorkspaceStore {
       return { ...publicRow, data } as unknown as Revision<T>
     }))
   }
-  async append<T extends object>(actor: Actor, kind: Kind, id: string, expected: number, payload: T, personId?: string, compensation = false) {
+  async append<T extends object>(actor: Actor, kind: Kind, id: string, expected: number, payload: T, personId?: string, compensation = false, sources: Sources = {}) {
     objectId(id)
     const person = await this.authority(actor, compensation ? 'rates:propose' : 'records:write', personId, compensation)
     const f = fence(actor), event = crypto.randomUUID(), version = expected + 1
+    const pins = [...(sources.people ?? []),...(person ? [{id:person.id,version:person.version}] : [])]
+    if(new Set(pins.map(p=>p.id)).size!==pins.length) throw new PayrollError('duplicate_source')
+    const deps = sources.objects ?? []
+    const sourceSql = pins.map(()=> 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)').join(' ') + deps.map(d=>` AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=? ${d.approved ? "AND EXISTS(SELECT 1 FROM env_workspace_decisions WHERE company_id=? AND kind=? AND object_id=? AND version=? AND decision='approved') AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions WHERE company_id=? AND kind=? AND object_id=? AND version=? AND decision='withdrawn')" : ''}`).join(' ')
+    const sourceArgs = [...pins.flatMap(p=>[actor.company,p.id,p.version]),...deps.flatMap(d=>[actor.company,d.kind,d.id,d.version,...(d.approved?[actor.company,d.kind,d.id,d.version,actor.company,d.kind,d.id,d.version]:[])])]
+
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const cipher = await seal(key, JSON.stringify([actor.company,kind,id,version]), JSON.stringify(payload))
     const result = await this.records.env.DB.batch<Record<string, unknown>>([
@@ -66,16 +80,18 @@ export class WorkspaceStore {
         SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
         AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?),0)=?
         ${person ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
-        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) RETURNING version`,
+        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) ${sourceSql} RETURNING version`,
         [actor.company,kind,id,version,person?.id ?? null,person?.version ?? null,cipher,actor.session.operator.id,Date.now(),event,...f.args,
-          actor.company,kind,id,expected,...(person ? [actor.company,person.id,person.version] : []),actor.company,kind,id,person?.id ?? null]),
+          actor.company,kind,id,expected,...(person ? [actor.company,person.id,person.version] : []),actor.company,kind,id,person?.id ?? null,...sourceArgs]),
+      ...pins.map(p=>this.records.statement(`INSERT INTO env_workspace_people(company_id,kind,object_id,version,person_id,person_version) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,[actor.company,kind,id,version,p.id,p.version,event])),
+      ...deps.map(d=>this.records.statement(`INSERT INTO env_workspace_dependencies(company_id,kind,object_id,version,source_kind,source_id,source_version,needs_approval) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,[actor.company,kind,id,version,d.kind,d.id,d.version,d.approved?1:0,event])),
       auditStatement(this.records.env, actor, event, `workspace.${kind}.recorded`, id, version, 'EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)', [event]),
     ])
     if (!result[0].results.length) throw new PayrollError('input_or_authority_changed', 409)
     return { id, kind, version }
   }
-  async find(actor: Actor, kind: Kind, id: string, personId?: string, compensation = false) {
-    const rows = await this.list(actor,kind,personId,compensation,false)
+  async find<T = Input>(actor: Actor, kind: Kind, id: string, personId?: string, compensation = false) {
+    const rows = await this.list<T>(actor,kind,personId,compensation,false)
     const row = rows.find(r => r.id === id)
     if (!row) throw new PayrollError('record_not_found', 404)
     return row
@@ -83,7 +99,7 @@ export class WorkspaceStore {
   async review(actor: Actor, kind: Kind, id: string, personId?: string) {
     const row = await this.find(actor,kind,id,personId,true)
     await this.authority(actor,'rates:approve',personId,true)
-    if (row.approvedBy || row.withdrawnBy) throw new PayrollError('review_stale',409)
+    if (!row.sourcesCurrent || row.approvedBy || row.withdrawnBy) throw new PayrollError('review_stale',409)
     const token = crypto.randomUUID() + crypto.randomUUID(), hash = await digest(token), f = fence(actor)
     const result = await this.records.statement(`INSERT INTO env_workspace_reviews(token_hash,company_id,kind,object_id,version,session_id,operator_id,grant_version,expires_at)
       SELECT ?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=? RETURNING token_hash`,
@@ -95,17 +111,18 @@ export class WorkspaceStore {
     const row = await this.find(actor,kind,id,personId,true)
     await this.authority(actor,'rates:approve',personId,true)
     const version = integer(input.version), f = fence(actor), event = crypto.randomUUID()
-    if (row.version !== version || row.withdrawnBy || (withdraw ? !row.approvedBy : row.approvedBy)) throw new PayrollError('review_stale',409)
+    if ((!withdraw && !row.sourcesCurrent) || row.version !== version || row.withdrawnBy || (withdraw ? !row.approvedBy : row.approvedBy)) throw new PayrollError('review_stale',409)
     const hash = withdraw ? '' : await digest(text(input.reviewToken,100))
     const result = await this.records.env.DB.batch<Record<string,unknown>>([
       this.records.statement(`INSERT INTO env_workspace_decisions(company_id,kind,object_id,version,decision,actor_id,occurred_at,change_id)
         SELECT ?,?,?,?,?,?,?,? WHERE ${f.sql}
         AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=?
         ${row.personId ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
+        ${withdraw ? '' : `AND EXISTS(SELECT 1 FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND v.object_id=? AND v.version=? AND ${currentSources('v')})`}
         AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions WHERE company_id=? AND kind=? AND object_id=? AND version=? AND decision=?)
         ${withdraw ? '' : `AND EXISTS(SELECT 1 FROM env_workspace_reviews WHERE token_hash=? AND company_id=? AND kind=? AND object_id=? AND version=? AND session_id=? AND operator_id=? AND grant_version=? AND expires_at>?)`}
         RETURNING version`, [actor.company,kind,id,version,withdraw?'withdrawn':'approved',actor.session.operator.id,Date.now(),event,...f.args,
-          actor.company,kind,id,version,...(row.personId ? [actor.company,row.personId,row.personVersion] : []),actor.company,kind,id,version,withdraw?'withdrawn':'approved',
+          actor.company,kind,id,version,...(row.personId ? [actor.company,row.personId,row.personVersion] : []),...(withdraw?[]:[actor.company,kind,id,version]),actor.company,kind,id,version,withdraw?'withdrawn':'approved',
           ...(withdraw ? [] : [hash,actor.company,kind,id,version,actor.session.id,actor.session.operator.id,actor.grant.version,Date.now()])]),
       auditStatement(this.records.env,actor,event,`workspace.${kind}.${withdraw?'withdrawn':'approved'}`,id,version,'EXISTS(SELECT 1 FROM env_workspace_decisions WHERE change_id=?)',[event]),
     ])

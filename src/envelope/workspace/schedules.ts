@@ -68,7 +68,7 @@ export class Schedules {
     if(occupation==='clerical'&&frequency==='monthly')throw new PayrollError('ny_clerical_semimonthly_required')
     if(occupation==='other')throw new PayrollError('occupation_rule_unresolved')
     const data:Schedule={name:text(input.name),frequency,timeZone,periodStart:start,periodEnd:end,requestedPayDate,payDate,holidayPolicy,personId,personVersion:person.version,occupation,workState,exceptionRef,exceptionFrom,exceptionThrough,periodStartInstant:localMidnight(start,timeZone),periodEndExclusiveInstant:localMidnight(addDays(end,1),timeZone),sourceUrl:scheduleSources.newYork}
-    return this.store.append(actor,'schedule',objectId(input.id),revision(input.version),data,undefined,true)
+    return this.store.append(actor,'schedule',objectId(input.id),revision(input.version),data,undefined,true,{people:[{id:person.id,version:person.version}]})
   }
   async read(actor:Actor){
     const history=await this.store.list<Schedule>(actor,'schedule',undefined,true)

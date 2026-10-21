@@ -6,8 +6,10 @@ import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
 import { WorkspaceStore } from './workspace/store'
 import { Allocations } from './workspace/allocations'
-import { allocationsPage, schedulesPage, workspacePage } from './workspace/pages'
+import { allocationsPage, schedulesPage, workspacePage, paySettingsPage, exactReviewPage } from './workspace/pages'
 import { Schedules } from './workspace/schedules'
+import { PayItems } from './workspace/pay-items'
+import type { Kind } from './workspace/store'
 import { PayrollError } from './security'
 import {
   setupPage,
@@ -58,7 +60,7 @@ async function input(request: Request): Promise<Input> {
       result: Input = {}
     for (const key of new Set(params.keys())) {
       const values = params.getAll(key)
-      result[key] = ['actions', 'fields', 'locations'].includes(key)
+      result[key] = ['actions', 'fields', 'locations', 'people'].includes(key)
         ? values
         : values.length === 1
           ? values[0]
@@ -288,6 +290,27 @@ export async function payrollResponse(
           const result = await schedules.read(actor)
           response = ui ? schedulesPage(session,companies,actor,await records.people(actor),result) : json(result)
         }
+      } else if (tail[0] === 'pay-settings') {
+        const store = new WorkspaceStore(records), pay = new PayItems(store)
+        if (!post && tail.length === 1) {
+          const result = await pay.read(actor)
+          response = ui ? paySettingsPage(session,companies,actor,await records.people(actor),result) : json(result)
+        } else if (post && tail.length === 2 && ['group','pay-item','pay-change'].includes(tail[1])) {
+          const saved = tail[1] === 'group' ? await pay.group(actor,value) : tail[1] === 'pay-item' ? await pay.item(actor,value) : await pay.change(actor,value)
+          response = ui ? redirect(base+'/pay-settings') : json(saved,201)
+        } else if (post && tail.join('/') === 'pay-settings/preview') {
+          const result = await pay.preview(actor,value)
+          response = ui ? paySettingsPage(session,companies,actor,await records.people(actor),await pay.read(actor),result) : json(result)
+        } else if (post && tail.join('/') === 'pay-settings/earnings-run') {
+          const result = await pay.preview(actor,value,true)
+          response = ui ? redirect(base+'/pay-settings') : json(result,201)
+        } else if (!post && tail.length === 4 && tail[1] === 'review' && ['group','pay-item','pay-change'].includes(tail[2])) {
+          const row = await store.review(actor,tail[2] as Kind,tail[3])
+          response = ui ? exactReviewPage(session,companies,actor,row) : json(row)
+        } else if (post && tail.length === 4 && ['group','pay-item','pay-change'].includes(tail[1]) && ['approve','withdraw'].includes(tail[3])) {
+          const result = await store.decide(actor,tail[1] as Kind,tail[2],value,undefined,tail[3] === 'withdraw')
+          response = ui ? redirect(base+'/pay-settings') : json(result)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'agents') {
         const agents = new AgentSettings(records)
         if (tail.length === 1 && post) {

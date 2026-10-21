@@ -1369,3 +1369,77 @@ export async function scheduleJourney({origin,cookie}) {
   console.log('PAY-CALENDARS passed: native frequency proposals, NY manual weekly refusal and scoped exception references, four frequencies, Friday bank holiday earlier, DST 167/169-hour local weeks, stale/refuse policy; no disconnected processing offer; 1440/390. Agency exception verification, all-state frequency and live speed/cutoff changes remain unproved.')
  }finally{await browser.close()}
 }
+
+/** REVIEWED-PAY-ITEMS: persisted setup versions, human decisions and actual earnings drafts. */
+export async function payItemsJourney({origin,cookie,sql}) {
+ const call=async(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+ const data=async(path,body,status=200)=>{const r=await call(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
+ const c=await data('/api/envelope/companies',{name:'Synthetic reviewed pay company',ein:'00-0000070'},201),base='/api/envelope/companies/'+c.id
+ const loc=await data(base+'/locations',{name:'Synthetic NY office',state:'NY'},201)
+ const a=await data(base+'/people',{name:'Synthetic salaried hire',locationId:loc.id},201),b=await data(base+'/people',{name:'Synthetic hourly worker',locationId:loc.id},201)
+ const door=base+'/pay-settings',screen=door.replace('/api/','/app/')
+ const approve=async(kind,id)=>{const r=await data(door+'/review/'+kind+'/'+id);return data(door+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+ const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ try {
+  const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+  const capture=async(label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
+  await capture('pay-settings-empty')
+  const group={id:'synthetic-envelope-70',version:0,name:'Reviewed workshop',people:[a.id,b.id]}
+  await data(door+'/group',group,201)
+  await capture('pay-group-review',screen+'/review/group/'+group.id)
+  await page.getByRole('button',{name:'Approve this exact setup',exact:true}).click();await page.waitForURL(origin+screen)
+  let result=await data(door);assert.ok(result.groups[0].approvedBy)
+  const allowance={id:'synthetic-envelope-71',version:0,name:'Recurring taxable allowance',groupId:group.id,amountCents:10000,taxCode:'w2-cash-earning',effectiveDate:'2026-01-01',recurring:true}
+  assert.equal((await call(door+'/pay-item',{...allowance,taxCode:'invented-exempt-code'})).status,400)
+  await data(door+'/pay-item',allowance,201)
+  const itemReview=await data(door+'/review/pay-item/'+allowance.id)
+  const before=await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions')
+  assert.equal((await call(door+'/pay-item/'+allowance.id+'/approve',{version:1,reviewToken:'synthetic-envelope-72',approvedBy:'an-agent',approved:true})).status,409)
+  assert.deepEqual(await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions'),before,'client approval flags cannot substitute for exact native review')
+  await data(door+'/pay-item/'+allowance.id+'/approve',{version:1,reviewToken:itemReview.reviewToken})
+  assert.equal((await call(door+'/pay-item/'+allowance.id+'/approve',{version:1,reviewToken:itemReview.reviewToken})).status,409,'review is one-use')
+  const reimbursement={...allowance,id:'synthetic-envelope-73',name:'Accountable business expense',amountCents:5000,taxCode:'accountable-reimbursement',evidenceRef:'synthetic-envelope-74',returnExcessBy:'2026-02-28'}
+  assert.equal((await call(door+'/pay-item',{...reimbursement,evidenceRef:''})).status,400)
+  await data(door+'/pay-item',reimbursement,201);await approve('pay-item',reimbursement.id)
+  const items=[{personId:a.id,personVersion:a.version,rateCents:12000000,basis:'annual-salary',employmentFrom:'2026-01-16',employmentThrough:'2026-12-31',unpaidDates:[]},{personId:b.id,personVersion:b.version,rateCents:2500,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2026-12-31',unpaidDates:[]}]
+  const change={id:'synthetic-envelope-75',version:0,name:'Reviewed group rates',groupId:group.id,effectiveDate:'2026-01-01',items}
+  assert.equal((await call(door+'/pay-change',{...change,items:[{...items[0],personVersion:999}]})).status,409)
+  await data(door+'/pay-change',change,201)
+  await capture('bulk-pay-review',screen+'/review/pay-change/'+change.id)
+  await page.getByRole('button',{name:'Approve this exact setup',exact:true}).click();await page.waitForURL(origin+screen)
+  await data(base+'/people/'+b.id+'/allocations/work',{id:'synthetic-envelope-76',version:0,day:'2026-01-20',state:'NY',locality:'New York City',minutes:480,earnedCents:20000,officeState:'NY',nyReason:'not-applicable',sourceRef:'synthetic-envelope-77',owner:'Synthetic payroll reviewer'},201)
+  const period={groupId:group.id,periodStart:'2026-01-01',periodEnd:'2026-01-31',payDate:'2026-02-02',frequency:'monthly'}
+  const preview=await data(door+'/preview',period)
+  assert.equal(preview.people.find(p=>p.id===a.id).earningsCents,516129,'mid-period hire uses 16/31 of one monthly salary, rounded once')
+  assert.equal(preview.people.find(p=>p.id===b.id).earningsCents,20000,'480 sourced minutes use the reviewed hourly rate')
+  assert.equal(preview.people.find(p=>p.id===a.id).taxableCashCents,526129)
+  assert.equal(preview.people.find(p=>p.id===a.id).reimbursementCents,5000)
+  assert.ok(preview.holds.some(h=>/substantiation/.test(h.reason)),'recurring reimbursement does not invent per-period substantiation')
+  assert.equal(preview.netPay,null);assert.equal(preview.paymentReady,false)
+  const draft=await data(door+'/earnings-run',{...period,id:'synthetic-envelope-78',version:0},201)
+  assert.equal(draft.preview.grossCashCents,566129)
+  result=await data(door);assert.equal(result.runs[0].sourceStatus,'current')
+  const oldDraft=JSON.stringify(result.runs[0].data)
+  await capture('pay-settings-earnings')
+  await data(door+'/pay-item/'+allowance.id+'/withdraw',{version:1})
+  result=await data(door);assert.equal(result.runs[0].sourceStatus,'changed-repreview-required');assert.equal(JSON.stringify(result.runs[0].data),oldDraft,'withdrawal never rewrites retained earnings')
+  const revised=await data(door+'/preview',period);assert.equal(revised.people.find(p=>p.id===a.id).taxableCashCents,516129)
+  await data(door+'/pay-item',{...allowance,version:1,amountCents:12000},201)
+  const stale=await data(door+'/review/pay-item/'+allowance.id)
+  await data(door+'/pay-item',{...allowance,version:2,amountCents:13000},201)
+  const snapshot=await sql('SELECT (SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit')
+  assert.equal((await call(door+'/pay-item/'+allowance.id+'/approve',{version:stale.version,reviewToken:stale.reviewToken})).status,409)
+  assert.deepEqual(await sql('SELECT (SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit'),snapshot,'stale review has no writes')
+  assert.equal((await call(door+'/earnings-run/synthetic-envelope-78/approve',{approved:true})).status,404,'uncalculated earnings cannot become approved payroll')
+  assert.equal((await call(door+'/settle',{paid:true})).status,404,'no pretend settlement or correction receipt route')
+  // Current person-source changes invalidate the group and every dependent setup.
+  const rate=await data(base+'/people/'+a.id+'/rates',{version:a.version,hourlyCents:2600,effectiveDate:'2026-02-01'},201)
+  const review=await data(base+'/rates/'+rate.id)
+  await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken})
+  assert.equal((await call(door+'/preview',period)).status,409,'source version changed: group must be reviewed again')
+  await capture('pay-settings-source-changed')
+  await capture('preparation-hub',base.replace('/api/','/app/')+'/workspace')
+  await context.close()
+  console.log('REVIEWED-PAY-ITEMS passed: native group/bulk review, taxable allowance/accountable-plan distinction, exact salary proration and sourced hourly earnings, invalid tax/stale source refusals, one-use human decision, withdrawal, immutable persisted earnings and source invalidation; no pretend settlement; 1440/390. Full taxability, first payable run and post-settlement correction remain unproved.')
+ }finally{await browser.close()}
+}
