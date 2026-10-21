@@ -387,7 +387,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Judged from the code and tests at commit `3b39f90cc811109a73d89614d3bf9c8b5d5c3e78` (21 October 2026).
+Judged from the code and tests at commit `5e4f9a08ce5d1ff27136003c07dc46c7f603562a` (21 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
