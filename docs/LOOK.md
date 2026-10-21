@@ -79,24 +79,25 @@ every clause missing); the app home at `/app` shows the pick's composition in it
 | `Heading({ lead, then, meta })` | `.heading`, `.lead`, `.then`, `.heading-meta` | "Kessler, week of Oct 19." / "Pays Fri Oct 30." then one line of facts. |
 | `Deck({ label, children })` | `.deck`, `.deck-fan` | The fanned checks behind the open one (offsets and turns from the 12ui conversion of the pick). |
 | `Check({ … })` | `.check`, `.check-head`, `.check-name`, `.check-role`, `.check-cols`, `.check-col`, `.check-label`, `.check-line`, `.check-gross`, `.check-foot`, `.check-net` | Who, hours and pay, deductions and taxes, net pay in the mint box; the open check also takes the `Tag` and the choices. |
+| `Check` `flag={{ was, now }}` | `.flag` | The exception on a check: a blush pill with the warning, the figure the run would pay struck in red and the figure it should pay ("~~92 h · $3,776.00~~ 46 h · $1,568.00"). |
+| `CheckTabs({ tabs })` | `.tabs`, `.tab`, `.tab--flagged`, `.tab-who`, `.tab-amount` | The run's other checks as horizontal tabs (name, role, amount, then the done check or the red warning), fanned beside the open check from 1280 px and stacked under it below. Each tab links to its check. |
+| `Done`, `Warn` | `.glyph`, `.ck`, `.warn` | The one heavy done check and the exception's warning (`src/ui/glyphs.ts`, shared with the homepage). |
 | `Tag({ children })` | `.tag` | Envelope's note beside mark 9's small cut (`/favicon-32.svg`), with a tail toward the figure it explains. |
 | `Amount({ value })` | `.none` | A figure, or a dash with the text "none" for screen readers. |
-| `RunSlip({ status, rows, when })` | `.slip`, `.slip-title`, `.slip-status`, `.slip-rows`, `.slip-net`, `.slip-total`, `.slip-when` | Gross pay, employee taxes, deductions, net pay (highlighted), employer taxes, total debit and its date; the debit equals net pay plus taxes plus deductions. |
+| `RunSlip({ status, rows, when, alert })` | `.slip`, `.slip-title`, `.slip-status`, `.slip-rows`, `.slip-net`, `.slip-total`, `.slip-when`, `.slip-alert` | Gross pay, employee taxes, deductions, net pay (highlighted), employer taxes, total debit and its date; the debit equals net pay plus taxes plus deductions. `alert` is the exception's one red line ("1,104 h · $51,246.00 · $28,566.00 at stake") with Envelope's small tag. |
 | choices | `.choices`, `.btn`, `.btn--primary` | One coral primary, then outlined buttons. On the open check under the tag. |
 | fields | `.field` (a label with `span` and `input`) | Thin border, forest focus ring; checkboxes in forest. |
 | `NotFound()` | `.lost`, `.lost-card` | Any address the app does not have. |
 
 ## Still to build with the product (from the pick)
 
-These are drawn in the pick and wait on the product's code. Build them from the parts above:
+The parts exist; these screens and states wait on the product's code and real records:
 
-- **The populated deck**: one check per person in a stable order (salaried last, hourly by name); the other checks as
-  horizontal tabs (name · role · amount, with the done check or a red tab) fanned to the right of the open check, a
-  vertical stack under it at 390. Clicking a tab brings that check forward.
-- **The exception**: on the affected check a blush pill with the wrong figure struck in red beside the right one
-  ("~~92 h · $3,776.00~~ 46 h · $1,568.00"), red tabs on the affected checks, one red line in the slip
-  ("1,104 h · $51,246.00 · $28,566.00 at stake") with a small tag, and Envelope's tag on the check ending in the
-  person's choices (Keep batch 1 outlined, Compare batches, Ask the foreman) and the one coral "Send to Walt to
-  approve". The tabs and the red line clear when the exception is resolved.
+- **The populated deck**: one check per person in a stable order (salaried last, hourly by name), the open one in
+  front, the others as `CheckTabs`; clicking a tab brings that check forward.
+- **The exception**: the `flag` on the affected check, `flagged` tabs, the slip's `alert`, and Envelope's `Tag` on the
+  check ending in the person's choices (Keep batch 1 outlined, Compare batches, Ask the foreman) and the screen's one
+  coral action ("Send to Walt to approve"). The flags, tabs and red line clear when the exception is resolved.
 - **Client chips with real businesses** and their statuses; **search** and **Ask Envelope** in the bar.
 - **The slip's live figures** from the run, with the debit date.
+- **Dev's one small red wrench** on his avatar, the app's only clay-style accent.

@@ -18,7 +18,9 @@ https://runeditrun.com/install.sh.
 Read CONTRACT.md and ACCEPTANCE.md before changing behavior. ct owns their
 wording. This new seed contains only Base's technical foundation; every payroll
 clause is missing. Do not add mock data, pretend features or provider fallbacks.
-Brand and build rounds follow later; preserve Base's default theme and Lobby.
+The app wears the owner-approved look (app pick A): build every screen from the
+tokens and components named in docs/LOOK.md, and keep public/rer-theme.css
+within Base's theme grammar (the installer reads it).
 
 Pin the published `@runeditrun/rer` exactly at 0.2.73. There is no local CLI
 copy. Public commands are `rer install`, `rer setup`, `rer dev`, `rer build`,
