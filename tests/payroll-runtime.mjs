@@ -898,6 +898,14 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
           403,
           name,
         )
+      const confused = await fetch(origin + company + '/people/' + maria.id + '/private/ssn', {
+        headers: { cookie, authorization: 'Bearer ' + agentToken },
+      })
+      assert.equal(
+        confused.status,
+        403,
+        'agent Authorization must never fall back to a human cookie',
+      )
       assert.equal(
         (await call(company + '/people/' + maria.id + '/private/ssn', '')).status,
         401,
@@ -1143,6 +1151,19 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
         401,
       )
     })
+    const sessionCount = await sql('SELECT COUNT(*) AS sessions FROM oa_sessions')
+    const unavailableInvite = await call('/auth/invite', cookie, {
+      email: 'synthetic-envelope-25@example.com',
+      displayName: 'Synthetic invited worker',
+      role: 'member',
+    })
+    assert.equal(unavailableInvite.status, 503, await unavailableInvite.clone().text())
+    assert.equal(unavailableInvite.headers.has('set-cookie'), false)
+    assert.deepEqual(
+      await sql('SELECT COUNT(*) AS sessions FROM oa_sessions'),
+      sessionCount,
+      'mail failure cannot admit an invited identity',
+    )
     assert.equal(
       (await call('/auth/magic-link', '', { email: 'owner@example.com' })).status,
       503,

@@ -387,7 +387,9 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Status reflects the implementation and public-door assertions cited below (21 October 2026). No clause is complete payroll or production readiness.
+Judged from the code and tests at commit `7fe083acb3b0fe1fe448ad53f0cdd4d457c7bdf9` (21 October 2026).
+
+No clause is complete payroll or production readiness.
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |

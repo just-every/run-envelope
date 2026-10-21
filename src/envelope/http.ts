@@ -219,6 +219,8 @@ export async function payrollResponse(
       } else throw new PayrollError('agent_tool_denied', 403)
       return json({ jsonrpc: '2.0', id: message.id, result })
     }
+    if (request.headers.has('authorization'))
+      throw new PayrollError('human_session_required', 403)
     session = await auth.getSession(request)
     if (!session)
       return ui && request.method !== 'POST'
