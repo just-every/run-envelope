@@ -20,7 +20,7 @@ wording. This new seed contains only Base's technical foundation; every payroll
 clause is missing. Do not add mock data, pretend features or provider fallbacks.
 Brand and build rounds follow later; preserve Base's default theme and Lobby.
 
-Pin the published `@runeditrun/rer` exactly at 0.2.73. There is no local CLI
+Pin the published `@runeditrun/rer` exactly at 0.2.76. There is no local CLI
 copy. Public commands are `rer install`, `rer setup`, `rer dev`, `rer build`,
 `rer verify`, `rer check`, `rer describe`, `rer export`, `rer import`,
 `rer reset --yes` and `rer deploy`. For an owner installation use `rer install`,

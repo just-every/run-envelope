@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "domain": "run-envelope.com",
+  "name": "Envelope",
+  "settings": {
+    "MAIL_FROM": "Envelope Demo <auth@demo.invalid>"
+  }
+}
