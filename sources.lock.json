@@ -350,11 +350,11 @@
       "executable": false
     },
     "public/look/envelope.css": {
-      "sha256": "dab7d4123ff4fea84d93b7e64572618098cdeb8271659f930d4995184342c552",
+      "sha256": "2ad3703852e39f6065d3171c172a8eb363bf4f1be2ac7c7408f258fe9dc238d8",
       "executable": false
     },
     "public/look/frames.css": {
-      "sha256": "37f1a7156f76e16addf635d854da97814b034c022f68dcac5984c5241d8d6a70",
+      "sha256": "9583859c1b58a9e0ca949ac5939a1270ad30f7ac4d494951d5258c48cd2e6979",
       "executable": false
     },
     "public/look/tokens.css": {
