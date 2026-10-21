@@ -14,3 +14,5 @@ dist/
 .rer/
 logs/
 test-results/
+
+.rer/demo/
