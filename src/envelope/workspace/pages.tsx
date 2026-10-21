@@ -3,6 +3,7 @@ import type { Actor } from '../access'
 import type { Company, Person } from '../records'
 import { page,Card,Field,Hidden,Submit,Select,companyPath } from '../pages'
 import type { Allocations } from './allocations'
+import { Schedules,payFrequencies,timeZones } from './schedules'
 import { states } from '../setup'
 
 export function allocationsPage(session:Session,companies:Company[],actor:Actor,person:Person,history:Awaited<ReturnType<Allocations['read']>>,preview?:Awaited<ReturnType<Allocations['preview']>>) {
@@ -58,4 +59,27 @@ export function allocationsPage(session:Session,companies:Company[],actor:Actor,
     </Card>
     <Card title="Official allocation sources">{Object.values(history.rules).map(r=><p key={r.id}><a href={r.url} rel="noreferrer">{r.title}</a> · edition {r.id}</p>)}</Card>
   </>)
+}
+
+
+export function schedulesPage(session:Session,companies:Company[],actor:Actor,people:Person[],result:Awaited<ReturnType<Schedules['read']>>) {
+ const base=companyPath(actor.company)+'/schedules'
+ return page(session,'Pay schedules',companies,actor.company,<>
+  <Card title="Calendar and processing eligibility"><p>{result.eligibility.reason}</p><p>No funding deadline, approval cutoff or fee is quoted. Calendar settings alone never authorize payment.</p><p><a href={companyPath(actor.company)+'/workspace'}>Payroll preparation</a></p></Card>
+  <Card title="Schedule proposals">{!result.history.length&&<p>No schedule proposals yet.</p>}{result.history.map(r=><article key={r.id+':'+r.version}><h3>{r.data.name} · v{r.version}</h3><p>{r.data.frequency} · {r.data.periodStart}–{r.data.periodEnd} · {r.data.timeZone}</p><p>Requested payday {r.data.requestedPayDate}; calendar-adjusted payday {r.data.payDate}. Policy: {r.data.holidayPolicy}.</p><p>Local period instants: {r.data.periodStartInstant} through {r.data.periodEndExclusiveInstant} (exclusive).</p><p>{r.data.occupation} · {r.data.workState} · worker {people.find(p=>p.id===r.data.personId)?.name??'Unavailable'} · {r.data.exceptionRef?'Official exception reference requires verification: '+r.data.exceptionRef:'No exception recorded.'}</p><p>Proposal only. Frequency verification for all work states and current provider eligibility are required before a payable run can use it.</p></article>)}</Card>
+  <Card title="Prepare a schedule"><form className="field" method="post" action={base}>
+   <Field name="id" label="Schedule ID"/><Field name="version" label="Previous schedule version (0 for new)" type="number" value={0}/><Field name="name" label="Schedule name"/>
+   <Select name="personId" label="Worker" choices={people.map(p=>p.id)}/><Select name="frequency" label="Pay frequency" choices={payFrequencies}/><Select name="timeZone" label="Employer time zone" choices={timeZones}/>
+   <Field name="periodStart" label="Local period starts" type="date"/><Field name="payDate" label="Requested payday" type="date"/><Select name="holidayPolicy" label="Non-banking-day policy" choices={['earlier','later','refuse']}/>
+   <Select name="workState" label="Frequency rule state" choices={['NY']}/><Select name="occupation" label="Occupation for frequency rule" choices={['manual','clerical','executive','other']}/>
+   <Field name="exceptionRef" label="Official agency exception custody reference" required={false} maxLength={500}/><Field name="exceptionPersonId" label="Exception worker ID" required={false}/><Field name="exceptionFrom" label="Exception starts" type="date" required={false}/><Field name="exceptionThrough" label="Exception expires" type="date" required={false}/>
+   <Submit primary>Prepare calendar proposal</Submit>
+  </form></Card>
+  <Card title="Official calendar and frequency sources">{Object.entries(result.sources).map(([name,url])=><p key={name}><a href={url} rel="noreferrer">{name}</a></p>)}</Card>
+ </>)
+}
+export function workspacePage(session:Session,companies:Company[],actor?:Actor,people:Person[]=[]) {
+ return page(session,'Payroll preparation',companies,actor?.company,<>
+  <Card title="Preparation settings"><p>Effective inputs and previews are available. No payment, filing or complete tax calculation is authorized here.</p>{actor?<><p><a href={companyPath(actor.company)}>Company records and access</a> · <a href={companyPath(actor.company)+'/schedules'}>Pay schedules</a></p>{people.map(p=><p key={p.id}><a href={companyPath(actor.company)+'/people/'+p.id+'/allocations'}>{p.name} · Work and residence</a></p>)}</>:companies.map(c=><p key={c.id}><a href={companyPath(c.id)+'/workspace'}>{c.name} · Preparation</a></p>)}</Card>
+ </>)
 }

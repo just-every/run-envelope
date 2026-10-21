@@ -6,7 +6,8 @@ import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
 import { WorkspaceStore } from './workspace/store'
 import { Allocations } from './workspace/allocations'
-import { allocationsPage } from './workspace/pages'
+import { allocationsPage, schedulesPage, workspacePage } from './workspace/pages'
+import { Schedules } from './workspace/schedules'
 import { PayrollError } from './security'
 import {
   setupPage,
@@ -254,6 +255,7 @@ export async function payrollResponse(
       value = post ? await input(request) : {},
       companies = ui ? await records.companies() : []
     let response: Response
+    if (ui && parts.join('/') === 'workspace' && !post) return workspacePage(session,companies)
     if (parts[0] !== 'companies') throw new PayrollError('not_found', 404)
     if (parts.length === 1) {
       if (post) {
@@ -275,6 +277,17 @@ export async function payrollResponse(
         response = ui
           ? companyPage(session, companies, company, actor, locations, people)
           : json({ company, locations, people })
+      } else if (tail.join('/') === 'workspace' && !post) {
+        response = ui ? workspacePage(session,companies,actor,await records.people(actor)) : json({preparation:'available',payments:'unavailable'})
+      } else if (tail.join('/') === 'schedules') {
+        const schedules = new Schedules(new WorkspaceStore(records))
+        if (post) {
+          const saved = await schedules.save(actor,value)
+          response = ui ? redirect(base+'/schedules') : json(saved,201)
+        } else {
+          const result = await schedules.read(actor)
+          response = ui ? schedulesPage(session,companies,actor,await records.people(actor),result) : json(result)
+        }
       } else if (tail[0] === 'agents') {
         const agents = new AgentSettings(records)
         if (tail.length === 1 && post) {

@@ -1329,3 +1329,43 @@ export async function allocationJourney({origin,cookie,sql}) {
     console.log('LOCATION-ALLOCATIONS passed: native residence entry; NJ-to-PA effective history; out-of-state wages; scoped NJ-165; NY convenience/necessity/unknown; PA-local and contradictory-source owned holds; exact cent bases; encrypted history; stale/cross-company refusals; 1440/390. Full tax/report calculation remains unproved.')
   }finally{await browser.close()}
 }
+
+/** PAY-CALENDARS: native proposals, local boundaries and unavailable rail offers. */
+export async function scheduleJourney({origin,cookie}) {
+ const call=async(path,body)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+ const data=async(path,body,status=200)=>{const r=await call(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
+ const c=await data('/api/envelope/companies',{name:'Synthetic New York workshop',ein:'00-0000050'},201),base='/api/envelope/companies/'+c.id
+ const loc=await data(base+'/locations',{name:'New York workshop',state:'NY'},201),person=await data(base+'/people',{name:'Synthetic NY manual worker',locationId:loc.id},201)
+ const door=base+'/schedules', screen=door.replace('/api/','/app/')
+ const entry={id:'synthetic-envelope-60',version:0,name:'Weekly workshop',frequency:'weekly',timeZone:'America/New_York',periodStart:'2026-06-08',payDate:'2026-06-19',holidayPolicy:'earlier',personId:person.id,occupation:'manual',workState:'NY'}
+ const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ try{
+  const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+  const capture=async(label)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+screen);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
+  await capture('schedules-empty')
+  const form=page.locator('form[action$="/schedules"]')
+  for(const [key,val] of Object.entries(entry)){const field=form.locator(`[name="${key}"]`);if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(String(val));else await field.fill(String(val))}
+  await page.getByRole('button',{name:'Prepare calendar proposal',exact:true}).click();await page.waitForURL(origin+screen)
+  let result=await data(door);assert.equal(result.history[0].data.payDate,'2026-06-18','Juneteenth Friday payday moves earlier')
+  assert.deepEqual(result.eligibility.availableSpeeds,[]);assert.equal(result.eligibility.fundingDeadline,null);assert.equal(result.eligibility.fees,null)
+  assert.equal((await call(door,{...entry,id:'synthetic-envelope-61',frequency:'biweekly'})).status,400,'NY manual biweekly requires scoped actual exception')
+  const exception={...entry,id:'synthetic-envelope-62',frequency:'biweekly',payDate:'2026-06-26',exceptionRef:'synthetic-envelope-63',exceptionPersonId:person.id,exceptionFrom:'2026-01-01',exceptionThrough:'2026-12-31'}
+  await data(door,exception,201)
+  for(const change of [{exceptionPersonId:'synthetic-envelope-64'},{exceptionThrough:'2026-06-01'}])assert.equal((await call(door,{...exception,...change,id:'synthetic-envelope-65'})).status,400)
+  for(const [frequency,start,end] of [['semimonthly','2026-06-01','2026-06-15'],['monthly','2026-06-01','2026-06-30']]){
+    await data(door,{...entry,id:'synthetic-envelope-'+frequency,frequency,occupation:'executive',periodStart:start,payDate:'2026-07-02'},201)
+    result=await data(door);assert.equal(result.history.find(r=>r.id==='synthetic-envelope-'+frequency).data.periodEnd,end)
+  }
+  await data(door,{...entry,id:'synthetic-envelope-66',periodStart:'2026-03-02',payDate:'2026-03-13'},201)
+  result=await data(door);let dst=result.history.find(r=>r.id==='synthetic-envelope-66').data
+  assert.equal((Date.parse(dst.periodEndExclusiveInstant)-Date.parse(dst.periodStartInstant))/3600000,167,'spring local week has 167 elapsed hours')
+  await data(door,{...entry,id:'synthetic-envelope-67',periodStart:'2026-10-26',payDate:'2026-11-06'},201)
+  result=await data(door);dst=result.history.find(r=>r.id==='synthetic-envelope-67').data
+  assert.equal((Date.parse(dst.periodEndExclusiveInstant)-Date.parse(dst.periodStartInstant))/3600000,169,'fall local week has 169 elapsed hours')
+  assert.equal((await call(door,{...entry,id:'synthetic-envelope-68',holidayPolicy:'refuse'})).status,400)
+  assert.equal((await call(door,{...entry,version:0})).status,409,'stale schedule cannot overwrite the reviewed source')
+  await capture('schedules-holidays-dst')
+  await context.close()
+  console.log('PAY-CALENDARS passed: native frequency proposals, NY manual weekly refusal and scoped exception references, four frequencies, Friday bank holiday earlier, DST 167/169-hour local weeks, stale/refuse policy; no disconnected processing offer; 1440/390. Agency exception verification, all-state frequency and live speed/cutoff changes remain unproved.')
+ }finally{await browser.close()}
+}

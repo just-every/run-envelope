@@ -34,20 +34,22 @@ export class WorkspaceStore {
     if (!actor.grant.locations.includes('*')) throw new PayrollError('all_locations_required', 403)
     return null
   }
-  async list<T = Input>(actor: Actor, kind: Kind, personId?: string, compensation = false): Promise<Revision<T>[]> {
-    await this.authority(actor, 'records:read', personId, compensation)
+  async list<T = Input>(actor: Actor, kind: Kind, personId?: string, compensation = false, audited = true): Promise<Revision<T>[]> {
+    const person = await this.authority(actor, 'records:read', personId, compensation)
+    const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const f = fence(actor), event = crypto.randomUUID()
     const result = await this.records.env.DB.batch<Record<string, unknown>>([
-      auditStatement(this.records.env, actor, event, `workspace.${kind}.read`, personId ?? actor.company, actor.grant.version),
+      ...(audited ? [auditStatement(this.records.env, actor, event, `workspace.${kind}.read`, personId ?? actor.company, actor.grant.version)] : []),
       this.records.statement(`SELECT v.object_id AS id,v.kind,v.version,v.person_id AS personId,v.person_version AS personVersion,v.cipher,v.created_by AS createdBy,v.created_at AS createdAt,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedBy,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn') AS withdrawnBy
         FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND ${personId ? 'v.person_id=?' : 'v.person_id IS NULL'} AND ${f.sql}
-        AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) ORDER BY v.object_id,v.version DESC`, [actor.company, kind, ...(personId ? [personId] : []), ...f.args, event]),
+        ${audited ? 'AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)' : ''}
+        ${person ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
+        ORDER BY v.object_id,v.version DESC`, [actor.company, kind, ...(personId ? [personId] : []), ...f.args, ...(audited ? [event] : []), ...(person ? [actor.company,person.id,person.version] : [])]),
     ])
-    if (!result[0].meta.changes) throw new PayrollError('authority_changed', 409)
-    const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
-    return Promise.all(result[1].results.map(async row => {
+    if (audited && !result[0].meta.changes) throw new PayrollError('authority_changed', 409)
+    return Promise.all(result[audited ? 1 : 0].results.map(async row => {
       const { cipher, ...publicRow } = row
       const data = JSON.parse(await unseal(key, JSON.stringify([actor.company,kind,row.id,row.version]), String(cipher)))
       return { ...publicRow, data } as unknown as Revision<T>
@@ -73,7 +75,7 @@ export class WorkspaceStore {
     return { id, kind, version }
   }
   async find(actor: Actor, kind: Kind, id: string, personId?: string, compensation = false) {
-    const rows = await this.list(actor,kind,personId,compensation)
+    const rows = await this.list(actor,kind,personId,compensation,false)
     const row = rows.find(r => r.id === id)
     if (!row) throw new PayrollError('record_not_found', 404)
     return row

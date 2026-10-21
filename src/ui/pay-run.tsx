@@ -72,6 +72,7 @@ export function PayRunHome({ viewer, companies = [] }: { viewer: Viewer; compani
                   <a className="btn btn--primary" href={`${identity.runSite}/contract`}>
                     See what's built →
                   </a>
+                  <a className="btn" href="/app/envelope/workspace">Payroll preparation</a>
                   <a className="btn" href={`${identity.runSite}/docs`}>
                     Read the docs
                   </a>

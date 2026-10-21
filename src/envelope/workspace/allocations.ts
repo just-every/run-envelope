@@ -43,6 +43,7 @@ export class Allocations {
     return this.store.append(actor,kind,id,version,data,personId,kind==='work')
   }
   async read(actor:Actor,personId:string) {
+    await this.store.authority(actor,'records:read',personId,true)
     const residence = await this.store.list<Residence>(actor,'residence',personId)
     const work = await this.store.list<WorkDay>(actor,'work',personId,true)
     const elections = await this.store.list<Election>(actor,'election',personId)

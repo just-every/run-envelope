@@ -9,7 +9,7 @@ import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { payrollJourney, missingKeyJourney, allocationJourney } from './payroll-runtime.mjs'
+import { payrollJourney, missingKeyJourney, allocationJourney, scheduleJourney } from './payroll-runtime.mjs'
 
 const socket = createServer()
 await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve))
@@ -173,22 +173,24 @@ try {
       ).stdout,
     ).flatMap((result) => result.results)
 
-  const records = await payrollJourney({ origin, cookie, settings, sql })
-  await allocationJourney({ origin, cookie, sql })
-  await stopWorker()
-  const withoutKey = { ...settings }
-  delete withoutKey.ENVELOPE_RECORD_KEY
-  worker = launch(withoutKey)
-  await waitForWorker()
-  await records.noWrite(async () => {
-    const response = await records.call('/api/envelope/companies', cookie, {
-      name: 'Held company',
-      ein: '00-0000003',
+  const selected = process.env.ENVELOPE_JOURNEYS?.split(',')
+  if (selected?.some(name => !['records','allocations','schedules'].includes(name))) throw Error('Unknown payroll journey')
+  if (!selected || selected.includes('allocations')) await allocationJourney({ origin, cookie, sql })
+  if (!selected || selected.includes('schedules')) await scheduleJourney({ origin, cookie })
+  if (!selected || selected.includes('records')) {
+    const records = await payrollJourney({ origin, cookie, settings, sql })
+    await stopWorker()
+    const withoutKey = { ...settings }
+    delete withoutKey.ENVELOPE_RECORD_KEY
+    worker = launch(withoutKey)
+    await waitForWorker()
+    await records.noWrite(async () => {
+      const response = await records.call('/api/envelope/companies', cookie, {name:'Held company',ein:'00-0000003'})
+      assert.equal(response.status,503)
+      assert.deepEqual(await response.json(),{error:'payroll_record_key_required'})
     })
-    assert.equal(response.status, 503)
-    assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
-  })
-  await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
+    await missingKeyJourney({origin,cookie,noWrite:records.noWrite})
+  }
 } finally {
   await stopWorker()
   await rm(persist, { recursive: true, force: true })
