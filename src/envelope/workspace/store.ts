@@ -1,0 +1,113 @@
+import type { Records, Input } from '../records'
+import { fence, auditStatement, requireAction, type Actor } from '../access'
+import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
+
+export type Kind = 'residence' | 'work' | 'election' | 'schedule' | 'pay-item' | 'pay-change' | 'rule'
+export interface Revision<T = Input> {
+  id: string; kind: Kind; version: number; personId: string | null; personVersion: number | null
+  data: T; createdBy: string; createdAt: number; approvedBy: string | null; withdrawnBy: string | null
+}
+export const revision = (v: unknown) => v === 0 || v === '0' ? 0 : integer(v)
+export const choice = (v: unknown, options: readonly string[]) => {
+  const value = text(v)
+  if (!options.includes(value)) throw new PayrollError('invalid_choice')
+  return value
+}
+export const optional = (v: unknown, max = 240) => v === undefined || v === '' ? '' : text(v, max)
+export const objectId = (v: unknown) => {
+  const id = text(v, 80)
+  if (!/^[a-zA-Z0-9][-a-zA-Z0-9]{0,79}$/.test(id)) throw new PayrollError('invalid_object_id')
+  return id
+}
+export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), b => b.toString(16).padStart(2, '0')).join('')
+
+/** Uses existing payroll powers; no cookie role, agent flag or client-supplied actor. */
+export class WorkspaceStore {
+  constructor(public records: Records) {}
+  async authority(actor: Actor, action: string, personId?: string | null, compensation = false) {
+    if (personId) {
+      const person = await this.records.person(actor, personId)
+      requireAction(actor, action, person.locationId, compensation ? 'compensation' : undefined)
+      return person
+    }
+    requireAction(actor, action, undefined, compensation ? 'compensation' : undefined)
+    if (!actor.grant.locations.includes('*')) throw new PayrollError('all_locations_required', 403)
+    return null
+  }
+  async list<T = Input>(actor: Actor, kind: Kind, personId?: string, compensation = false): Promise<Revision<T>[]> {
+    await this.authority(actor, 'records:read', personId, compensation)
+    const f = fence(actor), event = crypto.randomUUID()
+    const result = await this.records.env.DB.batch<Record<string, unknown>>([
+      auditStatement(this.records.env, actor, event, `workspace.${kind}.read`, personId ?? actor.company, actor.grant.version),
+      this.records.statement(`SELECT v.object_id AS id,v.kind,v.version,v.person_id AS personId,v.person_version AS personVersion,v.cipher,v.created_by AS createdBy,v.created_at AS createdAt,
+        (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedBy,
+        (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn') AS withdrawnBy
+        FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND ${personId ? 'v.person_id=?' : 'v.person_id IS NULL'} AND ${f.sql}
+        AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) ORDER BY v.object_id,v.version DESC`, [actor.company, kind, ...(personId ? [personId] : []), ...f.args, event]),
+    ])
+    if (!result[0].meta.changes) throw new PayrollError('authority_changed', 409)
+    const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
+    return Promise.all(result[1].results.map(async row => {
+      const { cipher, ...publicRow } = row
+      const data = JSON.parse(await unseal(key, JSON.stringify([actor.company,kind,row.id,row.version]), String(cipher)))
+      return { ...publicRow, data } as unknown as Revision<T>
+    }))
+  }
+  async append<T extends object>(actor: Actor, kind: Kind, id: string, expected: number, payload: T, personId?: string, compensation = false) {
+    objectId(id)
+    const person = await this.authority(actor, compensation ? 'rates:propose' : 'records:write', personId, compensation)
+    const f = fence(actor), event = crypto.randomUUID(), version = expected + 1
+    const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
+    const cipher = await seal(key, JSON.stringify([actor.company,kind,id,version]), JSON.stringify(payload))
+    const result = await this.records.env.DB.batch<Record<string, unknown>>([
+      this.records.statement(`INSERT INTO env_workspace_versions(company_id,kind,object_id,version,person_id,person_version,cipher,created_by,created_at,change_id)
+        SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
+        AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?),0)=?
+        ${person ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
+        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) RETURNING version`,
+        [actor.company,kind,id,version,person?.id ?? null,person?.version ?? null,cipher,actor.session.operator.id,Date.now(),event,...f.args,
+          actor.company,kind,id,expected,...(person ? [actor.company,person.id,person.version] : []),actor.company,kind,id,person?.id ?? null]),
+      auditStatement(this.records.env, actor, event, `workspace.${kind}.recorded`, id, version, 'EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)', [event]),
+    ])
+    if (!result[0].results.length) throw new PayrollError('input_or_authority_changed', 409)
+    return { id, kind, version }
+  }
+  async find(actor: Actor, kind: Kind, id: string, personId?: string, compensation = false) {
+    const rows = await this.list(actor,kind,personId,compensation)
+    const row = rows.find(r => r.id === id)
+    if (!row) throw new PayrollError('record_not_found', 404)
+    return row
+  }
+  async review(actor: Actor, kind: Kind, id: string, personId?: string) {
+    const row = await this.find(actor,kind,id,personId,true)
+    await this.authority(actor,'rates:approve',personId,true)
+    if (row.approvedBy || row.withdrawnBy) throw new PayrollError('review_stale',409)
+    const token = crypto.randomUUID() + crypto.randomUUID(), hash = await digest(token), f = fence(actor)
+    const result = await this.records.statement(`INSERT INTO env_workspace_reviews(token_hash,company_id,kind,object_id,version,session_id,operator_id,grant_version,expires_at)
+      SELECT ?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=? RETURNING token_hash`,
+      [hash,actor.company,kind,id,row.version,actor.session.id,actor.session.operator.id,actor.grant.version,Date.now()+600000,...f.args,actor.company,kind,id,row.version]).all()
+    if (!result.results.length) throw new PayrollError('review_stale',409)
+    return { ...row, reviewToken: token }
+  }
+  async decide(actor: Actor, kind: Kind, id: string, input: Input, personId?: string, withdraw = false) {
+    const row = await this.find(actor,kind,id,personId,true)
+    await this.authority(actor,'rates:approve',personId,true)
+    const version = integer(input.version), f = fence(actor), event = crypto.randomUUID()
+    if (row.version !== version || row.withdrawnBy || (withdraw ? !row.approvedBy : row.approvedBy)) throw new PayrollError('review_stale',409)
+    const hash = withdraw ? '' : await digest(text(input.reviewToken,100))
+    const result = await this.records.env.DB.batch<Record<string,unknown>>([
+      this.records.statement(`INSERT INTO env_workspace_decisions(company_id,kind,object_id,version,decision,actor_id,occurred_at,change_id)
+        SELECT ?,?,?,?,?,?,?,? WHERE ${f.sql}
+        AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=?
+        ${row.personId ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
+        AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions WHERE company_id=? AND kind=? AND object_id=? AND version=? AND decision=?)
+        ${withdraw ? '' : `AND EXISTS(SELECT 1 FROM env_workspace_reviews WHERE token_hash=? AND company_id=? AND kind=? AND object_id=? AND version=? AND session_id=? AND operator_id=? AND grant_version=? AND expires_at>?)`}
+        RETURNING version`, [actor.company,kind,id,version,withdraw?'withdrawn':'approved',actor.session.operator.id,Date.now(),event,...f.args,
+          actor.company,kind,id,version,...(row.personId ? [actor.company,row.personId,row.personVersion] : []),actor.company,kind,id,version,withdraw?'withdrawn':'approved',
+          ...(withdraw ? [] : [hash,actor.company,kind,id,version,actor.session.id,actor.session.operator.id,actor.grant.version,Date.now()])]),
+      auditStatement(this.records.env,actor,event,`workspace.${kind}.${withdraw?'withdrawn':'approved'}`,id,version,'EXISTS(SELECT 1 FROM env_workspace_decisions WHERE change_id=?)',[event]),
+    ])
+    if (!result[0].results.length) throw new PayrollError('review_stale',409)
+    return { id,version,decision:withdraw?'withdrawn':'approved',actorId:actor.session.operator.id }
+  }
+}

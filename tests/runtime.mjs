@@ -9,7 +9,7 @@ import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { payrollJourney, missingKeyJourney } from './payroll-runtime.mjs'
+import { payrollJourney, missingKeyJourney, allocationJourney } from './payroll-runtime.mjs'
 
 const socket = createServer()
 await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve))
@@ -174,6 +174,7 @@ try {
     ).flatMap((result) => result.results)
 
   const records = await payrollJourney({ origin, cookie, settings, sql })
+  await allocationJourney({ origin, cookie, sql })
   await stopWorker()
   const withoutKey = { ...settings }
   delete withoutKey.ENVELOPE_RECORD_KEY

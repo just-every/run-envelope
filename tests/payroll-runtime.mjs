@@ -1263,3 +1263,69 @@ export async function missingKeyJourney({ origin, cookie, noWrite }) {
     await browser.close()
   }
 }
+
+
+/** LOCATION-ALLOCATIONS: actual change API, encrypted history and native preview. */
+export async function allocationJourney({origin,cookie,sql}) {
+  const request=async(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const data=async(path,body,status=200)=>{const r=await request(path,body);assert.equal(r.status,status,await r.clone().text());return r.json()}
+  const company=await data('/api/envelope/companies',{name:'Synthetic multistate works',ein:'00-0000040'},201), base='/api/envelope/companies/'+company.id
+  const location=await data(base+'/locations',{name:'New Jersey office',state:'NJ'},201)
+  const person=await data(base+'/people',{name:'Synthetic NJ to PA worker',locationId:location.id},201)
+  const door=base+'/people/'+person.id+'/allocations', screen=door.replace('/api/','/app/')
+  const owner='Synthetic payroll reviewer', evidence='synthetic-envelope-40'
+  const residence={id:'synthetic-envelope-41',version:0,from:'2026-01-01',through:'2026-03-14',state:'NJ',locality:'Newark',owner,evidence}
+  const work={id:'synthetic-envelope-43',version:0,day:'2026-03-13',state:'NJ',locality:'Newark',minutes:480,earnedCents:20001,officeState:'NJ',nyReason:'not-applicable',sourceRef:'synthetic-envelope-44',owner}
+  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  try {
+    const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+    const capture=async(label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal((await page.locator('h1').count()),1);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`${label}-${width}.png`),fullPage:true})}}
+    await capture('locations-empty')
+    // Enter residence through the native form, rather than preloading application records.
+    const form=page.locator('form[action$="/residence"]')
+    for(const [key,val] of Object.entries(residence)){const field=form.locator(`[name="${key}"]`);if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(String(val));else await field.fill(String(val))}
+    await page.getByRole('button',{name:'Record effective residence',exact:true}).click();await page.waitForURL(origin+screen)
+    await data(door+'/residence',{...residence,id:'synthetic-envelope-42',from:'2026-03-15',through:'2026-12-31',state:'PA',locality:'Pittsburgh'},201)
+    await data(door+'/work',work,201)
+    await data(door+'/work',{...work,id:'synthetic-envelope-45',day:'2026-03-16',earnedCents:20002},201)
+    await data(door+'/work',{...work,id:'synthetic-envelope-46',day:'2026-03-17',state:'PA',locality:'Pittsburgh',officeState:'NY',nyReason:'convenience',earnedCents:20003},201)
+    const election={id:'synthetic-envelope-47',version:0,from:'2026-03-15',through:'2026-12-31',residentState:'PA',workState:'NJ',form:'NJ-165',owner,evidence:'synthetic-envelope-48'}
+    await data(door+'/election',election,201)
+    const preview=await data(door+'?from=2026-03-01&through=2026-03-31')
+    assert.equal(preview.totalWorkCents,60006);assert.equal(preview.allocatedWorkCents,60006)
+    assert.deepEqual(preview.allocations.map(a=>a.residentState),['NJ','PA','PA'])
+    assert.deepEqual(preview.allocations[1].stateWageBases.map(b=>b.state),['PA'],'NJ-165 removes NJ state wage withholding base after the move')
+    assert.deepEqual(preview.allocations[2].stateWageBases.map(b=>b.state),['PA','NY'],'convenience day retains NY source base')
+    assert.equal(preview.allocations[1].electionId,election.id)
+    assert.ok(preview.holds.some(h=>/local EIT/.test(h.reason)&&h.owner===owner),'reciprocity cannot waive PA locals')
+    assert.equal(preview.taxAmounts,null);assert.equal(preview.netPay,null);assert.equal(preview.paymentReady,false)
+    const approved=JSON.stringify(preview.allocations)
+    assert.equal(JSON.stringify((await data(door+'?from=2026-03-01&through=2026-03-31')).allocations),approved,'reload preserves exact dates, cents and rule/election provenance')
+    await capture('locations-move-preview',screen+'?from=2026-03-01&through=2026-03-31')
+    await data(door+'/work',{...work,id:'synthetic-envelope-46',version:1,day:'2026-03-17',state:'PA',locality:'Pittsburgh',officeState:'NY',nyReason:'employer-necessity',evidence:'synthetic-envelope-49'},201)
+    const necessity=await data(door+'?from=2026-03-17&through=2026-03-17')
+    assert.deepEqual(necessity.allocations[0].stateWageBases.map(b=>b.state),['PA'])
+    await data(door+'/work',{...work,id:'synthetic-envelope-50',day:'2026-04-01',officeState:'NY',nyReason:'undetermined'},201)
+    assert.match((await data(door+'?from=2026-04-01&through=2026-04-01')).holds[0].reason,/New York/)
+    await data(door+'/residence',{...residence,id:'synthetic-envelope-51',from:'2026-03-16',through:'2026-03-16',state:'NJ'},201)
+    const conflict=await data(door+'?from=2026-03-16&through=2026-03-16');assert.equal(conflict.allocations.length,0);assert.match(conflict.holds[0].reason,/Contradictory/)
+    await capture('locations-assigned-hold',screen+'?from=2026-03-16&through=2026-03-16')
+    const snapshot=()=>sql('SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS revisions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_audit) AS audit')
+    const before=await snapshot()
+    for(const [path,body,status] of [
+      [door+'/residence',residence,409],
+      [door+'/election',{...election,id:'synthetic-envelope-52',form:'REV-419EX'},400],
+      [door+'/work',{...work,id:'synthetic-envelope-53',officeState:'NY',nyReason:'employer-necessity'},400],
+      [door+'/work',{...work,id:'synthetic-envelope-54',minutes:1441},400],
+    ])assert.equal((await request(path,body)).status,status)
+    assert.deepEqual(await snapshot(),before,'invalid/stale writes do not append data or audit')
+    assert.equal((await request(door,undefined,'')).status,401)
+    const other=await data('/api/envelope/companies',{name:'Synthetic isolated entity',ein:'00-0000041'},201)
+    assert.equal((await request(door.replace(company.id,other.id))).status,404)
+    const stored=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('residence','work','election')"))
+    assert.doesNotMatch(stored,/Pittsburgh|Newark|synthetic-envelope-48/,'location/election custody is encrypted')
+    const history=await data(door);assert.equal(history.work.length,5,'both versions and all source days remain')
+    await context.close()
+    console.log('LOCATION-ALLOCATIONS passed: native residence entry; NJ-to-PA effective history; out-of-state wages; scoped NJ-165; NY convenience/necessity/unknown; PA-local and contradictory-source owned holds; exact cent bases; encrypted history; stale/cross-company refusals; 1440/390. Full tax/report calculation remains unproved.')
+  }finally{await browser.close()}
+}

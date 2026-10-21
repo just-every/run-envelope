@@ -4,6 +4,9 @@ import { Records, type Input } from './records'
 import { AgentSettings, AgentTools } from './agents'
 import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
+import { WorkspaceStore } from './workspace/store'
+import { Allocations } from './workspace/allocations'
+import { allocationsPage } from './workspace/pages'
 import { PayrollError } from './security'
 import {
   setupPage,
@@ -337,6 +340,17 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'people' && post) {
         const person = await records.createPerson(actor, value)
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
+      } else if (tail[0] === 'people' && tail[2] === 'allocations') {
+        const allocations = new Allocations(new WorkspaceStore(records)), personId = tail[1]
+        if (!post && tail.length === 3) {
+          const person = await records.person(actor, personId)
+          const preview = url.searchParams.has('from') ? await allocations.preview(actor, personId, { from:url.searchParams.get('from'), through:url.searchParams.get('through') }) : undefined
+          const history = preview?.history ?? await allocations.read(actor,personId)
+          response = ui ? allocationsPage(session,companies,actor,person,history,preview) : json(preview ?? history)
+        } else if (post && tail.length === 4 && ['residence','work','election'].includes(tail[3])) {
+          const saved = await allocations.save(actor,personId,tail[3] as 'residence'|'work'|'election',value)
+          response = ui ? redirect(base+'/people/'+personId+'/allocations') : json(saved,201)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'people' && tail.length === 2 && !post) {
         const person = await records.details(actor, tail[1])
         response = ui ? personPage(session, companies, actor, person) : json(person)
