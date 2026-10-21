@@ -22,9 +22,9 @@ A 404 is not evidence that an implemented payment door enforces authority.
 
 ## Private custody setup
 
-Before creating companies or storing/reading private text, provision a dedicated
-`ENVELOPE_RECORD_KEY` Worker secret containing a base64-encoded random 32-byte
-key. Use the installation's normal local private-settings/Worker-secret mechanism;
+Setup now generates and preserves a dedicated `ENVELOPE_RECORD_KEY` in private
+settings, using Base's managed-secret mechanism. Deployment declares that Worker
+secret explicitly. It contains a base64-encoded random 32-byte key;
 never put it in `wrangler.jsonc`, Git, URLs, screenshots or logs. It must be
 independent of the session secret. An absent or malformed key refuses private
 custody; there is no development or session-secret fallback.
@@ -41,7 +41,16 @@ and their document lifecycle are not implemented.
 
 Keep the key outside data archives and back it up securely with the owner. Key
 rotation/re-encryption and operational recovery are not implemented. Changing or
-losing the key makes existing ciphertext unreadable and is not a migration.
+losing the key makes existing ciphertext unreadable and is not a migration. If
+the key is missing after data was created, restore its backup before rerunning
+setup; generating a replacement cannot recover existing records.
+
+The Base archive includes durable payroll tables automatically. Active payroll
+grants and review challenges are explicitly excluded; the key stays outside the
+archive, with only its required configuration name declared. Restored companies
+therefore have no payroll authority. Fresh owner-authorized re-enrollment and a
+complete populated payroll archive/recovery journey remain ENV-053 work; do not
+claim the current foundation provides a complete payroll recovery procedure.
 
 ## Rate review
 

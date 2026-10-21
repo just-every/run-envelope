@@ -58,6 +58,16 @@
       "group": "owner"
     },
     {
+      "name": "ENVELOPE_RECORD_KEY",
+      "label": "Payroll record encryption key",
+      "kind": "secret",
+      "required": true,
+      "ownerVisible": false,
+      "input": "managed",
+      "generate": "base64",
+      "group": "owner"
+    },
+    {
       "name": "IDENTITY_PROVIDER",
       "label": "Identity provider",
       "kind": "url",

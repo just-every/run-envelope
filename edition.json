@@ -19,7 +19,9 @@
           "src/routes",
           "src/site",
           "scripts/installer",
-          "src/demo.ts"
+          "src/demo.ts",
+          "src/envelope",
+          "src/ui"
         ]
       }
     },

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "parent": null,
   "edition": "just-every/envelope",
-  "manifest": "be54e7ee9ebbc8371573cc590efe7611139972892bbd60959f188fb758691458",
+  "manifest": "0a455674599d1b30f8e5837296337a2f7e58388ff951d6fba87af728d2e2798b",
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
@@ -20,7 +20,9 @@
           "src/routes",
           "src/site",
           "scripts/installer",
-          "src/demo.ts"
+          "src/demo.ts",
+          "src/envelope",
+          "src/ui"
         ]
       },
       "baseline": null
@@ -175,15 +177,19 @@
       "executable": false
     },
     "deploy.json": {
-      "sha256": "7357226acc283621c9568c1a2a5102f3fb1f180173f6b83d8dbf72ef87d65ad3",
+      "sha256": "57d612582c41cc15e8c565a2661f9de8f7c8dbf8c9d573e240a691fd90278e21",
       "executable": false
     },
     "docs/LOOK.md": {
       "sha256": "3e98e12b6b34f3a99d483f05b9aed4f90fec3f13a3d405bf18687d4167720f81",
       "executable": false
     },
+    "docs/payroll-records.md": {
+      "sha256": "d879446903f487822ab42424e4d4d73c53dbb652c11a3c3d98ad4c1accd6ce4e",
+      "executable": false
+    },
     "edition.json": {
-      "sha256": "be54e7ee9ebbc8371573cc590efe7611139972892bbd60959f188fb758691458",
+      "sha256": "0a455674599d1b30f8e5837296337a2f7e58388ff951d6fba87af728d2e2798b",
       "executable": false
     },
     "HOMEPAGE-VARIANTS.md": {
@@ -252,6 +258,10 @@
     },
     "migrations/core/0015_command_receipts.sql": {
       "sha256": "8064fe877c22bf0500ff5c20d274cbd4e8b2e0dea986fa9e3e4fef4faf2c54a0",
+      "executable": false
+    },
+    "migrations/core/0016_payroll_records.sql": {
+      "sha256": "2fe77cf4fbf8b8b637d1760a0f38c39b1b56896aed6685724c35e1c29fce9da5",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -575,7 +585,7 @@
       "executable": false
     },
     "rer-setup.json": {
-      "sha256": "9f83cf558d0228bacc4d8e238b073234ca9738e683ba0b600d4898385028f92b",
+      "sha256": "7859dee7dbb23a3fd11822f817e8743dcacf89be5c78d2ee4c221ff16a4082ab",
       "executable": false
     },
     "RUN-LOCALLY.md": {
@@ -623,7 +633,7 @@
       "executable": false
     },
     "scripts/installer/local.mjs": {
-      "sha256": "64d4af02cd2da284818f1988c7b6123cf13061d92959942e557ce4e7accf56db",
+      "sha256": "adf98d0aa41eea92e0833fa47737b8775fc4af96df0ea029b4ac9a5e1f6dd4dd",
       "executable": false
     },
     "scripts/installer/seed.mjs": {
@@ -784,6 +794,26 @@
     },
     "src/dev-personas.ts": {
       "sha256": "7d24cb83de4302472d944adeb1b0467a54cd1f50112223fded8302c34163fdf6",
+      "executable": false
+    },
+    "src/envelope/access.ts": {
+      "sha256": "708a9f697c41a976129eb44b7b5641bde9a62082c59e5d73e689123079514278",
+      "executable": false
+    },
+    "src/envelope/http.ts": {
+      "sha256": "e3f38b0c2d1bc6fefe84f79800894e61fef59556b1c24d5b40fd211685f18a74",
+      "executable": false
+    },
+    "src/envelope/pages.tsx": {
+      "sha256": "a0cb3baf8024f1a07c5be5ee01351931887372c06fca97cacb36a5649065a99b",
+      "executable": false
+    },
+    "src/envelope/records.ts": {
+      "sha256": "3e57fc5c556dc21aab0b8b864a3ccdf90cfe5a8ce5edefbac638ff1f5c2e9529",
+      "executable": false
+    },
+    "src/envelope/security.ts": {
+      "sha256": "592d5f2976964e9edc947290a81ff9326e4e1cef465a483d14e5c54ab7c041ce",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -1822,8 +1852,12 @@
       "sha256": "a11d6b89e7219137540c7052683c5f4d9ba7ddf16f66d34c1f56ae34029c0a95",
       "executable": false
     },
+    "tests/payroll-runtime.mjs": {
+      "sha256": "3b9c1034e907ef46011d1d7f343ca403c19d5e63573a29c40e51dc80e800881d",
+      "executable": false
+    },
     "tests/runtime.mjs": {
-      "sha256": "16efc3ea72a3f4c3f8c17f2c03fdedfb23fe9885ba02c8a2358cef3c53c8ec88",
+      "sha256": "5eb84ed9c9987a4af5fff0efd4d1dfd9bb79aba99616290a60f3c4bb104beb5b",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
