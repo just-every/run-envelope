@@ -1,6 +1,6 @@
 # Acceptance requirements
 
-Target edition: **20 October 2026**. Envelope has no code or published contract. Every clause is **missing**; nothing in this checklist certifies a release, a working provider connection, live money movement or an agency filing. Clause IDs, titles, status and complete journeys mirror [CONTRACT.md](CONTRACT.md). No implementation evidence is claimed.
+Target edition: **20 October 2026**. Envelope has an initial partial record/access implementation and no released payroll product; nothing in this checklist certifies a release, a working provider connection, live money movement or an agency filing. Clause IDs, titles, status and complete journeys mirror [CONTRACT.md](CONTRACT.md). Partial implementation evidence is linked in the CONTRACT Status table; no clause is DONE.
 
 Use actual application, Base setup/deployment, documented API/CLI/MCP and native-client doors. Every browser journey below is exercised at **1440 and 390 CSS pixels**, including loaded, empty, pending/held, failed and completed states, using the shared realistic US mixed-workforce fixture in CONTRACT.md. Employee journeys cover English/Spanish and former-worker access; keyboard/focus/labels and WCAG 2.2 AA evidence are part of the relevant surface. Every required adapter gets its named provider-schema journey, not just a generic connector test.
 
@@ -12,9 +12,9 @@ Buyer review 1 closes seven switching gaps and carries the numbered Also noted i
 
 Round 2 applies ct's 20 October decision: a missing state/local tax number or agent grant never holds employee pay. Correct published-table/new-employer-rate calculation and human-approved pay continue on payday; only the jurisdiction's deposit/filing is held, dated and exposure-notified until confirmed authority and reviewed rate true-up release it once. State/local authorizations count toward the same five-day activation clock. ENV-066's denominator is the complete catalog/official-source union; unnamed/new taxes are unmapped failures, not scope exclusions. The original 71 IDs/titles remain unchanged.
 
-Round 3 applies ct's typed-tip decision: cash tips already held never pay twice; paycheck tips pay once; Pub 15 ordering and voluntary furnished funds lead to 941/944 and W-2 A/B reporting without a wage hold, including truthful zero-cash completion. ENV-021/066 include compulsory state funds/hour-based assessments, WA's consistent 160-hour salaried method, OR's own assumptions/rounding and official reports. ENV-014 tests final year/state FUTA Schedule A, BCR and Q4 deposit rules. All 71 IDs/titles and missing statuses remain intact; all added journeys inherit both viewport sizes and current human authority.
+Round 3 applies ct's typed-tip decision: cash tips already held never pay twice; paycheck tips pay once; Pub 15 ordering and voluntary furnished funds lead to 941/944 and W-2 A/B reporting without a wage hold, including truthful zero-cash completion. ENV-021/066 include compulsory state funds/hour-based assessments, WA's consistent 160-hour salaried method, OR's own assumptions/rounding and official reports. ENV-014 tests final year/state FUTA Schedule A, BCR and Q4 deposit rules. All 71 IDs/titles remain intact; all added journeys inherit both viewport sizes and current human authority.
 
-Buyer review 4 adds Gusto tax-refund custody and confirmed company/year annual non-filing elections, granted faster-pay eligibility/cutoff journeys, statutory NY DBL weekly/premium/multiple-employer/carrier cases, and fixed ENV-063/070 corpora. These inherit exact human authority and both viewport sizes. All 71 original IDs/titles remain missing.
+Buyer review 4 adds Gusto tax-refund custody and confirmed company/year annual non-filing elections, granted faster-pay eligibility/cutoff journeys, statutory NY DBL weekly/premium/multiple-employer/carrier cases, and fixed ENV-063/070 corpora. These inherit exact human authority and both viewport sizes. All 71 original IDs/titles remain intact; current statuses are summarized below.
 
 ## Clause journeys
 
@@ -110,7 +110,7 @@ Buyer review 4 adds Gusto tax-refund custody and confirmed company/year annual n
 
 **ENV-024 — Payroll, tax, labor and certified reports. Status: missing.** Use Reports to drill from quarter totals to one check, download reconciled CSV/PDF and generate WH-347/state certified output for a Davis-Bacon job with two classes and fringes. Validate against official form schemas/instructions at the report boundary; restrict compensation exports and retain a reviewed signature/version without treating an unsigned report as submitted. Download accepted 941/8974, 940, a state return and W-3 from Reports, match their versions/totals to stored receipts, and compare a rejected versus corrected/accepted copy. A viewer without export rights cannot download them. Download the low-wage server register and 941/W-2, the WA/OR hours/premium report, 2025 CA Schedule A/940 and two-location 8027. Reconcile each line to actual cash/furnished-funds receipts and official golden calculations with no double tip payout, disguised collection or missing state-fund cost; prepared and accepted files stay distinct. Open scope: the complete contracted behavior and this acceptance journey; no implementation exists.
 
-**ENV-028 — Payroll roles and sensitive-data audit. Status: missing.** Through settings grant a view-only accountant and a limited location approver, then try to read restricted compensation, export, edit bank details and approve/pay using UI and direct API. Refuse outside scope, revoke access and old sessions immediately, and inspect the attributed effective rate change and sensitive-read audit without logging full SSNs or bank numbers. Open scope: the complete contracted behavior and this acceptance journey; no implementation exists.
+**ENV-028 — Payroll roles and sensitive-data audit. Status: partial.** Through settings grant a view-only accountant and a limited location approver, then try to read restricted compensation, export, edit bank details and approve/pay using UI and direct API. Refuse outside scope, revoke access and old sessions immediately, and inspect the attributed effective rate change and sensitive-read audit without logging full SSNs or bank numbers. Proven foundation: explicit record grants, encrypted/masked private text, exact rate-ledger review, revocation and audit through the emitted Worker at both widths. Open scope: real payroll compensation/export, verified bank changes, payroll approval/payment and their audit, full documents and tools/transports; rate-ledger decisions are not yet applied to paychecks. Both complete acceptance points remain unproved; see CONTRACT.md Evidence and Gap.
 
 **ENV-029 — Accountant multi-client workspace. Status: missing.** Sign in as a firm user with 20 realistic clients, filter today's due runs and notices, prepare/approve only authorized clients and follow a Blotter handoff. Revoke one client's mandate and remove a staff member while work is pending; funds cannot move on stale grants, and open work returns to a named permitted owner. Open scope: the complete contracted behavior and this acceptance journey; no implementation exists.
 
@@ -164,6 +164,6 @@ Buyer review 4 adds Gusto tax-refund custody and confirmed company/year annual n
 
 | Kind | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Target | 0 | 0 | 64 | 64 |
+| Target | 0 | 1 | 63 | 64 |
 | Push further | 0 | 0 | 7 | 7 |
-| All | 0 | 0 | 71 | 71 |
+| All | 0 | 1 | 70 | 71 |

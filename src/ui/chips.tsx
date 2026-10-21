@@ -6,6 +6,6 @@ export interface ClientChip { name: string; status: string; colour: ChipColour; 
 export function ClientChips({ clients }: { clients: ClientChip[] }) {
  return <nav className="chips" aria-label="Businesses">
   {clients.length ? clients.map(client => <a key={client.href} className={`chip chip--${client.colour}`} href={client.href} aria-current={client.open ? 'page' : undefined}><b>{client.name}</b><small>{client.status}</small></a>)
-   : <p className="chip chip--none"><b>No businesses yet</b><small>Adding a business isn't built yet</small></p>}
+   : <p className="chip chip--none"><b>No businesses yet</b><small>No company access yet</small></p>}
  </nav>
 }

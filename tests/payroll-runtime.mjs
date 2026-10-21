@@ -106,6 +106,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       [],
       'Base admin alone has no payroll authority',
     )
+    assert.doesNotMatch(
+      await (await call('/app', actors.outsider.cookie)).text(),
+      /Rosa’s California|Kessler Pennsylvania/,
+    )
     const ca = await data(company + '/locations', { name: 'Oakland, California' }, cookie, 201),
       pa = await data(company + '/locations', { name: 'Pittsburgh, Pennsylvania' }, cookie, 201)
     const names = [
@@ -289,6 +293,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       actors.approver.cookie,
       201,
     )
+    await capture('/app', 'app-home-loaded')
     await capture('/app/envelope', 'company-loaded')
     await capture(screen, 'company-records')
     await capture(screen + '/grants', 'grants')

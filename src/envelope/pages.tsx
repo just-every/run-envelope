@@ -464,7 +464,7 @@ export function personPage(
             </p>
           ))
         ) : (
-          <p>No private records stored.</p>
+          <p>No permitted private records.</p>
         )}
         {fields
           .filter(

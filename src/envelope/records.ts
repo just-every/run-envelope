@@ -291,8 +291,15 @@ export class Records {
         [actor.company, id, comp ? 1 : 0, event, ...f.args],
       ),
       this.statement(
-        `SELECT kind,version FROM env_private_records WHERE company_id=? AND person_id=? AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) AND ${f.sql}`,
-        [actor.company, id, event, ...f.args],
+        `SELECT kind,version FROM env_private_records WHERE company_id=? AND person_id=? AND (?=1 OR kind IN (SELECT value FROM json_each(?))) AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) AND ${f.sql}`,
+        [
+          actor.company,
+          id,
+          actor.grant.role === 'owner' ? 1 : 0,
+          JSON.stringify(actor.grant.fields),
+          event,
+          ...f.args,
+        ],
       ),
     ])
     if (!results[0].meta.changes) throw new PayrollError('authority_or_record_changed', 409)

@@ -6,9 +6,9 @@
   "category": "Small-business payroll",
   "spine": {
     "id": "foundation",
-    "record": "No domain record selected"
+    "record": "Company-scoped payroll records"
   },
-  "description": "Small-business payroll. Technical foundation only; the target contract is not implemented.",
+  "description": "Small-business payroll. Persistent company records and payroll access are partial; calculation, payments and filings are not implemented.",
   "capabilities": [],
   "nonGoals": [
     "Finished product functionality",

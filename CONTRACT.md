@@ -2,7 +2,7 @@
 
 Target edition: **20 October 2026**. Envelope is full-service US small-business payroll: calculate what each person is owed, pay them on time, remit the taxes and deductions, file the returns, and carry every exception through to an evidenced outcome. A US employer switching from Gusto, ADP RUN, Paychex Flex, QuickBooks Payroll, Warp, Rippling Payroll or OnPay must be able to complete that job here. The first buyer has 1–100 employees; that starting buyer does not cap the product's growth or its coverage of states, local taxes, industries or payment methods.
 
-This is the destination, not a release promise. No Envelope code or released contract exists; every clause is missing. Money movement, reporting-agent enrollment, tax engines, agency portals, provider applications, native clients and partner agreements are engineering obligations. A builder may use Check, Gusto Embedded, Salsa, Zeal or a sponsor-bank arrangement, but must deliver the named outcomes, expose unsupported provider coverage as unfinished, and never replace payment or filing with a generated document labeled complete. Envelope remains its own product; shared code does not merge payroll with HR, time, accounting or practice management.
+This is the destination, not a release promise. There is no released payroll product; the Status table records the first partial record/access implementation and the remaining unproved behavior. Money movement, reporting-agent enrollment, tax engines, agency portals, provider applications, native clients and partner agreements are engineering obligations. A builder may use Check, Gusto Embedded, Salsa, Zeal or a sponsor-bank arrangement, but must deliver the named outcomes, expose unsupported provider coverage as unfinished, and never replace payment or filing with a generated document labeled complete. Envelope remains its own product; shared code does not merge payroll with HR, time, accounting or practice management.
 
 ## Product target
 
@@ -387,13 +387,13 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Judged from the code and tests at commit `bb36d7612d6ee448a022e32df94cad323ea186a4` (20 October 2026).
+Status follows the public-door tests cited below. The record/access foundation is partial; no complete payroll clause or provider outcome is claimed.
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 0 | 0 | 0 | 0 |
-| Target and push further | 0 | 0 | 71 | 71 |
-| All | 0 | 0 | 71 | 71 |
+| Target and push further | 0 | 1 | 70 | 71 |
+| All | 0 | 1 | 70 | 71 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -443,7 +443,7 @@ Judged from the code and tests at commit `bb36d7612d6ee448a022e32df94cad323ea186
 | `ENV-044` | Signature, communications and practice handoff | target | missing |  | No implementation exists; the complete signature, communications and practice handoff behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-022` | Employee and contractor pay portal | target | missing |  | No implementation exists; the complete employee and contractor pay portal behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. |
 | `ENV-024` | Payroll, tax, labor and certified reports | target | missing |  | No implementation exists; the complete payroll, tax, labor and certified reports behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. |
-| `ENV-028` | Payroll roles and sensitive-data audit | target | missing |  | No implementation exists; the complete payroll roles and sensitive-data audit behavior and its public-door acceptance journey remain to be built and proven. |
+| `ENV-028` | Payroll roles and sensitive-data audit | target | partial | Acceptance point 1 (partial): [PAYROLL-RECORDS / payrollJourney](tests/payroll-runtime.mjs), invoked by [the emitted Worker runner](tests/runtime.mjs), proves native settings grants plus company/location/field, compensation-read, record-export and bank-document refusals through UI/API. Point 2 (partial): the same journey proves revoke/re-grant old-session refusal, exact named rate-ledger decisions, attributed sensitive-read audit without raw private values; [PAYROLL-CUSTODY-UNAVAILABLE / missingKeyJourney](tests/payroll-runtime.mjs) proves absent-key UI/API no-write refusal. Both journeys capture 1440/390; full remaining points are in Gap. | Current proof covers company/location/field record grants, independent record export and bank-document custody powers, encrypted private text, masked reads, exact named rate-ledger decisions and old-session revocation. Real payroll compensation/export, verified bank-detail changes, run approval/release/payment doors and their audit remain unbuilt/unproved, as do full private documents and tool/transport journeys. Rate decisions are not yet applied to paychecks. These obligations remain with ENV-004, ENV-011, ENV-022, ENV-024, ENV-030, ENV-034 and ENV-051–053 as their doors are built; neither missing doors nor 404s prove them. |
 | `ENV-029` | Accountant multi-client workspace | target | missing |  | No implementation exists; the complete accountant multi-client workspace behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-068` | Controlled employment and income verification | target | missing |  | No implementation exists; the complete controlled employment and income verification behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-045` | Native mobile payroll and accessible desktop | target | missing |  | No implementation exists; the complete native mobile payroll and accessible desktop behavior and its public-door acceptance journey remain to be built and proven. |

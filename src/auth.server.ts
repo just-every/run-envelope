@@ -7,6 +7,7 @@ import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthCo
 import { operatorMail } from './mail.server.mjs'
 import branding from './branding.json'
 import { payRunDocument } from './ui/page.server'
+import { Records } from './envelope/records'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
 const theme = { href: '/rer-theme.css', productName: branding.name, accentColor: branding.primaryColor }
@@ -82,7 +83,7 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
  if (url.pathname === '/app') {
   const session = await operatorAuth(env).getSession(request)
   if (!session) return new Response(null, { status: 303, headers: { ...privateHeaders, location: '/signin' } })
-  return payRunDocument(session.operator)
+  return payRunDocument(session.operator, await new Records(env, session).companies())
  }
  return null
 }

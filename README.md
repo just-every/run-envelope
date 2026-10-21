@@ -4,9 +4,11 @@ Small-business payroll.
 
 100% free, open source alternative to Gusto, ADP RUN, Paychex Flex.
 
-This is the Base technical foundation for a new seed. Payroll is not built yet.
-[CONTRACT.md](CONTRACT.md) and [ACCEPTANCE.md](ACCEPTANCE.md) describe the target,
-with every product clause marked missing. The shared Lobby is at `/`; the Run
+Company-scoped payroll records, private text custody and explicit payroll grants
+are the first partial foundation. Calculation, payments and filings are not built.
+See [payroll records and access](docs/payroll-records.md) for the current doors and
+limits. [CONTRACT.md](CONTRACT.md) and [ACCEPTANCE.md](ACCEPTANCE.md) describe the
+remaining target; no clause is DONE. The shared Lobby is at `/`; the Run
 site renders the root contract at `/contract`.
 
 ## Run locally
