@@ -2238,6 +2238,8 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     )
     await capture('pay-settings-source-changed')
     await capture('preparation-hub', base.replace('/api/', '/app/') + '/workspace')
+    await capture('preparation-company-chooser', '/app/envelope/workspace')
+    await capture('preparation-entry', '/app')
     // The same business operation at the contracted first-buyer ceiling must
     // not overflow D1's variable count. This is not a timing benchmark.
     const members = []
