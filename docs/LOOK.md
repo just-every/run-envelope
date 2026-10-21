@@ -52,7 +52,7 @@ every clause missing); the app home at `/app` shows the pick's composition in it
 | `--paper` | `--rer-surface` #ffffff | Cards, the bar. |
 | `--mint` / `--mint-band` | #e0f6f3 / #d6f1ea | A check's net pay box / the slip's net pay row. |
 | `--sky` | #e9f4fe | Envelope's tag. |
-| `--blush` | #fdeeee | The one exception's pill and alerts. |
+| `--blush` | #fef0f0 | The one exception's pill and alerts. |
 | `--wash` | #f5f9fa | Hovered outlined buttons, read-only fields. |
 | `--ink` / `--body` / `--muted` | #1d2a44 / #3d4a5e / #627084 | Text: headings and figures / body / secondary. |
 | `--hair` / `--field-line` | #dde5ea / #86939f | Rules / form and control borders (3:1). |

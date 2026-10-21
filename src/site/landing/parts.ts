@@ -1,5 +1,6 @@
 // Parts every section shares: business chips in each client's colour, the one heavy done-green check, separators that
 // never start a line, and copy that keeps its dates, times and figures with their units.
+import { DONE_CHECK } from '../../ui/glyphs'
 
 /** Separators travel with both adjacent words, never dangling at either line edge. */
 export const dot = ' · '
@@ -55,8 +56,8 @@ export const chip = (business: Business, label = businessName[business]) => `<sp
 /** The grey "All 4" pill. */
 export const all4 = '<span class="chip chip--all">All 4</span>'
 
-/** The page's one done glyph: a heavy check in done-green (or currentColor on a coloured ground). */
-export const CHECK = '<svg class="ck" viewBox="0 0 16 16" role="img" aria-label="done"><path d="M2.8 8.7l3.4 3.3 7-7.6" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+/** The page's one done glyph: a heavy check in done-green (or currentColor on a coloured ground), shared with the app. */
+export const CHECK = DONE_CHECK
 /** Copy ending in the check; the last word and the check never part. */
 export const done = (text: string) => {
  const kept = keep(text)

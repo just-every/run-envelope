@@ -1,0 +1,4 @@
+// Envelope's two small glyphs, shared by the homepage (src/site) and the app: the one heavy done check (done-green, or
+// currentColor on a coloured ground) and the exception's warning, drawn in red only on an exception.
+export const DONE_CHECK = '<svg class="ck" viewBox="0 0 16 16" role="img" aria-label="done"><path d="M2.8 8.7l3.4 3.3 7-7.6" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+export const WARNING = '<svg class="warn" viewBox="0 0 20 20" role="img" aria-label="exception"><path d="M10 2.2 18.6 17.3H1.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 7.4v4.6" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="10" cy="14.6" r="1.25" fill="#fff"/></svg>'
