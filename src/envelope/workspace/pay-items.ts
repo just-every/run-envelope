@@ -414,7 +414,14 @@ export class PayItems {
           if (!holds.some((h) => h.personId === member.id && h.code === 'proration-preview-only'))
             holds.push({personId: member.id, code: 'proration-preview-only',
               reason: 'Salary proration is preview-only. Stricter work-state rules, final-pay deadlines and complete payroll calculation require review; no salary preview can be approved, paid or dispatched.'})
-          if (policy) objects.push({kind: 'proration-policy', id: policy.id, version: policy.version, approved: true})
+          if (policy) {
+            // Pin the current policy timeline, including future revisions. The
+            // chosen older effective entry stays in the immutable payload; a
+            // later edit to that timeline must force a fresh preview.
+            const timeline = policies.find((p) => p.id === policy.id)!
+            objects.push({kind: 'proration-policy', id: timeline.id, version: timeline.version,
+              approved: timeline.version === policy.version})
+          }
           const calculated = salaryDay({ day, periodStart, periodEnd, periods,
             setup: {...setup, salaryType: setup.salaryType ?? 'unverified', unpaidLeave: setup.unpaidLeave ?? []},
             policy: policy?.data, workedMinutes: work.filter((w) => w.data.day === day).reduce((n, w) => n + w.data.minutes, 0) })

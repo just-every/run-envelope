@@ -109,7 +109,7 @@ export function salaryDay(input: SalaryDayInput): SalaryDayResult {
   const method = actualWork ? 'actual-worked-minutes' : policy?.method ?? 'calendar-days'
   const periodUnits = actualWork || method === 'scheduled-hours' ? scheduledMinutes
     : method === 'scheduled-workdays' ? scheduledDays : calendarDays
-  if (day === periodStart) {
+  if (day === periodStart || day === policy?.effectiveDate) {
     details.push(`Salary preview: ${method}; period ${periodStart} through ${periodEnd}; ` +
       `${calendarDays} calendar days, ${scheduledDays} scheduled workdays, ${scheduledMinutes} scheduled minutes; ` +
       `annual rate ${setup.rateCents} cents / ${periods} periods / ${periodUnits} ${actualWork || method === 'scheduled-hours' ? 'scheduled minutes' : method === 'scheduled-workdays' ? 'scheduled workdays' : 'calendar days'}` +

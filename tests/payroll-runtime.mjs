@@ -2045,13 +2045,13 @@ export async function payItemsJourney({ origin, cookie, sql }) {
           'A',
           'keyboard reaches native app navigation',
         )
-        await page.screenshot({
-          path: join(
-            process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',
-            `${label}-${width}.png`,
-          ),
-          fullPage: true,
-        })
+        const folder = process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
+        await page.screenshot({path:join(folder,`${label}-${width}.png`),fullPage:true})
+        const policies = page.locator('section').filter({has:page.getByRole('heading',{name:'Salary proration policies',exact:true})})
+        if (await policies.count()) await policies.screenshot({path:join(folder,`${label}-policy-${width}.png`)})
+        const drafts = page.locator('section').filter({has:page.getByRole('heading',{name:'Immutable earnings drafts',exact:true})})
+        if (await drafts.count() && await drafts.locator('article').count())
+          await drafts.locator(':scope > .field > article').last().screenshot({path:join(folder,`${label}-last-draft-${width}.png`)})
       }
     }
     await capture('pay-settings-empty')
@@ -2304,7 +2304,7 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     assert.ok(salaryPreview.people.find((p) => p.id === a.id).details.some((d) => /scheduled-workdays/.test(d)))
     await data(door + '/earnings-run',{...period,id:'synthetic-envelope-122',version:0},201)
     await capture('salary-workday-preview')
-    await data(door + '/proration-policy', {...policy,version:2,effectiveDate:'2026-02-01',method:'scheduled-hours'},201)
+    await data(door + '/proration-policy', {...policy,version:2,effectiveDate:'2026-02-01',method:'scheduled-hours',weekMinutes:[0,480,480,480,240,480,0]},201)
     await approve('proration-policy',policy.id)
     // An effective-dated revision preserves the prior method for earlier periods.
     salaryPreview = await data(door + '/preview', period)
@@ -2335,6 +2335,22 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     assert.ok(!salaryPreview.holds.some((h) => h.code === 'proration-leave-review'))
     await data(door + '/earnings-run',{...period,id:'synthetic-envelope-126',version:0},201)
     await capture('salary-fmla-preview')
+    const hoursItems = leaveItems.map((p) => ({...p,unpaidLeave:[],unpaidDates:[]}))
+    hoursItems[0].employmentFrom = '2026-02-10'
+    hoursItems[1] = {...hoursItems[1],basis:'annual-salary',rateCents:6000000,salaryType:'nonexempt'}
+    await data(base + '/people/' + b.id + '/allocations/work',{
+      id:'synthetic-envelope-127',version:0,day:'2026-02-20',state:'NY',locality:'New York City',
+      minutes:480,earnedCents:20000,officeState:'NY',nyReason:'not-applicable',sourceRef:'synthetic-envelope-128'
+    },201)
+    await data(door + '/pay-change',{...change,version:4,items:hoursItems},201)
+    await approve('pay-change',change.id)
+    const hoursPeriod = {...period,periodStart:'2026-02-01',periodEnd:'2026-02-28',payDate:'2026-03-02'}
+    const hoursPreview = await data(door + '/preview',hoursPeriod)
+    assert.equal(hoursPreview.people.find((p) => p.id === a.id).earningsCents,694444,'6000 of 8640 uneven scheduled minutes')
+    assert.equal(hoursPreview.people.find((p) => p.id === b.id).earningsCents,27778,'nonexempt salary uses 480 actual minutes against 8640 scheduled minutes')
+    assert.ok(hoursPreview.people.find((p) => p.id === b.id).details.some((d) => /regular-rate input/.test(d)))
+    await data(door + '/earnings-run',{...hoursPeriod,id:'synthetic-envelope-129',version:0},201)
+    await capture('salary-hours-preview')
     // All methods remain preview-only, including an explicitly human-chosen method.
     const noEffects = await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions')
     for (const action of ['approve','release']) {
