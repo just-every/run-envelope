@@ -2536,6 +2536,35 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     await capture('preparation-hub', base.replace('/api/', '/app/') + '/workspace')
     await capture('preparation-company-chooser', '/app/envelope/workspace')
     await capture('preparation-entry', '/app')
+    // A mid-week California discharge pays a proportional final week, due that same day.
+    const caOffice = await data(base + '/locations', { name: 'Synthetic Los Angeles office', state: 'CA' }, 201)
+    const manager = await data(base + '/people', { name: 'Synthetic California exempt manager', locationId: caOffice.id }, 201)
+    const caGroup = { id: 'synthetic-envelope-360', version: 0, name: 'California managers', people: [manager.id] }
+    await data(door + '/group', caGroup, 201)
+    await approve('group', caGroup.id)
+    await data(door + '/proration-policy', { ...policy, id: 'synthetic-envelope-361', version: 0, name: 'California workday policy',
+      groupId: caGroup.id, method: 'scheduled-workdays' }, 201)
+    await approve('proration-policy', 'synthetic-envelope-361')
+    const finalTerms = { personId: manager.id, personVersion: manager.version, rateCents: 12000000, basis: 'annual-salary',
+      employmentFrom: '2025-06-02', employmentThrough: '2026-03-18', unpaidDates: [], salaryType: 'exempt', separation: 'discharge' }
+    const finalChange = { id: 'synthetic-envelope-362', version: 0, name: 'California final terms', groupId: caGroup.id,
+      effectiveDate: '2025-06-02', items: [finalTerms] }
+    await data(door + '/pay-change', finalChange, 201)
+    await approve('pay-change', finalChange.id)
+    const march = { groupId: caGroup.id, periodStart: '2026-03-01', periodEnd: '2026-03-31', payDate: '2026-04-02', frequency: 'monthly' }
+    let final = await data(door + '/preview', march)
+    assert.equal(final.people[0].earningsCents, 590909, '13 of 22 March workdays: the Wednesday final week is proportional')
+    assert.match(final.holds.find((h) => h.code === 'final-pay-deadline').reason, /due 2026-03-18 under Labor Code §201\(a\)/)
+    assert.ok(final.people[0].details.some((d) => /Final wages due 2026-03-18/.test(d)))
+    await data(door + '/earnings-run', { ...march, id: 'synthetic-envelope-363', version: 0 }, 201)
+    await capture('salary-final-pay-held')
+    for (const action of ['approve', 'release'])
+      assert.deepEqual(await (await call(door + '/earnings-run/synthetic-envelope-363/' + action, { version: 1 })).json(),
+        { error: 'proration_preview_not_payable' }, 'final salary stays unpayable until ENV-012 and an authorized rail exist')
+    await data(door + '/pay-change', { ...finalChange, version: 1, items: [{ ...finalTerms, separation: '' }] }, 201)
+    await approve('pay-change', finalChange.id)
+    final = await data(door + '/preview', march)
+    assert.ok(final.holds.some((h) => h.code === 'final-pay-separation-review'), 'an unknown separation type is held, never guessed')
     // The same business operation at the contracted first-buyer ceiling must
     // not overflow D1's variable count. This is not a timing benchmark.
     const members = []

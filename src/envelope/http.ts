@@ -24,6 +24,8 @@ import {
 import { Schedules } from './workspace/schedules'
 import { PayItems } from './workspace/pay-items'
 import { PayPolicies } from './workspace/pay-policies'
+import { RunApprovals, type ApprovalPolicy } from './workspace/run-approvals'
+import { runReviewPage, releaseRefusalPage } from './workspace/run-approval-pages'
 import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
 import { PayrollError } from './security'
@@ -386,9 +388,16 @@ export async function payrollResponse(
         } else throw new PayrollError('not_found', 404)
       } else if (tail[0] === 'pay-settings') {
         const store = new WorkspaceStore(records),
-          pay = new PayItems(store)
+          pay = new PayItems(store),
+          approvals = new RunApprovals(store, pay),
+          setupKinds = ['group', 'pay-item', 'pay-change', 'proration-policy', 'approval-policy']
+        // The two-person threshold is the owner's own policy, end to end.
+        if ((tail[1] === 'review' ? tail[2] : tail[1]) === 'approval-policy' && actor.grant.role !== 'owner')
+          throw new PayrollError('owner_required', 403)
         if (!post && tail.length === 1) {
-          const result = await pay.read(actor)
+          const result = await pay.read(actor),
+            statuses = await approvals.statuses(actor, result.runs),
+            policies = await store.list<ApprovalPolicy>(actor, 'approval-policy', undefined, true, false)
           response = ui
             ? paySettingsPage(
                 session,
@@ -396,13 +405,11 @@ export async function payrollResponse(
                 actor,
                 await records.people(actor),
                 result,
+                undefined,
+                { statuses, policies },
               )
-            : json(result)
-        } else if (
-          post &&
-          tail.length === 2 &&
-          ['group', 'pay-item', 'pay-change', 'proration-policy'].includes(tail[1])
-        ) {
+            : json({ ...result, approvals: statuses, approvalPolicies: policies })
+        } else if (post && tail.length === 2 && setupKinds.includes(tail[1])) {
           const saved =
             tail[1] === 'group'
               ? await pay.group(actor, value)
@@ -410,7 +417,9 @@ export async function payrollResponse(
                 ? await pay.item(actor, value)
                 : tail[1] === 'proration-policy'
                   ? await new PayPolicies(store, pay).save(actor, value)
-                  : await pay.change(actor, value)
+                  : tail[1] === 'approval-policy'
+                    ? await approvals.savePolicy(actor, value)
+                    : await pay.change(actor, value)
           response = ui ? redirect(base + '/pay-settings') : json(saved, 201)
         } else if (post && tail.join('/') === 'pay-settings/preview') {
           const result = await pay.preview(actor, value)
@@ -427,22 +436,34 @@ export async function payrollResponse(
         } else if (post && tail.join('/') === 'pay-settings/earnings-run') {
           const result = await pay.preview(actor, value, true)
           response = ui ? redirect(base + '/pay-settings') : json(result, 201)
-        } else if (post && tail.length === 4 && tail[1] === 'earnings-run' &&
-          ['approve', 'release'].includes(tail[3])) {
-          await store.find(actor, 'earnings-run', tail[2], undefined, true)
-          throw new PayrollError('proration_preview_not_payable', 409)
+        } else if (!post && tail.length === 4 && tail[1] === 'earnings-run' && tail[3] === 'review') {
+          const row = await approvals.review(actor, tail[2])
+          response = ui ? runReviewPage(session, companies, actor, row) : json(row)
+        } else if (post && tail.length === 4 && tail[1] === 'earnings-run' && tail[3] === 'approve') {
+          const result = await approvals.approve(actor, tail[2], value)
+          response = ui ? redirect(base + '/pay-settings') : json(result)
+        } else if (post && tail.length === 4 && tail[1] === 'earnings-run' && tail[3] === 'release') {
+          // Release always ends in a named refusal today; the screen says why nothing was sent.
+          try {
+            await approvals.release(actor, tail[2], value)
+            throw new PayrollError('run_not_payable', 409)
+          } catch (error) {
+            if (!ui || !(error instanceof PayrollError) || error.status !== 409) throw error
+            const refused = releaseRefusalPage(session, companies, actor, tail[2], error.code)
+            response = new Response(refused.body, { status: 409, headers: refused.headers })
+          }
         } else if (
           !post &&
           tail.length === 4 &&
           tail[1] === 'review' &&
-          ['group', 'pay-item', 'pay-change', 'proration-policy'].includes(tail[2])
+          setupKinds.includes(tail[2])
         ) {
           const row = await store.review(actor, tail[2] as Kind, tail[3])
           response = ui ? exactReviewPage(session, companies, actor, row) : json(row)
         } else if (
           post &&
           tail.length === 4 &&
-          ['group', 'pay-item', 'pay-change', 'proration-policy'].includes(tail[1]) &&
+          setupKinds.includes(tail[1]) &&
           ['approve', 'withdraw'].includes(tail[3])
         ) {
           const result = await store.decide(

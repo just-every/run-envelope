@@ -30,12 +30,15 @@ export function reviewInputFence(company: string, sets: ReviewInputSet[]) {
   }
 }
 export async function reviewInputSets(store: WorkspaceStore, actor: Actor, proposalId: string, people: string[]) {
-  const specs = [
+  return collectionPins(store, actor, [
     {kind:'schedule',personId:'',exceptId:''},
     {kind:'pay-change',personId:'',exceptId:proposalId},
     {kind:'proration-policy',personId:'',exceptId:''},
-    ...people.map((personId) => ({kind:'work',personId,exceptId:''})),
-  ]
+    ...people.map((personId) => ({kind:'work' as Kind,personId,exceptId:''})),
+  ])
+}
+/** Pins the current size of each named collection, so a newly added ID is material too. */
+export async function collectionPins(store: WorkspaceStore, actor: Actor, specs: {kind: Kind; personId: string; exceptId: string}[]) {
   const f = fence(actor), c = counts('?', "json_extract(pin.value,'$.kind')", "json_extract(pin.value,'$.personId')", "json_extract(pin.value,'$.exceptId')")
   const result = await store.records.statement(
     `SELECT json_extract(pin.value,'$.kind') AS kind,json_extract(pin.value,'$.personId') AS personId,json_extract(pin.value,'$.exceptId') AS exceptId,${c.versions} AS versions,${c.decisions} AS decisions FROM json_each(?) pin WHERE ${f.sql}`,

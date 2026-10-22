@@ -29,7 +29,8 @@ POST `/pay-change` with `id`, `version`, `name`, `groupId`, `effectiveDate`, and
 `unpaidDates` (legacy ISO dates, never salary deduction authority). Salary setup
 also accepts `salaryType` (`exempt`, `nonexempt`, `unverified`) and `unpaidLeave`:
 `[{day, minutes, reason, evidenceRef}]`. Reasons are `personal`, `sickness-plan`,
-`fmla`, `other`. Only reviewed group members may be included. Invalid codes,
+`fmla`, `other`. `separation` (`none`, `discharge`, `quit-with-notice`,
+`quit-without-notice`) records why employment ends on `employmentThrough`. Only reviewed group members may be included. Invalid codes,
 stale people and unreviewed/withdrawn groups refuse. Setup review lists every
 person's terms; it is not payroll approval.
 
@@ -62,6 +63,14 @@ work become `proration-leave-review`, preserving salary. These references are
 not verified signed leave or plan custody. Every salary preview also has
 `proration-preview-only`: stricter work-state law, full legal treatment and
 payroll remain unfinished. Mid-period salary changes require named review.
+When employment ends inside a period, earnings stop after the last day, so the
+final week is proportional under the chosen method. California sets the final-pay
+deadline ([Labor Code §§201–202](https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=LAB&sectionNum=201.)): the last day on discharge or after 72 hours'
+notice; on a quit without notice, within 72 hours (the time of quitting is not
+recorded, so two calendar days later is used). A pay date after it holds
+`final-pay-deadline`; an off-cycle final payment belongs to ENV-012. A missing
+separation type holds `final-pay-separation-review`, and any other work state holds
+`final-pay-deadline-review` for a person.
 No computed preview authorizes a deduction or money movement. Governing source:
 [29 CFR 541.602](https://www.ecfr.gov/current/title-29/subtitle-B/chapter-V/subchapter-A/part-541/subpart-G/section-541.602).
 
@@ -74,11 +83,12 @@ checks. True post-settlement corrections, lawful deduction limits, complete tax
 calculation and actual payable runs await their implementations and an authorized
 ENV-011/035/065 rail. There is deliberately no route accepting a claimed settlement.
 
-POST `/earnings-run/{id}/approve` or `/earnings-run/{id}/release` explicitly
-refuses with `proration_preview_not_payable` (409) and makes no decision or
-external request. This refusal covers the real retained earnings draft; it is
-not an approval/dispatch implementation. There is no client-supplied completion,
-settlement or receipt field that grants authority.
+POST `/earnings-run/{id}/approve` or `/earnings-run/{id}/release` refuses a
+salary proration preview with `proration_preview_not_payable` (409) and makes no
+decision or external request. Runs without a proration hold follow the exact
+approval doors in [payroll-approvals.md](payroll-approvals.md); their release
+still refuses until tax obligations and an authorized rail exist. There is no
+client-supplied completion, settlement or receipt field that grants authority.
 
 Bulk rate proposals retain `diff.people`: each worker's first affected saved pay
 period, original/proposed base earnings, delta, schedule identity and outstanding

@@ -13,6 +13,7 @@ export type Kind =
   | 'pay-item'
   | 'pay-change'
   | 'proration-policy'
+  | 'approval-policy'
   | 'rule'
   | 'group'
   | 'earnings-run'
@@ -57,7 +58,7 @@ export interface Sources {
   people?: { id: string; version: number }[]
   objects?: { kind: Kind; id: string; version: number; approved?: boolean }[]
 }
-const currentSources = (
+export const currentSources = (
   alias: string,
 ) => `NOT EXISTS(SELECT 1 FROM env_workspace_people sp WHERE sp.company_id=${alias}.company_id AND sp.kind=${alias}.kind AND sp.object_id=${alias}.object_id AND sp.version=${alias}.version
   AND NOT EXISTS(SELECT 1 FROM env_people p WHERE p.company_id=sp.company_id AND p.id=sp.person_id AND p.version=sp.person_version))

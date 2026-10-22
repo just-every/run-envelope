@@ -19,6 +19,7 @@ import {
   payItemsJourney,
   rulesJourney,
 } from './payroll-runtime.mjs'
+import { approvalJourney } from './payroll-approvals.mjs'
 
 const socket = createServer()
 await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve))
@@ -198,7 +199,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'sponsored'].includes(name),
+        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -209,6 +210,8 @@ try {
   if (!selected || selected.includes('pay-items'))
     await payItemsJourney({ origin, cookie, sql })
   if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
+  if (!selected || selected.includes('approvals'))
+    await approvalJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('records')) {
     const records = await payrollJourney({ origin, cookie, settings, sql })
     await stopWorker()

@@ -15,8 +15,9 @@ import {
 import { addDays } from './schedules'
 import type { WorkDay } from './allocations'
 import { payChangeDiff } from './pay-change-diff'
-import { reviewInputSets } from './review-inputs'
+import { reviewInputSets, collectionPins } from './review-inputs'
 import { salaryDay, type ProrationPolicy, type SalarySetup } from './proration'
+import { finalPayCheck, separations, type Separation } from './final-pay'
 import { periodRules, ruleFingerprint, type PayrollRule } from './rules'
 
 export interface Group {
@@ -51,6 +52,7 @@ export interface PayChange {
     unpaidDates: string[]
     salaryType: SalarySetup['salaryType']
     unpaidLeave: SalarySetup['unpaidLeave']
+    separation?: Separation
   }[]
 }
 export interface EarningsRun {
@@ -69,6 +71,8 @@ export interface EarningsRun {
     details: string[]
   }[]
   holds: { personId: string; code?: string; reason: string }[]
+  /** Bank record version bound per payee; 0 means no account is on file. */
+  destinations: { personId: string; bankVersion: number }[]
   grossCashCents: number
   taxableCashCents: number
   reimbursementCents: number
@@ -122,8 +126,40 @@ const list = (v: unknown): unknown[] =>
           .map((s) => s.trim())
           .filter(Boolean)
       : []
+/** A retained run is current only while its setup, sources and period rules are unchanged. */
+export async function runCurrency(
+  run: Revision<EarningsRun>,
+  changes: Revision<PayChange>[],
+  items: Revision<PayItem>[],
+  policies: Revision<ProrationPolicy>[],
+  rules: Revision<PayrollRule>[],
+) {
+  return {
+    setup:
+      Boolean(run.sourcesCurrent) &&
+      run.data.setupFingerprint ===
+        (await fingerprint(run.data.groupId, changes, items, policies)),
+    rules:
+      run.data.ruleFingerprint ===
+      (await ruleFingerprint(
+        rules,
+        run.data.locationStates,
+        run.data.periodStart,
+        run.data.periodEnd,
+      )),
+  }
+}
 export class PayItems {
   constructor(public store: WorkspaceStore) {}
+  async sourceCheck(actor: Actor, run: Revision<EarningsRun>) {
+    const [changes, items, policies, rules] = await Promise.all([
+      this.store.list<PayChange>(actor, 'pay-change', undefined, true, false),
+      this.store.list<PayItem>(actor, 'pay-item', undefined, true, false),
+      this.store.list<ProrationPolicy>(actor, 'proration-policy', undefined, true, false),
+      this.store.list<PayrollRule>(actor, 'rule', undefined, true, false),
+    ])
+    return runCurrency(run, changes, items, policies, rules)
+  }
   async group(actor: Actor, input: Input) {
     const ids = list(input.people).map((v) => text(v))
     if (!ids.length || ids.length > 100 || new Set(ids).size !== ids.length)
@@ -255,6 +291,7 @@ export class PayItems {
         unpaidDates,
         unpaidLeave,
         salaryType: choice(item.salaryType ?? 'unverified', ['exempt', 'nonexempt', 'unverified']) as SalarySetup['salaryType'],
+        separation: choice(item.separation || 'none', separations) as Separation,
       })
       seen.add(personId)
     }
@@ -306,22 +343,14 @@ export class PayItems {
       changes,
       policies,
       runs: await Promise.all(
-        runs.map(async (r) => ({
-          ...r,
-          sourceStatus:
-            r.sourcesCurrent &&
-            r.data.setupFingerprint ===
-              (await fingerprint(r.data.groupId, changes, items, policies)) &&
-            r.data.ruleFingerprint ===
-              (await ruleFingerprint(
-                rules,
-                r.data.locationStates,
-                r.data.periodStart,
-                r.data.periodEnd,
-              ))
-              ? 'current'
-              : 'changed-repreview-required',
-        })),
+        runs.map(async (r) => {
+          const current = await runCurrency(r, changes, items, policies, rules)
+          return {
+            ...r,
+            sourceStatus:
+              current.setup && current.rules ? 'current' : 'changed-repreview-required',
+          }
+        }),
       ),
     }
   }
@@ -363,6 +392,14 @@ export class PayItems {
       objects: NonNullable<Sources['objects']> = [
         { kind: 'group', id: group.id, version: group.version, approved: true },
       ]
+    const assigned = (
+      await this.store.records
+        .statement(
+          'SELECT p.id,l.state_code AS state FROM env_people p JOIN env_locations l ON l.company_id=p.company_id AND l.id=p.location_id WHERE p.company_id=?',
+          [actor.company],
+        )
+        .all<{ id: string; state: string }>()
+    ).results
     for (const member of group.data.people) {
       const work = latest(
         await this.store.list<WorkDay>(actor, 'work', member.id, true, false),
@@ -471,6 +508,15 @@ export class PayItems {
         objects.push({ kind: 'pay-change', id: c.id, version: c.version, approved: true })
         details.push(`${c.data.name} v${c.version}, effective ${c.data.effectiveDate}`)
       }
+      // Employment ending inside the period is final pay with its own work-state deadline.
+      const last = [...used.values()].sort((x, y) => y.data.effectiveDate.localeCompare(x.data.effectiveDate))[0]
+      const terms = last?.data.items.find((p) => p.personId === member.id)
+      if (terms) {
+        const final = finalPayCheck({ state: assigned.find((p) => p.id === member.id)?.state ?? '',
+          separation: terms.separation ?? 'none', lastDay: terms.employmentThrough, periodStart, periodEnd, payDate })
+        details.push(...final.details)
+        for (const hold of final.holds) holds.push({ personId: member.id, ...hold })
+      }
       for (const item of items) {
         if (!effective(item, payDate)) {
           if (item.data.effectiveDate <= payDate)
@@ -510,7 +556,7 @@ export class PayItems {
       holds.push({
         personId: member.id,
         reason:
-          'Gross-to-net, overtime/premiums, legal deduction limits and complete jurisdiction tax treatment are not implemented. This earnings preview cannot be approved or dispatched as payroll.',
+          'Gross-to-net, overtime/premiums, legal deduction limits and complete jurisdiction tax treatment are not implemented. A person may approve this exact version, but it cannot be released, paid or dispatched as payroll.',
       })
       people.push({
         id: member.id,
@@ -525,14 +571,6 @@ export class PayItems {
     const sum = (
       field: 'taxableCashCents' | 'reimbursementCents' | 'afterTaxDeductionCents',
     ) => people.reduce((s, p) => s + p[field], 0)
-    const assigned = (
-      await this.store.records
-        .statement(
-          'SELECT p.id,l.state_code AS state FROM env_people p JOIN env_locations l ON l.company_id=p.company_id AND l.id=p.location_id WHERE p.company_id=?',
-          [actor.company],
-        )
-        .all<{ id: string; state: string }>()
-    ).results
     const locationStates = [
       ...new Set(
         assigned
@@ -548,6 +586,19 @@ export class PayItems {
       false,
     )
     const selectedRules = periodRules(rules, locationStates, periodStart, periodEnd)
+    // Versions only: the run binds which bank record it would pay, never the account.
+    const banks = (
+      await this.store.records
+        .statement(
+          "SELECT person_id AS personId,version FROM env_private_records WHERE company_id=? AND kind='bank'",
+          [actor.company],
+        )
+        .all<{ personId: string; version: number }>()
+    ).results
+    const destinations = group.data.people.map((p) => ({
+      personId: p.id,
+      bankVersion: banks.find((b) => b.personId === p.id)?.version ?? 0,
+    }))
 
     const result: EarningsRun = {
       periodStart,
@@ -557,6 +608,7 @@ export class PayItems {
       groupId: group.id,
       people,
       holds,
+      destinations,
       grossCashCents: sum('taxableCashCents') + sum('reimbursementCents'),
       taxableCashCents: sum('taxableCashCents'),
       reimbursementCents: sum('reimbursementCents'),
@@ -598,6 +650,11 @@ export class PayItems {
         {
           people: group.data.people.map((p) => ({ id: p.id, version: p.version })),
           objects: unique,
+          // New work IDs for a payee and any approval-policy change are material.
+          reviewSets: await collectionPins(this.store, actor, [
+            ...group.data.people.map((p) => ({ kind: 'work' as Kind, personId: p.id, exceptId: '' })),
+            { kind: 'approval-policy', personId: '', exceptId: '' },
+          ]),
         },
       )),
       preview: result,

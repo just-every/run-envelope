@@ -10,6 +10,8 @@ import { TaxElectionCard, WithholdingPreview } from './tax-input-pages'
 import { LocalTaxCard } from './local-tax-page'
 import { PayChangeTerms } from './pay-change-terms'
 import { PayPolicyForm, PayPolicyTerms } from './pay-policy-form'
+import { ApprovalPolicyForm, RunApproval } from './run-approval-pages'
+import type { ApprovalPolicy, RunApprovalStatus } from './run-approvals'
 const NamedSelect = ({
   name,
   label,
@@ -553,6 +555,7 @@ export function paySettingsPage(
   people: Person[],
   result: Awaited<ReturnType<import('./pay-items').PayItems['read']>>,
   preview?: import('./pay-items').EarningsRun,
+  approval?: { statuses: RunApprovalStatus[]; policies: import('./store').Revision<ApprovalPolicy>[] },
 ) {
   const base = companyPath(actor.company) + '/pay-settings'
   const revisions = (
@@ -773,9 +776,19 @@ export function paySettingsPage(
               {r.id} · v{r.version} · {r.sourceStatus}
             </h3>
             {run(r.data)}
+            <RunApproval
+              base={base}
+              run={r}
+              status={approval?.statuses.find((s) => s.runId === r.id && s.version === r.version)}
+            />
           </article>
         ))}
       </Card>
+      {approval && actor.grant.role === 'owner' && (
+        <Card title="Run approval policy">
+          <ApprovalPolicyForm base={base} policies={approval.policies} />
+        </Card>
+      )}
     </>,
   )
 }
