@@ -230,6 +230,22 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await approvedCa()
     await bank(c1, 1)
     await release(caRun, caVersion, 'run_destination_changed')
+    // Release and approval racing an edit: whichever lands first, the edit voids the version.
+    await approvedCa()
+    const raced = await Promise.all([
+      call(door + '/earnings-run/' + caRun + '/release', { version: caVersion }),
+      work(c1, 349, 'CA', 450, 2),
+    ])
+    assert.equal(raced[0].status, 409)
+    assert.ok(['run_not_payable', 'run_sources_changed'].includes((await raced[0].json()).error))
+    await release(caRun, caVersion, 'run_sources_changed')
+    caVersion = await run(caRun, caVersion, caSetup.group)
+    const racedReview = await review(caRun, 'approver-a')
+    await Promise.all([
+      call(door + '/earnings-run/' + caRun + '/approve', { version: caVersion, reviewToken: racedReview.reviewToken }, humans['approver-a'].cookie),
+      work(c1, 349, 'CA', 480, 3),
+    ])
+    await release(caRun, caVersion, 'run_sources_changed')
     await approvedCa()
 
     // A WA risk class or final FUTA edition voids only the runs it governs.
@@ -307,6 +323,9 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await release(tipRun, tipVersion, 'run_sources_changed')
     const audit = await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='run.approved'")
     assert.equal(audit[0].n, (await sql('SELECT COUNT(*) AS n FROM env_run_approvals'))[0].n, 'every approval is audited once')
+    const trail = (await data(base + '/audit')).filter((e) => e.action === 'run.approved')
+    assert.deepEqual([trail[0].actorId, trail[0].targetId, trail[0].version], [humans['approver-b'].id, tipRun, tipVersion],
+      'the audit door names the latest approver and exact version')
     console.log(
       'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; a WA risk class and final CA FUTA void only their runs; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
     )

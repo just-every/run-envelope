@@ -981,7 +981,7 @@
       "executable": false
     },
     "src/envelope/workspace/run-approval-pages.tsx": {
-      "sha256": "0fed15563a7bd88c3b06b690dfc749b0f30ca6fba425b970480a0ac6453c9bbe",
+      "sha256": "20bc44653e8a2340b07652d9238fc59cb43bd6321b4d8f88b1a385a92e919b47",
       "executable": false
     },
     "src/envelope/workspace/run-approvals.ts": {
@@ -2045,11 +2045,11 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "00d715f77d6320f3a707d5e232bf9c59bbe93f4ef2187dd5b6ae25b0812f42a6",
+      "sha256": "02dd1e084bfccdff9465243805c828d429063ef56c47ebc99652a4c9f1ba4257",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "f32d5e323b2ca6e5361b7508d3aee18418bd6bf47840f1a1d699474245ba8ee4",
+      "sha256": "8494549678b968b21ad39ef586073eec7484d337cee98da7fefb670a441a223b",
       "executable": false
     },
     "tests/runtime.mjs": {

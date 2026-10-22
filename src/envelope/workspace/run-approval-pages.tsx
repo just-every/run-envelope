@@ -178,7 +178,7 @@ export function runReviewPage(
       </div>
       <p>
         {row.approval.current} of {row.approval.required} current approval
-        {row.approval.required > 1 ? 's' : ''}. A second approval must come from a different person.
+        {row.approval.required > 1 ? 's. The second approval must come from a different person.' : '.'}
       </p>
       <form method="post" action={`${base}/earnings-run/${row.id}/approve`}>
         <Hidden name="version" value={row.version} />
