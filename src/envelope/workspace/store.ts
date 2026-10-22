@@ -6,6 +6,7 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind =
   | 'residence'
   | 'work'
+  | 'tip'
   | 'election'
   | 'tax-election'
   | 'local-tax-input'

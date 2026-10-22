@@ -16,8 +16,16 @@ date and frequency, every payee and person version, earnings, reimbursements,
 after-tax deductions, the approved setup it used, the period's rule editions, the
 known debit and `destinations`: each payee's bank-record version (0 when no
 account is on file). Bank details never enter the run. The version also pins
-the size of each payee's work collection and of the approval-policy collection,
-so an added work entry or any policy change is material.
+the size of each payee's work and tip collections and of the approval-policy
+collection, so an added work entry, an added tip or any policy change is material.
+
+POST `/people/{person}/allocations/tip` records one tip: `id`, prior `version`,
+`day`, `amountCents`, `settlement` (`cash`, already received by the worker, or
+`paycheck`, paid through payroll) and `furnishedCents`, money the worker actually
+gave the employer toward tax on tips (never more than the tip). Paycheck tips add
+to the known debit; cash tips do not. A run binds every tip version, so changing
+one tip's settlement type or furnished funds voids approval of the old version.
+Tax on tips and any uncollected tax are not calculated (ENV-009).
 
 ## Two-person threshold
 

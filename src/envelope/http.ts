@@ -25,6 +25,7 @@ import { Schedules } from './workspace/schedules'
 import { PayItems } from './workspace/pay-items'
 import { PayPolicies } from './workspace/pay-policies'
 import { RunApprovals, type ApprovalPolicy } from './workspace/run-approvals'
+import { Tips } from './workspace/tips'
 import { runReviewPage, releaseRefusalPage } from './workspace/run-approval-pages'
 import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
@@ -611,10 +612,11 @@ export async function payrollResponse(
         } else if (
           post &&
           tail.length === 4 &&
-          ['residence', 'work', 'election', 'tax-election', 'local-tax-input'].includes(tail[3])
+          ['residence', 'work', 'election', 'tax-election', 'local-tax-input', 'tip'].includes(tail[3])
         ) {
           const saved = tail[3] === 'tax-election' ? await new TaxElections(allocations.store).save(actor,personId,value) :
-            tail[3] === 'local-tax-input' ? await new LocalTaxInputs(allocations.store).save(actor,personId,value) : await allocations.save(
+            tail[3] === 'local-tax-input' ? await new LocalTaxInputs(allocations.store).save(actor,personId,value) :
+            tail[3] === 'tip' ? await new Tips(allocations.store).save(actor,personId,value) : await allocations.save(
             actor,
             personId,
             tail[3] as 'residence' | 'work' | 'election',

@@ -273,10 +273,42 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await data(door + '/pay-change/' + caSetup.change.id + '/withdraw', { version: 2 })
     await release(caRun, caVersion, 'run_sources_changed')
     await capture('run-approval-voided', screen)
+
+    // Each tip's settlement type and employee-furnished funds bind the approved version.
+    const t1 = await person('Synthetic Seattle bartender', wa)
+    const tipSetup = await setup(370, 'Seattle tipped crew', [t1])
+    await work(t1, 372, 'WA')
+    await bank(t1, 0)
+    const tip = (n, settlement, amountCents, furnishedCents, version = 0) =>
+      data(base + '/people/' + t1.id + '/allocations/tip', { id: 'synthetic-envelope-' + n, version, day: '2026-03-02',
+        amountCents, settlement, furnishedCents, sourceRef: 'synthetic-envelope-tip-' + n }, 201)
+    await tip(373, 'cash', 5000, 1000)
+    await tip(374, 'paycheck', 3000, 0)
+    const tipRun = 'synthetic-envelope-375'
+    let tipVersion = await run(tipRun, 0, tipSetup.group)
+    const tipData = async () => (await data(door)).runs.find((r) => r.id === tipRun).data
+    let tipped = await tipData()
+    assert.equal(tipped.grossCashCents, 23000, 'paycheck tips are paid; cash tips were already received')
+    assert.deepEqual([tipped.people[0].cashTipsCents, tipped.people[0].paycheckTipsCents, tipped.people[0].tipFundsCents], [5000, 3000, 1000])
+    await approve(tipRun, 'approver-b')
+    await release(tipRun, tipVersion, 'run_not_payable')
+    await tip(374, 'cash', 3000, 0, 1)
+    await release(tipRun, tipVersion, 'run_sources_changed')
+    tipVersion = await run(tipRun, tipVersion, tipSetup.group)
+    tipped = await tipData()
+    assert.equal(tipped.grossCashCents, 20000, 'a revised payout is a new version')
+    await release(tipRun, tipVersion, 'approval_required')
+    page = await capture('run-tip-binding', screen + '/earnings-run/' + tipRun + '/review', 'approver-b')
+    assert.ok((await page.locator('main').innerText()).includes('$30.00 cash, employee-furnished funds $0.00'))
+    await page.getByRole('button', { name: 'Approve this exact run version', exact: true }).click()
+    await page.waitForURL(origin + screen)
+    await release(tipRun, tipVersion, 'run_not_payable')
+    await tip(373, 'cash', 5000, 1500, 1)
+    await release(tipRun, tipVersion, 'run_sources_changed')
     const audit = await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='run.approved'")
     assert.equal(audit[0].n, (await sql('SELECT COUNT(*) AS n FROM env_run_approvals'))[0].n, 'every approval is audited once')
     console.log(
-      'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant edits and setup withdrawal void approval; a WA risk class and final CA FUTA void only their runs; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
+      'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; a WA risk class and final CA FUTA void only their runs; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
     )
   } finally {
     await browser.close()

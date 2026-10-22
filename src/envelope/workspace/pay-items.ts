@@ -18,6 +18,7 @@ import { payChangeDiff } from './pay-change-diff'
 import { reviewInputSets, collectionPins } from './review-inputs'
 import { salaryDay, type ProrationPolicy, type SalarySetup } from './proration'
 import { finalPayCheck, separations, type Separation } from './final-pay'
+import type { TipEntry } from './tips'
 import { periodRules, ruleFingerprint, type PayrollRule } from './rules'
 
 export interface Group {
@@ -68,6 +69,10 @@ export interface EarningsRun {
     taxableCashCents: number
     reimbursementCents: number
     afterTaxDeductionCents: number
+    /** Already received by the worker: wages for tax, never paid again. */
+    cashTipsCents: number
+    paycheckTipsCents: number
+    tipFundsCents: number
     details: string[]
   }[]
   holds: { personId: string; code?: string; reason: string }[]
@@ -504,6 +509,21 @@ export class PayItems {
       let taxable = earnings,
         reimbursement = 0,
         deductions = 0
+      // Each tip's settlement type and furnished funds are part of the exact version.
+      const tips = latest(await this.store.list<TipEntry>(actor, 'tip', member.id, true, false))
+        .filter((t) => t.data.day >= periodStart && t.data.day <= periodEnd)
+      const tipped = { cash: 0, paycheck: 0, funds: 0 }
+      for (const t of tips) {
+        tipped[t.data.settlement] += t.data.amountCents
+        tipped.funds += t.data.furnishedCents
+        objects.push({ kind: 'tip', id: t.id, version: t.version })
+        details.push(`Tip ${t.data.day} v${t.version}: $${(t.data.amountCents / 100).toFixed(2)} ${t.data.settlement}` +
+          `, employee-furnished funds $${(t.data.furnishedCents / 100).toFixed(2)}`)
+      }
+      taxable += tipped.paycheck
+      if (tips.length)
+        holds.push({ personId: member.id,
+          reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-009).' })
       for (const c of used.values()) {
         objects.push({ kind: 'pay-change', id: c.id, version: c.version, approved: true })
         details.push(`${c.data.name} v${c.version}, effective ${c.data.effectiveDate}`)
@@ -556,7 +576,7 @@ export class PayItems {
       holds.push({
         personId: member.id,
         reason:
-          'Gross-to-net, overtime/premiums, legal deduction limits and complete jurisdiction tax treatment are not implemented. A person may approve this exact version, but it cannot be released, paid or dispatched as payroll.',
+          'Gross-to-net, overtime/premiums, legal deduction limits and complete jurisdiction tax treatment are not implemented, so this version cannot be released, paid or dispatched as payroll.',
       })
       people.push({
         id: member.id,
@@ -565,6 +585,9 @@ export class PayItems {
         taxableCashCents: taxable,
         reimbursementCents: reimbursement,
         afterTaxDeductionCents: deductions,
+        cashTipsCents: tipped.cash,
+        paycheckTipsCents: tipped.paycheck,
+        tipFundsCents: tipped.funds,
         details,
       })
     }
@@ -652,7 +675,7 @@ export class PayItems {
           objects: unique,
           // New work IDs for a payee and any approval-policy change are material.
           reviewSets: await collectionPins(this.store, actor, [
-            ...group.data.people.map((p) => ({ kind: 'work' as Kind, personId: p.id, exceptId: '' })),
+            ...group.data.people.flatMap((p) => (['work', 'tip'] as Kind[]).map((kind) => ({ kind, personId: p.id, exceptId: '' }))),
             { kind: 'approval-policy', personId: '', exceptId: '' },
           ]),
         },

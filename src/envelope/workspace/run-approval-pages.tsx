@@ -59,7 +59,12 @@ export const RunApproval = ({
   run: Revision<EarningsRun>
   status?: RunApprovalStatus
 }) =>
-  status ? (
+  run.data.holds.some((h) => h.code?.startsWith('proration-')) ? (
+    <p>
+      Not approvable: salary proration previews stay preview-only until stricter work-state and
+      final-pay rules exist. Nothing can be released from this version.
+    </p>
+  ) : status ? (
     <div>
       <h4>Approval of v{run.version}</h4>
       <p>
@@ -158,6 +163,9 @@ export function runReviewPage(
             reimbursement {dollars(p.reimbursementCents)} · after-tax deductions{' '}
             {dollars(p.afterTaxDeductionCents)}
           </p>
+          {p.details.map((d, i) => (
+            <p key={i}>{d}</p>
+          ))}
         </article>
       ))}
       <div role="status">
