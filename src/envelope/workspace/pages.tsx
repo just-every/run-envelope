@@ -6,6 +6,7 @@ import type { Allocations } from './allocations'
 import { Schedules, payFrequencies, timeZones } from './schedules'
 import { Rules, ruleFamilies } from './rules'
 import { states } from '../setup'
+import { PayPolicyForm } from './pay-policy-form'
 const NamedSelect = ({
   name,
   label,
@@ -545,7 +546,7 @@ export function paySettingsPage(
 ) {
   const base = companyPath(actor.company) + '/pay-settings'
   const revisions = (
-    kind: 'group' | 'pay-item' | 'pay-change',
+    kind: 'group' | 'pay-item' | 'pay-change' | 'proration-policy',
     rows: import('./store').Revision[],
   ) =>
     rows.map((r) => (
@@ -612,7 +613,7 @@ export function paySettingsPage(
         <h3>Unresolved before payroll</h3>
         {r.holds.map((h, i) => (
           <p key={i}>
-            {people.find((p) => p.id === h.personId)?.name ?? 'Worker'}: {h.reason}
+            {people.find((p) => p.id === h.personId)?.name ?? 'Worker'}: {h.code && <strong>{h.code}: </strong>}{h.reason}
           </p>
         ))}
       </div>
@@ -660,6 +661,12 @@ export function paySettingsPage(
           </fieldset>
           <Submit>Propose payroll group</Submit>
         </form>
+      </Card>
+      <Card title="Salary proration policies">
+        <p>Choose a method for each pay group and effective date. Calendar-day previews without a chosen policy remain under a named hold. Every salary preview still requires work-state and payroll review.</p>
+        {!result.policies.length && <p>No human-chosen proration policy yet.</p>}
+        {revisions('proration-policy', result.policies as unknown as import('./store').Revision[])}
+        <PayPolicyForm base={base} groups={groupIds.map((id) => ({id, name: result.groups.find((g) => g.id === id)!.data.name}))} />
       </Card>
       <Card title="Custom and recurring pay items">
         {!result.items.length && <p>No pay items yet.</p>}
@@ -717,7 +724,7 @@ export function paySettingsPage(
         <p>
           Use the documented API to prepare a bulk change from current worker records. It
           retains every person's source version, effective rate, salary/hourly basis,
-          employment dates and unpaid dates for exact human review.
+          exemption classification, employment dates and coded unpaid leave for exact human review. Untyped unpaid dates never authorize salary deductions.
         </p>
       </Card>
       <Card title="Preview and retain earnings">

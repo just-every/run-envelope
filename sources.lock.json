@@ -145,7 +145,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "83899c59d6530daacfbdbfad73770b49995141008026d56744e385c94f3f519b",
+      "sha256": "911c67c56476189c2d63388d36121768b1b18d9ef7a1a012fff8a275d3d37ce1",
       "executable": false
     },
     "AGENTS.md": {
@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "46015ed9f3d903fc54991f017f4216aa817e4c58fffc41a9c6ddba511e21bbea",
+      "sha256": "2b7389a3e145b3963c306403431f3d396185efd7f89ca895759877431f48b246",
       "executable": false
     },
     "deploy-demo.json": {
@@ -197,7 +197,7 @@
       "executable": false
     },
     "docs/payroll-pay-items.md": {
-      "sha256": "91272c8024163b6d0e09a4cdec30cbad33516823ff288cb49df587aded0f0b5a",
+      "sha256": "67d409d064771c6eaae1983b971b4ae9cbda8b0f8bf693bcb4b9889736dc739b",
       "executable": false
     },
     "docs/payroll-records.md": {
@@ -857,7 +857,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "310e787f5887821c751eab090479f6d381c67c1103b90cb1be2d284261a7fb0f",
+      "sha256": "301bf2cb60d0b6fd18605395954cb8cc843a170739f12b860eb285e9a120437a",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -897,11 +897,11 @@
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "e10c2cb55623fedb9c4431d14a1f09a3364ddfae310be79e7bf74d56f0d5567e",
+      "sha256": "109573830cc5530a54873d3f015db3ed94dfd9b8676beeaea41c52263dcea672",
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "1bdfcbf810c52f5aea2f0711fd35525f890135b428f98aefdd3356e4dc2e14cb",
+      "sha256": "f27bdcc90421b32ea3dc3148c6ae4712fc900954dfa064b09d099d4ef531c0f0",
       "executable": false
     },
     "src/envelope/workspace/rules.ts": {
@@ -913,7 +913,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "5a9ec6af15551a53a6659d2f04e302c7a72a1b3729ac22bcc6d04e7fe149c2d9",
+      "sha256": "fbdf70bc09ec1036da26d588f805dc899cc62c08f70ea343f29d4bc5188c85cb",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -1953,7 +1953,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "fa453755eeeb14a8671ba4ce2158604c171964a66c087f67a27d9722ad9c5d01",
+      "sha256": "27bb6d7816e9a82d47dfaa5c859d20665cd144f237c737ef98708fca6cf327be",
       "executable": false
     },
     "tests/runtime.mjs": {

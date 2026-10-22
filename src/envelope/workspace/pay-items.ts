@@ -14,6 +14,7 @@ import {
 } from './store'
 import { addDays } from './schedules'
 import type { WorkDay } from './allocations'
+import { salaryDay, type ProrationPolicy, type SalarySetup } from './proration'
 import { periodRules, ruleFingerprint, type PayrollRule } from './rules'
 
 export interface Group {
@@ -45,6 +46,8 @@ export interface PayChange {
     employmentFrom: string
     employmentThrough: string
     unpaidDates: string[]
+    salaryType: SalarySetup['salaryType']
+    unpaidLeave: SalarySetup['unpaidLeave']
   }[]
 }
 export interface EarningsRun {
@@ -62,7 +65,7 @@ export interface EarningsRun {
     afterTaxDeductionCents: number
     details: string[]
   }[]
-  holds: { personId: string; reason: string }[]
+  holds: { personId: string; code?: string; reason: string }[]
   grossCashCents: number
   taxableCashCents: number
   reimbursementCents: number
@@ -90,10 +93,11 @@ const fingerprint = (
   groupId: string,
   changes: Revision<PayChange>[],
   items: Revision<PayItem>[],
+  policies: Revision<ProrationPolicy>[] = [],
 ) =>
   digest(
     JSON.stringify(
-      [...changes, ...items]
+      [...changes, ...items, ...policies]
         .filter((r) => r.data.groupId === groupId)
         .map((r) => [
           r.kind,
@@ -222,6 +226,21 @@ export class PayItems {
         new Set(unpaidDates).size !== unpaidDates.length
       )
         throw new PayrollError('invalid_employment_period')
+      let leave: unknown = item.unpaidLeave ?? []
+      if (typeof leave === 'string') {
+        try { leave = JSON.parse(leave) } catch { throw new PayrollError('invalid_unpaid_leave') }
+      }
+      if (!Array.isArray(leave) || leave.length > 366) throw new PayrollError('invalid_unpaid_leave')
+      const unpaidLeave: SalarySetup['unpaidLeave'] = leave.map((raw) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new PayrollError('invalid_unpaid_leave')
+        const l = raw as Input, minutes = integer(l.minutes)
+        if (minutes > 1440) throw new PayrollError('invalid_unpaid_leave')
+        return { day: date(l.day), minutes,
+          reason: choice(l.reason, ['personal', 'sickness-plan', 'fmla', 'other']) as SalarySetup['unpaidLeave'][number]['reason'],
+          evidenceRef: optional(l.evidenceRef, 500) }
+      })
+      if (new Set(unpaidLeave.map((l) => l.day)).size !== unpaidLeave.length)
+        throw new PayrollError('duplicate_leave_date')
       items.push({
         personId,
         personVersion: person.version,
@@ -231,6 +250,8 @@ export class PayItems {
         employmentFrom,
         employmentThrough,
         unpaidDates,
+        unpaidLeave,
+        salaryType: choice(item.salaryType ?? 'unverified', ['exempt', 'nonexempt', 'unverified']) as SalarySetup['salaryType'],
       })
       seen.add(personId)
     }
@@ -270,17 +291,19 @@ export class PayItems {
       true,
       false,
     )
+    const policies = await this.store.list<ProrationPolicy>(actor, 'proration-policy', undefined, true)
     return {
       groups,
       items,
       changes,
+      policies,
       runs: await Promise.all(
         runs.map(async (r) => ({
           ...r,
           sourceStatus:
             r.sourcesCurrent &&
             r.data.setupFingerprint ===
-              (await fingerprint(r.data.groupId, changes, items)) &&
+              (await fingerprint(r.data.groupId, changes, items, policies)) &&
             r.data.ruleFingerprint ===
               (await ruleFingerprint(
                 rules,
@@ -323,6 +346,8 @@ export class PayItems {
         false,
       ),
       allItems = await this.store.list<PayItem>(actor, 'pay-item', undefined, true, false)
+    const allPolicies = await this.store.list<ProrationPolicy>(actor, 'proration-policy', undefined, true, false)
+    const policies = allPolicies.filter((p) => p.data.groupId === group.id)
     const changes = latest(allChanges).filter((c) => c.data.groupId === group.id),
       items = latest(allItems).filter((i) => i.data.groupId === group.id)
     const people: EarningsRun['people'] = [],
@@ -380,15 +405,32 @@ export class PayItems {
         }
         used.set(current.id, current)
         const setup = current.data.items.find((p) => p.personId === member.id)!
-        if (
-          day < setup.employmentFrom ||
-          day > setup.employmentThrough ||
-          setup.unpaidDates.includes(day)
-        )
-          continue
-        if (setup.basis === 'annual-salary')
-          add(BigInt(setup.rateCents), BigInt(periods * days))
-        else {
+        if (setup.basis === 'annual-salary') {
+          const applicable = latest(policies.filter((p) => p.data.effectiveDate <= day))
+            .sort((a, b) => b.data.effectiveDate.localeCompare(a.data.effectiveDate) || b.createdAt - a.createdAt)
+          const proposed = applicable[0]
+          const policy = proposed && effective(proposed, day) &&
+            !(applicable[1]?.data.effectiveDate === proposed.data.effectiveDate) ? proposed : undefined
+          if (!holds.some((h) => h.personId === member.id && h.code === 'proration-preview-only'))
+            holds.push({personId: member.id, code: 'proration-preview-only',
+              reason: 'Salary proration is preview-only. Stricter work-state rules, final-pay deadlines and complete payroll calculation require review; no salary preview can be approved, paid or dispatched.'})
+          if (policy) objects.push({kind: 'proration-policy', id: policy.id, version: policy.version, approved: true})
+          const calculated = salaryDay({ day, periodStart, periodEnd, periods,
+            setup: {...setup, salaryType: setup.salaryType ?? 'unverified', unpaidLeave: setup.unpaidLeave ?? []},
+            policy: policy?.data, workedMinutes: work.filter((w) => w.data.day === day).reduce((n, w) => n + w.data.minutes, 0) })
+          add(calculated.numerator, calculated.denominator)
+          if (calculated.detail) details.push(calculated.detail)
+          for (const hold of calculated.holds)
+            if (!holds.some((h) => h.personId === member.id && h.code === hold.code && h.reason === hold.reason))
+              holds.push({ personId: member.id, ...hold })
+          if (setup.salaryType === 'nonexempt')
+            for (const w of work.filter((w) => w.data.day === day))
+              objects.push({kind: 'work', id: w.id, version: w.version})
+          if (current.data.effectiveDate > periodStart && current.data.effectiveDate !== setup.employmentFrom)
+            holds.push({personId: member.id, code: 'proration-rate-change-review',
+              reason: 'Effective salary change within the period requires salary-basis and stricter work-state review before any reduction.'})
+        } else {
+          if (day < setup.employmentFrom || day > setup.employmentThrough || setup.unpaidDates.includes(day)) continue
           const entries = work.filter((w) => w.data.day === day)
           const minutes = entries.reduce((s, w) => s + w.data.minutes, 0)
           if (minutes > 1440) {
@@ -507,7 +549,7 @@ export class PayItems {
       taxAmounts: null,
       netPay: null,
       paymentReady: false,
-      setupFingerprint: await fingerprint(group.id, allChanges, allItems),
+      setupFingerprint: await fingerprint(group.id, allChanges, allItems, allPolicies),
       locationStates,
       ruleFingerprint: await ruleFingerprint(
         rules,
@@ -524,6 +566,8 @@ export class PayItems {
       })),
     }
     if (!persist) return result
+    if (objects.some((o) => objects.some((p) => p.kind === o.kind && p.id === o.id && p.version !== o.version)))
+      throw new PayrollError('conflicting_period_source_versions', 409)
     const unique = objects.filter(
       (o, i, a) => a.findIndex((x) => x.kind === o.kind && x.id === o.id) === i,
     )

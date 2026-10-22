@@ -9,6 +9,7 @@ export type Kind =
   | 'schedule'
   | 'pay-item'
   | 'pay-change'
+  | 'proration-policy'
   | 'rule'
   | 'group'
   | 'earnings-run'

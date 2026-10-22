@@ -21,6 +21,7 @@ import {
 } from './workspace/pages'
 import { Schedules } from './workspace/schedules'
 import { PayItems } from './workspace/pay-items'
+import { PayPolicies } from './workspace/pay-policies'
 import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
 import { PayrollError } from './security'
@@ -398,14 +399,16 @@ export async function payrollResponse(
         } else if (
           post &&
           tail.length === 2 &&
-          ['group', 'pay-item', 'pay-change'].includes(tail[1])
+          ['group', 'pay-item', 'pay-change', 'proration-policy'].includes(tail[1])
         ) {
           const saved =
             tail[1] === 'group'
               ? await pay.group(actor, value)
               : tail[1] === 'pay-item'
                 ? await pay.item(actor, value)
-                : await pay.change(actor, value)
+                : tail[1] === 'proration-policy'
+                  ? await new PayPolicies(store, pay).save(actor, value)
+                  : await pay.change(actor, value)
           response = ui ? redirect(base + '/pay-settings') : json(saved, 201)
         } else if (post && tail.join('/') === 'pay-settings/preview') {
           const result = await pay.preview(actor, value)
@@ -422,18 +425,22 @@ export async function payrollResponse(
         } else if (post && tail.join('/') === 'pay-settings/earnings-run') {
           const result = await pay.preview(actor, value, true)
           response = ui ? redirect(base + '/pay-settings') : json(result, 201)
+        } else if (post && tail.length === 4 && tail[1] === 'earnings-run' &&
+          ['approve', 'release'].includes(tail[3])) {
+          await store.find(actor, 'earnings-run', tail[2], undefined, true)
+          throw new PayrollError('proration_preview_not_payable', 409)
         } else if (
           !post &&
           tail.length === 4 &&
           tail[1] === 'review' &&
-          ['group', 'pay-item', 'pay-change'].includes(tail[2])
+          ['group', 'pay-item', 'pay-change', 'proration-policy'].includes(tail[2])
         ) {
           const row = await store.review(actor, tail[2] as Kind, tail[3])
           response = ui ? exactReviewPage(session, companies, actor, row) : json(row)
         } else if (
           post &&
           tail.length === 4 &&
-          ['group', 'pay-item', 'pay-change'].includes(tail[1]) &&
+          ['group', 'pay-item', 'pay-change', 'proration-policy'].includes(tail[1]) &&
           ['approve', 'withdraw'].includes(tail[3])
         ) {
           const result = await store.decide(

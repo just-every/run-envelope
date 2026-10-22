@@ -2266,7 +2266,7 @@ export async function payItemsJourney({ origin, cookie, sql }) {
           approved: true,
         })
       ).status,
-      404,
+      409,
       'uncalculated earnings cannot become approved payroll',
     )
     assert.equal(
@@ -2274,6 +2274,79 @@ export async function payItemsJourney({ origin, cookie, sql }) {
       404,
       'no pretend settlement or correction receipt route',
     )
+    // Salary methods are chosen by a person, effective dated and retained with the draft.
+    const policy = {
+      id: 'synthetic-envelope-120', version: 0, name: 'Workshop salary policy',
+      groupId: group.id, effectiveDate: '2026-01-01', method: 'calendar-days',
+      weekMinutes: [0, 480, 480, 480, 480, 480, 0], weekStartsOn: 1,
+    }
+    assert.ok(preview.holds.some((h) => h.code === 'proration-policy-required'))
+    await page.goto(origin + screen)
+    await page.getByLabel('Proration policy ID', {exact:true}).fill(policy.id)
+    await page.getByLabel('Proration policy name', {exact:true}).fill(policy.name)
+    await page.getByLabel('Proration effective date', {exact:true}).fill(policy.effectiveDate)
+    await page.getByRole('button', {name:'Propose proration policy',exact:true}).click()
+    await page.waitForURL(origin + screen)
+    await capture('proration-policy-review', screen + '/review/proration-policy/' + policy.id)
+    await page.getByRole('button', {name:'Approve this exact setup',exact:true}).click()
+    await page.waitForURL(origin + screen)
+    let salaryPreview = await data(door + '/preview', period)
+    assert.equal(salaryPreview.people.find((p) => p.id === a.id).earningsCents, 516129)
+    assert.ok(salaryPreview.people.find((p) => p.id === a.id).details.some((d) => /calendar-days/.test(d)))
+    await data(door + '/earnings-run', {...period,id:'synthetic-envelope-121',version:0},201)
+    await capture('salary-calendar-preview')
+    await data(door + '/proration-policy', {...policy,version:1,method:'scheduled-workdays'},201)
+    const proposed = await data(door + '/preview', period)
+    assert.ok(proposed.holds.some((h) => h.code === 'proration-policy-required'), 'an unreviewed method is not adopted')
+    await approve('proration-policy',policy.id)
+    salaryPreview = await data(door + '/preview', period)
+    assert.equal(salaryPreview.people.find((p) => p.id === a.id).earningsCents,500000,'11 of 22 scheduled workdays')
+    assert.ok(salaryPreview.people.find((p) => p.id === a.id).details.some((d) => /scheduled-workdays/.test(d)))
+    await data(door + '/earnings-run',{...period,id:'synthetic-envelope-122',version:0},201)
+    await capture('salary-workday-preview')
+    await data(door + '/proration-policy', {...policy,version:2,effectiveDate:'2026-02-01',method:'scheduled-hours'},201)
+    await approve('proration-policy',policy.id)
+    // An effective-dated revision preserves the prior method for earlier periods.
+    salaryPreview = await data(door + '/preview', period)
+    assert.equal(salaryPreview.people.find((p) => p.id === a.id).earningsCents,500000)
+    const february = await data(door + '/preview',{...period,periodStart:'2026-02-01',periodEnd:'2026-02-28',payDate:'2026-03-02'})
+    assert.equal(february.people.find((p) => p.id === a.id).earningsCents,1000000)
+    assert.ok(february.people.find((p) => p.id === a.id).details.some((d) => /scheduled-hours/.test(d)))
+    assert.ok(salaryPreview.holds.some((h) => h.code === 'proration-preview-only'))
+    const leaveItems = items.map((p) => ({...p,salaryType:'exempt'}))
+    leaveItems[0] = {...leaveItems[0],unpaidDates:['2026-01-17']}
+    await data(door + '/pay-change',{...change,version:1,items:leaveItems},201)
+    await approve('pay-change',change.id)
+    salaryPreview = await data(door + '/preview',period)
+    assert.equal(salaryPreview.people.find((p) => p.id === a.id).earningsCents,500000,'unpaid Saturday never deducts scheduled salary')
+    leaveItems[0] = {...leaveItems[0],unpaidLeave:[{day:'2026-01-20',minutes:240,reason:'personal',evidenceRef:'synthetic-envelope-124'}]}
+    await data(door + '/pay-change',{...change,version:2,items:leaveItems},201)
+    await approve('pay-change',change.id)
+    salaryPreview = await data(door + '/preview',period)
+    assert.equal(salaryPreview.people.find((p) => p.id === a.id).earningsCents,500000,'personal partial day is held without reducing salary')
+    assert.ok(salaryPreview.holds.some((h) => h.code === 'proration-leave-review'))
+    await data(door + '/earnings-run',{...period,id:'synthetic-envelope-125',version:0},201)
+    await capture('salary-personal-partial-held')
+    leaveItems[0].unpaidLeave[0].reason = 'fmla'
+    await data(door + '/pay-change',{...change,version:3,items:leaveItems},201)
+    await approve('pay-change',change.id)
+    salaryPreview = await data(door + '/preview',period)
+    assert.equal(salaryPreview.people.find((p) => p.id === a.id).earningsCents,477273,'FMLA half day is an exact half scheduled-day preview deduction')
+    assert.ok(!salaryPreview.holds.some((h) => h.code === 'proration-leave-review'))
+    await data(door + '/earnings-run',{...period,id:'synthetic-envelope-126',version:0},201)
+    await capture('salary-fmla-preview')
+    // All methods remain preview-only, including an explicitly human-chosen method.
+    const noEffects = await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions')
+    for (const action of ['approve','release']) {
+      const refusal = await call(door + '/earnings-run/synthetic-envelope-126/' + action,{version:1,approved:true})
+      assert.equal(refusal.status,409)
+      assert.deepEqual(await refusal.json(),{error:'proration_preview_not_payable'})
+    }
+    assert.deepEqual(await sql('SELECT COUNT(*) AS decisions FROM env_workspace_decisions'),noEffects)
+    assert.equal(salaryPreview.paymentReady,false)
+    const retained = (await data(door)).runs.find((r) => r.id === 'synthetic-envelope-121')
+    assert.equal(retained.data.people.find((p) => p.id === a.id).earningsCents,516129,'method and leave edits preserve original earnings')
+    assert.equal(retained.sourceStatus,'changed-repreview-required')
     // Current person-source changes invalidate the group and every dependent setup.
     const rate = await data(
       base + '/people/' + a.id + '/rates',

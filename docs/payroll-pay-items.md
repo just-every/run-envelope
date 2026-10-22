@@ -26,19 +26,44 @@ IRS reference: https://www.irs.gov/publications/p463 .
 POST `/pay-change` with `id`, `version`, `name`, `groupId`, `effectiveDate`, and
 `items`. Each item contains `personId`, current `personVersion`, `rateCents`,
 `basis` (`hourly` or `annual-salary`), `employmentFrom`, `employmentThrough`, and
-`unpaidDates` (ISO dates). Only reviewed group members may be included. Invalid
-codes, stale people and unreviewed/withdrawn groups refuse. The exact native
-review lists every person's proposed terms; it is a setup decision, not a payroll
-approval.
+`unpaidDates` (legacy ISO dates, never salary deduction authority). Salary setup
+also accepts `salaryType` (`exempt`, `nonexempt`, `unverified`) and `unpaidLeave`:
+`[{day, minutes, reason, evidenceRef}]`. Reasons are `personal`, `sickness-plan`,
+`fmla`, `other`. Only reviewed group members may be included. Invalid codes,
+stale people and unreviewed/withdrawn groups refuse. Setup review lists every
+person's terms; it is not payroll approval.
+
+POST `/proration-policy` with `id`, prior `version`, `name`, `groupId`,
+`effectiveDate`, `method` (`calendar-days`, `scheduled-workdays`,
+`scheduled-hours`), `weekMinutes` (seven scheduled minute counts Sunday through
+Saturday), and `weekStartsOn` (0 Sunday through 6 Saturday). The native settings
+form creates the same proposal. Review/approve/withdraw follows the exact
+session-bound setup ceremony. A proposed policy never selects a payable method.
+An effective future revision retains earlier approved revisions for earlier dates.
+Overlapping policies with the same effective date require review; no arbitrary
+method wins. Policy revision/withdrawal invalidates dependent retained drafts.
 
 POST `/preview` with `groupId`, `periodStart`, `periodEnd`, `payDate`, `frequency`
 to calculate regular hourly/salaried earnings from effective approved setup.
-Hourly minutes come from persisted work inputs. Salary preview uses calendar-day
-proration within the chosen period and 52/26/24/12 annual periods, accumulating
-integer rational cents and rounding once per worker. Actual exempt/nonexempt,
-leave, holiday, overtime and jurisdiction compliance remain unresolved; no preview
-can be approved as payroll. Proposed proration is not permission for an unlawful
-salary deduction. A later clause must verify the employment policy and legal basis.
+Salary uses the chosen period basis and 52/26/24/12 annual periods, accumulating
+exact rational cents and rounding half-up once per worker. Details retain method,
+calendar/workday/hour denominator, rate, policy effective date and coded leave.
+For $120,000 annual salary and a Jan 16 hire, January previews $5,161.29 by
+calendar days and $5,000.00 by Monday-Friday workdays. A nonexempt salary uses
+actual work minutes against scheduled period minutes and identifies the input
+still owed to ENV-006's workweek regular-rate/overtime calculation.
+
+Without a chosen method, `proration-policy-required` holds the interim calendar
+preview. Unverified exemption has `proration-classification-review`. Untyped
+unpaid dates never reduce salary. Unscheduled leave deducts nothing. Evidenced
+whole scheduled personal/sickness-plan days and evidenced FMLA minutes can alter
+the exempt preview; personal partial days, unsupported reasons and conflicting
+work become `proration-leave-review`, preserving salary. These references are
+not verified signed leave or plan custody. Every salary preview also has
+`proration-preview-only`: stricter work-state law, full legal treatment and
+payroll remain unfinished. Mid-period salary changes require named review.
+No computed preview authorizes a deduction or money movement. Governing source:
+[29 CFR 541.602](https://www.ecfr.gov/current/title-29/subtitle-B/chapter-V/subchapter-A/part-541/subpart-G/section-541.602).
 
 POST `/earnings-run` with the same fields plus `id`/prior `version` retains an
 immutable draft with exact setup/work sources. GET the settings to reload it.
@@ -48,3 +73,9 @@ to undo approved setup for future preparation. Withdrawal cannot rewrite settled
 checks. True post-settlement corrections, lawful deduction limits, complete tax
 calculation and actual payable runs await their implementations and an authorized
 ENV-011/035/065 rail. There is deliberately no route accepting a claimed settlement.
+
+POST `/earnings-run/{id}/approve` or `/earnings-run/{id}/release` explicitly
+refuses with `proration_preview_not_payable` (409) and makes no decision or
+external request. This refusal covers the real retained earnings draft; it is
+not an approval/dispatch implementation. There is no client-supplied completion,
+settlement or receipt field that grants authority.
