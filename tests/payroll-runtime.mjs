@@ -2862,6 +2862,9 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     edge.modelMode='unavailable'
     await tool('notice.process',{companyId:company,noticeId},adminToken,503)
     assert.equal((await data(api+'/notices/'+noticeId)).analyses.length,1)
+    edge.modelMode='redirect'
+    await tool('notice.process',{companyId:company,noticeId},adminToken,503)
+    assert.equal(edge.calls.some(r=>r.url.includes('ungranted.example')),false,'provider redirects never forward credentials')
     edge.modelMode='tool'
     await tool('notice.process',{companyId:company,noticeId},adminToken,503)
     edge.modelMode='normal'
