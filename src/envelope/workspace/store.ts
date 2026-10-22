@@ -7,6 +7,8 @@ export type Kind =
   | 'residence'
   | 'work'
   | 'election'
+  | 'tax-election'
+  | 'local-tax-input'
   | 'schedule'
   | 'pay-item'
   | 'pay-change'

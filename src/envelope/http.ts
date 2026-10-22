@@ -8,6 +8,8 @@ import { providersPage, noticesPage, noticePage, replyReviewPage } from './notic
 import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
 import { WorkspaceStore } from './workspace/store'
+import { TaxElections } from './workspace/tax-elections'
+import { LocalTaxInputs } from './workspace/local-tax-inputs'
 import { Allocations } from './workspace/allocations'
 import {
   allocationsPage,
@@ -575,6 +577,7 @@ export async function payrollResponse(
             ? await allocations.preview(actor, personId, {
                 from: url.searchParams.get('from'),
                 through: url.searchParams.get('through'),
+                payDate:url.searchParams.get('payDate'),frequency:url.searchParams.get('frequency'),
               })
             : undefined
           const history = preview?.history ?? (await allocations.read(actor, personId))
@@ -587,9 +590,10 @@ export async function payrollResponse(
         } else if (
           post &&
           tail.length === 4 &&
-          ['residence', 'work', 'election'].includes(tail[3])
+          ['residence', 'work', 'election', 'tax-election', 'local-tax-input'].includes(tail[3])
         ) {
-          const saved = await allocations.save(
+          const saved = tail[3] === 'tax-election' ? await new TaxElections(allocations.store).save(actor,personId,value) :
+            tail[3] === 'local-tax-input' ? await new LocalTaxInputs(allocations.store).save(actor,personId,value) : await allocations.save(
             actor,
             personId,
             tail[3] as 'residence' | 'work' | 'election',

@@ -1705,9 +1705,123 @@ export async function allocationJourney({ origin, cookie, sql, settings }) {
     )
     const history = await data(door)
     assert.equal(history.work.length, 5, 'both versions and all source days remain')
+    // Resolve the deliberately introduced residence contradiction, retaining it in history.
+    await data(door + '/residence',{...residence,id:'synthetic-envelope-51',version:1,
+      from:'2026-03-14',through:'2026-03-14',psd:'880000'},201)
+    await data(door + '/residence',{...residence,id:'synthetic-envelope-42',version:1,
+      from:'2026-03-15',through:'2026-12-31',state:'PA',locality:'Pittsburgh',psd:'700102',schoolDistrict:'PITTSBURGH S D'},201)
+    await data(door + '/work',{...work,id:'synthetic-envelope-45',version:1,day:'2026-03-16',earnedCents:20002,psd:'880000',site:'outside-PA'},201)
+    const paDay={...work,id:'synthetic-envelope-46',version:2,day:'2026-03-17',state:'PA',locality:'Pittsburgh',
+      officeState:'NY',nyReason:'employer-necessity',evidence:'synthetic-envelope-149',psd:'700102',site:'home-office'}
+    await data(door + '/work',paDay,201)
+    const inputs={id:'synthetic-envelope-150',version:0,from:'2026-01-01',through:'2026-12-31',
+      state:'NJ',table:'A',allowances:0,additionalCents:0,evidenceRef:'synthetic-envelope-151'}
+    await data(door + '/tax-election',inputs,201)
+    await data(door + '/tax-election',{...inputs,id:'synthetic-envelope-152',state:'NY',filingStatus:'single'},201)
+    const marchQuery='?from=2026-03-01&through=2026-03-31&payDate=2026-04-02&frequency=monthly'
+    let calculated=await data(door+marchQuery)
+    assert.equal(calculated.totalWorkCents,60004)
+    assert.equal(calculated.allocatedWorkCents,60004,'calculation preserves source wages, without a balancing plug')
+    assert.equal(calculated.withholding.states.find((s) => s.state==='NJ').withholdingCents,300)
+    assert.equal(calculated.withholding.states.find((s) => s.state==='PA').withholdingCents,1228)
+    assert.equal(calculated.withholding.states.find((s) => s.state==='PA').reportWagesCents,40003)
+    assert.equal(calculated.withholding.states.find((s) => s.state==='NY').withholdingCents,0)
+    assert.equal(calculated.netPay,null)
+    assert.equal(calculated.paymentReady,false)
+    await capture('locations-state-withholding',screen+marchQuery)
+    await data(door+'/work',{...paDay,version:3,nyReason:'convenience'},201)
+    calculated=await data(door+marchQuery)
+    assert.equal(calculated.withholding.states.find((s) => s.state==='PA').withholdingCents,null,'foreign tax credit is never guessed')
+    assert.equal(calculated.withholding.states.find((s) => s.state==='NY').taxableWagesCents,20001)
+    await capture('locations-foreign-credit-held',screen+marchQuery)
+    await data(door+'/work',{...paDay,version:4},201)
+
+    // PA rounds aggregate ordinary wages once for a real payroll period.
+    for (const [id,day] of [[153,'2026-05-01'],[154,'2026-05-04']])
+      await data(door+'/work',{...work,id:'synthetic-envelope-'+id,day,state:'PA',locality:'Pittsburgh',
+        minutes:1,earnedCents:19,psd:'700102',site:'home-office'},201)
+    await page.goto(origin+screen)
+    await page.getByLabel('Withholding period starts',{exact:true}).fill('2026-05-01')
+    await page.getByLabel('Withholding period ends',{exact:true}).fill('2026-05-31')
+    await page.getByLabel('Actual withholding pay date',{exact:true}).fill('2026-06-01')
+    await page.getByLabel('Withholding pay frequency',{exact:true}).selectOption('monthly')
+    await page.getByRole('button',{name:'Calculate ordinary cash withholding',exact:true}).click()
+    await page.waitForURL((url) => url.searchParams.get('payDate')==='2026-06-01')
+    let tax=await data(door+'?from=2026-05-01&through=2026-05-31&payDate=2026-06-01&frequency=monthly')
+    assert.equal(tax.withholding.states.find((s) => s.state==='PA').withholdingCents,1,'38 cents × 3.07% rounds once, not one cent per row')
+    await capture('locations-pa-rounded',new URL(page.url()).pathname+new URL(page.url()).search)
+    const invalidBefore=await snapshot()
+    assert.equal((await request(door+'?from=2026-05-01&through=2026-05-20&payDate=2026-06-01&frequency=monthly')).status,400)
+    assert.deepEqual(await snapshot(),invalidBefore,'non-period input refuses before sensitive reads or writes')
+
+    const stateWorker=async (number,state,wages) => {
+      const p=await data(base+'/people',{name:'Synthetic '+state+' ordinary wage worker',locationId:location.id},201)
+      const d=base+'/people/'+p.id+'/allocations'
+      await data(d+'/residence',{...residence,id:'synthetic-envelope-'+number,from:'2026-01-01',through:'2026-12-31',
+        state,locality:state==='NY'?'Albany':'Newark',psd:state==='NJ'?'880000':''},201)
+      await data(d+'/work',{...work,id:'synthetic-envelope-'+(number+1),day:'2026-05-01',state,officeState:state,
+        locality:state==='NY'?'Albany':'Newark',earnedCents:wages,psd:state==='NJ'?'880000':'',site:state==='NJ'?'outside-PA':'unknown'},201)
+      return {person:p,door:d,screen:d.replace('/api/','/app/'),workId:'synthetic-envelope-'+(number+1)}
+    }
+    const ny=await stateWorker(160,'NY',40000)
+    await data(ny.door+'/tax-election',{...inputs,id:'synthetic-envelope-162',state:'NY',filingStatus:'single',allowances:3},201)
+    const weekly='?from=2026-04-27&through=2026-05-03&payDate=2026-05-08&frequency=weekly'
+    tax=await data(ny.door+weekly)
+    assert.equal(tax.withholding.states.find((s) => s.state==='NY').withholdingCents,801,'official weekly single $400 / 3 allowances example')
+    await capture('locations-ny-withholding',ny.screen+weekly)
+    await page.goto(origin+ny.screen+'?edit=tax-election&id=synthetic-envelope-162')
+    await page.getByLabel('Additional state withholding in cents',{exact:true}).fill('1000')
+    await page.getByRole('button',{name:'Record sourced state inputs',exact:true}).click()
+    await page.waitForURL(origin+ny.screen)
+    tax=await data(ny.door+weekly)
+    assert.equal(tax.withholding.states.find((s) => s.state==='NY').withholdingCents,1801)
+    assert.deepEqual((await data(ny.door)).taxElections.map((r) => r.data.additionalCents),[1000,0],'election history is immutable')
+    await capture('locations-tax-election-current',ny.screen+'?edit=tax-election&id=synthetic-envelope-162')
+    const nj=await stateWorker(170,'NJ',30000)
+    await data(nj.door+'/tax-election',{...inputs,id:'synthetic-envelope-172',allowances:1},201)
+    tax=await data(nj.door+weekly)
+    assert.equal(tax.withholding.states.find((s) => s.state==='NJ').withholdingCents,421,'official NJ A $300 / 1 allowance example')
+    await data(nj.door+'/work',{...work,id:nj.workId,version:1,day:'2026-05-01',earnedCents:70000},201)
+    tax=await data(nj.door+weekly)
+    assert.equal(tax.withholding.states.find((s) => s.state==='NJ').withholdingCents,1184,'official NJ A $700 / 1 allowance example')
+    await data(nj.door+'/work',{...work,id:nj.workId,version:2,day:'2026-05-01',earnedCents:37500},201)
+    await data(nj.door+'/tax-election',{...inputs,id:'synthetic-envelope-172',version:1,table:'B',allowances:3},201)
+    tax=await data(nj.door+weekly)
+    assert.equal(tax.withholding.states.find((s) => s.state==='NJ').withholdingCents,476,'official NJ B $375 / 3 allowances example')
+    await capture('locations-nj-withholding',nj.screen+weekly)
+
+    // Actual Pittsburgh sources, balances and cap; no automatic courtesy or duplicate LST.
+    const localPerson=await stateWorker(180,'PA',100000)
+    await data(localPerson.door+'/residence',{...residence,id:'synthetic-envelope-180',version:1,
+      from:'2026-01-01',through:'2026-12-31',state:'PA',locality:'Pittsburgh',psd:'700102',schoolDistrict:'PITTSBURGH S D'},201)
+    await data(localPerson.door+'/work',{...work,id:localPerson.workId,version:1,day:'2026-05-01',state:'PA',locality:'Pittsburgh',
+      earnedCents:100000,psd:'700102',site:'home-office'},201)
+    const localFacts={id:'synthetic-envelope-182',version:0,from:'2026-04-27',through:'2026-05-03',payDate:'2026-05-08',frequency:'weekly',
+      ordinaryCashOnly:true,employerState:'NJ',courtesyWithholding:'declined',courtesyElectionRef:'synthetic-envelope-183',
+      principalEmployer:'this',principalWorkPsd:'700102',principalEmploymentEvidenceRef:'synthetic-envelope-184',payrollPeriodsPerYear:52,
+      priorCollectedCents:5150,priorCollectionEvidenceRef:'synthetic-envelope-185',periodCollectedCents:0,periodCollectionEvidenceRef:'synthetic-envelope-186',
+      employerPittsburghYtdCents:1800000,ytdEvidenceRef:'synthetic-envelope-187',midyearEntry:'no',exemptionStatus:'none',exemptionCatchupPeriods:0}
+    await data(localPerson.door+'/local-tax-input',localFacts,201)
+    tax=await data(localPerson.door+weekly)
+    assert.equal(tax.withholding.states.find((s) => s.state==='PA').withholdingCents,3070)
+    assert.equal(tax.withholding.local.eitCents,3000)
+    assert.equal(tax.withholding.local.lstCents,50,'all-employer prior LST caps the actual current collection')
+    await capture('locations-pittsburgh-withholding',localPerson.screen+weekly)
+    await data(localPerson.door+'/local-tax-input',{...localFacts,version:1,priorCollectedCents:''},201)
+    tax=await data(localPerson.door+weekly)
+    assert.equal(tax.withholding.local.eitCents,3000,'unknown LST balance leaves independently known EIT intact')
+    assert.equal(tax.withholding.local.lstCents,null,'blank prior balance never means zero')
+    await capture('locations-lst-balance-held',localPerson.screen+weekly)
+    const taxGuard=await snapshot()
+    assert.equal((await request(nj.door+'/tax-election',{...inputs,id:'synthetic-envelope-189'},readerCookie)).status,403)
+    assert.deepEqual(await snapshot(),taxGuard,'state inputs inherit private tax write grants')
+    const storedTax=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('tax-election','local-tax-input')"))
+    assert.doesNotMatch(storedTax,/synthetic-envelope-18[3-7]|synthetic-envelope-151/)
+    const originalInputs=JSON.stringify((await data(door)).taxElections)
+    assert.equal(JSON.stringify((await data(door)).taxElections),originalInputs)
     await context.close()
     console.log(
-      'LOCATION-ALLOCATIONS passed: native residence entry; NJ-to-PA effective history; out-of-state wages; scoped NJ-165; NY convenience/necessity/unknown; PA-local and contradictory-source owned holds; exact cent bases; encrypted history; stale/cross-company refusals; 1440/390. Full tax/report calculation remains unproved.',
+      'LOCATION-ALLOCATIONS passed: native residence entry; NJ-to-PA effective history; out-of-state wages; scoped NJ-165; NY convenience/necessity/unknown; PA-local and contradictory-source owned holds; exact cent bases; encrypted history; stale/cross-company refusals; 1440/390. Official NJ/PA/NY ordinary-cash state tables and Pittsburgh EIT/LST previews, native sourced elections, period rounding, unknown balances and current source custody are exercised; full tax/report calculation remains unproved.',
     )
   } finally {
     await browser.close()

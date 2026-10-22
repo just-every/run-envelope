@@ -861,7 +861,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "301bf2cb60d0b6fd18605395954cb8cc843a170739f12b860eb285e9a120437a",
+      "sha256": "82583ddc4e8ca03873f85513360daf60fd6f5f726da7440f8e34472f07e69986",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -897,15 +897,19 @@
       "executable": false
     },
     "src/envelope/workspace/allocations.ts": {
-      "sha256": "0e1bb090e8f3cacaafe3299e4649a1f73eca6e68317f631fd7f614cd8b2868a4",
+      "sha256": "df6a9ea22a429bbebc436881f08ad5cd9583c4d93651530b20b332498f5f3c1a",
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "a9ce9579a54b0d8a00846120cafebe89e3ed61e107fa2b4e33c8d246af12c31f",
+      "sha256": "6b72ce869f27453d7d2e905111ce9f6032eb835a7c9017dc490f13cc986d92aa",
       "executable": false
     },
     "src/envelope/workspace/pay-change-diff.ts": {
       "sha256": "7dc5d526253b7f1a132b6655736b00ff8a1082db068b9def48eb7d18bc8e598d",
+      "executable": false
+    },
+    "src/envelope/workspace/pay-change-terms.tsx": {
+      "sha256": "da91dc77ba1dee53abb31f32c79c53e5050c9536316ae6453e91720be3e804e1",
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
@@ -937,7 +941,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "385fc5bc1a8577ea80cc0af42d6c7bcbfed84208db68f39f50ff6a502f6d50ec",
+      "sha256": "9bfeb04e7ecbe4ff9ef23777dff85a1586f303d59569bd4d4ed55a03d17a09ea",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -1977,7 +1981,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "e839b1031566f20977a11f4f686fafd902d82253cf2c52bb79124dad4a5a4fc0",
+      "sha256": "b529a8d9cbb93570d12efd0b4228c4358ff190341655b283e598f91c6eb467df",
       "executable": false
     },
     "tests/runtime.mjs": {

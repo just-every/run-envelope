@@ -2,6 +2,9 @@ import type { Input } from '../records'
 import { date, text, integer, PayrollError } from '../security'
 import { requireAction, type Actor } from '../access'
 import { states } from '../setup'
+import type { TaxElection } from './tax-elections'
+import { allocationTax, withholdingPeriod } from './allocation-tax'
+import type { LocalTaxInput } from './local-tax-inputs'
 import {
   WorkspaceStore,
   choice,
@@ -36,7 +39,7 @@ export const allocationRules = {
   local: {
     id: 'pa-local-eit',
     title: 'Pennsylvania DCED: local income tax requirements for employers',
-    url: 'https://dced.pa.gov/local-government/local-income-tax-information/local-income-tax-requirements-for-employers/',
+    url: 'https://dced.pa.gov/local-government/local-income-tax-information/instructions-employers/',
   },
 } as const
 export interface Residence {
@@ -44,6 +47,8 @@ export interface Residence {
   through: string
   state: string
   locality: string
+  psd?: string
+  schoolDistrict?: string
   evidence: string
   owner: string
   ownerId: string
@@ -52,6 +57,8 @@ export interface WorkDay {
   day: string
   state: string
   locality: string
+  psd?: string
+  site?: string
   minutes: number
   earnedCents: number
   officeState: string
@@ -78,6 +85,11 @@ const range = (input: Input) => {
   return { from, through }
 }
 const state = (v: unknown) => choice(v, states)
+const psd = (value:unknown) => {
+  const v=optional(value,6)
+  if (v && !/^\d{6}$/.test(v)) throw new PayrollError('invalid_psd_code')
+  return v
+}
 const current = <T>(rows: Revision<T>[]) =>
   rows.filter((r, i, a) => a.findIndex((x) => x.id === r.id) === i)
 export class Allocations {
@@ -100,6 +112,8 @@ export class Allocations {
         ...range(input),
         state: state(input.state),
         locality: text(input.locality, 120),
+        psd: psd(input.psd),
+        schoolDistrict:optional(input.schoolDistrict,120),
         evidence: text(input.evidence, 500),
         owner,
         ownerId,
@@ -125,6 +139,8 @@ export class Allocations {
         day: date(input.day),
         state: state(input.state),
         locality: text(input.locality, 120),
+        psd: psd(input.psd),
+        site:choice(input.site ?? 'unknown',['home-office','employer-worksite','outside-PA','unknown']),
         minutes,
         earnedCents,
         officeState,
@@ -165,13 +181,16 @@ export class Allocations {
     const residence = await this.store.list<Residence>(actor, 'residence', personId)
     const work = await this.store.list<WorkDay>(actor, 'work', personId, true)
     const elections = await this.store.list<Election>(actor, 'election', personId)
-    return { residence, work, elections, rules: allocationRules }
+    const taxElections = await this.store.list<TaxElection>(actor,'tax-election',personId,true)
+    const localInputs = await this.store.list<LocalTaxInput>(actor,'local-tax-input',personId,true)
+    return { residence, work, elections, taxElections, localInputs, rules: allocationRules }
   }
   async preview(actor: Actor, personId: string, input: Input) {
     const from = date(input.from),
       through = date(input.through)
     if (from > through || (Date.parse(through) - Date.parse(from)) / 86400000 > 366)
       throw new PayrollError('invalid_preview_period')
+    const period = withholdingPeriod(input)
     const history = await this.read(actor, personId)
     const holds: {
       day: string
@@ -190,6 +209,12 @@ export class Allocations {
       ruleIds: string[]
       sourceIds: string[]
       electionId: string | null
+      residencePsd: string
+      residenceSchoolDistrict: string
+      residencyCertificationRef: string
+      workPsd: string
+      site: string
+      physicalWorkEvidenceRef: string
     }[] = []
     const residents = current(history.residence),
       work = current(history.work).filter(
@@ -224,6 +249,9 @@ export class Allocations {
         )
         continue
       }
+      if (!row.sourcesCurrent || !rs[0].sourcesCurrent) {
+        hold('Worker source changed. Revalidate the effective work and residence records.'); continue
+      }
       const r = rs[0].data
       if (
         work.filter((x) => x.data.day === w.day).reduce((n, x) => n + x.data.minutes, 0) >
@@ -250,6 +278,9 @@ export class Allocations {
       if (applicable.length > 1) {
         hold('Contradictory overlapping reciprocity elections.')
         continue
+      }
+      if (applicable.some((e) => !e.sourcesCurrent)) {
+        hold('Worker source changed. Revalidate the recorded reciprocity election.'); continue
       }
       const e = applicable[0],
         bases: { state: string; basisCents: number; role: string }[] = [],
@@ -297,16 +328,23 @@ export class Allocations {
         ruleIds: [...new Set(ruleIds)],
         sourceIds: sources,
         electionId: e?.id ?? null,
+        residencePsd:r.psd ?? '',residenceSchoolDistrict:r.schoolDistrict ?? '',
+        residencyCertificationRef:r.evidence,workPsd:w.psd ?? '',site:w.site ?? 'unknown',
+        physicalWorkEvidenceRef:w.evidence || w.sourceRef,
       })
     }
+    const totalWorkCents = work.reduce((s, r) => s + r.data.earnedCents, 0)
+    const allocatedWorkCents = allocations.reduce((s, r) => s + r.earnedCents, 0)
+    const withholding = allocationTax(actor,period,allocations,totalWorkCents,allocatedWorkCents,history.taxElections,history.localInputs)
     return {
       from,
       through,
+      withholding,
       personId,
       allocations,
       holds,
-      totalWorkCents: work.reduce((s, r) => s + r.data.earnedCents, 0),
-      allocatedWorkCents: allocations.reduce((s, r) => s + r.earnedCents, 0),
+      totalWorkCents,
+      allocatedWorkCents,
       status: 'allocation-preview-only',
       paymentReady: false,
       taxAmounts: null,

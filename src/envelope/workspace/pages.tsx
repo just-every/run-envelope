@@ -6,6 +6,8 @@ import type { Allocations } from './allocations'
 import { Schedules, payFrequencies, timeZones } from './schedules'
 import { Rules, ruleFamilies } from './rules'
 import { states } from '../setup'
+import { TaxElectionCard, WithholdingPreview } from './tax-input-pages'
+import { LocalTaxCard } from './local-tax-page'
 import { PayChangeTerms } from './pay-change-terms'
 import { PayPolicyForm, PayPolicyTerms } from './pay-policy-form'
 const NamedSelect = ({
@@ -127,6 +129,9 @@ export function allocationsPage(
           </>
         )}
       </Card>
+      <WithholdingPreview base={base} preview={preview} />
+      <TaxElectionCard base={base} rows={history.taxElections} edit={edit} />
+      <LocalTaxCard base={base} rows={history.localInputs} edit={edit} />
       <Card title="Residence history">
         {!history.residence.length && (
           <p>
@@ -161,6 +166,8 @@ export function allocationsPage(
             choices={states}
             value={residence?.data.state}
           />
+          <Field name="psd" label="Residence PSD (PA local certification)" value={residence?.data.psd} required={false} maxLength={6} />
+          <Field name="schoolDistrict" label="Residence school district (official source row)" value={residence?.data.schoolDistrict} required={false} />
           <Field
             name="locality"
             label="Residence municipality / district"
@@ -203,6 +210,8 @@ export function allocationsPage(
             label="Work municipality / district"
             value={work?.data.locality}
           />
+          <Field name="psd" label="Worksite PSD (PA local certification)" value={work?.data.psd} required={false} maxLength={6} />
+          <Select name="site" label="Physical worksite type" choices={['unknown','home-office','employer-worksite','outside-PA']} value={work?.data.site} />
           <Field
             name="minutes"
             label="Actual work minutes"
