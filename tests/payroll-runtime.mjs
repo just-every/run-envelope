@@ -2051,7 +2051,7 @@ export async function payItemsJourney({ origin, cookie, sql }) {
         if (await policies.count()) await policies.screenshot({path:join(folder,`${label}-policy-${width}.png`)})
         const drafts = page.locator('section').filter({has:page.getByRole('heading',{name:'Immutable earnings drafts',exact:true})})
         if (await drafts.count() && await drafts.locator('article').count())
-          await drafts.locator(':scope > .field > article').last().screenshot({path:join(folder,`${label}-last-draft-${width}.png`)})
+          await drafts.locator(':scope > .field > article').first().screenshot({path:join(folder,`${label}-last-draft-${width}.png`)})
       }
     }
     await capture('pay-settings-empty')
@@ -2363,6 +2363,45 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     const retained = (await data(door)).runs.find((r) => r.id === 'synthetic-envelope-121')
     assert.equal(retained.data.people.find((p) => p.id === a.id).earningsCents,516129,'method and leave edits preserve original earnings')
     assert.equal(retained.sourceStatus,'changed-repreview-required')
+    // Compare the actual first scheduled period and bind its inputs until review.
+    for (const [index,person] of [a,b].entries()) await data(base + '/schedules',{
+      id:'synthetic-envelope-' + (130+index),version:0,name:person.name + ' monthly schedule',
+      personId:person.id,frequency:'monthly',timeZone:'America/New_York',periodStart:'2026-02-01',
+      payDate:'2026-03-02',holidayPolicy:'later',occupation:'executive',workState:'NY'
+    },201)
+    const raisedItems = hoursItems.map((p) => ({...p,rateCents:p.rateCents+1200000}))
+    await data(door + '/pay-change',{...change,version:5,effectiveDate:'2026-02-01',items:raisedItems},201)
+    let bulk = await data(door + '/review/pay-change/' + change.id)
+    const comparison = bulk.data.diff
+    assert.equal(comparison.people[0].firstPeriod.periodStart,'2026-02-01')
+    assert.equal(comparison.people[0].firstPeriod.payDate,'2026-03-02')
+    assert.equal(comparison.people[0].beforeEarningsCents,694444)
+    assert.equal(comparison.people[0].afterEarningsCents,763889)
+    assert.equal(comparison.people[0].deltaCents,69445)
+    assert.equal(comparison.people[1].beforeEarningsCents,27778)
+    assert.equal(comparison.people[1].afterEarningsCents,33333)
+    assert.equal(comparison.totals.beforeEarningsCents,722222)
+    assert.equal(comparison.totals.afterEarningsCents,797222)
+    assert.equal(comparison.totals.deltaCents,75000)
+    assert.equal(comparison.people[0].eligibility,'earnings-preview-only')
+    await capture('bulk-first-period-review',screen + '/review/pay-change/' + change.id)
+    // A new source ID is material even though no old pinned revision changed.
+    await data(base + '/people/' + b.id + '/allocations/work',{
+      id:'synthetic-envelope-132',version:0,day:'2026-02-21',state:'NY',locality:'New York City',
+      minutes:60,earnedCents:2500,officeState:'NY',nyReason:'not-applicable',sourceRef:'synthetic-envelope-133'
+    },201)
+    assert.equal((await call(door + '/pay-change/' + change.id + '/approve',{
+      version:bulk.version,reviewToken:bulk.reviewToken
+    })).status,409,'new input added after review invalidates the exact bulk comparison')
+    await data(door + '/pay-change',{...change,version:6,effectiveDate:'2026-02-01',items:raisedItems},201)
+    bulk = await data(door + '/review/pay-change/' + change.id)
+    assert.equal(bulk.data.diff.people[1].afterEarningsCents,37500,'re-preview includes newly recorded minutes')
+    await data(door + '/pay-change/' + change.id + '/approve',{version:bulk.version,reviewToken:bulk.reviewToken})
+    await data(door + '/earnings-run',{...hoursPeriod,id:'synthetic-envelope-134',version:0},201)
+    const applied = (await data(door)).runs.find((r) => r.id === 'synthetic-envelope-134')
+    assert.equal(applied.data.people.find((p) => p.id === a.id).earningsCents,763889)
+    assert.equal(applied.data.people.find((p) => p.id === b.id).earningsCents,37500)
+    await capture('bulk-applied-earnings')
     // Current person-source changes invalidate the group and every dependent setup.
     const rate = await data(
       base + '/people/' + a.id + '/rates',

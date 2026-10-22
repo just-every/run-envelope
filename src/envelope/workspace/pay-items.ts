@@ -14,6 +14,8 @@ import {
 } from './store'
 import { addDays } from './schedules'
 import type { WorkDay } from './allocations'
+import { payChangeDiff } from './pay-change-diff'
+import { reviewInputSets } from './review-inputs'
 import { salaryDay, type ProrationPolicy, type SalarySetup } from './proration'
 import { periodRules, ruleFingerprint, type PayrollRule } from './rules'
 
@@ -33,6 +35,7 @@ export interface PayItem {
   returnExcessBy: string
 }
 export interface PayChange {
+  diff?: Awaited<ReturnType<typeof payChangeDiff>>['diff']
   name: string
   groupId: string
   groupVersion: number
@@ -262,15 +265,20 @@ export class PayItems {
       effectiveDate,
       items,
     }
+    const proposalId = objectId(input.id)
+    const reviewSets = await reviewInputSets(this.store, actor, proposalId, items.map((p) => p.personId))
+    const comparison = await payChangeDiff(this.store, actor, data, proposalId)
+    data.diff = comparison.diff
     return this.store.append(
       actor,
       'pay-change',
-      objectId(input.id),
+      proposalId,
       revision(input.version),
       data,
       undefined,
       true,
       {
+        reviewSets,
         people: items.map((p) => ({ id: p.personId, version: p.personVersion })),
         objects: [
           { kind: 'group', id: group.id, version: group.version, approved: true },

@@ -1,4 +1,5 @@
 import type { Records, Input } from '../records'
+import { currentReviewInputs, reviewInputFence, type ReviewInputSet } from './review-inputs'
 import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
@@ -50,6 +51,7 @@ export const digest = async (value: string) =>
   ).join('')
 
 export interface Sources {
+  reviewSets?: ReviewInputSet[]
   people?: { id: string; version: number }[]
   objects?: { kind: Kind; id: string; version: number; approved?: boolean }[]
 }
@@ -57,6 +59,7 @@ const currentSources = (
   alias: string,
 ) => `NOT EXISTS(SELECT 1 FROM env_workspace_people sp WHERE sp.company_id=${alias}.company_id AND sp.kind=${alias}.kind AND sp.object_id=${alias}.object_id AND sp.version=${alias}.version
   AND NOT EXISTS(SELECT 1 FROM env_people p WHERE p.company_id=sp.company_id AND p.id=sp.person_id AND p.version=sp.person_version))
+  AND (EXISTS(SELECT 1 FROM env_workspace_decisions approved WHERE approved.company_id=${alias}.company_id AND approved.kind=${alias}.kind AND approved.object_id=${alias}.object_id AND approved.version=${alias}.version AND approved.decision='approved') OR ${currentReviewInputs(alias)})
   AND NOT EXISTS(SELECT 1 FROM env_workspace_dependencies dep WHERE dep.company_id=${alias}.company_id AND dep.kind=${alias}.kind AND dep.object_id=${alias}.object_id AND dep.version=${alias}.version
   AND ((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=dep.company_id AND sv.kind=dep.source_kind AND sv.object_id=dep.source_id)!=dep.source_version
     OR (dep.needs_approval=1 AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions sd WHERE sd.company_id=dep.company_id AND sd.kind=dep.source_kind AND sd.object_id=dep.source_id AND sd.version=dep.source_version AND sd.decision='approved'))
@@ -181,6 +184,7 @@ export class WorkspaceStore {
         OR (json_extract(src.value,'$.approved')=1 AND (
           NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='approved')
           OR EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='withdrawn'))))`
+    const reviewInputs = reviewInputFence(actor.company, sources.reviewSets ?? [])
     const sourceArgs = [
       JSON.stringify(pins),
       actor.company,
@@ -202,7 +206,7 @@ export class WorkspaceStore {
         SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
         AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?),0)=?
         ${person ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
-        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) ${sourceSql} RETURNING version`,
+        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) ${sourceSql} AND ${reviewInputs.sql} RETURNING version`,
         [
           actor.company,
           kind,
@@ -225,6 +229,7 @@ export class WorkspaceStore {
           id,
           person?.id ?? null,
           ...sourceArgs,
+          ...reviewInputs.args,
         ],
       ),
       this.records.statement(
@@ -236,6 +241,11 @@ export class WorkspaceStore {
         `INSERT INTO env_workspace_dependencies(company_id,kind,object_id,version,source_kind,source_id,source_version,needs_approval)
         SELECT ?,?,?,?,json_extract(value,'$.kind'),json_extract(value,'$.id'),json_extract(value,'$.version'),COALESCE(json_extract(value,'$.approved'),0) FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
         [actor.company, kind, id, version, JSON.stringify(deps), event],
+      ),
+      this.records.statement(
+        `INSERT INTO env_workspace_review_inputs(company_id,kind,object_id,version,source_kind,source_person_id,except_id,versions,decisions)
+        SELECT ?,?,?,?,json_extract(value,'$.kind'),json_extract(value,'$.personId'),json_extract(value,'$.exceptId'),json_extract(value,'$.versions'),json_extract(value,'$.decisions') FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
+        [actor.company,kind,id,version,JSON.stringify(sources.reviewSets ?? []),event],
       ),
       auditStatement(
         this.records.env,

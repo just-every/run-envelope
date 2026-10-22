@@ -91,9 +91,9 @@ export function salaryDay(input: SalaryDayInput): SalaryDayResult {
     return result()
   }
   if (!policy)
-    hold('proration-policy-required', `${day}: calendar-day preview only; choose an effective human-reviewed salary proration policy.`)
+    hold('proration-policy-required', 'Calendar-day preview only; choose an effective human-reviewed salary proration policy.')
   if (setup.salaryType !== 'exempt' && setup.salaryType !== 'nonexempt')
-    hold('proration-classification-review', `${day}: salary exemption is unverified; this is an earnings preview only.`)
+    hold('proration-classification-review', 'Salary exemption is unverified; this is an earnings preview only.')
 
   let scheduledDays = 0, scheduledMinutes = 0
   if (policy) {

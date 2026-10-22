@@ -549,7 +549,7 @@ export function paySettingsPage(
     kind: 'group' | 'pay-item' | 'pay-change' | 'proration-policy',
     rows: import('./store').Revision[],
   ) =>
-    rows.map((r) => (
+    rows.map((r, index) => (
       <article key={kind + r.id + ':' + r.version}>
         <h3>
           {String(r.data.name)} · v{r.version}
@@ -570,7 +570,7 @@ export function paySettingsPage(
             </a>
           </p>
         )}
-        {r.approvedBy && !r.withdrawnBy && (
+        {r.approvedBy && !r.withdrawnBy && rows.findIndex((x) => x.id === r.id) === index && (
           <form method="post" action={base + '/' + kind + '/' + r.id + '/withdraw'}>
             <Hidden name="version" value={r.version} />
             <Submit>
@@ -757,7 +757,7 @@ export function paySettingsPage(
       </Card>
       <Card title="Immutable earnings drafts">
         {!result.runs.length && <p>No earnings drafts yet.</p>}
-        {result.runs.map((r) => (
+        {[...result.runs].sort((a, b) => b.createdAt - a.createdAt).map((r) => (
           <article key={r.id + ':' + r.version}>
             <h3>
               {r.id} · v{r.version} · {r.sourceStatus}
