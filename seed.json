@@ -23,6 +23,31 @@
         "HTTP requests"
       ],
       "adapters": []
+    },
+    {
+      "id": "openai",
+      "required": false,
+      "why": "Owner-opted-in redacted tax-notice proposals only; never payroll calculation or approval",
+      "data": [
+        "redacted notice text"
+      ],
+      "adapters": [
+        "https://api.openai.com/v1/responses"
+      ]
+    },
+    {
+      "id": "resend",
+      "required": false,
+      "why": "Exact unexpired human-approved notice correspondence only",
+      "data": [
+        "approved sender",
+        "approved recipient",
+        "approved subject",
+        "approved redacted reply"
+      ],
+      "adapters": [
+        "https://api.resend.com/emails"
+      ]
     }
   ],
   "env": [],

@@ -2,6 +2,9 @@ import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
 import { AgentSettings, AgentTools } from './agents'
+import { Providers } from './providers'
+import { Notices, processNotice, dispatchReply } from './notices'
+import { providersPage, noticesPage, noticePage, replyReviewPage } from './notice-pages'
 import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
 import { WorkspaceStore } from './workspace/store'
@@ -71,7 +74,7 @@ async function input(request: Request): Promise<Input> {
       result: Input = {}
     for (const key of new Set(params.keys())) {
       const values = params.getAll(key)
-      result[key] = ['actions', 'fields', 'locations', 'people'].includes(key)
+      result[key] = ['actions', 'fields', 'locations', 'people', 'providers', 'models'].includes(key)
         ? values
         : values.length === 1
           ? values[0]
@@ -159,6 +162,18 @@ export async function payrollResponse(
         result = {
           tools: [
             {
+              name: 'credentials.rotate', action: 'rotate', description: 'Replace the current secret, only while the sponsored grant remains current. Old bearer stops immediately.',
+              properties: {}, required: [],
+            },
+            {
+              name: 'notice.process', action: 'notices:process', description: 'Extract an untrusted proposal from a saved notice using only the declared OpenAI model. Never approves or invokes model tools.',
+              properties: {companyId:{type:'string'},noticeId:{type:'string'}}, required:['companyId','noticeId'],
+            },
+            {
+              name: 'reply.dispatch', action: 'dispatch:execute', description: 'Dispatch only the exact latest unexpired human-approved notice reply through declared Resend. Rechecks current human and sponsor authority. Never approves, pays wages or files returns.',
+              properties: {companyId:{type:'string'},replyId:{type:'string'},version:{type:'integer'},digest:{type:'string'}}, required:['companyId','replyId','version','digest'],
+            },
+            {
               name: 'records.list',
               action: 'records:read',
               description: 'Read up to 100 scoped person records; no private values.',
@@ -200,7 +215,7 @@ export async function payrollResponse(
               required: ['companyId', 'draftId'],
             },
           ]
-            .filter((t) => scopes.includes(t.action))
+            .filter((t) => t.action === 'rotate' || scopes.includes(t.action))
             .map(({ name, description, properties, required }) => ({
               name,
               description,
@@ -225,7 +240,13 @@ export async function payrollResponse(
         if (!args || typeof args !== 'object' || Array.isArray(args))
           throw new PayrollError('invalid_mcp_request')
         const value =
-          params.name === 'records.list'
+          params.name === 'credentials.rotate'
+            ? Object.keys(args).length ? (() => {throw new PayrollError('invalid_input')})() : await agent.rotate()
+            : params.name === 'notice.process'
+              ? await processNotice(agent,args)
+              : params.name === 'reply.dispatch'
+                ? await dispatchReply(agent,args)
+                : params.name === 'records.list'
             ? await agent.records(args)
             : params.name === 'draft.prepare'
               ? await agent.prepare(args)
@@ -425,6 +446,43 @@ export async function payrollResponse(
           )
           response = ui ? redirect(base + '/pay-settings') : json(result)
         } else throw new PayrollError('not_found', 404)
+      } else if (tail.join('/') === 'providers') {
+        const providers = new Providers(records)
+        if (post) {
+          const result = await providers.save(actor,value)
+          response = ui ? redirect(base+'/providers') : json(result,201)
+        } else {
+          providers.owner(actor)
+          const result = await providers.list(actor)
+          response = ui ? providersPage(session,companies,actor,result) : json(result)
+        }
+      } else if (tail[0] === 'notices') {
+        const notices = new Notices(records)
+        if (tail.length===1 && post) {
+          const result = await notices.create(actor,value)
+          response = ui ? redirect(base+'/notices/'+result.id) : json(result,201)
+        } else if (tail.length===1 && !post) {
+          const result = await notices.list(actor)
+          response = ui ? noticesPage(session,companies,actor,await records.locations(actor),result) : json(result)
+        } else if (tail.length===2 && !post) {
+          const result = await notices.details(actor,tail[1])
+          response = ui ? noticePage(session,companies,actor,result) : json(result)
+        } else if (tail.length===3 && tail[2]==='replies' && post) {
+          const result = await notices.saveReply(actor,tail[1],value)
+          response = ui ? redirect(base+'/notices/'+tail[1]) : json(result,201)
+        } else throw new PayrollError('not_found',404)
+      } else if (tail[0] === 'notice-replies' && tail.length===3) {
+        const notices = new Notices(records)
+        if (tail[2]==='review' && !post) {
+          const result = await notices.review(actor,tail[1])
+          response = ui ? replyReviewPage(session,companies,actor,result) : json(result)
+        } else if (tail[2]==='approve' && post) {
+          const result = await notices.approve(actor,tail[1],value)
+          response = ui ? redirect(base+'/notices') : json(result)
+        } else if (tail[2]==='withdraw' && post) {
+          const result = await notices.withdraw(actor,tail[1],value)
+          response = ui ? redirect(base+'/notices') : json(result)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'agents') {
         const agents = new AgentSettings(records)
         if (tail.length === 1 && post) {
@@ -442,8 +500,13 @@ export async function payrollResponse(
                 actor,
                 await records.locations(actor),
                 grants,
+                await agents.policy(actor),
+                await new Providers(records).list(actor),
               )
             : json({ grants, access })
+        } else if (tail.join('/') === 'agents/policy' && post) {
+          const result = await agents.setPolicy(actor,value)
+          response = ui ? redirect(base+'/agents') : json(result)
         } else if (tail.join('/') === 'agents/access' && !post) {
           response = json(await agents.access(actor))
           response.headers.set(

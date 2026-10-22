@@ -1,92 +1,98 @@
-# Sponsored payroll preparation
+# Sponsored payroll and notice work
 
-Open **Agent credentials** in company settings. The current company owner can
-issue a named credential after fresh app-local email confirmation in the same
-browser. The sponsor is that person, never a client-supplied actor. A credential
-expires in 1–24 hours. Its secret appears once in the no-store response; only a
-keyed digest is stored separately from its historical declaration. Keep the
-secret out of URLs, logs, screenshots, notices and model context.
+Open **Agent credentials** in the company workspace. Any human whose current
+ENV-028 grant contains every delegated company, location, field and action can
+sponsor. This includes payroll admins and firm accountants; a role label alone
+adds no power. The owner can restrict sponsorship to owners. Non-owners see and
+revoke only their own credentials and access metadata. Owner sessions manage all
+company credentials. Base sessions and agent bearers never substitute for one
+another.
 
-The conservative initial policy is owner-only sponsorship with no model or data
-provider permissions. It is a partial ENV-052 implementation, pending policy
-approval and the remaining run/approval/dispatch work. No model is called by
-these tools. The maximum lifetime is not a claim that such a credential can
-approve or execute payroll. Future ENV-030/034/035/055 doors must preserve
-current sponsor, field/action/company/provider authority and exact human
-approval; this implementation does not satisfy those future doors.
+Fresh ten-minute app-local email proof in the same native session is required
+before minting. Use `POST /auth/step-up` with `action: credentials:mint` and the
+settings return path; complete the single-use confirmation in that browser.
+Client `mfa:true`, a dev flag or a cookie timestamp is not proof. Linked MFA and
+full payroll release are still ENV-051/034 work.
 
-Permitted actions are `records:read`, `drafts:prepare`, `drafts:read`. Scope is one
-company and explicit location IDs (or `*` for that company's locations).
-`compensation` is required to prepare/read drafts. SSN, bank, approval, release,
-filing, provider and model scopes are refused. Empty provider/model allowlists
-never inherit installation credentials. Credential revocation, expiry,
-sponsor deactivation/version change or company grant change immediately ends
-access; it does not require restarting the service.
+Choose a review date within 90 days (`reviewDate`, UTC end of day), and a first
+secret lifetime of 1–24 hours (`hours`). Omitting the review date creates the
+short-lived grant used by earlier clients. A secret appears once, in a no-store
+response. Only a keyed digest is stored. `credentials.rotate` replaces that
+digest and returns a new secret expiring within 24 hours and before the original
+review date. Rotation cannot extend the grant, restore an expired/revoked bearer
+or survive sponsor removal/current-scope changes. Rotate before expiry; an
+expired secret requires fresh human issuance. Concurrent rotations have one
+winner; old in-flight requests fail their repeated digest fence.
 
-## Human settings API
+## Scope and human settings API
 
-Use a current company-owner session and the records API's Origin rules:
+All routes use `/api/envelope/companies/:company`, a current human session and
+same-origin POSTs. The equivalent native forms are under
+`/app/envelope/companies/:company`.
 
-- `GET /api/envelope/companies/:company/agents`: scope declarations (no secret)
-  and the latest 200 permitted-access metadata events.
-- `POST` to the same path: `{name, hours, actions, fields, locations}`; optional
-  `providers` and `models` must be empty. Returns `{id, token, expiresAt,
-  sponsorId}` once. Fresh Base app-local proof is checked again at the write.
-- `POST /api/envelope/companies/:company/agents/:id/revoke`: `{version}`;
-  revokes the exact current version. Old secrets never revive.
-- `GET /api/envelope/companies/:company/agents/access`: private JSON attachment
-  with credential, sponsor, action, target and time, without secret values.
-- `GET /api/envelope/companies/:company/drafts`: owner-visible persisted input
-  proposals. The same records render at the company's **Run input proposals**.
+- `GET /agents`: permitted declarations and latest 200 access events, no secrets.
+- `POST /agents`: `{name,hours,reviewDate?,actions,fields,locations,providers?,models?}`.
+  Returns `{id,token,expiresAt,secretExpiresAt,sponsorId}` once.
+- `POST /agents/:id/revoke`: `{version}`, compare-and-swap revocation.
+- `POST /agents/policy`: owner-only `{version,ownerOnly}` with audit.
+- `GET /agents/access`: permitted attributed access metadata attachment.
+- `GET /drafts`: existing owner-visible persisted uncalculated input proposals.
+- `GET /providers`, `POST /providers`: owner declarations described in
+  [payroll-notices.md](payroll-notices.md).
 
-The existing Base `POST /auth/step-up` with action `credentials:mint` sends the
-confirmation. Its link completes through `/auth/confirm` only in the session
-that requested it. The ten-minute proof may also come from a genuine native
-email-link sign-in, matching Base's semantics. Provider identity, a dev-session
-flag, a cookie timestamp or client `mfa:true` alone is not payroll proof. Bank
-**document storage** now requires this fresh proof too; that does not implement
-ENV-004 bank verification, new-bank cooling, human bank-change approval or
-ENV-011 release. Linked OIDC MFA and former-worker form journeys remain unproved.
+Delegation requires these current ENV-028 powers, plus every requested field and
+location. `*` locations can be delegated only by a sponsor holding `*`.
+
+| Agent action | Required sponsor powers |
+| --- | --- |
+| `records:read` | `records:read` |
+| `drafts:prepare` | `records:read`, `rates:propose` and `compensation` field |
+| `drafts:read` | `records:read` and `compensation` field |
+| `notices:process` | `notices:read`, `notices:write` and `tax` field |
+| `dispatch:execute` | `notices:read`, `notices:dispatch` and `tax` field |
+
+Only `compensation` and `tax` fields are grantable. SSN/bank/approval powers are
+never grantable. Providers must be enabled owner declarations: `openai` for
+redacted notice processing with model `gpt-4.1-mini`, and `resend` for exact
+human-approved correspondence. Empty lists grant nothing and never inherit a
+runtime credential. No agent approves, changes bank details, pays wages or signs
+or files a tax return.
 
 ## Stateless MCP endpoint
 
-`POST /api/envelope/mcp` uses `Authorization: Bearer <secret>`, JSON and JSON-RPC
-2.0. It accepts no cookie identity or cross-origin browser request. The request
-body limit is 64 KB, and each credential has a durable limit of 120 authenticated
-requests per minute. There are no SSE or public payroll transports.
+`POST /api/envelope/mcp` requires `Authorization: Bearer <secret>`, JSON-RPC 2.0
+and JSON (64 KB maximum). Cross-origin browsers and cookie-only requests are
+refused. The durable limit is 120 authenticated requests per minute per grant.
+`initialize` uses protocol `2025-03-26`; `notifications/initialized` returns 202.
+`tools/list` lists only permitted tools. `tools/call` takes `{name,arguments}`.
 
-`initialize` negotiates protocol `2025-03-26`; `notifications/initialized` returns
-202. `tools/list` returns only permitted tool descriptions and JSON schemas.
-`tools/call` takes `{name, arguments}`:
+- `credentials.rotate`: `{}`; permitted only while this bearer, grant and sponsor
+  remain current. Save the returned secret securely; never put it in a notice,
+  model context, URL, log or screenshot.
+- `records.list`: `{companyId}`, at most 100 scoped person IDs/names/location
+  IDs/versions, with no private values or pay rates.
+- `draft.prepare`: `{companyId,personId,minutes,periodStart,periodEnd,payDate,
+  sourceRef,requestKey}`; minutes 1–44,640. Persists an immutable input proposal
+  referencing a current person and latest reviewed rate effective at period
+  start. Same key/inputs returns the same proposal; different inputs conflict.
+- `draft.read`: `{companyId,draftId}`, scoped proposal/rate/source references and
+  stale-person indication. An input proposal is **uncalculated, not approved**.
+- `notice.process`: `{companyId,noticeId}`, actual encrypted source notice to
+  declared OpenAI; redacted output is an **untrusted proposal**, never authority.
+- `reply.dispatch`: `{companyId,replyId,version,digest}`, only an exact current
+  unexpired human-approved notice reply, with current sponsor/approver/location/
+  provider authority. It is not a payroll-payment or signed-filing tool.
 
-- `records.list`: `{companyId}` returns up to 100 currently scoped person
-  IDs/names/location IDs/versions, with no private values or pay rates.
-- `draft.prepare`: `{companyId, personId, minutes, periodStart, periodEnd,
-  payDate, sourceRef, requestKey}` persists one immutable proposed input against
-  a real current person/version and the latest human-reviewed rate effective
-  by period start. `minutes` is 1–44,640. Invalid periods, foreign locations,
-  absent reviewed rates or extra approval/provider fields are refused. Reusing
-  a request key with the same inputs returns the same proposal; different inputs
-  conflict without changing it.
-- `draft.read`: `{companyId, draftId}` returns an in-scope proposal with its
-  person/version, reviewed rate/cents, minutes, source and period references.
-  A changed person version is exposed as stale.
+Authenticated transport openings and permitted actions are attributed to grant
+and sponsor. Authority and bearer digest are checked again in reads/writes and
+before outbound work. The original AGENT-DRAFTS journey suspends a request after
+its authenticated access event, revokes it via settings, and proves no write.
+The SPONSORED-NOTICES journey covers current-scope non-owner sponsors, rotation,
+injection confinement, human-only exact correspondence and durable unknowns.
 
-A proposal is explicitly **uncalculated and not approved**. It does not compute
-withholding, make an approval-ready payroll, authorize a bank/filing instruction
-or dispatch anything. Reading its version or possessing the credential is not
-human approval. Unknown escalation tools are refused. Text in `sourceRef` is
-inert stored provenance, not an instruction to invoke a model/provider.
-
-Every authenticated transport opening is logged before its body is consumed;
-permitted record/draft actions are separately attributed. Authority is checked
-again inside each read/write statement. The integration journey suspends a
-request after its authenticated opening appears in the public access log,
-revokes the credential through settings, then finishes the body and proves no
-draft is written. This proves in-flight **preparation** revocation; approved
-outbound dispatch and official-schema forged-filing behavior remain unfinished.
-
-Archive policy excludes the secret-digest table. Historical credential IDs,
-scopes, access attribution and input proposals may remain as evidence; restored
-company grants and usable credential secrets do not transfer. A populated
-restore/re-enrollment proof is still ENV-053 work.
+Archive policy excludes active secret digests, company grants, provider
+credentials, approval authority and review challenges. Historical IDs,
+declarations, proposals, notices and dispatch evidence do not authorize restored
+outbound work. Full populated restore proof remains ENV-053 work. Full calculated
+payroll, official-schema forged-filing refusals and authorized rail/sandbox
+proof remain outstanding; no production payroll readiness is claimed.

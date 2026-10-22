@@ -4,7 +4,17 @@ import { fence, auditStatement, type Actor } from './access'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { PayrollError, text, integer, date } from './security'
 
-export const agentActions = ['records:read', 'drafts:prepare', 'drafts:read'] as const
+export const agentActions = ['records:read', 'drafts:prepare', 'drafts:read', 'notices:process', 'dispatch:execute'] as const
+// Delegation never manufactures a human power. These are the ENV-028 powers
+// needed by each actual tool; approval and bank powers are never delegated.
+const inheritedActions: Record<string, string[]> = {
+  'records:read': ['records:read'],
+  'drafts:prepare': ['records:read', 'rates:propose'],
+  'drafts:read': ['records:read'],
+  'notices:process': ['notices:read', 'notices:write'],
+  'dispatch:execute': ['notices:read', 'notices:dispatch'],
+}
+
 interface AgentGrant {
   id: string
   company_id: string
@@ -19,8 +29,10 @@ interface AgentGrant {
   models: string
   expires_at: number
   version: number
+  secret_expires_at: number
+  token_hash: string
 }
-const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,revoked_at AS revokedAt,version`
+const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,(SELECT secret_expires_at FROM env_agent_credentials WHERE id=env_agent_grants.id) AS secretExpiresAt,revoked_at AS revokedAt,version`
 const uuid = () => crypto.randomUUID()
 const list = (value: unknown, allowed: readonly string[]) => {
   const entries = Array.isArray(value)
@@ -38,7 +50,7 @@ const list = (value: unknown, allowed: readonly string[]) => {
     throw new PayrollError('invalid_agent_scope')
   return [...new Set(entries)] as string[]
 }
-async function digest(secret: string, value: string) {
+export async function credentialDigest(secret: string, value: string) {
   const enc = new TextEncoder(),
     key = await crypto.subtle.importKey(
       'raw',
@@ -59,20 +71,41 @@ export class AgentSettings {
   owner(actor: Actor) {
     if (actor.grant.role !== 'owner') throw new PayrollError('owner_required', 403)
   }
-  async list(actor: Actor) {
+  sponsor(actor: Actor) {
+    if (actor.grant.role !== 'owner' && !actor.grant.actions.includes('records:read'))
+      throw new PayrollError('sponsor_scope_denied', 403)
+  }
+  async policy(actor: Actor) {
+    this.sponsor(actor)
+    const f = fence(actor)
+    return await this.records.statement(`SELECT owner_only AS ownerOnly,version FROM env_agent_policy WHERE company_id=? AND ${f.sql}`, [actor.company,...f.args]).first() ?? {ownerOnly: 0,version: 0}
+  }
+  async setPolicy(actor: Actor, input: Input) {
     this.owner(actor)
+    const f = fence(actor), version = input.version === 0 || input.version === '0' ? 0 : integer(input.version), id = uuid()
+    const result = await this.records.env.DB.batch([
+      this.records.statement(`INSERT INTO env_agent_policy(company_id,owner_only,version,change_id) SELECT ?,?,1,? WHERE ${f.sql} AND COALESCE((SELECT version FROM env_agent_policy WHERE company_id=?),0)=?
+        ON CONFLICT(company_id) DO UPDATE SET owner_only=excluded.owner_only,version=env_agent_policy.version+1,change_id=excluded.change_id WHERE env_agent_policy.version=? RETURNING version`,
+        [actor.company,input.ownerOnly === true || input.ownerOnly === 'true' ? 1 : 0,id,...f.args,actor.company,version,version]),
+      auditStatement(this.records.env,actor,id,'agent.policy',actor.company,version+1,'EXISTS(SELECT 1 FROM env_agent_policy WHERE change_id=?)',[id]),
+    ])
+    if (!result[0].results.length) throw new PayrollError('policy_or_authority_changed',409)
+    return result[0].results[0]
+  }
+  async list(actor: Actor) {
+    this.sponsor(actor)
     const f = fence(actor)
     return (
       await this.records
         .statement(
-          `SELECT ${metadataColumns} FROM env_agent_grants WHERE company_id=? AND ${f.sql} ORDER BY created_at,id`,
-          [actor.company, ...f.args],
+          `SELECT ${metadataColumns} FROM env_agent_grants WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY created_at,id`,
+          [actor.company, actor.grant.role, actor.session.operator.id, ...f.args],
         )
         .all<Record<string, unknown>>()
     ).results
   }
   async issue(actor: Actor, input: Input) {
-    this.owner(actor)
+    this.sponsor(actor)
     await requirePayrollProof(this.records.env, actor)
     const name = text(input.name),
       hours = integer(input.hours),
@@ -83,13 +116,29 @@ export class AgentSettings {
       ...(await this.records.locations(actor)).map((l) => l.id),
     ])
     if (!locations.length) throw new PayrollError('invalid_agent_scope')
-    const fields = list(input.fields, ['compensation']),
-      providers = list(input.providers, []),
-      models = list(input.models, [])
+    const fields = list(input.fields, ['compensation', 'tax']),
+      providers = list(input.providers, ['openai', 'resend']),
+      models = list(input.models, ['gpt-4.1-mini'])
+    const requiredActions = [...new Set(actions.flatMap(a => inheritedActions[a]))]
+    if (actor.grant.role !== 'owner' && (
+      requiredActions.some(a => !actor.grant.actions.includes(a)) ||
+      fields.some(a => !actor.grant.fields.includes(a)) ||
+      (!actor.grant.locations.includes('*') && locations.some(l => !actor.grant.locations.includes(l)))
+    )) throw new PayrollError('sponsor_scope_denied',403)
+    if (actions.some(a => a.startsWith('drafts:')) && !fields.includes('compensation'))
+      throw new PayrollError('compensation_scope_required')
+    if (actions.includes('notices:process') && (!fields.includes('tax') || !providers.includes('openai') || !models.includes('gpt-4.1-mini')))
+      throw new PayrollError('notice_provider_scope_required')
+    if (actions.includes('dispatch:execute') && (!fields.includes('tax') || !providers.includes('resend')))
+      throw new PayrollError('dispatch_provider_scope_required')
+    // Only a current owner-declared provider is grantable, with no implicit keys.
+    for (const provider of providers) {
+      const declared = await this.records.statement('SELECT id FROM env_external_providers WHERE company_id=? AND id=? AND enabled=1', [actor.company,provider]).first()
+      if (!declared) throw new PayrollError('provider_not_declared')
+    }
+    if (models.length && !providers.includes('openai')) throw new PayrollError('provider_not_declared')
     if (actions.includes('drafts:prepare') && !fields.includes('compensation'))
       throw new PayrollError('compensation_scope_required')
-    // No provider/model adapter is exposed by this credential. Empty allowlists
-    // are enforced, rather than a wildcard or inherited runtime provider key.
     const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
       .replaceAll('+', '-')
       .replaceAll('/', '_')
@@ -97,14 +146,16 @@ export class AgentSettings {
     const id = uuid(),
       event = uuid(),
       now = Date.now(),
-      expiresAt = now + hours * 3600000
-    const hash = await digest(this.records.env.SESSION_SECRET, token),
+      expiresAt = input.reviewDate ? new Date(date(input.reviewDate)+'T23:59:59.999Z').getTime() : now + hours * 3600000,
+      secretExpiresAt = Math.min(expiresAt, now + hours * 3600000)
+    if (expiresAt <= now || expiresAt > now + 90 * 86400000) throw new PayrollError('invalid_review_date')
+    const hash = await credentialDigest(this.records.env.SESSION_SECRET, token),
       f = fence(actor),
       p = stepUpFence(actor)
     const result = await this.records.env.DB.batch([
       this.records.statement(
         `INSERT INTO env_agent_grants(id,company_id,sponsor_id,sponsor_grant_version,sponsor_operator_version,name,actions,fields,locations,providers,models,created_at,expires_at)
-    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql} RETURNING id`,
+    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql} AND (?='owner' OR NOT EXISTS(SELECT 1 FROM env_agent_policy WHERE company_id=? AND owner_only=1)) RETURNING id`,
         [
           id,
           actor.company,
@@ -121,11 +172,13 @@ export class AgentSettings {
           expiresAt,
           ...f.args,
           ...p.args,
+          actor.grant.role,
+          actor.company,
         ],
       ),
       this.records.statement(
-        `INSERT INTO env_agent_credentials(id,token_hash) SELECT ?,? WHERE EXISTS(SELECT 1 FROM env_agent_grants WHERE id=?)`,
-        [id, hash, id],
+        `INSERT INTO env_agent_credentials(id,token_hash,secret_expires_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM env_agent_grants WHERE id=?)`,
+        [id, hash, secretExpiresAt, id],
       ),
       auditStatement(
         this.records.env,
@@ -139,17 +192,17 @@ export class AgentSettings {
       ),
     ])
     if (!result[0].results.length) throw new PayrollError('authority_or_proof_changed', 409)
-    return { id, token, expiresAt, sponsorId: actor.session.operator.id }
+    return { id, token, expiresAt, secretExpiresAt, sponsorId: actor.session.operator.id }
   }
   async revoke(actor: Actor, id: string, input: Input) {
-    this.owner(actor)
+    this.sponsor(actor)
     const version = integer(input.version),
       f = fence(actor),
       event = uuid()
     const result = await this.records.env.DB.batch([
       this.records.statement(
-        `UPDATE env_agent_grants SET revoked_at=?,version=version+1 WHERE company_id=? AND id=? AND version=? AND revoked_at IS NULL AND ${f.sql} RETURNING id`,
-        [Date.now(), actor.company, id, version, ...f.args],
+        `UPDATE env_agent_grants SET revoked_at=?,version=version+1 WHERE company_id=? AND id=? AND version=? AND revoked_at IS NULL AND (?='owner' OR sponsor_id=?) AND ${f.sql} RETURNING id`,
+        [Date.now(), actor.company, id, version, actor.grant.role, actor.session.operator.id, ...f.args],
       ),
       auditStatement(
         this.records.env,
@@ -167,13 +220,13 @@ export class AgentSettings {
     return { id, revoked: true, version: version + 1 }
   }
   async access(actor: Actor) {
-    this.owner(actor)
+    this.sponsor(actor)
     const f = fence(actor)
     return (
       await this.records
         .statement(
-          `SELECT credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt FROM env_agent_access WHERE company_id=? AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
-          [actor.company, ...f.args],
+          `SELECT credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt FROM env_agent_access WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
+          [actor.company, actor.grant.role, actor.session.operator.id, ...f.args],
         )
         .all<Record<string, unknown>>()
     ).results
@@ -199,9 +252,9 @@ export class AgentTools {
   static async authenticate(env: Bindings, token: string) {
     if (!/^[A-Za-z0-9_-]{43}$/.test(token))
       throw new PayrollError('agent_authentication_required', 401)
-    const hash = await digest(env.SESSION_SECRET, token)
+    const hash = await credentialDigest(env.SESSION_SECRET, token)
     const row = await env.DB.prepare(
-      'SELECT g.* FROM env_agent_grants g JOIN env_agent_credentials c ON c.id=g.id WHERE c.token_hash=?',
+      'SELECT g.*,c.secret_expires_at,c.token_hash FROM env_agent_grants g JOIN env_agent_credentials c ON c.id=g.id WHERE c.token_hash=?',
     )
       .bind(hash)
       .first<AgentGrant>()
@@ -230,9 +283,26 @@ export class AgentTools {
     return {
       sql: `EXISTS(SELECT 1 FROM env_agent_grants a JOIN env_agent_credentials c ON c.id=a.id JOIN env_grants s ON s.company_id=a.company_id AND s.operator_id=a.sponsor_id JOIN oa_operators o ON o.id=a.sponsor_id
     WHERE a.id=? AND a.company_id=? AND a.version=? AND a.revoked_at IS NULL AND a.expires_at>unixepoch('subsec')*1000
-    AND o.status='active' AND o.version=a.sponsor_operator_version AND s.version=a.sponsor_grant_version AND s.revoked_at IS NULL AND s.role='owner')`,
-      args: [g.id, g.company_id, g.version],
+    AND c.token_hash=? AND c.secret_expires_at>unixepoch('subsec')*1000
+    AND o.status='active' AND o.version=a.sponsor_operator_version AND s.version=a.sponsor_grant_version AND s.revoked_at IS NULL
+    AND (s.role='owner' OR (NOT EXISTS(SELECT 1 FROM env_agent_policy pol WHERE pol.company_id=a.company_id AND pol.owner_only=1)
+      AND NOT EXISTS(SELECT 1 FROM json_each(a.fields) af WHERE af.value NOT IN (SELECT value FROM json_each(s.fields)))
+      AND (EXISTS(SELECT 1 FROM json_each(s.locations) WHERE value='*') OR NOT EXISTS(SELECT 1 FROM json_each(a.locations) al WHERE al.value NOT IN (SELECT value FROM json_each(s.locations))))
+      AND NOT EXISTS(SELECT 1 FROM json_each(?) req WHERE req.value NOT IN (SELECT value FROM json_each(s.actions))))))`,
+      args: [g.id, g.company_id, g.version, g.token_hash, JSON.stringify([...new Set((JSON.parse(g.actions) as string[]).flatMap(a => inheritedActions[a] ?? ['ungrantable']))])],
     }
+  }
+  async rotate() {
+    const f = this.fence(), token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=',''),
+      hash = await credentialDigest(this.env.SESSION_SECRET,token),
+      secretExpiresAt = Math.min(this.grant.expires_at,Date.now()+86400000)
+    // Compare-and-swap: an in-flight old bearer and concurrent rotations lose.
+    const result = await this.env.DB.batch([
+      this.log('credentials:rotate',this.grant.id),
+      this.env.DB.prepare(`UPDATE env_agent_credentials SET token_hash=?,secret_expires_at=? WHERE id=? AND ${f.sql} RETURNING id`).bind(hash,secretExpiresAt,this.grant.id,...f.args),
+    ])
+    if (!result[1].results.length) throw new PayrollError('agent_authority_revoked',403)
+    return {id:this.grant.id,token,secretExpiresAt,expiresAt:this.grant.expires_at}
   }
   allow(action: string, company: unknown) {
     if (company !== this.grant.company_id || !JSON.parse(this.grant.actions).includes(action))
@@ -313,7 +383,7 @@ export class AgentTools {
       l = this.location('p.location_id')
     // One atomic INSERT selects a genuine reviewed rate and current worker version.
     // No helper-only draft, calculation claim, approval bit or outbound side effect.
-    const fingerprint = await digest(
+    const fingerprint = await credentialDigest(
       this.env.SESSION_SECRET,
       JSON.stringify([person, minutes, periodStart, periodEnd, payDate, source]),
     )

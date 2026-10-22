@@ -10,12 +10,16 @@ export function agentsPage(
   actor: Actor,
   locations: { id: string; name: string }[],
   grants: Record<string, unknown>[],
+  policy: Record<string, unknown>,
+  providers: {id:string;enabled:number}[],
 ) {
   const base = companyPath(actor.company) + '/agents'
   const labels: Record<string, string> = {
     'records:read': 'View person records',
     'drafts:prepare': 'Prepare run inputs',
     'drafts:read': 'Read run inputs',
+    'notices:process': 'Process notice with declared model',
+    'dispatch:execute': 'Dispatch exact human-approved notice reply',
   }
   return page(
     session,
@@ -25,10 +29,11 @@ export function agentsPage(
     <>
       <Card title="Named sponsorship">
         <p>
-          Each credential acts only for this company under your current owner grant, expires
-          within 24 hours and stops immediately on revocation or sponsor removal. No model or
-          data provider is allowed. Agents cannot approve, change bank instructions or send
-          payments and filings.
+          Each grant stays within your current company, location, field and action powers.
+          Choose a review date within 90 days; each secret lasts at most 24 hours and may
+          rotate only while the grant and sponsor remain current. Only declared providers
+          may process notice text or dispatch an exact human-approved reply.
+          Agents never approve or change bank details. Payroll payments and filings remain unavailable.
         </p>
         <form method="post" action="/auth/step-up">
           <Hidden name="action" value="credentials:mint" />
@@ -36,10 +41,21 @@ export function agentsPage(
           <Submit>Send sensitive-change confirmation</Submit>
         </form>
       </Card>
+      {actor.grant.role === 'owner' && <Card title="Sponsorship policy">
+        <form method="post" action={base+'/policy'}>
+          <Hidden name="version" value={Number(policy.version)} />
+          <label className="field"><span>Who may sponsor</span><select name="ownerOnly" defaultValue={String(Boolean(policy.ownerOnly))}>
+            <option value="false">Any person with every delegated power</option><option value="true">Company owners only</option>
+          </select></label>
+          <Submit>Save sponsorship policy</Submit>
+        </form>
+        <a href={companyPath(actor.company)+'/providers'}>Declare external providers</a>
+      </Card>}
       <Card title="Issue a scoped credential">
         <form className="field" method="post" action={base}>
           <Field name="name" label="Agent or integration name" />
           <Field name="hours" label="Expires in hours (1–24)" type="number" value={1} />
+          <Field name="reviewDate" label="Grant review date (within 90 days)" type="date" required={false} />
           <fieldset>
             <legend>Permitted actions</legend>
             {agentActions.map((a) => (
@@ -71,6 +87,11 @@ export function agentsPage(
               compensation for draft preparation and reading
             </span>
           </label>
+          <label className="field"><span><input type="checkbox" name="fields" value="tax" /> Tax notice text and replies</span></label>
+          <fieldset><legend>Declared providers</legend>
+            {providers.filter(p => p.enabled).map(p => <label className="field" key={p.id}><span><input type="checkbox" name="providers" value={p.id} /> {p.id === 'openai' ? 'OpenAI: redacted notice text' : 'Resend: exact approved reply'}</span></label>)}
+          </fieldset>
+          {providers.some(p => p.id==='openai' && p.enabled) && <label className="field"><span><input type="checkbox" name="models" value="gpt-4.1-mini" /> gpt-4.1-mini for notice proposals</span></label>}
           <Submit primary>Issue sponsored credential</Submit>
         </form>
       </Card>
@@ -91,8 +112,8 @@ export function agentsPage(
                       : (locations.find((l) => l.id === id)?.name ?? 'Unavailable location'),
                   )
                   .join(', ')}{' '}
-                · providers/models: none · expires{' '}
-                {new Date(Number(g.expiresAt)).toISOString()} ·{' '}
+                · providers {JSON.parse(String(g.providers)).join(', ') || 'none'} · models {JSON.parse(String(g.models)).join(', ') || 'none'} · review due{' '}
+                {new Date(Number(g.expiresAt)).toISOString()} · secret expires {new Date(Number(g.secretExpiresAt)).toISOString()} ·{' '}
                 {g.revokedAt
                   ? 'Revoked'
                   : Number(g.expiresAt) <= Date.now()
@@ -128,7 +149,7 @@ export function issuedAgentPage(
   session: Session,
   companies: Company[],
   actor: Actor,
-  issued: { id: string; token: string; expiresAt: number },
+  issued: { id: string; token: string; expiresAt: number; secretExpiresAt: number },
 ) {
   return page(
     session,
@@ -138,7 +159,7 @@ export function issuedAgentPage(
     <Card title="Save this credential securely">
       <p>
         This secret is displayed once. Keep it out of URLs, logs, screenshots and model
-        instructions. It expires {new Date(issued.expiresAt).toISOString()}.
+        instructions. This secret expires {new Date(issued.secretExpiresAt).toISOString()}; grant review is due {new Date(issued.expiresAt).toISOString()}.
       </p>
       <label className="field">
         <span>One-time credential</span>

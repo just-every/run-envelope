@@ -14,6 +14,10 @@ export const actions = [
   'pay:approve',
   'pay:release',
   'audit:read',
+  'notices:read',
+  'notices:write',
+  'notices:approve',
+  'notices:dispatch',
 ] as const
 export const fields = ['compensation', 'ssn', 'bank', 'tax'] as const
 export const roles = [

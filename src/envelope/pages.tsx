@@ -20,6 +20,10 @@ const actionLabels: Record<string, string> = {
   'pay:approve': 'Approve payroll (unavailable)',
   'pay:release': 'Release payroll (unavailable)',
   'audit:read': 'Read company audit',
+  'notices:read': 'Read tax notices',
+  'notices:write': 'Prepare tax notice replies',
+  'notices:approve': 'Approve exact notice replies',
+  'notices:dispatch': 'Dispatch approved notice replies',
 }
 
 export const companyPath = (id: string) => `/app/envelope/companies/${encodeURIComponent(id)}`
@@ -178,14 +182,13 @@ export function companyPage(
               <a className="btn" href={`${base}/setup`}>
                 Company and tax setup
               </a>
-              <a className="btn" href={`${base}/agents`}>
-                Agent credentials
-              </a>
               <a className="btn" href={`${base}/drafts`}>
                 Run input proposals
               </a>
             </>
           )}
+          {(actor.grant.role === 'owner' || actor.grant.actions.includes('records:read')) && <a className="btn" href={`${base}/agents`}>Agent credentials</a>}
+          {can(actor, 'notices:read', 'tax') && <a className="btn" href={`${base}/notices`}>Tax notices and replies</a>}
           {can(actor, 'export') && can(actor, 'records:read') && (
             <a className="btn" href={`/api/envelope/companies/${company.id}/export`}>
               Export record register

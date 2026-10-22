@@ -8,8 +8,10 @@ import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
+import { unstable_startWorker } from 'wrangler'
 import {
+  sponsoredJourney,
   payrollJourney,
   missingKeyJourney,
   allocationJourney,
@@ -196,7 +198,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['records', 'allocations', 'schedules', 'pay-items', 'rules'].includes(name),
+        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'sponsored'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -207,6 +209,44 @@ try {
   if (!selected || selected.includes('pay-items'))
     await payItemsJourney({ origin, cookie, sql })
   if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
+  if (!selected || selected.includes('sponsored')) {
+    await stopWorker()
+    const edge = {calls:[],modelMode:'normal',sendMode:'normal'}
+    let sponsoredWorker
+    const startSponsored = async () => {
+      sponsoredWorker = await unstable_startWorker({
+        config:resolve('dist/server/wrangler.json'),
+        bindings:Object.fromEntries(Object.entries(settings).map(([key,value]) => [key,{type:'plain_text',value}])),
+        dev:{server:{hostname:'127.0.0.1',port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
+          outboundService:async request => {
+            // Fakes exist only at the real OpenAI/Resend HTTP edge. No arbitrary
+            // URL, installation service or model-selected destination is forwarded.
+            const url=request.url, body=JSON.parse(await request.text())
+            edge.calls.push({url,body,idempotencyKey:request.headers.get('Idempotency-Key')})
+            if(url==='https://api.openai.com/v1/responses' && request.method==='POST') {
+              if(edge.modelMode==='unavailable') return Response.json({error:{message:'Synthetic provider unavailable',type:'server_error',code:'server_error'}},{status:503})
+              if(edge.modelMode==='tool') return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',output:[{type:'function_call',call_id:'synthetic-envelope-531',name:'provider.call',arguments:'{}'}]})
+              return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',model:'gpt-4.1-mini',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify({summary:'CP161 balance-due notice requires human reconciliation. Untrusted text names an ungranted provider.',proposedReply:'Please provide the employer account transcript; a human must confirm the facts and recipient.'}),annotations:[]}]}]})
+            }
+            if(url==='https://api.resend.com/emails' && request.method==='POST') {
+              if(edge.sendMode==='unknown') return Response.json({name:'application_error',message:'Synthetic indeterminate provider result'},{status:500})
+              return Response.json({id:'00000000-0000-4000-8000-000000000052'})
+            }
+            throw new Error('Unexpected outbound request refused by network-edge fixture')
+          },
+        },
+      })
+      await sponsoredWorker.ready
+    }
+    try {
+      await startSponsored()
+      await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()}})
+    } finally {
+      await sponsoredWorker?.dispose()
+      worker=launch(settings)
+      await waitForWorker()
+    }
+  }
   if (!selected || selected.includes('records')) {
     const records = await payrollJourney({ origin, cookie, settings, sql })
     await stopWorker()
