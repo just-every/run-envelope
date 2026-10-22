@@ -54,15 +54,27 @@ export const RunApproval = ({
   base,
   run,
   status,
+  latest,
+  current,
 }: {
   base: string
   run: Revision<EarningsRun>
   status?: RunApprovalStatus
+  latest: boolean
+  current: boolean
 }) =>
   run.data.holds.some((h) => h.code?.startsWith('proration-')) ? (
     <p>
       Not approvable: salary proration previews stay preview-only until stricter work-state and
       final-pay rules exist. Nothing can be released from this version.
+    </p>
+  ) : !latest ? (
+    <p>Superseded by a newer version. Nothing can be approved or released from v{run.version}.</p>
+  ) : !current ? (
+    <p>
+      Sources changed after v{run.version}. Retain a new preview and approve it; nothing can be
+      released from this version.
+      {status?.approvals.length ? ` ${status.approvals.length} earlier approval(s) no longer count.` : ''}
     </p>
   ) : status ? (
     <div>

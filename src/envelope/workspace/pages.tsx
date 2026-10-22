@@ -780,6 +780,8 @@ export function paySettingsPage(
               base={base}
               run={r}
               status={approval?.statuses.find((s) => s.runId === r.id && s.version === r.version)}
+              latest={result.runs.every((x) => x.id !== r.id || x.version <= r.version)}
+              current={r.sourceStatus === 'current'}
             />
           </article>
         ))}
