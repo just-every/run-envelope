@@ -2385,6 +2385,7 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     assert.equal(comparison.totals.deltaCents,75000)
     assert.equal(comparison.people[0].eligibility,'earnings-preview-only')
     await capture('bulk-first-period-review',screen + '/review/pay-change/' + change.id)
+    assert.ok((await page.locator('main').innerText()).includes('$7,638.89'), 'the human review displays the actual proposed first-period amount')
     // A new source ID is material even though no old pinned revision changed.
     await data(base + '/people/' + b.id + '/allocations/work',{
       id:'synthetic-envelope-132',version:0,day:'2026-02-21',state:'NY',locality:'New York City',

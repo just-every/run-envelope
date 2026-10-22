@@ -12,7 +12,7 @@ type FirstPeriod = {
 }
 type PersonDiff = {
   personId: string; personName: string; firstPeriod: FirstPeriod | null
-  beforeRateCents: number | null; afterRateCents: number; basis: string
+  beforeRateCents: number | null; beforeBasis: string | null; afterRateCents: number; basis: string
   beforeEarningsCents: number | null; afterEarningsCents: number | null
   deltaCents: number | null; eligibility: 'earnings-preview-only' | 'needs-input'; holds: string[]
 }
@@ -80,7 +80,7 @@ export async function payChangeDiff(
     people.set(person.id, person.version)
     const row: PersonDiff = {
       personId: person.id, personName: person.name, firstPeriod: null,
-      beforeRateCents: null, afterRateCents: proposed.rateCents, basis: proposed.basis,
+      beforeRateCents: null, beforeBasis: null, afterRateCents: proposed.rateCents, basis: proposed.basis,
       beforeEarningsCents: null, afterEarningsCents: null, deltaCents: null,
       eligibility: 'needs-input', holds: [],
     }
@@ -116,7 +116,9 @@ export async function payChangeDiff(
       pin(selected, changeHistory, true)
       return selected.data.items.find((p) => p.personId === person.id) ?? null
     }
-    row.beforeRateCents = baseline(change.effectiveDate)?.rateCents ?? null
+    const priorRate = baseline(change.effectiveDate)
+    row.beforeRateCents = priorRate?.rateCents ?? null
+    row.beforeBasis = priorRate?.basis ?? null
     const periods = { weekly: 52, biweekly: 26, semimonthly: 24, monthly: 12 }[period.frequency]
     if (!periods) throw new PayrollError('invalid_pay_frequency')
     const calculate = (after: boolean): number | null => {
