@@ -12,6 +12,10 @@ interface Reply {id:string;version:number;noticeId:string;providerVersion:number
 export interface ReplyData {sender:string;to:string;subject:string;body:string}
 const uuid = () => crypto.randomUUID()
 const latestReply = `(SELECT MAX(version) FROM env_notice_replies WHERE company_id=r.company_id AND id=r.id)=r.version`
+function documentText(value:unknown,max=12000) {
+  if (typeof value!=='string' || !value.trim() || value.length>max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) throw new PayrollError('invalid_notice_text')
+  return value.trim()
+}
 function exactKeys(input:Input, keys:string[]) {
   if (Object.keys(input).some(k => !keys.includes(k))) throw new PayrollError('invalid_notice_input')
 }
@@ -31,7 +35,7 @@ export class Notices {
     return (await this.records.statement(`SELECT id,reference,location_id AS locationId,created_at AS createdAt FROM env_notices WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY created_at DESC,id LIMIT 100`,[actor.company,...l.args,...f.args]).all()).results
   }
   async create(actor:Actor,input:Input) {
-    const location=text(input.locationId), reference=redact(text(input.reference)), body=text(input.body,12000)
+    const location=text(input.locationId), reference=redact(text(input.reference)), body=documentText(input.body)
     requireAction(actor,'notices:write',location,'tax')
     const id=uuid(), f=fence(actor), event=uuid(), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY), hash=await digest(body),
       cipher=await seal(key,JSON.stringify([actor.company,'notice',id]),body)
@@ -69,7 +73,7 @@ export class Notices {
     const provider=await this.records.statement(`SELECT * FROM env_external_providers WHERE company_id=? AND id='resend' AND enabled=1 AND ${f.sql}`,[actor.company,...f.args]).first<Provider>()
     if (!provider) throw new PayrollError('provider_not_declared',409)
     const secret=await providerSecret(this.records.env,actor.company,provider)
-    const payload:ReplyData={sender:provider.sender,to:email(input.to),subject:redact(text(input.subject,200),[secret]),body:redact(text(input.body,12000),[secret])}
+    const payload:ReplyData={sender:provider.sender,to:email(input.to),subject:redact(text(input.subject,200),[secret]),body:redact(documentText(input.body),[secret])}
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
     const result=await this.records.env.DB.batch([
@@ -170,7 +174,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
     if (output.length!==1 || output[0].type!=='output_text') throw 0
     const parsed=JSON.parse(String(output[0].text))
     if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',')!=='proposedReply,summary') throw 0
-    analysis={summary:redact(text(parsed.summary,6000),[secret]),proposedReply:redact(text(parsed.proposedReply,6000),[secret])}
+    analysis={summary:redact(documentText(parsed.summary,6000),[secret]),proposedReply:redact(documentText(parsed.proposedReply,6000),[secret])}
   } catch { throw new PayrollError('notice_model_unavailable',503) }
   const analysisId=uuid(), cipher=await seal(key,JSON.stringify([company,'analysis',analysisId]),JSON.stringify(analysis))
   // In-flight provider, sponsor and grant revocation fences also protect results.
@@ -236,7 +240,7 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
       const wire=await response.text()
       if (wire.length<64000) {
         const value=JSON.parse(wire)
-        if (typeof value.id==='string' && /^[a-fA-F0-9-]{36}$/.test(value.id)) {state='accepted';receipt=value.id}
+        if (typeof value.id==='string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.id)) {state='accepted';receipt=value.id}
       }
     }
   } catch { /* A timeout cannot prove that Resend did not accept the email. */ }

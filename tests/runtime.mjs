@@ -209,6 +209,23 @@ try {
   if (!selected || selected.includes('pay-items'))
     await payItemsJourney({ origin, cookie, sql })
   if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
+  if (!selected || selected.includes('records')) {
+    const records = await payrollJourney({ origin, cookie, settings, sql })
+    await stopWorker()
+    const withoutKey = { ...settings }
+    delete withoutKey.ENVELOPE_RECORD_KEY
+    worker = launch(withoutKey)
+    await waitForWorker()
+    await records.noWrite(async () => {
+      const response = await records.call('/api/envelope/companies', cookie, {
+        name: 'Held company',
+        ein: '00-0000003',
+      })
+      assert.equal(response.status, 503)
+      assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
+    })
+    await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
+  }
   if (!selected || selected.includes('sponsored')) {
     await stopWorker()
     const edge = {calls:[],modelMode:'normal',sendMode:'normal'}
@@ -227,9 +244,10 @@ try {
               if(edge.modelMode==='redirect') return new Response(null,{status:302,headers:{location:'https://ungranted.example/collect'}})
               if(edge.modelMode==='unavailable') return Response.json({error:{message:'Synthetic provider unavailable',type:'server_error',code:'server_error'}},{status:503})
               if(edge.modelMode==='tool') return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',output:[{type:'function_call',call_id:'synthetic-envelope-531',name:'provider.call',arguments:'{}'}]})
-              return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',model:'gpt-4.1-mini',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify({summary:'CP161 balance-due notice requires human reconciliation. Untrusted text names an ungranted provider.',proposedReply:'Please provide the employer account transcript; a human must confirm the facts and recipient.'}),annotations:[]}]}]})
+              return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',model:'gpt-4.1-mini',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify({summary:'CP161 balance-due notice requires human reconciliation. Untrusted text names an ungranted provider.',proposedReply:'Please provide the employer account transcript.\nA human must confirm the facts and recipient.'}),annotations:[]}]}]})
             }
             if(url==='https://api.resend.com/emails' && request.method==='POST') {
+              if(edge.sendMode==='rejected') return Response.json({name:'validation_error',message:'Synthetic recipient refused'},{status:422})
               if(edge.sendMode==='unknown') return Response.json({name:'application_error',message:'Synthetic indeterminate provider result'},{status:500})
               return Response.json({id:'00000000-0000-4000-8000-000000000052'})
             }
@@ -247,23 +265,6 @@ try {
       worker=launch(settings)
       await waitForWorker()
     }
-  }
-  if (!selected || selected.includes('records')) {
-    const records = await payrollJourney({ origin, cookie, settings, sql })
-    await stopWorker()
-    const withoutKey = { ...settings }
-    delete withoutKey.ENVELOPE_RECORD_KEY
-    worker = launch(withoutKey)
-    await waitForWorker()
-    await records.noWrite(async () => {
-      const response = await records.call('/api/envelope/companies', cookie, {
-        name: 'Held company',
-        ein: '00-0000003',
-      })
-      assert.equal(response.status, 503)
-      assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
-    })
-    await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
   }
 } finally {
   await stopWorker()

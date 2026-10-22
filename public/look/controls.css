@@ -121,3 +121,5 @@ html[data-state] :is(a, .btn):focus-visible { outline: 3px solid var(--forest); 
 
 /* Long immutable evidence stays readable in the notice review at phone widths. */
 .app .evidence-text { min-width: 0; overflow-wrap: anywhere; }
+
+.app .notice-text { white-space: pre-wrap; }

@@ -131,11 +131,11 @@ export function agentsPage(
         ) : (
           <p>No sponsored credentials.</p>
         )}
-        <p>
+        {actor.grant.role === 'owner' && <p>
           <a href={companyPath(actor.company) + '/drafts'}>
             Inspect persisted run input proposals
           </a>
-        </p>
+        </p>}
       </Card>
       <p>
         <a className="btn" href={`/api/envelope/companies/${actor.company}/agents/access`}>

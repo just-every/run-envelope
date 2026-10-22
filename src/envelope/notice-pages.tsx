@@ -55,7 +55,7 @@ export function noticePage(session:Session,companies:Company[],actor:Actor,notic
     <Card title="Exact reply versions">
       {notice.replies.length ? notice.replies.map(r => <div key={String(r.id)}>
         <h3 className="evidence-text">{String(r.data.subject)}</h3>
-        <p className="evidence-text">From {String(r.data.sender)} to {String(r.data.to)} · version {Number(r.version)}</p><p className="evidence-text">{String(r.data.body)}</p>
+        <p className="evidence-text">From {String(r.data.sender)} to {String(r.data.to)} · version {Number(r.version)}</p><p className="evidence-text notice-text">{String(r.data.body)}</p>
         <p className="evidence-text">Reply ID: {String(r.id)}. Digest: {String(r.digest)}. {r.approvalRevokedAt ? 'Approval withdrawn' : r.approvedBy ? `Human approval by ${r.approvedBy}, expires ${new Date(Number(r.approvalExpiresAt)).toISOString()}` : 'Not approved'}.</p>
         <p className="evidence-text">{r.dispatchState==='accepted' ? 'Provider accepted; delivery unconfirmed' : r.dispatchState==='unknown' || r.dispatchState==='pending' ? 'Unknown or pending send — held for human reconciliation; do not resend' : r.dispatchState==='rejected' ? 'Provider rejected; human repair required' : 'Not dispatched'}. {Boolean(r.providerReceipt) && 'Receipt: '+r.providerReceipt}</p>
         {canApprove && !r.approvedBy && <p className="evidence-text"><a className="btn" href={base+'/notice-replies/'+r.id+'/review'}>Review exact reply version {Number(r.version)}</a></p>}
@@ -80,7 +80,7 @@ export function replyReviewPage(session:Session,companies:Company[],actor:Actor,
   const base=companyPath(actor.company), returnTo=base+'/notice-replies/'+reply.id+'/review'
   return page(session,'Review exact notice reply',companies,actor.company,<Card title="Your explicit approval is required">
     <p className="evidence-text">Only this immutable version and digest may be sent. An edit, provider change, expiry, withdrawal or authority removal prevents dispatch. This is correspondence, never payroll payment or a signed tax filing.</p>
-    <p className="evidence-text">From {reply.data.sender} to {reply.data.to}</p><h3 className="evidence-text">{reply.data.subject}</h3><p className="evidence-text">{reply.data.body}</p><p className="evidence-text">Version {reply.version} · digest {reply.digest}</p>
+    <p className="evidence-text">From {reply.data.sender} to {reply.data.to}</p><h3 className="evidence-text">{reply.data.subject}</h3><p className="evidence-text notice-text">{reply.data.body}</p><p className="evidence-text">Version {reply.version} · digest {reply.digest}</p>
     <form method="post" action="/auth/step-up"><Hidden name="action" value="credentials:mint" /><Hidden name="returnTo" value={returnTo} /><Submit>Send sensitive-change confirmation</Submit></form>
     <form method="post" action={base+'/notice-replies/'+reply.id+'/approve'}>
       <Hidden name="version" value={reply.version} /><Hidden name="digest" value={reply.digest} /><Hidden name="reviewToken" value={reply.reviewToken} />

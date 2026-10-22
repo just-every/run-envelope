@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "265c0927a14851ee0f5c917d5756ecec0b72c8428833b11b6dfac68200132d72",
+      "sha256": "15366937e2dfd13cedbf251e6f6ec06f59c1b6c1587ce75aceb162b3802be236",
       "executable": false
     },
     "deploy-demo.json": {
@@ -417,7 +417,7 @@
       "executable": false
     },
     "public/look/controls.css": {
-      "sha256": "093987e3d5a809caad5bbf75ca6346603888b1f65052c94b54a64684d37f058e",
+      "sha256": "8c50f63d181ce1ba75ba9631acc46e66e966ce61d9828654fd431d5a239c8131",
       "executable": false
     },
     "public/look/envelope.css": {
@@ -849,7 +849,7 @@
       "executable": false
     },
     "src/envelope/agent-pages.tsx": {
-      "sha256": "dafc43e802935787ae8ac96fc3318a58952b94dd5dd36e5d4ec51a74cc1b085f",
+      "sha256": "ce839fe73a255781eb14462c8148241db0c01c6ce2fbff8ad2c80ba2575a6d98",
       "executable": false
     },
     "src/envelope/agents.ts": {
@@ -861,11 +861,11 @@
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
-      "sha256": "802c2977258bb7ae9cb8ad9adf0ad44babd43372efeac364d4718aaed57915a7",
+      "sha256": "a9cb147f3ad4bcd61e4084dd551da7713811949157785b04c614c6a3d3540606",
       "executable": false
     },
     "src/envelope/notices.ts": {
-      "sha256": "e79b7b80576ce6c1eae4ff6131449bc77bdecdc53435d1cce42a6a9b9d5b5db0",
+      "sha256": "d0b2472fdbc718e2d87d17037224a219339d00545f41ae86fa300ebc919df356",
       "executable": false
     },
     "src/envelope/pages.tsx": {
@@ -1953,11 +1953,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "448ddb99e2990eefd0dba82e431ef3299cfe43b8e7b7f5ea047bbb5be8239408",
+      "sha256": "fa453755eeeb14a8671ba4ce2158604c171964a66c087f67a27d9722ad9c5d01",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "fcf98561b755a0f8807bdac29c58e428a3f5154c38da09203e914f17cf7867f3",
+      "sha256": "07c812f573242f38816845fa22acf86ff323f49d1dc2ad054dea9a82cdd64038",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
