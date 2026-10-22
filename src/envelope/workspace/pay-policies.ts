@@ -10,7 +10,10 @@ export class PayPolicies {
   constructor(public store: WorkspaceStore, public pay: PayItems) {}
   async save(actor: Actor, input: Input) {
     const group = await this.pay.approvedGroup(actor, objectId(input.groupId))
-    let minutes: unknown = input.weekMinutes
+    let minutes: unknown = input.weekMinutes ?? Array.from({length:7}, (_,i) => {
+      const n = input['scheduledMinutes' + i]
+      return typeof n === 'string' && /^\d+$/.test(n) ? Number(n) : n
+    })
     if (typeof minutes === 'string') {
       try { minutes = JSON.parse(minutes) } catch { throw new PayrollError('invalid_week_schedule') }
     }
@@ -21,7 +24,7 @@ export class PayPolicies {
     if (!Number.isInteger(weekStartsOn) || weekStartsOn < 0 || weekStartsOn > 6)
       throw new PayrollError('invalid_workweek_start')
     const data: ProrationPolicy = {
-      name: text(input.name), groupId: group.id, groupVersion: group.version,
+      name: text(input.name), groupId: group.id, groupName: group.data.name, groupVersion: group.version,
       effectiveDate: date(input.effectiveDate),
       method: choice(input.method, ['calendar-days', 'scheduled-workdays', 'scheduled-hours']) as ProrationPolicy['method'],
       weekMinutes: minutes as number[], weekStartsOn,

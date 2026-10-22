@@ -79,3 +79,15 @@ refuses with `proration_preview_not_payable` (409) and makes no decision or
 external request. This refusal covers the real retained earnings draft; it is
 not an approval/dispatch implementation. There is no client-supplied completion,
 settlement or receipt field that grants authority.
+
+Bulk rate proposals retain `diff.people`: each worker's first affected saved pay
+period, original/proposed base earnings, delta, schedule identity and outstanding
+inputs. `diff.totals` sums known amounts; an unknown baseline remains null, never
+zero. Salary comparisons use the same exact salary calculator as retained earnings;
+hourly/nonexempt comparisons use actual persisted minutes. These are base earnings,
+not tax/net/payment eligibility. A missing/contradictory schedule or unverified
+salary basis remains visible. Review input collections are checked atomically when
+saving/approving the proposal: a new competing ID or a changed source after review
+refuses the old decision. Once adopted, rate history remains intact when later
+work arrives; affected earnings drafts still require a fresh preview. The displayed
+review is immutable and shows exactly the comparison the person is adopting.

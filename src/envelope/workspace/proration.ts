@@ -1,5 +1,6 @@
 export interface ProrationPolicy {
   name: string
+  groupName?: string
   groupId: string
   groupVersion: number
   effectiveDate: string

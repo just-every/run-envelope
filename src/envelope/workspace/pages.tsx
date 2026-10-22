@@ -6,7 +6,7 @@ import type { Allocations } from './allocations'
 import { Schedules, payFrequencies, timeZones } from './schedules'
 import { Rules, ruleFamilies } from './rules'
 import { states } from '../setup'
-import { PayPolicyForm } from './pay-policy-form'
+import { PayPolicyForm, PayPolicyTerms } from './pay-policy-form'
 const NamedSelect = ({
   name,
   label,
@@ -805,7 +805,7 @@ export function exactReviewPage(
         Version {row.version}. Review these exact people, periods and terms. This decision
         does not approve or dispatch a pay run.
       </p>
-      {details(row.data)}
+      {row.kind === 'proration-policy' ? <PayPolicyTerms policy={row.data as unknown as import('./proration').ProrationPolicy} /> : details(row.data)}
       <form method="post" action={base + '/' + row.kind + '/' + row.id + '/approve'}>
         <Hidden name="version" value={row.version} />
         <Hidden name="reviewToken" value={row.reviewToken} />
