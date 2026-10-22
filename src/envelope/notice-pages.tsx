@@ -38,7 +38,7 @@ export function noticesPage(session:Session,companies:Company[],actor:Actor,loca
     {canWrite && <Card title="Record a notice">
       <form method="post" action={base+'/notices'}>
         <Field name="reference" label="Notice reference" />
-        <label className="field"><span>Notice location</span><select name="locationId" required>{locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+        <label className="field"><span>Notice location</span><select name="locationId" aria-label="Notice location" required>{locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         <label className="field"><span>Original notice text</span><textarea name="body" required maxLength={12000} rows={8} /></label>
         <Submit primary>Record private notice</Submit>
       </form>

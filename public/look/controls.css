@@ -73,14 +73,14 @@ html.rer-themed .secondary-link a { color: var(--teal-ink); font-weight: 500; te
 .app .field { display: grid; gap: 8px; }
 .app .field > span,
 html.rer-themed label { color: var(--ink); font: 600 14.5px/1.35 var(--text); }
-.app .field :is(input, select),
+.app .field :is(input, select, textarea),
 html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
 html.rer-themed select {
   box-sizing: border-box; display: block; width: 100%; min-height: 48px; margin: 0; padding: 11px 14px;
   border: 1px solid var(--field-line); border-radius: var(--radius-control); background-color: var(--paper); color: var(--ink);
   font: 400 16px/1.4 var(--text);
 }
-.app .field :is(input, select):focus-visible,
+.app .field :is(input, select, textarea):focus-visible,
 html.rer-themed input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus-visible,
 html.rer-themed select:focus-visible {
   border-color: var(--forest); outline: 2px solid transparent; box-shadow: 0 0 0 1px var(--forest), 0 0 0 5px color-mix(in srgb, var(--forest) 22%, transparent);

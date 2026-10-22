@@ -192,6 +192,10 @@
       "sha256": "a39ac7ce8ac8466cb29fc81288cba03f56ee4898a572e3ffea37fb85c3beaa49",
       "executable": false
     },
+    "docs/payroll-notices.md": {
+      "sha256": "4b0faa607f7592fa4f5360a4409e2f4addcb6cfcfd87611188ac279d49b5fd4f",
+      "executable": false
+    },
     "docs/payroll-pay-items.md": {
       "sha256": "91272c8024163b6d0e09a4cdec30cbad33516823ff288cb49df587aded0f0b5a",
       "executable": false
@@ -304,6 +308,10 @@
       "sha256": "377960f0f6ed4a6967e3403b0d566bf4f07c242a49d0adcedfe2935a3fff71e9",
       "executable": false
     },
+    "migrations/core/0021_sponsored_notice_work.sql": {
+      "sha256": "749c2b289d7c36f1ab3fd8f8af4850f49825cf2c01af6c07852f291902569e89",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "5dce7856fac22b695fc39b505e90971b52044c076d2935837a57c73bf01b427e",
       "executable": false
@@ -409,7 +417,7 @@
       "executable": false
     },
     "public/look/controls.css": {
-      "sha256": "04105105369184d807e5df217c4abc712728880e6f2f212d2583db6fae00880d",
+      "sha256": "183093cba3ad7aa9a1b9e07335cc9413f03c184492f5f62a2c1e7485193dcd88",
       "executable": false
     },
     "public/look/envelope.css": {
@@ -845,15 +853,27 @@
       "executable": false
     },
     "src/envelope/agents.ts": {
-      "sha256": "2a8ac9cbbd8d435d09a514101ee0b5190f461ab139afc60c25d51e2d5b9b924f",
+      "sha256": "0f8e6bffcfd5771d55ee5b22dfec7af7204cfef6a56d18945bda925a5335a69b",
       "executable": false
     },
     "src/envelope/http.ts": {
       "sha256": "310e787f5887821c751eab090479f6d381c67c1103b90cb1be2d284261a7fb0f",
       "executable": false
     },
+    "src/envelope/notice-pages.tsx": {
+      "sha256": "4cba48ac99d204ebaa5bf71e3c47e816ccd04cb32d886a0b4bd2f841b53aaa4d",
+      "executable": false
+    },
+    "src/envelope/notices.ts": {
+      "sha256": "1de6299f6525b72e52964cc732f32d2e5726a8ebe3c406b80fe9dd0a00c3e1c7",
+      "executable": false
+    },
     "src/envelope/pages.tsx": {
       "sha256": "465dde01b499df4f662dce2f75b92e1e74f4d135bf46e25e33f7b63e0e7492d1",
+      "executable": false
+    },
+    "src/envelope/providers.ts": {
+      "sha256": "91abd523c2ff59e6fd1b88afca347bd28a9f30a8df0cc677f6347f25f3a010e2",
       "executable": false
     },
     "src/envelope/records.ts": {
@@ -1933,7 +1953,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "0374a323532983bb1421abf3f185d281935a1d9b24591234c5ddd225f199c699",
+      "sha256": "6684c74fb62dda2304c2fd0739637d8c4f77251d5f8938b10b623675a7305462",
       "executable": false
     },
     "tests/runtime.mjs": {

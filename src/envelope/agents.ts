@@ -87,6 +87,7 @@ export class AgentSettings {
       this.records.statement(`INSERT INTO env_agent_policy(company_id,owner_only,version,change_id) SELECT ?,?,1,? WHERE ${f.sql} AND COALESCE((SELECT version FROM env_agent_policy WHERE company_id=?),0)=?
         ON CONFLICT(company_id) DO UPDATE SET owner_only=excluded.owner_only,version=env_agent_policy.version+1,change_id=excluded.change_id WHERE env_agent_policy.version=? RETURNING version`,
         [actor.company,input.ownerOnly === true || input.ownerOnly === 'true' ? 1 : 0,id,...f.args,actor.company,version,version]),
+      this.records.statement(`UPDATE env_agent_grants SET revoked_at=?,version=version+1 WHERE company_id=? AND revoked_at IS NULL AND EXISTS(SELECT 1 FROM env_agent_policy WHERE company_id=? AND owner_only=1 AND change_id=?) AND sponsor_id NOT IN (SELECT operator_id FROM env_grants WHERE company_id=? AND role='owner' AND revoked_at IS NULL)`,[Date.now(),actor.company,actor.company,id,actor.company]),
       auditStatement(this.records.env,actor,id,'agent.policy',actor.company,version+1,'EXISTS(SELECT 1 FROM env_agent_policy WHERE change_id=?)',[id]),
     ])
     if (!result[0].results.length) throw new PayrollError('policy_or_authority_changed',409)
@@ -137,8 +138,6 @@ export class AgentSettings {
       if (!declared) throw new PayrollError('provider_not_declared')
     }
     if (models.length && !providers.includes('openai')) throw new PayrollError('provider_not_declared')
-    if (actions.includes('drafts:prepare') && !fields.includes('compensation'))
-      throw new PayrollError('compensation_scope_required')
     const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
       .replaceAll('+', '-')
       .replaceAll('/', '_')

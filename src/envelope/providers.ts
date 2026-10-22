@@ -92,6 +92,6 @@ export function redact(value: string, secrets: string[] = []) {
   let v = value
   for (const secret of secrets.filter(Boolean)) v = v.split(secret).join('[redacted credential]')
   return v.replace(/\b[A-Za-z0-9_-]{40,}\b/g,'[redacted credential]').replace(/\b\d{3}[- ]\d{2}[- ]\d{4}\b/g,'[redacted SSN]')
-    .replace(/\b\d(?:[ -]?\d){7,}\b/g,'[redacted identifier]')
+    .replace(/\b\d(?:[ -]?\d){7,}\b/g,match => /^\d{4}-\d{2}-\d{2}$/.test(match) ? match : '[redacted identifier]')
     .replace(/\b(?:SSN|social security|bank(?: account)?|routing|account(?: number)?)\s*[:#=]\s*[A-Za-z0-9][A-Za-z0-9 -]{2,40}/gi,'[redacted sensitive field]')
 }
