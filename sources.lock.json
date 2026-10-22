@@ -896,8 +896,40 @@
       "sha256": "014290c3960ce2d3a38e4159dd9be1000994531b0829ec0de321ddcdaf1878d9",
       "executable": false
     },
+    "src/envelope/workspace/allocation-tax.ts": {
+      "sha256": "ffdb96a696422d71fa1af524910ae7aa992a55b0a7311e6a9972212b4ac7b760",
+      "executable": false
+    },
     "src/envelope/workspace/allocations.ts": {
       "sha256": "df6a9ea22a429bbebc436881f08ad5cd9583c4d93651530b20b332498f5f3c1a",
+      "executable": false
+    },
+    "src/envelope/workspace/local-tax-exemption.ts": {
+      "sha256": "a56c656b10c28fce4e4ab7476cb8a89e67f88cf5a43607d427cba71ec7f3a0ca",
+      "executable": false
+    },
+    "src/envelope/workspace/local-tax-inputs.ts": {
+      "sha256": "3ec54758a3d5b00227fe97df5d4b500e4d8fa5ea246e5508f242ea3d7a1f93d4",
+      "executable": false
+    },
+    "src/envelope/workspace/local-tax-page.tsx": {
+      "sha256": "600226d66d5393a46ec81c780b2421849123aae7d1f994b120cb2d748e0dc6b0",
+      "executable": false
+    },
+    "src/envelope/workspace/nj-withholding.ts": {
+      "sha256": "7fa909775e7f3d395a1ebc387e9f0421b1886d56c9fc1b1574fd389149bbfff7",
+      "executable": false
+    },
+    "src/envelope/workspace/ny-withholding.ts": {
+      "sha256": "ff65fb66cbba0299abbba527447c9825d8123bdc497e1db6bb7c42e61a2626ca",
+      "executable": false
+    },
+    "src/envelope/workspace/pa-local.ts": {
+      "sha256": "fb96d86459743adfe26af40c15b2addbbceeea56cd72822f1303c6ac3b89d738",
+      "executable": false
+    },
+    "src/envelope/workspace/pa-withholding.ts": {
+      "sha256": "f8326f31d0836f772e1870383e294ec988e98276532869e9dbe2df03c26cc1ba",
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
@@ -942,6 +974,14 @@
     },
     "src/envelope/workspace/store.ts": {
       "sha256": "9bfeb04e7ecbe4ff9ef23777dff85a1586f303d59569bd4d4ed55a03d17a09ea",
+      "executable": false
+    },
+    "src/envelope/workspace/tax-elections.ts": {
+      "sha256": "f80f0dff6b0aa1f953ee20878e2a2de947e1edb5e4776dd01e0423a825b76503",
+      "executable": false
+    },
+    "src/envelope/workspace/tax-input-pages.tsx": {
+      "sha256": "08ef6a5815e2eda341680530b4acd7906305d77256eb98b4e7e9d378445c1af2",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
