@@ -417,7 +417,7 @@
       "executable": false
     },
     "public/look/controls.css": {
-      "sha256": "183093cba3ad7aa9a1b9e07335cc9413f03c184492f5f62a2c1e7485193dcd88",
+      "sha256": "093987e3d5a809caad5bbf75ca6346603888b1f65052c94b54a64684d37f058e",
       "executable": false
     },
     "public/look/envelope.css": {
@@ -861,7 +861,7 @@
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
-      "sha256": "02744ef91bd7b0ff48231831ef0590a3ba831f8e717babd566ed6b0bca4c475c",
+      "sha256": "802c2977258bb7ae9cb8ad9adf0ad44babd43372efeac364d4718aaed57915a7",
       "executable": false
     },
     "src/envelope/notices.ts": {

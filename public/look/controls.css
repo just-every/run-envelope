@@ -118,3 +118,6 @@ html[data-state] :is(a, .btn):focus-visible { outline: 3px solid var(--forest); 
   body > main > :is(.brand, .rer-brand):first-child img,
   body > main > :is(.brand, .rer-brand):first-child::before { width: 32px; height: 32px; }
 }
+
+/* Long immutable evidence stays readable in the notice review at phone widths. */
+.app .evidence-text { min-width: 0; overflow-wrap: anywhere; }
