@@ -200,8 +200,8 @@ export class AgentSettings {
       event = uuid()
     const result = await this.records.env.DB.batch([
       this.records.statement(
-        `UPDATE env_agent_grants SET revoked_at=?,version=version+1 WHERE company_id=? AND id=? AND version=? AND revoked_at IS NULL AND (?='owner' OR sponsor_id=?) AND ${f.sql} RETURNING id`,
-        [Date.now(), actor.company, id, version, actor.grant.role, actor.session.operator.id, ...f.args],
+        `UPDATE env_agent_grants SET revoked_at=?,revocation_id=?,version=version+1 WHERE company_id=? AND id=? AND version=? AND revoked_at IS NULL AND (?='owner' OR sponsor_id=?) AND ${f.sql} RETURNING id`,
+        [Date.now(), event, actor.company, id, version, actor.grant.role, actor.session.operator.id, ...f.args],
       ),
       auditStatement(
         this.records.env,
@@ -210,8 +210,8 @@ export class AgentSettings {
         'agent.revoked',
         id,
         version + 1,
-        'EXISTS(SELECT 1 FROM env_agent_grants WHERE id=? AND company_id=? AND version=? AND revoked_at IS NOT NULL)',
-        [id, actor.company, version + 1],
+        'EXISTS(SELECT 1 FROM env_agent_grants WHERE revocation_id=?)',
+        [event],
       ),
     ])
     if (!result[0].results.length)

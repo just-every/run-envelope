@@ -10,11 +10,11 @@ export function providersPage(session:Session,companies:Company[],actor:Actor,pr
   const base=companyPath(actor.company)
   return page(session,'External notice providers',companies,actor.company,<>
     <Card title="Choose and declare every recipient">
-      <p>Optional AI never calculates or approves payroll. No connection is enabled until you authorize its purpose, fields and custody. SSN and bank values are redacted. Disabling a provider immediately prevents future calls and invalidates its pending reply approvals. Existing unknown sends stay held.</p>
+      <p style={{overflowWrap:'anywhere'}}>Optional AI never calculates or approves payroll. No connection is enabled until you authorize its purpose, fields and custody. SSN and bank values are redacted. Disabling a provider immediately prevents future calls and invalidates its pending reply approvals. Existing unknown sends stay held.</p>
       <form method="post" action="/auth/step-up"><Hidden name="action" value="credentials:mint" /><Hidden name="returnTo" value={base+'/providers'} /><Submit>Send sensitive-change confirmation</Submit></form>
     </Card>
     {providers.map(p => <Card key={p.id} title={p.recipient}>
-      <p>{p.purpose}. Destination: {p.url}. Fields: {p.fields.join(', ')}. {p.custody}. Current state: {p.enabled ? 'Declared and enabled' : 'Unavailable'}.</p>
+      <p style={{overflowWrap:'anywhere'}}>{p.purpose}. Destination: {p.url}. Fields: {p.fields.join(', ')}. {p.custody}. Current state: {p.enabled ? 'Declared and enabled' : 'Unavailable'}.</p>
       <form method="post" action={base+'/providers'}>
         <Hidden name="id" value={p.id} /><Hidden name="version" value={p.version} />
         <label className="field"><span>Connection state for {p.id}</span><select name="enabled" defaultValue={String(Boolean(p.enabled))}><option value="false">Disabled</option><option value="true">Enabled with explicit consent</option></select></label>
@@ -32,8 +32,8 @@ export function noticesPage(session:Session,companies:Company[],actor:Actor,loca
   const canWrite=actor.grant.role==='owner' || actor.grant.actions.includes('notices:write')
   return page(session,'Tax notices and replies',companies,actor.company,<>
     <Card title="Untrusted source evidence">
-      <p>A notice records evidence, never instructions or authority. Model summaries and proposed replies remain untrusted. A human chooses and reviews the exact recipient and message before an agent can dispatch it. This does not file a tax return, sign a filing or pay wages.</p>
-      {notices.length ? notices.map(n => <p key={String(n.id)}><a href={base+'/notices/'+n.id}>{String(n.reference)}</a></p>) : <p>No notices recorded.</p>}
+      <p style={{overflowWrap:'anywhere'}}>A notice records evidence, never instructions or authority. Model summaries and proposed replies remain untrusted. A human chooses and reviews the exact recipient and message before an agent can dispatch it. This does not file a tax return, sign a filing or pay wages.</p>
+      {notices.length ? notices.map(n => <p key={String(n.id)}><a href={base+'/notices/'+n.id}>{String(n.reference)}</a></p>) : <p style={{overflowWrap:'anywhere'}}>No notices recorded.</p>}
     </Card>
     {canWrite && <Card title="Record a notice">
       <form method="post" action={base+'/notices'}>
@@ -47,23 +47,23 @@ export function noticesPage(session:Session,companies:Company[],actor:Actor,loca
 }
 export function noticePage(session:Session,companies:Company[],actor:Actor,notice:Awaited<ReturnType<Notices['details']>>) {
   const base=companyPath(actor.company), canWrite=actor.grant.role==='owner' || actor.grant.actions.includes('notices:write'), canApprove=actor.grant.role==='owner' || actor.grant.actions.includes('notices:approve')
-  return page(session,'Notice '+notice.reference,companies,actor.company,<>
-    <Card title="Recorded notice"><p className="notice-text">{redact(notice.body)}</p><p>Notice ID: {notice.id}. MCP notice.process reads only redacted notice text, never payroll records or credentials.</p></Card>
+  return page(session,'Notice review',companies,actor.company,<>
+    <Card title="Recorded notice"><p style={{overflowWrap:'anywhere'}}>{notice.reference}</p><p className="notice-text" style={{overflowWrap:'anywhere'}}>{redact(notice.body)}</p><p style={{overflowWrap:'anywhere'}}>Notice ID: {notice.id}. MCP notice.process reads only redacted notice text, never payroll records or credentials.</p></Card>
     <Card title="Untrusted model proposals">
-      {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3>Summary</h3><p>{String(a.summary)}</p><h3>Proposed reply — not approved</h3><p>{String(a.proposedReply)}</p></div>) : <p>No model result. A missing connection remains unavailable; no result is invented.</p>}
+      {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3 style={{overflowWrap:'anywhere'}}>Summary</h3><p style={{overflowWrap:'anywhere'}}>{String(a.summary)}</p><h3 style={{overflowWrap:'anywhere'}}>Proposed reply — not approved</h3><p style={{overflowWrap:'anywhere'}}>{String(a.proposedReply)}</p></div>) : <p style={{overflowWrap:'anywhere'}}>No model result. A missing connection remains unavailable; no result is invented.</p>}
     </Card>
     <Card title="Exact reply versions">
       {notice.replies.length ? notice.replies.map(r => <div key={String(r.id)}>
-        <h3>{String(r.data.subject)}</h3>
-        <p>From {String(r.data.sender)} to {String(r.data.to)} · version {Number(r.version)}</p><p>{String(r.data.body)}</p>
-        <p>Reply ID: {String(r.id)}. Digest: {String(r.digest)}. {r.approvalRevokedAt ? 'Approval withdrawn' : r.approvedBy ? `Human approval by ${r.approvedBy}, expires ${new Date(Number(r.approvalExpiresAt)).toISOString()}` : 'Not approved'}.</p>
-        <p>{r.dispatchState==='accepted' ? 'Provider accepted; delivery unconfirmed' : r.dispatchState==='unknown' || r.dispatchState==='pending' ? 'Unknown or pending send — held for human reconciliation; do not resend' : r.dispatchState==='rejected' ? 'Provider rejected; human repair required' : 'Not dispatched'}. {Boolean(r.providerReceipt) && 'Receipt: '+r.providerReceipt}</p>
-        {canApprove && !r.approvedBy && <p><a className="btn" href={base+'/notice-replies/'+r.id+'/review'}>Review exact reply version {Number(r.version)}</a></p>}
+        <h3 style={{overflowWrap:'anywhere'}}>{String(r.data.subject)}</h3>
+        <p style={{overflowWrap:'anywhere'}}>From {String(r.data.sender)} to {String(r.data.to)} · version {Number(r.version)}</p><p style={{overflowWrap:'anywhere'}}>{String(r.data.body)}</p>
+        <p style={{overflowWrap:'anywhere'}}>Reply ID: {String(r.id)}. Digest: {String(r.digest)}. {r.approvalRevokedAt ? 'Approval withdrawn' : r.approvedBy ? `Human approval by ${r.approvedBy}, expires ${new Date(Number(r.approvalExpiresAt)).toISOString()}` : 'Not approved'}.</p>
+        <p style={{overflowWrap:'anywhere'}}>{r.dispatchState==='accepted' ? 'Provider accepted; delivery unconfirmed' : r.dispatchState==='unknown' || r.dispatchState==='pending' ? 'Unknown or pending send — held for human reconciliation; do not resend' : r.dispatchState==='rejected' ? 'Provider rejected; human repair required' : 'Not dispatched'}. {Boolean(r.providerReceipt) && 'Receipt: '+r.providerReceipt}</p>
+        {canApprove && !r.approvedBy && <p style={{overflowWrap:'anywhere'}}><a className="btn" href={base+'/notice-replies/'+r.id+'/review'}>Review exact reply version {Number(r.version)}</a></p>}
         {canApprove && Boolean(r.approvedBy) && !r.approvalRevokedAt && !r.dispatchState && <form method="post" action={base+'/notice-replies/'+r.id+'/withdraw'}><Hidden name="version" value={Number(r.version)} /><Submit>Withdraw exact reply approval</Submit></form>}
         {canWrite && !r.dispatchState && <details><summary>Edit into an unapproved version</summary><ReplyForm action={base+'/notices/'+notice.id+'/replies'} id={String(r.id)} version={Number(r.version)} data={r.data} /></details>}
-      </div>) : <p>No replies prepared.</p>}
+      </div>) : <p style={{overflowWrap:'anywhere'}}>No replies prepared.</p>}
     </Card>
-    {canWrite && <Card title="Prepare a reply for human review"><p>Verify the recipient independently. No model-suggested recipient or signature is authority.</p><ReplyForm action={base+'/notices/'+notice.id+'/replies'} /></Card>}
+    {canWrite && <Card title="Prepare a reply for human review"><p style={{overflowWrap:'anywhere'}}>Verify the recipient independently. No model-suggested recipient or signature is authority.</p><ReplyForm action={base+'/notices/'+notice.id+'/replies'} /></Card>}
     <a className="btn" href={base+'/notices'}>All notices</a>
   </>)
 }
@@ -79,8 +79,8 @@ function ReplyForm({action,id,version=0,data}:{action:string;id?:string;version?
 export function replyReviewPage(session:Session,companies:Company[],actor:Actor,reply:Awaited<ReturnType<Notices['review']>>) {
   const base=companyPath(actor.company), returnTo=base+'/notice-replies/'+reply.id+'/review'
   return page(session,'Review exact notice reply',companies,actor.company,<Card title="Your explicit approval is required">
-    <p>Only this immutable version and digest may be sent. An edit, provider change, expiry, withdrawal or authority removal prevents dispatch. This is correspondence, never payroll payment or a signed tax filing.</p>
-    <p>From {reply.data.sender} to {reply.data.to}</p><h3>{reply.data.subject}</h3><p>{reply.data.body}</p><p>Version {reply.version} · digest {reply.digest}</p>
+    <p style={{overflowWrap:'anywhere'}}>Only this immutable version and digest may be sent. An edit, provider change, expiry, withdrawal or authority removal prevents dispatch. This is correspondence, never payroll payment or a signed tax filing.</p>
+    <p style={{overflowWrap:'anywhere'}}>From {reply.data.sender} to {reply.data.to}</p><h3 style={{overflowWrap:'anywhere'}}>{reply.data.subject}</h3><p style={{overflowWrap:'anywhere'}}>{reply.data.body}</p><p style={{overflowWrap:'anywhere'}}>Version {reply.version} · digest {reply.digest}</p>
     <form method="post" action="/auth/step-up"><Hidden name="action" value="credentials:mint" /><Hidden name="returnTo" value={returnTo} /><Submit>Send sensitive-change confirmation</Submit></form>
     <form method="post" action={base+'/notice-replies/'+reply.id+'/approve'}>
       <Hidden name="version" value={reply.version} /><Hidden name="digest" value={reply.digest} /><Hidden name="reviewToken" value={reply.reviewToken} />

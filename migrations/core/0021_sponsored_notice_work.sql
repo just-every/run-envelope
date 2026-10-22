@@ -1,4 +1,5 @@
 -- Review-dated grants and short-lived rotating secrets are separate authority.
+ALTER TABLE env_agent_grants ADD COLUMN revocation_id TEXT;
 ALTER TABLE env_agent_credentials ADD COLUMN secret_expires_at INTEGER NOT NULL DEFAULT 0;
 UPDATE env_agent_credentials SET secret_expires_at=(SELECT expires_at FROM env_agent_grants g WHERE g.id=env_agent_credentials.id);
 CREATE TABLE env_agent_policy(company_id TEXT PRIMARY KEY REFERENCES env_companies(id),owner_only INTEGER NOT NULL CHECK(owner_only IN (0,1)),version INTEGER NOT NULL,change_id TEXT NOT NULL);
@@ -19,7 +20,7 @@ CREATE TABLE env_notice_analysis(
 );
 CREATE TABLE env_notice_replies(
  company_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,notice_id TEXT NOT NULL,
- provider_version INTEGER NOT NULL,cipher TEXT NOT NULL,digest TEXT NOT NULL,created_by TEXT NOT NULL,created_at INTEGER NOT NULL,
+ provider_version INTEGER NOT NULL,cipher TEXT NOT NULL,digest TEXT NOT NULL,created_by TEXT NOT NULL,created_at INTEGER NOT NULL,change_id TEXT NOT NULL,
  PRIMARY KEY(company_id,id,version),FOREIGN KEY(company_id,notice_id) REFERENCES env_notices(company_id,id)
 );
 CREATE TABLE env_notice_reviews(
@@ -29,7 +30,7 @@ CREATE TABLE env_notice_reviews(
 CREATE TABLE env_notice_approvals(
  company_id TEXT NOT NULL,reply_id TEXT NOT NULL,version INTEGER NOT NULL,digest TEXT NOT NULL,
  actor_id TEXT NOT NULL,operator_version INTEGER NOT NULL,grant_version INTEGER NOT NULL,
- expires_at INTEGER NOT NULL,revoked_at INTEGER,created_at INTEGER NOT NULL,
+ expires_at INTEGER NOT NULL,revoked_at INTEGER,created_at INTEGER NOT NULL,change_id TEXT NOT NULL,
  PRIMARY KEY(company_id,reply_id,version)
 );
 CREATE TABLE env_notice_dispatches(

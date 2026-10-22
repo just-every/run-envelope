@@ -31,7 +31,7 @@ export class Notices {
     return (await this.records.statement(`SELECT id,reference,location_id AS locationId,created_at AS createdAt FROM env_notices WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY created_at DESC,id LIMIT 100`,[actor.company,...l.args,...f.args]).all()).results
   }
   async create(actor:Actor,input:Input) {
-    const location=text(input.locationId), reference=text(input.reference), body=text(input.body,12000)
+    const location=text(input.locationId), reference=redact(text(input.reference)), body=text(input.body,12000)
     requireAction(actor,'notices:write',location,'tax')
     const id=uuid(), f=fence(actor), event=uuid(), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY), hash=await digest(body),
       cipher=await seal(key,JSON.stringify([actor.company,'notice',id]),body)
@@ -60,7 +60,7 @@ export class Notices {
       const {cipher,...metadata}=r
       return {...metadata,data:JSON.parse(await unseal(key,JSON.stringify([actor.company,'reply',r.id,r.version]),String(cipher)))} as Record<string,unknown> & {data:ReplyData}
     }))
-    return {...notice, cipher:undefined,body:await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher),analyses,replies}
+    return {...notice, cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
   }
   async saveReply(actor:Actor,noticeId:string,input:Input) {
     await this.notice(actor,noticeId,'notices:write')
@@ -73,14 +73,14 @@ export class Notices {
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
     const result=await this.records.env.DB.batch([
-      this.records.statement(`INSERT INTO env_notice_replies(company_id,id,version,notice_id,provider_version,cipher,digest,created_by,created_at)
-        SELECT ?,?,?,?,?,?,?,?,? WHERE ${f.sql}
+      this.records.statement(`INSERT INTO env_notice_replies(company_id,id,version,notice_id,provider_version,cipher,digest,created_by,created_at,change_id)
+        SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
         AND COALESCE((SELECT MAX(version) FROM env_notice_replies WHERE company_id=? AND id=?),0)=?
         AND NOT EXISTS(SELECT 1 FROM env_notice_replies WHERE company_id=? AND id=? AND notice_id!=?)
         AND NOT EXISTS(SELECT 1 FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND state IN ('pending','accepted','unknown'))
         AND EXISTS(SELECT 1 FROM env_external_providers WHERE company_id=? AND id='resend' AND enabled=1 AND version=?) RETURNING id`,
-        [actor.company,id,version+1,noticeId,provider.version,cipher,hash,actor.session.operator.id,Date.now(),...f.args,actor.company,id,version,actor.company,id,noticeId,actor.company,id,actor.company,provider.version]),
-      auditStatement(this.records.env,actor,event,'notice.reply.recorded',id,version+1,'EXISTS(SELECT 1 FROM env_notice_replies WHERE company_id=? AND id=? AND version=? AND digest=?)',[actor.company,id,version+1,hash]),
+        [actor.company,id,version+1,noticeId,provider.version,cipher,hash,actor.session.operator.id,Date.now(),event,...f.args,actor.company,id,version,actor.company,id,noticeId,actor.company,id,actor.company,provider.version]),
+      auditStatement(this.records.env,actor,event,'notice.reply.recorded',id,version+1,'EXISTS(SELECT 1 FROM env_notice_replies WHERE change_id=?)',[event]),
     ])
     if (!result[0].results.length) throw new PayrollError('reply_or_authority_changed',409)
     return {id,version:version+1,digest:hash}
@@ -112,14 +112,14 @@ export class Notices {
       minutes=input.minutes===undefined ? 10 : integer(input.minutes), f=fence(actor), p=stepUpFence(actor), event=uuid()
     if (version!==reply.version || hash!==reply.digest || minutes>60) throw new PayrollError('exact_review_required',409)
     const result=await this.records.env.DB.batch([
-      this.records.statement(`INSERT INTO env_notice_approvals(company_id,reply_id,version,digest,actor_id,operator_version,grant_version,expires_at,created_at)
-        SELECT ?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql}
+      this.records.statement(`INSERT INTO env_notice_approvals(company_id,reply_id,version,digest,actor_id,operator_version,grant_version,expires_at,created_at,change_id)
+        SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql}
         AND EXISTS(SELECT 1 FROM env_notice_replies r JOIN env_external_providers ep ON ep.company_id=r.company_id AND ep.id='resend' AND ep.enabled=1 AND ep.version=r.provider_version
           WHERE r.company_id=? AND r.id=? AND r.version=? AND r.digest=? AND ${latestReply})
         AND EXISTS(SELECT 1 FROM env_notice_reviews WHERE token_hash=? AND company_id=? AND reply_id=? AND version=? AND session_id=? AND operator_id=? AND grant_version=? AND expires_at>?)
         ON CONFLICT(company_id,reply_id,version) DO NOTHING RETURNING reply_id`,
-        [actor.company,id,version,hash,actor.session.operator.id,actor.session.operator.version,actor.grant.version,Date.now()+minutes*60000,Date.now(),...f.args,...p.args,actor.company,id,version,hash,tokenHash,actor.company,id,version,actor.session.id,actor.session.operator.id,actor.grant.version,Date.now()]),
-      auditStatement(this.records.env,actor,event,'notice.reply.approved',id,version,'EXISTS(SELECT 1 FROM env_notice_approvals WHERE company_id=? AND reply_id=? AND version=? AND actor_id=? AND revoked_at IS NULL)',[actor.company,id,version,actor.session.operator.id]),
+        [actor.company,id,version,hash,actor.session.operator.id,actor.session.operator.version,actor.grant.version,Date.now()+minutes*60000,Date.now(),event,...f.args,...p.args,actor.company,id,version,hash,tokenHash,actor.company,id,version,actor.session.id,actor.session.operator.id,actor.grant.version,Date.now()]),
+      auditStatement(this.records.env,actor,event,'notice.reply.approved',id,version,'EXISTS(SELECT 1 FROM env_notice_approvals WHERE change_id=?)',[event]),
     ])
     if (!result[0].results.length) throw new PayrollError('exact_review_or_authority_changed',409)
     return {id,version,digest:hash,approvedBy:actor.session.operator.id}
@@ -129,9 +129,9 @@ export class Notices {
     requireAction(actor,'notices:approve',reply.locationId,'tax')
     const f=fence(actor), version=integer(input.version), event=uuid()
     const result=await this.records.env.DB.batch([
-      this.records.statement(`UPDATE env_notice_approvals SET revoked_at=? WHERE company_id=? AND reply_id=? AND version=? AND revoked_at IS NULL AND ${f.sql}
-        AND NOT EXISTS(SELECT 1 FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND version=? AND state IN ('pending','accepted','unknown')) RETURNING reply_id`,[Date.now(),actor.company,id,version,...f.args,actor.company,id,version]),
-      auditStatement(this.records.env,actor,event,'notice.reply.withdrawn',id,version,'EXISTS(SELECT 1 FROM env_notice_approvals WHERE company_id=? AND reply_id=? AND version=? AND revoked_at IS NOT NULL)',[actor.company,id,version]),
+      this.records.statement(`UPDATE env_notice_approvals SET revoked_at=?,change_id=? WHERE company_id=? AND reply_id=? AND version=? AND revoked_at IS NULL AND ${f.sql}
+        AND NOT EXISTS(SELECT 1 FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND version=? AND state IN ('pending','accepted','unknown')) RETURNING reply_id`,[Date.now(),event,actor.company,id,version,...f.args,actor.company,id,version]),
+      auditStatement(this.records.env,actor,event,'notice.reply.withdrawn',id,version,'EXISTS(SELECT 1 FROM env_notice_approvals WHERE change_id=?)',[event]),
     ])
     if (!result[0].results.length) throw new PayrollError('approval_already_dispatched_or_changed',409)
     return {id,version,withdrawn:true}
