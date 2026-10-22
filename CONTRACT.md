@@ -389,7 +389,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Judged from current source and the named public-door journeys (22 October 2026). Branch Verify records the exact candidate SHA.
+Judged from the code and tests at commit `b1ff62c833b2bb11d1754dab3088d603c6bf3f5b` (22 October 2026).
 
 No clause is complete payroll or production readiness.
 
