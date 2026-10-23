@@ -145,7 +145,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "804be9a6ebdbaa5c0e12c9a2b86fb6b7ae6733d940de6cbf803d56173b23997c",
+      "sha256": "65862213242398433d7a0d9346be42c090ca096e3143418d60a3bd670a728efb",
       "executable": false
     },
     "AGENTS.md": {
@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3d52b41531ccf717f9530f57c054c2661551d30332c6b93fca897c55cbee160f",
+      "sha256": "609a214cd4e7c7cae7c4422abe8afe30e4a586d5e43aca112c6e7a16cec02176",
       "executable": false
     },
     "deploy-demo.json": {
@@ -194,6 +194,10 @@
     },
     "docs/payroll-approvals.md": {
       "sha256": "c29b7d1b49e60a6893a6ad70d88bc8f01a656b89594a0c38e4838eb145f3f4b3",
+      "executable": false
+    },
+    "docs/payroll-leave.md": {
+      "sha256": "61cccce5d85046179fdf4db53d65e9fb93a598c6ad9a3839d694124e90f72af2",
       "executable": false
     },
     "docs/payroll-notices.md": {
