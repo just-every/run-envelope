@@ -389,7 +389,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Status evidence below names committed public-door journeys. Updated 23 October 2026.
+Judged from the code and tests at commit `52568f98082c7c0080112d6378e94fea60b772f3` (23 October 2026).
 
 No clause is complete payroll or production readiness.
 
