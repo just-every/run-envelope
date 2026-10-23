@@ -57,8 +57,6 @@ const redirect = (location: string) =>
   new Response(null, { status: 303, headers: { ...headers, location } })
 async function input(request: Request): Promise<Input> {
   if (!request.body) throw new PayrollError('invalid_input')
-  const declaredLength=request.headers.get('content-length')
-  if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength)>64000) throw new PayrollError('input_too_large',413)
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = [],
     limit = 64000
@@ -68,11 +66,17 @@ async function input(request: Request): Promise<Input> {
     if (done) break
     size += value.length
     if (size > limit) {
-      await reader.cancel()
-      throw new PayrollError('input_too_large', 413)
-    }
-    chunks.push(value)
+      chunks.length = 0
+      // Drain a bounded remainder without retaining it. Cancelling a small
+      // oversized upload leaves workerd's upload proxy mid-request and loses
+      // the intended rejection on its next request. Large streams are aborted.
+      if (size > limit + 1024 * 1024) {
+        await reader.cancel()
+        throw new PayrollError('input_too_large', 413)
+      }
+    } else chunks.push(value)
   }
+  if (size > limit) throw new PayrollError('input_too_large', 413)
   const bytes = new Uint8Array(size)
   let pos = 0
   for (const c of chunks) {
