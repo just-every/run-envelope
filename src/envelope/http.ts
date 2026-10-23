@@ -1,7 +1,7 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
-import { VerificationRequests, ownerOnly } from './income-verification/requests'
+import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
 import { ProtectedResponses } from './disclosures/protected'
 import { verificationPage, protectedResponsePage } from './income-verification/pages'
 import { SourceIntake } from './intake/sources'
@@ -607,7 +607,14 @@ export async function payrollResponse(
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
       } else if (tail[0]==='people' && tail[2]==='verification') {
         const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'
-        const view=async()=>({history:await verification.history(actor,personId,self),bindings:self?[]:await store.list<import('./income-verification/requests').WorkerBinding>(actor,'verification-worker',personId,true),income:self?[]:await store.list<import('./income-verification/requests').IncomeSource>(actor,'income-source',personId,true),disclosures:self?[]:await store.list<import('./income-verification/requests').ProtectedDisclosure>(actor,'disclosure',personId,true)})
+        const view=async()=>{
+          const history=await verification.history(actor,personId,self)
+          const disclosures=self?[]:await store.list<import('./income-verification/requests').ProtectedDisclosure>(actor,'disclosure',personId,true)
+          return {history,bindings:self?[]:await store.list<import('./income-verification/requests').WorkerBinding>(actor,'verification-worker',personId,true),income:self?[]:await store.list<import('./income-verification/requests').IncomeSource>(actor,'income-source',personId,true),disclosures:disclosures.map(r=>{
+            const consent=history.consents.find(c=>c.id===r.data.consentId)
+            return consent && retentionDeadline(consent.retentionUntil)>=Date.now()?r:{...r,data:{...r.data,response:{retention:'restricted-after-selected-date'},provenance:[]}}
+          })}
+        }
         if(!post && tail.length===3){
           const result=await view()
           response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),result,self):json(result)

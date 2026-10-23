@@ -302,14 +302,23 @@ export function verificationPage(
           </article>
         ))}
         {result.history.releases.map((r, i) => (
-          <p key={i}>
-            Response {String(r.disclosureId)} v{String(r.disclosureVersion)} ·
-            requester {String(r.requesterId)} · released{' '}
-            {new Date(Number(r.issuedAt)).toISOString()} ·{' '}
-            {r.openedAt ? 'opened' : 'not opened'} ·{' '}
-            {r.acknowledgedAt ? 'requester acknowledged' : 'no acknowledgement'}
-            .
-          </p>
+          <article key={i}>
+            <p>
+              Response {String(r.disclosureId)} v{String(r.disclosureVersion)} ·
+              requester {String(r.requesterId)} · released{' '}
+              {new Date(Number(r.issuedAt)).toISOString()} ·{' '}
+              {r.openedAt ? 'opened' : 'not opened'} ·{' '}
+              {r.acknowledgedAt
+                ? 'requester acknowledged'
+                : 'no acknowledgement'}
+              .
+            </p>
+            <p>
+              {r.retentionStatus}.{' '}
+              {r.corrects ? 'Linked correction of ' + r.corrects : ''}
+            </p>
+            {r.response && <Details value={r.response} />}
+          </article>
         ))}
         {result.history.corrections.map((r) => (
           <p key={r.id}>

@@ -51,12 +51,18 @@ export function approved(row: Revision<unknown>) {
 /** One reviewed, encrypted ledger per worker. Proposals never mutate the adopted balance. */
 export class LeaveLedger {
   constructor(public store: WorkspaceStore) {}
-  async read(actor: Actor, personId: string) {
-    return this.store.list<LeaveAccount>(actor, 'leave-account', personId, true)
+  async read(actor: Actor, personId: string, audited = true) {
+    return this.store.list<LeaveAccount>(
+      actor,
+      'leave-account',
+      personId,
+      true,
+      audited,
+    )
   }
   async open(actor: Actor, personId: string, input: Input) {
     await this.store.authority(actor, 'rates:propose', personId, true)
-    if ((await this.read(actor, personId)).length)
+    if ((await this.read(actor, personId, false)).length)
       throw new PayrollError('leave_account_exists', 409)
     let raw = input.tiers
     if (typeof raw === 'string') {
@@ -121,7 +127,8 @@ export class LeaveLedger {
     input: Input,
     handoff?: LeaveEntry['handoff'],
   ) {
-    const row = (await this.read(actor, personId))[0]
+    await this.store.authority(actor, 'rates:propose', personId, true)
+    const row = (await this.read(actor, personId, false))[0]
     if (!row) throw new PayrollError('leave_account_required', 409)
     const sourceId = text(input.sourceId, 120),
       sourceVersion = integer(input.sourceVersion)

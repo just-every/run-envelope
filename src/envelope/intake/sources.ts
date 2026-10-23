@@ -168,7 +168,7 @@ export class SourceIntake {
     if (event.data.provider !== 'willow' || event.data.type !== 'leave')
       throw new PayrollError('willow_leave_source_required', 409)
     const ledger = new LeaveLedger(this.store),
-      account = (await ledger.read(actor, personId))[0]
+      account = (await ledger.read(actor, personId, false))[0]
     if (!account || account.data.owner !== 'willow')
       throw new PayrollError('willow_owns_leave_balance', 409)
     return ledger.record(

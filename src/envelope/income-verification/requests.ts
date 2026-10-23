@@ -57,6 +57,8 @@ export interface ProtectedDisclosure {
   response: Input
   provenance: { kind: string; id: string; version: number; sourceRef: string }[]
 }
+export const retentionDeadline = (value: string) =>
+  Date.parse(value.length === 10 ? value + 'T23:59:59.999Z' : value)
 const boundedPeriod = (input: Input) => {
   const from = date(input.from),
     through = date(input.through)
@@ -82,6 +84,22 @@ export const bindingFence = (
  AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='withdrawn'))`
 export class VerificationRequests {
   constructor(public store: WorkspaceStore) {}
+  private async scope(actor: Actor, personId: string, self: boolean) {
+    const f = fence(actor)
+    if (self) {
+      const binding = await this.binding(actor, personId, true)
+      f.sql += ` AND EXISTS(SELECT 1 FROM env_workspace_versions b WHERE b.company_id=? AND b.kind='verification-worker' AND b.object_id=? AND b.version=?
+        AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
+        AND ${currentSources('b')}
+        AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='approved')
+        AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='withdrawn'))`
+      f.args.push(actor.company, binding.id, binding.version)
+    } else {
+      ownerOnly(actor)
+      await this.store.authority(actor, 'records:read', personId, true)
+    }
+    return f
+  }
   async bind(actor: Actor, personId: string, input: Input) {
     ownerOnly(actor)
     const workerId = text(input.workerId)
@@ -168,17 +186,25 @@ export class VerificationRequests {
           ? date(input.expiresOn) + 'T23:59:59.999Z'
           : text(input.expiresAt, 30),
       expiresAt = Date.parse(expiry),
-      retentionUntil = date(input.retentionUntil)
+      retentionUntil = text(input.retentionUntil, 30)
     if (
       !Number.isFinite(expiresAt) ||
       new Date(expiresAt).toISOString() !== expiry
     )
       throw new PayrollError('invalid_verification_expiry')
+    const retentionAt = retentionDeadline(retentionUntil)
+    if (
+      !Number.isFinite(retentionAt) ||
+      (retentionUntil.length === 10
+        ? date(retentionUntil) !== retentionUntil
+        : new Date(retentionAt).toISOString() !== retentionUntil)
+    )
+      throw new PayrollError('invalid_verification_retention')
     if (
       expiresAt <= Date.now() ||
       expiresAt > Date.now() + 30 * 86400000 ||
-      Date.parse(retentionUntil + 'T23:59:59.999Z') < expiresAt ||
-      Date.parse(retentionUntil) > Date.now() + 90 * 86400000
+      retentionAt < expiresAt ||
+      retentionAt > Date.now() + 90 * 86400000
     )
       throw new PayrollError('invalid_verification_expiry')
     const payload: ConsentData = {
@@ -248,12 +274,7 @@ export class VerificationRequests {
     personId: string,
     self = false,
   ): Promise<Consent[]> {
-    if (self) await this.binding(actor, personId, true)
-    else {
-      ownerOnly(actor)
-      await this.store.authority(actor, 'records:read', personId, true)
-    }
-    const f = fence(actor),
+    const f = await this.scope(actor, personId, self),
       rows = await this.store.records
         .statement(
           `SELECT id,person_id AS personId,worker_id AS workerId,binding_id AS bindingId,binding_version AS bindingVersion,expires_at AS expiresAt,revoked_at AS revokedAt,cipher FROM env_verification_consents WHERE company_id=? AND person_id=? AND ${f.sql} ORDER BY created_at DESC`,
@@ -490,7 +511,7 @@ export class VerificationRequests {
     )
     if (!consent)
       throw new PayrollError('verification_request_unavailable', 404)
-    const f = fence(actor),
+    const f = await this.scope(actor, personId, true),
       key = crypto.randomUUID(),
       event = crypto.randomUUID(),
       cipher = await seal(
@@ -528,36 +549,87 @@ export class VerificationRequests {
   }
   async history(actor: Actor, personId: string, self = false) {
     const consents = await this.consents(actor, personId, self),
-      f = fence(actor)
-    const releases = await this.store.records
-      .statement(
-        `SELECT r.id,r.consent_id AS consentId,r.disclosure_id AS disclosureId,r.disclosure_version AS disclosureVersion,r.requester_id AS requesterId,r.issued_at AS issuedAt,r.expires_at AS expiresAt,r.opened_at AS openedAt,r.acknowledged_at AS acknowledgedAt FROM env_verification_releases r JOIN env_verification_consents c ON c.company_id=r.company_id AND c.id=r.consent_id WHERE c.company_id=? AND c.person_id=? AND ${f.sql}`,
-        [actor.company, personId, ...f.args],
-      )
-      .all()
-    const corrections = await this.store.records
-      .statement(
-        `SELECT id,consent_id AS consentId,worker_id AS workerId,cipher,created_at AS createdAt FROM env_verification_corrections WHERE company_id=? AND consent_id IN(SELECT id FROM env_verification_consents WHERE company_id=? AND person_id=?) AND ${f.sql}`,
-        [actor.company, actor.company, personId, ...f.args],
-      )
-      .all<{
-        id: string
-        consentId: string
-        workerId: string
-        cipher: string
-        createdAt: number
-      }>()
+      f = await this.scope(actor, personId, self),
+      event = crypto.randomUUID()
+    const results = await this.store.records.env.DB.batch<
+      Record<string, unknown>
+    >([
+      auditStatement(
+        this.store.records.env,
+        actor,
+        event,
+        'verification.disclosure-history-read',
+        personId,
+        actor.grant.version,
+        f.sql,
+        f.args,
+      ),
+      this.store.records.statement(
+        `SELECT r.id,r.consent_id AS consentId,r.disclosure_id AS disclosureId,r.disclosure_version AS disclosureVersion,r.requester_id AS requesterId,r.issued_at AS issuedAt,r.expires_at AS expiresAt,r.opened_at AS openedAt,r.acknowledged_at AS acknowledgedAt,v.cipher
+        FROM env_verification_releases r JOIN env_verification_consents c ON c.company_id=r.company_id AND c.id=r.consent_id
+        JOIN env_workspace_versions v ON v.company_id=r.company_id AND v.kind='disclosure' AND v.object_id=r.disclosure_id AND v.version=r.disclosure_version
+        WHERE c.company_id=? AND c.person_id=? AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
+        [actor.company, personId, ...f.args, event],
+      ),
+      this.store.records.statement(
+        `SELECT id,consent_id AS consentId,worker_id AS workerId,cipher,created_at AS createdAt FROM env_verification_corrections
+        WHERE company_id=? AND consent_id IN(SELECT id FROM env_verification_consents WHERE company_id=? AND person_id=?) AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
+        [actor.company, actor.company, personId, ...f.args, event],
+      ),
+    ])
+    if (!results[0].meta.changes)
+      throw new PayrollError('verification_authority_changed', 409)
     const key = await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY)
     return {
       consents,
-      releases: releases.results,
+      releases: await Promise.all(
+        results[1].results.map(async ({ cipher, ...r }) => {
+          const consent = consents.find((c) => c.id === r.consentId),
+            retained =
+              consent && retentionDeadline(consent.retentionUntil) >= Date.now()
+          const disclosed = retained
+            ? (JSON.parse(
+                await unseal(
+                  key,
+                  JSON.stringify([
+                    actor.company,
+                    'disclosure',
+                    r.disclosureId,
+                    r.disclosureVersion,
+                  ]),
+                  String(cipher),
+                ),
+              ) as ProtectedDisclosure)
+            : undefined
+          return {
+            id: String(r.id),
+            consentId: String(r.consentId),
+            disclosureId: String(r.disclosureId),
+            disclosureVersion: Number(r.disclosureVersion),
+            requesterId: String(r.requesterId),
+            issuedAt: Number(r.issuedAt),
+            expiresAt: Number(r.expiresAt),
+            openedAt: r.openedAt == null ? null : Number(r.openedAt),
+            acknowledgedAt:
+              r.acknowledgedAt == null ? null : Number(r.acknowledgedAt),
+            retentionStatus: retained
+              ? 'visible-until-selected-date'
+              : 'restricted-after-selected-date',
+            response: disclosed?.response ?? null,
+            corrects: disclosed?.corrects ?? null,
+          }
+        }),
+      ),
       corrections: await Promise.all(
-        corrections.results.map(async ({ cipher, ...r }) => ({
-          ...r,
+        results[2].results.map(async ({ cipher, ...r }) => ({
+          id: String(r.id),
+          consentId: String(r.consentId),
+          workerId: String(r.workerId),
+          createdAt: Number(r.createdAt),
           reason: await unseal(
             key,
             JSON.stringify([actor.company, 'verification-correction', r.id]),
-            cipher,
+            String(cipher),
           ),
         })),
       ),
