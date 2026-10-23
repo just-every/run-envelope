@@ -2,7 +2,7 @@ import {restoredJourney} from './restored.mjs'
 import assert from 'node:assert/strict'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
-import {mkdtemp,mkdir,cp,symlink,readFile,writeFile,rm} from 'node:fs/promises'
+import {mkdtemp,mkdir,cp,symlink,readFile,open,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join,resolve,dirname} from 'node:path'
 const execute=promisify(execFile)
@@ -61,7 +61,11 @@ export async function archiveJourney({persist,settings,formerToken,previousPersi
     await mkdir(join(damagedTarget,'exports'),{recursive:true})
     const corrupt=structuredClone(archive),part=corrupt.find(r=>r.kind==='part'),item=part.items.find(i=>i.kind==='row')
     item.row[Object.keys(item.row)[0]]='synthetic-envelope-599'
-    await writeFile(join(damagedTarget,'exports/corrupt.rer'),corrupt.map(r=>JSON.stringify(r)).join('\n')+'\n')
+    const corruptFile=await open(join(damagedTarget,'exports/corrupt.rer'),'wx',0o600)
+    try {
+      await corruptFile.chmod(0o600)
+      await corruptFile.writeFile(corrupt.map(r=>JSON.stringify(r)).join('\n')+'\n')
+    } finally {await corruptFile.close()}
     assert.match(await run(damagedTarget,['import','--input','exports/corrupt.rer','--yes'],1),/verification failed/)
     const olderSource=await fixture('older-source'),fencedTarget=await fixture('older-target')
     await mkdir(join(olderSource,'.wrangler'),{recursive:true})

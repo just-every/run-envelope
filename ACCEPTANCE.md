@@ -164,6 +164,6 @@ Buyer review 4 adds Gusto tax-refund custody and confirmed company/year annual n
 
 | Kind | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Target | 0 | 14 | 50 | 64 |
+| Target | 0 | 18 | 46 | 64 |
 | Push further | 0 | 0 | 7 | 7 |
-| All | 0 | 14 | 57 | 71 |
+| All | 0 | 18 | 53 | 71 |

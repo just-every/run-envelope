@@ -398,8 +398,8 @@ No clause is complete payroll or production readiness.
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 0 | 0 | 0 | 0 |
-| Target and push further | 0 | 14 | 57 | 71 |
-| All | 0 | 14 | 57 | 71 |
+| Target and push further | 0 | 18 | 53 | 71 |
+| All | 0 | 18 | 53 | 71 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |

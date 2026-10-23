@@ -34,6 +34,15 @@
         "pnpm run build",
         "ENVELOPE_JOURNEYS=sponsored pnpm run test:runtime"
       ]
+    },
+    {
+      "name": "people",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=income-verification,source-intake,leave pnpm run test:runtime"
+      ]
     }
   ],
   "nightly": []
