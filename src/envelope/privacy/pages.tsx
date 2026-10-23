@@ -31,7 +31,7 @@ export function privacyPage(session:Session,companies:Company[],actor:Actor,peop
       {requests.length ? requests.map(r=><div key={r.id}>
         <h3 className="evidence-text">{r.state==='complete'?'Eligible local erasure complete':'Held — not completed'}</h3>
         <p className="evidence-text">Request {r.id}. Requested {new Date(r.requestedAt).toISOString()}{r.completedAt ? '; completed '+new Date(r.completedAt).toISOString() : ''}.</p>
-        {r.state==='held' && <><pre className="evidence-text">{JSON.stringify(r.retained,null,2)}</pre><form method="post" action={base+'/release'}>
+        {r.state==='held' && <><div className="evidence-text"><p>Retained fields: {(r.retained.fields??[]).join(', ')}.</p>{r.retained.hold && <p>Legal basis: {r.retained.hold.basis}. Custodian: {r.retained.hold.custodian}. Review/release date: {r.retained.hold.releaseDate}.</p>}{r.retained.history?.length>0 && <p>Payroll evidence awaiting category-specific retention review: {r.retained.history.map((h:{category:string;reference:string})=>h.category+' '+h.reference).join('; ')}.</p>}</div><form method="post" action={base+'/release'}>
           <Hidden name="personId" value={r.personId!} />
           <Field name="evidence" label="Verified lawful release evidence" maxLength={500} />
           <label className="field"><span><input type="checkbox" name="confirm" value="true" required /> I confirm release is lawful and request eligible deletion now.</span></label>

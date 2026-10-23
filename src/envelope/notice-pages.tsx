@@ -3,6 +3,7 @@ import type { Actor } from './access'
 import type { Company } from './records'
 import type { Providers } from './providers'
 import { redact } from './providers'
+import { CaseCard } from './notices/case-card'
 import type { Notices } from './notices'
 import { page, Card, Field, Hidden, Submit, companyPath } from './pages'
 
@@ -59,6 +60,7 @@ export function noticePage(session:Session,companies:Company[],actor:Actor,notic
         <Submit>Upload private original</Submit>
       </form>}
     </Card>
+    <CaseCard actor={actor} noticeId={notice.id} base={base} work={notice.caseWork} files={notice.files} />
     <Card title="Untrusted model proposals">
       {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3 className="evidence-text">Summary</h3><p className="evidence-text">{String(a.summary)}</p><h3 className="evidence-text">Proposed reply — not approved</h3><p className="evidence-text">{String(a.proposedReply)}</p></div>) : <p className="evidence-text">No model result. A missing connection remains unavailable; no result is invented.</p>}
     </Card>

@@ -14,6 +14,7 @@ import { LeaveLedger } from './leave/ledger'
 import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
 import { Providers } from './providers'
+import { NoticeCases } from './notices/cases'
 import { Notices, processNotice, dispatchReply } from './notices'
 import { requireActiveCompany } from './effects/fences/restore'
 import { PrivateFiles, privateDownload } from './private-files/store'
@@ -559,6 +560,10 @@ export async function payrollResponse(
         } else if (tail.length===2 && !post) {
           const result = await notices.details(actor,tail[1])
           response = ui ? noticePage(session,companies,actor,result) : json(result)
+        } else if (tail.length===3 && tail[2]==='case') {
+          const cases=new NoticeCases(notices)
+          const result=post ? await cases.save(actor,tail[1],value) : await cases.read(actor,tail[1])
+          response=ui && post ? redirect(base+'/notices/'+tail[1]) : json(result)
         } else if (tail.length===3 && tail[2]==='files' && post) {
           const result = await new PrivateFiles(notices).save(actor,tail[1],value)
           response = ui ? redirect(base+'/notices/'+tail[1]) : json(result,201)
