@@ -2049,11 +2049,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "9780c1b8eff2ca7fc9585b2b20a346530473b017fec324578671ac5eb83f0a7a",
+      "sha256": "28ac037a28cec729faf04fc62fd8aea1494c6c28eb0d0b108e59e15b1359f490",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "9c4cf6210bab58564675742179fa76a1b921047ebbe61890e617755b498878a9",
+      "sha256": "6b9ebe2ca5da5cf8347b12b4e5ca4ae3046c3aab0366d588bda5c553b87f4e62",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

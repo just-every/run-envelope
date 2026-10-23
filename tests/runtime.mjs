@@ -6,6 +6,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
+import { request as httpsRequest } from 'node:https'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -232,7 +233,7 @@ try {
   }
   if (!selected || selected.includes('identity')) {
     await stopWorker()
-    const identityOrigin='https://envelope.example.com', issuer='https://auth.example.com'
+    const identityOrigin=`https://127.0.0.1:${port}`, issuer='https://auth.example.com'
     const pair=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
     const appPair=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
     const publicJwk={...await crypto.subtle.exportKey('jwk',pair.publicKey),kid:'synthetic-envelope-600',alg:'ES256',use:'sig'}
@@ -252,7 +253,7 @@ try {
       identityWorker=await unstable_startWorker({
         config:resolve('dist/server/wrangler.json'),
         bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:'resend',MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:'synthetic-envelope-600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
-        dev:{server:{hostname:'127.0.0.1',port},origin:{hostname:new URL(identityOrigin).host,secure:true},inspector:false,remote:false,watch:false,persist,logLevel:'error',
+        dev:{server:{hostname:'127.0.0.1',port,secure:true},origin:{hostname:new URL(identityOrigin).host,secure:true},inspector:false,remote:false,watch:false,persist,logLevel:'error',
           outboundService:async request=>{
             if(request.url==='https://api.resend.com/emails' && request.method==='POST') {
               const body=await request.json();edge.mails.push(body)
@@ -288,7 +289,22 @@ try {
         },
       })
       await identityWorker.ready
-      await identityJourney({worker:identityWorker,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
+      const identityTransport={fetch:(url,init={})=>new Promise((resolve,reject)=>{
+        assert.equal(new URL(url).origin,identityOrigin,'TLS exception is confined to this loopback fixture')
+        const request=httpsRequest(url,{method:init.method,headers:init.headers,rejectUnauthorized:false},response=>{
+          const chunks=[]
+          response.on('data',chunk=>chunks.push(chunk))
+          response.on('error',reject)
+          response.on('end',()=>{
+            const headers=new Headers()
+            for(let i=0;i<response.rawHeaders.length;i+=2) headers.append(response.rawHeaders[i],response.rawHeaders[i+1])
+            resolve(new Response([204,304].includes(response.statusCode)?null:Buffer.concat(chunks),{status:response.statusCode,headers}))
+          })
+        })
+        request.on('error',reject)
+        request.end(init.body)
+      })}
+      await identityJourney({worker:identityTransport,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
     } finally {
       await identityWorker?.dispose()
       worker=launch(settings)

@@ -3272,21 +3272,8 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
   const sessionCount = async () => (await sql('SELECT COUNT(*) AS n FROM oa_sessions'))[0].n
   const mailLink = () => new URL(edge.mails.at(-1).text.match(/https:\/\/[^\s]+/)[0])
   const browser = await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
-  const context = await browser.newContext({serviceWorkers:'block'})
-  // Browser traffic reaches the actual emitted Worker, with its real HTTPS
-  // origin/cookie/Origin checks; no application handler or auth response is mocked.
-  await context.route(origin + '/**', async route => {
-    const request = route.request()
-    const response = await worker.fetch(request.url(), {
-      method:request.method(), headers:{...await request.allHeaders(),host:new URL(origin).host,'CF-Connecting-IP':'127.0.0.2'},
-      ...(request.postDataBuffer() ? {body:request.postDataBuffer()} : {}), redirect:'manual',
-    })
-    if(request.method()==='POST') {
-      const location=response.headers.get('location')
-      console.log('IDENTITY browser POST',new URL(request.url()).pathname,response.status,location ? new URL(location,origin).origin+new URL(location,origin).pathname : 'no redirect')
-    }
-    await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())})
-  })
+  // A real HTTPS loopback fixture uses a generated self-signed certificate.
+  const context = await browser.newContext({ignoreHTTPSErrors:true})
   const page = await context.newPage()
   const folder = process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
   await mkdir(folder,{recursive:true})
