@@ -3596,3 +3596,88 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     console.log('SOURCE-INTAKE passed: native review, effective Willow hire/rate/termination and held location/leave/benefit handoffs, BambooHR/HiBob official rate schemas, future/late-conflict/replay safety, six source earnings and replacement commission correction, affected-run invalidation and current salary-field revocation; 1440/390. Rippling, live sync and reconciled actuals remain unproved.')
   } finally {await browser.close()}
 }
+
+/** INCOME-VERIFICATION: native worker consent and protected, source-bound disclosure. */
+export async function incomeVerificationJourney({ origin, cookie, sql, settings }) {
+  const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
+  const c=await data('/api/envelope/companies',{name:'Synthetic protected verification employer',ein:'00-0001000'},201),api='/api/envelope/companies/'+c.id
+  const location=await data(api+'/locations',{name:'Pennsylvania office',state:'PA'},201),p=await data(api+'/people',{name:'María, mortgage applicant',locationId:location.id},201),foreign=await data(api+'/people',{name:'Unrelated worker',locationId:location.id},201),person=api+'/people/'+p.id,door=person+'/verification'
+  const identities={}
+  for(const [i,name] of ['worker','requester','forged','coworker'].entries()){
+    const token=randomBytes(32).toString('base64url'),id='synthetic-envelope-'+(1001+i),sid='synthetic-envelope-'+(1011+i),hash=await hashToken(settings.SESSION_SECRET,'session',token)
+    await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('${id}','verification-${name}@example.com','Synthetic ${name}','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('${sid}','${hash}','${id}',1,'native',${Date.now()},${Date.now()+3600000})`)
+    identities[name]={id,cookie:localCookieName('operator_session_local',origin)+'='+token}
+    if(name==='worker'||name==='coworker')await data(api+'/grants',{operatorId:id,version:0,role:'employee',locations:[location.id],fields:[],actions:['records:read']})
+  }
+  const approve=async(kind,id)=>{const r=await data(door+'/'+kind+'/'+id+'/review');await data(door+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken});return r}
+  const source={id:'synthetic-envelope-1020',version:0,from:'2026-06-01',through:'2026-06-30',grossCents:345678,sourceRef:'synthetic-envelope-1021',evidence:'Synthetic documented historical payroll register, reviewed against original'}
+  const now=Date.now(),dateAfter=days=>new Date(now+days*86400000).toISOString().slice(0,10)
+  const consent={requesterId:identities.requester.id,purpose:'mortgage',from:source.from,through:source.through,fields:['hireDate','grossWages'],expiresOn:dateAfter(3),retentionUntil:dateAfter(30)}
+  const snapshot=()=>sql("SELECT (SELECT COUNT(*) FROM env_verification_consents) AS consents,(SELECT COUNT(*) FROM env_verification_releases) AS releases,(SELECT COUNT(*) FROM env_workspace_versions WHERE kind='disclosure') AS disclosures,(SELECT COUNT(*) FROM env_audit) AS audit")
+  const noWrite=async(fn)=>{const before=await snapshot();await fn();assert.deepEqual(await snapshot(),before,'Denied requests cannot create a disclosure, receipt or false audit')}
+  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  try{
+    const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+    const workerContext=await browser.newContext(),workerParts=identities.worker.cookie.split('=');await workerContext.addCookies([{name:workerParts[0],value:workerParts[1],url:origin}]);const workerPage=await workerContext.newPage()
+    const requesterContext=await browser.newContext(),requesterParts=identities.requester.cookie.split('=');await requesterContext.addCookies([{name:requesterParts[0],value:requesterParts[1],url:origin}]);const requesterPage=await requesterContext.newPage()
+    const capture=async(target,path,label,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',{recursive:true});for(const width of [1440,390]){await target.setViewportSize({width,height:1000});const r=await target.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),status);await target.evaluate(()=>document.fonts.ready);assert.equal(await target.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await target.keyboard.press('Tab');assert.equal(await target.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await target.locator('button').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Verification controls have visible words');await target.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',label+'-'+width+'.png'),fullPage:true,mask:[target.locator('[data-release-token]')]})}}
+    await capture(page,door,'verification-empty')
+    const binding=await data(door+'/worker',{version:0,workerId:identities.worker.id,evidence:'synthetic-envelope-1022'},201)
+    await capture(page,door+'/verification-worker/'+binding.id+'/review','verification-worker-review');await approve('verification-worker',binding.id)
+    const hire=await data(person+'/hris',{provider:'willow',type:'hire',sourceVersion:1,version:0,sourcePersonId:'synthetic-envelope-1023',sourceApprovedBy:'Synthetic HR reviewer',sourceEvidence:'synthetic-envelope-1024',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-1025',effectiveDate:'2025-09-15',values:{}}},201)
+    const h=await data(person+'/hris/'+hire.id+'/review');await data(person+'/hris/'+hire.id+'/approve',{version:h.version,reviewToken:h.reviewToken})
+    await data(door+'/income',source,201);await capture(page,door+'/income-source/'+source.id+'/review','verification-wage-source-review');await approve('income-source',source.id)
+    await noWrite(async()=>{
+      await data(door+'/consents',{...consent,fields:['rawSSN','completeHistory']},403,identities.worker.cookie)
+      await data(door+'/consents',{...consent,purpose:'broad-employer-history'},400,identities.worker.cookie)
+      await data(door+'/consents',{...consent,expiresOn:dateAfter(-1)},400,identities.worker.cookie)
+      await data(door+'/consents',{...consent,requesterId:'synthetic-envelope-no-identity'},403,identities.worker.cookie)
+      await data(door+'/consents',consent,403,identities.coworker.cookie)
+      await data(api+'/people/'+foreign.id+'/verification/consents',consent,403,identities.worker.cookie)
+    })
+    await capture(workerPage,door,'verification-worker-consent-empty')
+    for(const [label,value] of [['Verified requester identity ID',identities.requester.id],['Selected period starts',consent.from],['Selected period ends',consent.through],['Consent expires (within 30 days)',consent.expiresOn],['Restricted history retention date (within 90 days)',consent.retentionUntil]])await workerPage.getByLabel(label,{exact:true}).fill(value)
+    await workerPage.getByLabel('Hire date',{exact:true}).check();await workerPage.getByLabel('Gross wages in the selected period',{exact:true}).check()
+    await workerPage.getByRole('button',{name:'Consent to these exact fields and period',exact:true}).click();await workerPage.waitForURL(origin+door.replace('/api/','/app/'))
+    const signed=(await data(door,undefined,200,identities.worker.cookie)).history.consents[0]
+    assert.deepEqual(signed.fields,['hireDate','grossWages'])
+    const prepare=async(id,consentId=signed.id,extra={})=>data(door+'/disclosures',{id,version:0,consentId,...extra},201)
+    const response=await prepare('synthetic-envelope-1030')
+    await capture(page,door+'/disclosure/'+response.id+'/review','verification-minimal-response-review')
+    await noWrite(async()=>{await data(door+'/disclosure/'+response.id+'/release',{version:1},409);await data(door+'/disclosure/'+response.id+'/approve',{version:1,approved:true},403,identities.worker.cookie)})
+    await approve('disclosure',response.id)
+    const released=await data(door+'/disclosure/'+response.id+'/release',{version:1},201)
+    assert.equal(released.delivered,false)
+    const get=(release,who=identities.requester.cookie,status=200)=>data('/api/envelope/protected-response/read',{id:release.id,token:release.token},status,who)
+    await noWrite(async()=>{await get(released,identities.forged.cookie,403);await get({...released,token:'synthetic-envelope-1031'},identities.requester.cookie,403)})
+    let facts=await get(released)
+    assert.deepEqual(facts.response,{periodStart:source.from,periodEnd:source.through,hireDate:'2025-09-15',grossWagesCents:345678,currency:'USD'})
+    assert.equal(JSON.stringify(facts).includes('employmentStatus'),false)
+    assert.ok(facts.provenance.some(s=>s.sourceRef===source.sourceRef));assert.ok(facts.provenance.some(s=>s.sourceRef==='synthetic-envelope-1025'))
+    await data('/api/envelope/protected-response/ack',{id:released.id,token:released.token},200,identities.requester.cookie)
+    let history=(await data(door,undefined,200,identities.worker.cookie)).history
+    assert.ok(history.releases[0].openedAt);assert.ok(history.releases[0].acknowledgedAt)
+    await capture(workerPage,door,'verification-worker-disclosure-history')
+    await capture(requesterPage,'/app/envelope/protected-response','verification-requester-empty')
+    await requesterPage.getByLabel('Protected release ID',{exact:true}).fill(released.id);await requesterPage.getByLabel('Private response token',{exact:true}).fill(released.token);await requesterPage.getByRole('button',{name:'Open selected reviewed facts',exact:true}).click();await requesterPage.waitForURL(origin+'/app/envelope/protected-response/read')
+    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope','verification-protected-facts-'+width+'.png'),fullPage:true})}
+    await data(door+'/consents/'+signed.id+'/corrections',{reason:'Please reconcile the gross amount to the corrected June register.'},200,identities.worker.cookie)
+    await data(door+'/income',{...source,version:1,grossCents:345600},201);await approve('income-source',source.id)
+    await noWrite(async()=>{await get(released,identities.requester.cookie,403)})
+    const corrected=await prepare('synthetic-envelope-1032',signed.id,{corrects:response.id});await approve('disclosure',corrected.id)
+    const correctedRelease=await data(door+'/disclosure/'+corrected.id+'/release',{version:1},201);facts=await get(correctedRelease);assert.equal(facts.response.grossWagesCents,345600);assert.equal(facts.corrects,response.id)
+    await data(door+'/consents/'+signed.id+'/revoke',{},200,identities.worker.cookie)
+    await noWrite(async()=>{await get(correctedRelease,identities.requester.cookie,403);await data(door+'/disclosures',{id:'synthetic-envelope-1033',version:0,consentId:signed.id},403)})
+    const expiring=await data(door+'/consents',{...consent,expiresAt:new Date(Date.now()+3500).toISOString()},201,identities.worker.cookie)
+    const expiringResponse=await prepare('synthetic-envelope-1034',expiring.id);await approve('disclosure',expiringResponse.id)
+    const expiringRelease=await data(door+'/disclosure/'+expiringResponse.id+'/release',{version:1},201)
+    await get(expiringRelease)
+    await new Promise(resolve=>setTimeout(resolve,3600))
+    await noWrite(async()=>{await get(expiringRelease,identities.requester.cookie,403)})
+    await capture(page,door,'verification-corrected-revoked-history');await capture(workerPage,door,'verification-worker-revoked-history')
+    const privateRows=JSON.stringify(await sql("SELECT cipher FROM env_verification_consents UNION ALL SELECT cipher FROM env_verification_corrections UNION ALL SELECT cipher FROM env_workspace_versions WHERE kind IN ('income-source','disclosure')"))
+    assert.equal(privateRows.includes(source.sourceRef),false);assert.equal(privateRows.includes('345678'),false)
+    console.log('INCOME-VERIFICATION passed: native worker/requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction/history, linked source correction, revocation and actual expiry; native screens 1440/390. Interim policy approval, legal-authority route and full retained-data lifecycle remain unproved.')
+  }finally{await browser.close()}
+}

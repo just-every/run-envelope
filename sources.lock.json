@@ -328,6 +328,10 @@
       "sha256": "13038caa4e4b626760c34c790129e6dc8ce6dac64a3a79429d591ccdfd16916b",
       "executable": false
     },
+    "migrations/core/0024_income_verification.sql": {
+      "sha256": "e68de79e09f4355d516e2dbec2606c014e65d3ba71b2db519e8d154cefc84830",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "5dce7856fac22b695fc39b505e90971b52044c076d2935837a57c73bf01b427e",
       "executable": false
@@ -880,8 +884,20 @@
       "sha256": "caea8cce777d770e2037b8b7b3ceacc486f59c75bdf512de14b32fd766f2ece8",
       "executable": false
     },
+    "src/envelope/disclosures/protected.ts": {
+      "sha256": "fc0886f0e6c72c0cb64d2028ab347ec764dda31390fed41f141d8eae5c5e5023",
+      "executable": false
+    },
     "src/envelope/http.ts": {
-      "sha256": "fb6eef5a863ba8dd44ba3fd549bdf7ed4c4d809e35d769d01fb9b2e66513c4eb",
+      "sha256": "3f0674ce0859ad7a9eb4646dc31ffc37d3d1c7a8336e9588f150bcee83e083db",
+      "executable": false
+    },
+    "src/envelope/income-verification/pages.tsx": {
+      "sha256": "1627f4ffbb99a47a71acdc8482997420c215c355ce0a13739552790bb6dbcb1e",
+      "executable": false
+    },
+    "src/envelope/income-verification/requests.ts": {
+      "sha256": "47d466f0a3599e8a277c96fe5856da634d0e89c3407f36896f9cd39e4b90ef65",
       "executable": false
     },
     "src/envelope/intake/pages.tsx": {
@@ -909,7 +925,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "a15aeb336e7b900c3a2085065064b364e3614bc78658b56a6cb57e0cedda3024",
+      "sha256": "0f0b3ea922d10957824b4b316e135830f4fea52b270df9ffc183188dbbdf293a",
       "executable": false
     },
     "src/envelope/providers.ts": {
@@ -1021,7 +1037,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "b2b4728c0d2f5bcee9ab1351c64c4cbb5117a7614e754c4771cdb86e57dcae9a",
+      "sha256": "61d2ea682f6a268bcd52a65382371c32cb8c21d2ec615dbfdb4e091d79df7e81",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2077,11 +2093,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "78cebcc687cc3b1305c9aa34204f8727a56313fa462988e2b21f28d82be8fe90",
+      "sha256": "03353b8af9d49084f21f6f4d1d1763e84d3b333340db3e52ebd822891a0d5f9d",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "5d11ca87278fb7ca4d45b4010f4d02d7c5310a3c4933a6ea36e0e99e97f15e10",
+      "sha256": "4a634331ad062a39dacc870e13e808ac7079371b5280aea5d3b5fb9c869bc08c",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
