@@ -247,6 +247,6 @@ export async function archiveJourney(context) {
     assert.ok(occupied.output.includes('target_not_empty'), 'the refusal is specifically the nonempty target')
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(adoptedHistory)), 'nonempty refusal leaves all prior business and identity history unchanged')
     await keys.occupied()
-    console.log('Archive custody journey passed: native mixed-company history, ciphertext, inactive authority and atomic CLI refusals.')
+    console.log('Archive custody journey passed: native annual corrections, source editions, unused-worker erasure fence, inactive authority, restricted audited adoption and atomic CLI refusals.')
   } finally { await rm(temporary, { recursive: true, force: true }) }
 }
