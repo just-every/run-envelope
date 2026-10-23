@@ -75,7 +75,7 @@ export async function firmJourney(context) {
       await preparation.getByRole('heading',{name:'Preparation results',exact:true}).scrollIntoViewIfNeeded();assert.equal(await preparation.getByRole('status').getByRole('link').count(),2);await preparation.screenshot({path:join(proof,`firm-batch-prepared-${width}.png`)})
     }
     await capture('firm-work-list',first.base.replace('/api/','/app/')+'/firm-work')
-    page=await capture('firm-exact-client-review',runPath.replace('/api/','/app/')+'/review','backup');await page.getByRole('heading',{name:'Review an exact run version',exact:true}).waitFor()
+    page=await capture('firm-exact-client-review',runPath.replace('/api/','/app/')+'/review','backup');await page.getByRole('button',{name:'Approve this exact run version',exact:true}).waitFor()
     for(const [kind,sourceKind,sourceId] of [['funding','earnings-run',first.run.id],['filing','registration','STATE-WH']]) {
       page=await capture('firm-assign-'+kind,first.base.replace('/api/','/app/')+'/firm-work?sourceKind='+sourceKind+'&sourceId='+sourceId+'&sourceVersion=1')
       await page.getByLabel('Work type',{exact:true}).selectOption(kind)
