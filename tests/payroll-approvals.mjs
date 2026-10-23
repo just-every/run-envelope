@@ -33,7 +33,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual(await effects(), before, error + ' has zero effects')
   }
   const humans = {}
-  for (const name of ['approver-a', 'approver-b', 'admin']) {
+  for (const name of ['approver-a', 'approver-b', 'admin', 'clerk']) {
     const token = randomBytes(32).toString('base64url'),
       id = 'synthetic-envelope-run-' + name,
       session = 'synthetic-envelope-run-session-' + name,
@@ -321,11 +321,17 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     const tipSetup = await setup(370, 'Seattle tipped crew', [t1])
     await work(t1, 372, 'WA')
     await bank(t1, 0)
-    const tip = (n, settlement, amountCents, furnishedCents, version = 0) =>
-      data(base + '/people/' + t1.id + '/allocations/tip', { id: 'synthetic-envelope-' + n, version, day: '2026-03-02',
-        amountCents, settlement, furnishedCents, sourceRef: 'synthetic-envelope-tip-' + n }, 201)
+    const tipPath = base + '/people/' + t1.id + '/allocations/tip',
+      tipBody = (n, settlement, amountCents, furnishedCents, version) => ({ id: 'synthetic-envelope-' + n, version, day: '2026-03-02',
+        amountCents, settlement, furnishedCents, sourceRef: 'synthetic-envelope-tip-' + n })
+    const tip = (n, settlement, amountCents, furnishedCents, version = 0, who = cookie) =>
+      data(tipPath, tipBody(n, settlement, amountCents, furnishedCents, version), 201, who)
     await tip(373, 'cash', 5000, 1000)
     await tip(374, 'paycheck', 3000, 0)
+    // Adding people does not authorize tip amounts: recording or revising a tip needs compensation access.
+    await grant('clerk', 'preparer', [], ['records:read', 'records:write'])
+    await refused(tipPath, tipBody(376, 'paycheck', 25000, 0, 0), 'payroll_access_denied', humans.clerk.cookie, {}, 403)
+    await refused(tipPath, tipBody(374, 'paycheck', 25000, 0, 1), 'payroll_access_denied', humans.clerk.cookie, {}, 403)
     const tipRun = 'synthetic-envelope-375'
     let tipVersion = await run(tipRun, 0, tipSetup.group)
     const tipData = async () => (await data(door)).runs.find((r) => r.id === tipRun).data
@@ -334,7 +340,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual([tipped.people[0].cashTipsCents, tipped.people[0].paycheckTipsCents, tipped.people[0].tipFundsCents], [5000, 3000, 1000])
     await approve(tipRun, 'approver-b')
     await release(tipRun, tipVersion, 'run_not_payable')
-    await tip(374, 'cash', 3000, 0, 1)
+    await tip(374, 'cash', 3000, 0, 1, humans.admin.cookie)
     await release(tipRun, tipVersion, 'run_sources_changed')
     tipVersion = await run(tipRun, tipVersion, tipSetup.group)
     tipped = await tipData()
@@ -353,7 +359,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual([trail[0].actorId, trail[0].targetId, trail[0].version], [humans['approver-b'].id, tipRun, tipVersion],
       'the audit door names the latest approver and exact version')
     console.log(
-      'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; a WA risk class and final CA FUTA void only their runs; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
+      'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; adding people alone cannot record or revise a tip; a WA risk class and final CA FUTA void only their runs; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
     )
   } finally {
     await browser.close()

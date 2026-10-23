@@ -1069,7 +1069,7 @@
       "executable": false
     },
     "src/envelope/workspace/tips.ts": {
-      "sha256": "71235189e0f5c024e5f179b1377e1b0abd3e05e3316e3d58b83bce3c41284696",
+      "sha256": "79ecf502436006260a715f90b4ab10c23bf1af9753762253cec9b8b50a33664a",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -2109,7 +2109,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "aecfef72918d797b0de155351406c829e90403b82b2202f74239a202cf8b8f67",
+      "sha256": "01bcef7f6213e743af64a60abc2d00509d1ea43a0653608f3d46e76c77641f11",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {

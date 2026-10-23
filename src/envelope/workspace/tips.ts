@@ -34,6 +34,6 @@ export class Tips {
       owner: actor.session.operator.displayName,
       ownerId: actor.session.operator.id,
     }
-    return this.store.append(actor, 'tip', objectId(input.id), revision(input.version), data, personId)
+    return this.store.append(actor, 'tip', objectId(input.id), revision(input.version), data, personId, true)
   }
 }
