@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { fileRecords } from '@runeditrun/rer/modules/portability/files'
 import { archiveFixture } from './archive-fixture.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
-import { unrelatedPersonArchive } from './archive-relationships.mjs'
+import { unrelatedPersonArchive, unrelatedCorrectionArchive } from './archive-relationships.mjs'
 import { archiveEditions } from './archive-editions.mjs'
 
 const execute = promisify(execFile)
@@ -108,6 +108,8 @@ export async function archiveJourney(context) {
     for (const id of fixture.companies) assert.ok(before.env_companies.some(row => row.id === id))
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
     for (const year of fixture.years) {
+      for (const returnId of [year.originalReturnId, year.correctedReturnId])
+        assert.ok(before.env_workspace_versions.some(row => row.kind === 'industry-return' && row.object_id === returnId), 'original and corrected prepared returns remain retained')
       for (const check of [...year.monthlyChecks, { id: year.correctionId }])
         assert.ok(before.env_workspace_versions.some(row => row.kind === 'industry-check' && row.object_id === check.id), 'annual calculations and linked correction are real archived records')
     }
@@ -169,6 +171,12 @@ export async function archiveJourney(context) {
     assert.notEqual(relation.code, 0, 'a checksummed archive with a foreign person reference refuses import')
     assert.ok(relation.output.includes('archive_relationship_invalid'), 'staged business relationships are checked beyond transport checksums')
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'relationship refusal publishes no business or identity rows')
+    const unrelatedCorrection = join(temporary, 'unrelated-correction.rer')
+    await unrelatedCorrectionArchive(records, unrelatedCorrection, settings.ENVELOPE_RECORD_KEY, fixture.years[0].correctionId)
+    const correctionRefusal = await rer(target, 'import', unrelatedCorrection)
+    assert.notEqual(correctionRefusal.code, 0, 'authenticated corrected history must refer to a retained original from the same employer and worker')
+    assert.ok(correctionRefusal.output.includes('archive_relationship_invalid'))
+    assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'broken encrypted correction reference publishes no business or identity rows')
 
     const broken = join(temporary, 'corrupt.rer')
     await writeFile(broken, text.slice(0, text.lastIndexOf('\n', text.length - 2) + 1), { mode: 0o600 })

@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { canonicalJson, makePart } from '@runeditrun/rer/modules/portability'
-import { ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/modules/portability/format'
+import { rewrittenArchive } from './archive-relationships.mjs'
 
 const hash = value => createHash('sha256').update(value).digest('hex')
 export async function archiveEditions(records, source, destination) {
@@ -34,13 +33,6 @@ export async function archiveEditions(records, source, destination) {
     item.data = damaged.subarray(offset, offset + size).toString('base64')
     offset += size
   }
-  const content = new ContentVerifier(altered), archive = new ArchiveVerifier(altered), parts = []
-  for (const old of changed.filter(record => record.kind === 'part')) {
-    const part = await makePart(old.index, old.items)
-    for (const item of part.items) content.add(item)
-    archive.add(part); parts.push(part)
-  }
-  await writeFile(destination, [altered, ...parts, { kind: 'closing', partCount: parts.length,
-    contentHash: content.digest(), archiveHash: archive.digest() }].map(canonicalJson).join('\n') + '\n', { mode: 0o600 })
+  await rewrittenArchive(changed, destination)
   return { descriptor, bytes }
 }

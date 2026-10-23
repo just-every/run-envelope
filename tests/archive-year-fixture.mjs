@@ -51,6 +51,17 @@ export async function archiveYearFixture(payroll, company) {
     assert.ok(retained.sourcesCurrent, 'all monthly calculations retain the same frozen work collection')
   }
   const original = before.checks.find(row => row.id === monthlyChecks[9].id)
+  const returns = company.base + '/industry-returns'
+  const formInput = check => ({ id: 'synthetic-envelope-860601', version: 0, form: '941', taxYear: 2026, quarter: 4,
+    checks: [{ personId: person.id, id: check.id, version: check.version }],
+    address: { street: '100 Main Street', city: 'Austin', state: 'TX', postalCode: '78701' },
+    employeeCount: 0, depositsCents: 0, basis: 'Prepared October monthly register; no collection or filing is asserted.' })
+  const approveReturn = async id => {
+    const review = await payroll.data(returns + '/' + id + '/review')
+    await payroll.data(returns + '/' + id + '/decision', { version: review.version, reviewToken: review.reviewToken })
+  }
+  const originalReturn = await payroll.data(returns, formInput(original), 201)
+  await approveReturn(originalReturn.id)
   await payroll.classify(company, person, ordinaryFacts, {
     version: 1, w4: { ...ordinaryW4, step4cExtraWithholdingCents: 2500 },
   })
@@ -71,5 +82,12 @@ export async function archiveYearFixture(payroll, company) {
   assert.equal(retainedCorrection.data.result.employeeTaxes.incomeTaxCents - original.data.result.employeeTaxes.incomeTaxCents, 2500)
   assert.equal(retainedCorrection.data.amendment.netCashDifferenceCents, -2500)
   assert.equal(retainedCorrection.data.amendment.changed, true)
-  return { monthlyChecks, correctionId: correction.id, originalId: original.id, correction: retainedCorrection }
+  const correctedReturn = await payroll.data(returns, { ...formInput(retainedCorrection), id: 'synthetic-envelope-860602',
+    corrects: originalReturn.id, discoveredOn: '2026-11-02', reason: 'Reviewed corrected W-4 in prepared October register.',
+    process: 'adjustment', w2FiledOrWillFile: true, certifications: [] }, 201)
+  await approveReturn(correctedReturn.id)
+  const returnHistory = await payroll.data(returns)
+  assert.equal(returnHistory.find(row => row.id === correctedReturn.id).data.corrects, originalReturn.id)
+  assert.ok(returnHistory.find(row => row.id === originalReturn.id).approvedBy, 'original return review remains retained')
+  return { monthlyChecks, originalReturnId: originalReturn.id, correctedReturnId: correctedReturn.id, correctionId: correction.id, originalId: original.id, correction: retainedCorrection }
 }

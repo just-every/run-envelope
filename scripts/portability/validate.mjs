@@ -1,6 +1,7 @@
 import { PortabilityError } from '@runeditrun/rer/modules/portability';
 import { archiveRecordKey, decryptArchivedRecord } from './encryption.mjs';
 import { validateRelationships, quote } from './relationships.mjs';
+import { validateIndustryHistory } from './industry-history.mjs';
 
 const fail = code => { throw new PortabilityError(code, 409); };
 const parsed = text => {
@@ -48,6 +49,7 @@ export async function validateEnvelopeArchive(staged, getKey) {
         if (table.name === 'env_workspace_versions') {
           const data = parsed(plaintext);
           if (row.kind === 'ui-claim') await validateClaimArtifacts(data);
+          await validateIndustryHistory(staged, row, data, key);
         } else if (['env_company_setup', 'env_jurisdictions', 'env_notice_analysis', 'env_notice_replies', 'env_verification_consents', 'env_firm_work', 'env_firm_work_history'].includes(table.name)) parsed(plaintext);
       }
     }

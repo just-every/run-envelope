@@ -785,7 +785,7 @@
       "executable": false
     },
     "scripts/portability/validate.mjs": {
-      "sha256": "4929bf66f5270eba7fced17408fc0293e6cf7fdbd8a94add8b6725e2aad557cb",
+      "sha256": "7698c526e22424a37de025f3295233e165cbad7966a18294b83e6e058d397191",
       "executable": false
     },
     "scripts/verify-app.mjs": {
@@ -2281,7 +2281,7 @@
       "executable": false
     },
     "tests/archive-editions.mjs": {
-      "sha256": "68af06f0e08261a205f703c90a74cd108f6107bdf83e5c904d9255ba7695196e",
+      "sha256": "c9692044044ac3a351cb25f76d08c6827bcce9076e19486dc2005c79ae238350",
       "executable": false
     },
     "tests/archive-fixture.mjs": {
@@ -2293,11 +2293,11 @@
       "executable": false
     },
     "tests/archive-relationships.mjs": {
-      "sha256": "0761517c8996484dfe8544e72244309d13f1e21b3617c771d3440ba196316413",
+      "sha256": "ce46d525660fddf4c4887f1ba4285ac1780940c514bdab67e7942571ae39a688",
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "d38091adba60cd8f0f629839538405f87ecd5951fe323589f2aa63e9c60c0ead",
+      "sha256": "5b05e07ddffbb05448f0d96eec21289838b59c5f860fc44dc9edc62df66c6cdc",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -2305,7 +2305,7 @@
       "executable": false
     },
     "tests/archive-year-fixture.mjs": {
-      "sha256": "628e6181735bd9b426257e44ef888b7d412a6fc0b6f913af1f648e041f4e6fa1",
+      "sha256": "38bad1f660b256599366083f1e3b1152dfa39bdf1f1e8e99f9fe0aa8ff18fd24",
       "executable": false
     },
     "tests/claims-browser.mjs": {
