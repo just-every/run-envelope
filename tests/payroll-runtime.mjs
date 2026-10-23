@@ -1,3 +1,4 @@
+import { publicSurfaceJourney } from './envelope/custody/public-surfaces.mjs'
 import { noticeCaseJourney } from './envelope/cases/notices.mjs'
 import AxeBuilder from '@axe-core/playwright'
 import { privacyJourney } from './envelope/custody/privacy.mjs'
@@ -3016,7 +3017,8 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
   const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const proof=process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
   await mkdir(proof,{recursive:true})
-  const context=await browser.newContext(),page=await context.newPage()
+  const context=await browser.newContext(),page=await context.newPage(),browserRequests=[]
+  page.on('request',r=>browserRequests.push(r.url()))
   const setIdentity=async(who=cookie) => {
     await context.clearCookies()
     const at=who.indexOf('=')
@@ -3161,6 +3163,20 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     edge.modelMode='tool'
     await tool('notice.process',{companyId:company,noticeId},adminToken,503)
     edge.modelMode='normal'
+    const suspendedGrant=await data(api+'/agents',{...grantInput,name:'synthetic-envelope-528'},cookie,201)
+    let begin,release
+    const began=new Promise(resolve=>{begin=resolve}),released=new Promise(resolve=>{release=resolve})
+    edge.modelBarrier={started:begin,released}
+    const inFlight=rpc('notice.process',{companyId:company,noticeId},suspendedGrant.token)
+    try {
+      let deadline
+      try {await Promise.race([began,new Promise((_,reject)=>{deadline=setTimeout(()=>reject(Error('model edge did not start')),10000)})])}
+      finally {clearTimeout(deadline)}
+      await data(api+'/agents/'+suspendedGrant.id+'/revoke',{version:1})
+    } finally {release();delete edge.modelBarrier}
+    const revokedResult=await inFlight
+    assert.equal(revokedResult.status,403,await revokedResult.clone().text())
+    assert.equal((await data(api+'/notices/'+noticeId)).analyses.length,1,'revocation during actual provider processing prevents a saved result')
     const dispatcher=await data(api+'/agents',{name:'synthetic-envelope-517',hours:24,reviewDate,actions:['dispatch:execute'],fields:['tax'],locations:[ca.id],providers:['resend']},sponsors.accountant.cookie,201)
     await setIdentity(cookie)
     await page.goto(origin+noticePath)
@@ -3266,7 +3282,9 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal(JSON.stringify(audit).includes('000-00-0001'),false)
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,3)
     await noticeCaseJourney({origin,cookie,api,ui,noticeId,page,capture,ownerId:owner.id,limitedCookie:sponsors.preparer.cookie,sql})
-    await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql})
+    await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql,settings})
+    assert.ok(browserRequests.every(url=>new URL(url).origin===origin),'operator screens and hostile originals cause no third-party browser load')
+    await publicSurfaceJourney({browser,origin})
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
   } finally {await context.close();await browser.close()}
 }

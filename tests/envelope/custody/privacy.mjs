@@ -1,7 +1,10 @@
+import {randomBytes} from 'node:crypto'
+import {hashToken} from '../../../src/modules/operator-auth/crypto.mjs'
+import {localCookieName} from '../../../src/modules/operator-auth/http.mjs'
 import assert from 'node:assert/strict'
 
 /** Owner requests through real HTTP forms; fixture identities are supplied by the host journey. */
-export async function privacyJourney({origin,cookie,api,limitedCookie,page,capture,sql}) {
+export async function privacyJourney({origin,cookie,api,limitedCookie,page,capture,sql,settings}) {
   const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
   const company=await data('/api/envelope/companies',{name:'Privacy custody test company',ein:'00-0000054'},201),base='/api/envelope/companies/'+company.id,ui='/app/envelope/companies/'+company.id,
@@ -36,12 +39,23 @@ export async function privacyJourney({origin,cookie,api,limitedCookie,page,captu
   assert.equal(replay.replayed,true)
   assert.equal(replay.id,completed.id)
   await capture(ui+'/privacy','privacy-eligible-complete')
+  const readerId='synthetic-envelope-542'
+  await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('${readerId}','synthetic-envelope-542@example.com','Records accountant','member','active',1,1)`)
+  await data(base+'/grants',{operatorId:readerId,version:0,role:'accountant',locations:['*'],fields:['tax'],actions:['records:read','private:read','export']})
+  const token=randomBytes(32).toString('base64url'),session='synthetic-envelope-543',hash=await hashToken(settings.SESSION_SECRET,'session',token),readerCookie=localCookieName('operator_session_local',origin)+'='+token
+  await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('${session}','${hash}','${readerId}',1,'native',${Date.now()},${Date.now()+3600000})`)
+  assert.equal((await call(base+'/people/'+held.id,undefined,readerCookie)).status,200,'ordinary access exists before the privacy hold')
   await data(base+'/privacy/holds',{personId:held.id,basis:'Synthetic statutory payroll evidence retention',custodian:'Installation owner',releaseDate:'2030-01-01',confirm:true})
   const heldRequest=await data(base+'/privacy',{personId:held.id,confirm:true})
   assert.equal(heldRequest.state,'held')
   assert.deepEqual(heldRequest.retained.fields,['person.name','person.location_id','person.version','private.tax@1'])
   assert.deepEqual(heldRequest.retained.hold,{basis:'Synthetic statutory payroll evidence retention',custodian:'Installation owner',releaseDate:'2030-01-01'})
   assert.equal((await call(base+'/people/'+held.id+'/private/tax')).status,200,'lawful owner custody remains explicit')
+  assert.equal((await call(base+'/people/'+held.id,undefined,readerCookie)).status,404,'held records are restricted to the owner custodian')
+  assert.equal((await call(base+'/people/'+held.id+'/private/tax',undefined,readerCookie)).status,404)
+  const listed=await data(base,undefined,200,readerCookie)
+  assert.equal(listed.people.some(p=>p.id===held.id),false)
+  assert.equal((await (await call(base+'/export',undefined,readerCookie)).text()).includes(held.name),false,'exports cannot bypass a hold')
   await capture(ui+'/privacy','privacy-held-exact-set')
   await page.getByLabel('Verified lawful release evidence',{exact:true}).fill('Synthetic legal release authorization 2026-10-23')
   await page.getByLabel('I confirm release is lawful and request eligible deletion now.',{exact:true}).check()
@@ -52,6 +66,10 @@ export async function privacyJourney({origin,cookie,api,limitedCookie,page,captu
   assert.equal(done.filter(r=>r.state==='complete').length,2)
   assert.equal(done.filter(r=>r.state==='held').length,0)
   assert.equal((await sql(`SELECT COUNT(*) AS n FROM env_privacy_guard`))[0].n,0)
+  const holdEvents=await sql(`SELECT fingerprint,action,basis,custodian,release_date,actor_id FROM env_privacy_hold_events WHERE company_id='${company.id}' ORDER BY occurred_at`)
+  assert.deepEqual(holdEvents.map(e=>e.action),['recorded','released'])
+  assert.equal(holdEvents[0].fingerprint,holdEvents[1].fingerprint)
+  assert.equal(JSON.stringify(holdEvents).includes(held.id),false,'hold provenance remains without worker identity')
   assert.equal((await sql('SELECT COUNT(*) AS n FROM rer_portability_journal'))[0].n>=3,true,'native restore tombstones and redaction checkpoint commit with deletion')
   await capture(ui+'/privacy','privacy-released-complete')
   console.log('PRIVACY-CUSTODY passed: explicit native owner erase within five minutes, local records/private fields absent, anonymous audit and replay-safe receipt; exact lawful retained set and human release cascade; native archive journal; owner forms at 1440/390')

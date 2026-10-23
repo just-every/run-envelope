@@ -95,3 +95,67 @@ sandbox run. Only synthetic credentials/identifiers are used.
 - Resend send: https://resend.com/docs/api-reference/emails/send-email
 - Resend idempotency: https://resend.com/docs/dashboard/emails/idempotency-keys
 - IRS CP161 notice context: https://www.irs.gov/individuals/understanding-your-cp161-notice
+
+## Private originals and case history
+
+`POST /notices/:id/files` accepts native multipart fields `file`, `version` (0
+for a new file), and optional existing `id`. Supported originals are PDF (with
+its `%PDF-` signature), UTF-8 HTML and UTF-8 text, up to 32,768 bytes each. A new
+version requires the exact previous version. Filenames cannot contain paths.
+Every version has its own encrypted bytes, SHA-256, author and time. Files are
+never public assets, model inputs or inline PDF/HTML viewers. The authenticated
+`GET /notices/:id/files/:fileId/:version` additionally requires current
+`private:read` and `tax` scope for the notice location, records a sensitive read,
+and returns an attachment with octet-stream, nosniff, sandbox and no-store.
+Downloading an original does not make it safe to open in an active viewer.
+
+`GET /notices/:id/case` reads immutable case versions. `POST` to the same path
+with `version:0, action:"intake"` records the human-transcribed `kind`
+(`sui-rate`, `irs-deposit`, `irs-lock-in`, `other`), `agency`, `ein`, `period`,
+current human `ownerId`, UTC ISO `deadline`, and `reportedAmountCents`. The
+original notice digest fixes provenance. A wrong EIN creates an identity-review
+case; it never matches a foreign company or creates a zero liability. A reported
+amount is distinct from an agency-supported remaining balance, initially unknown.
+
+Subsequent events require the exact prior `version`, `action`, `fileId`,
+`fileVersion` and a cited `note`. The file must belong to this same notice.
+
+- `deposit-proof` records evidence without implying an accepted deposit.
+- `ocr-correction` requires the correct company `ein` and corrected
+  `reportedAmountCents`; previous transcription and identity mismatch remain in
+  history.
+- `claimed-abatement` records `claimedAbatementCents`; it never changes actual
+  abatement or remaining liability.
+- `agency-close` requires current `notices:approve`, fresh native proof,
+  `confirm:true`, an independently verified original agency disposition,
+  `remainingLiabilityCents` and `actualAbatementCents`. Actual abatement cannot
+  exceed the recorded claim. A resolved case can retain a nonzero balance.
+- `agency-reopen` cites the agency's new evidence and restores an open unknown
+  balance. It preserves the original response deadline and breach history.
+- `rate-applied` links an already reviewed, current, nonwithdrawn SUI rule by
+  `reference`. That rule's `sourceRef` must be exactly
+  `notice:<notice-id>:<original-notice-digest>`. The case does not itself approve
+  or modify a rate.
+- `correspondence` links an actual accepted dispatch intent ID in `reference`;
+  provider acceptance alone never resolves the case.
+
+Case data is encrypted, append-only, attributed and source-cited. The deadline
+screen distinguishes an overdue open case from a resolved case whose missed
+response deadline remains recorded. Notices never mutate pay, sign filings or
+send money. Scanning/OCR automation, authorized inbound email/feed intake,
+automated escalation delivery, IRS 2800C instruction implementation and complete
+filing/payment integration remain unavailable. A recorded `irs-lock-in` is held
+evidence, not an implemented withholding instruction.
+
+## Installation-wide external declarations
+
+The owner provider screen also lists actual Cloudflare hosting/private storage,
+the explicitly selected native authentication mail adapter and any pinned linked
+OIDC issuer/endpoints. It shows purpose, fields, credential names, custody and
+unavailable/suppressed states. These declarations are in `seed.json`. Native
+sign-in links intentionally carry authentication secrets only to the addressed
+operator; no payroll record is included. Unimplemented bank/rail/agency/recordkeeper/
+HR/time/POS/ledger/SMS/chat/push flows are not advertised as connected adapters.
+All configured company provider keys, including a disabled provider's key, are
+removed from notice model requests/output and correspondence. Unicode identifier
+variants are normalized for redaction; original evidence is preserved encrypted.

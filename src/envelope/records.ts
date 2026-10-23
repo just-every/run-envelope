@@ -1,3 +1,4 @@
+import { retainedPersonAccess } from './privacy/access'
 import type { Bindings } from '../auth.server'
 import type { Session } from '../modules/operator-auth/index.mjs'
 import {
@@ -233,7 +234,7 @@ export class Records {
       l = locationSql(actor, 'location_id')
     return (
       await this.statement(
-        `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY name,id`,
+        `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND ${retainedPersonAccess(actor)} ORDER BY name,id`,
         [actor.company, ...l.args, ...f.args],
       ).all<Person>()
     ).results
@@ -243,7 +244,7 @@ export class Records {
     const f = fence(actor),
       l = locationSql(actor, 'location_id')
     const value = await this.statement(
-      `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND id=? AND ${l.sql} AND ${f.sql}`,
+      `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND id=? AND ${l.sql} AND ${f.sql} AND ${retainedPersonAccess(actor)}`,
       [actor.company, id, ...l.args, ...f.args],
     ).first<Person>()
     if (!value) throw new PayrollError('record_not_found', 404)
@@ -583,11 +584,11 @@ export class Records {
       event = uuid()
     const result = await this.env.DB.batch<Record<string, unknown>>([
       this.statement(
-        `INSERT INTO env_audit(id,company_id,actor_id,action,target_id,version,occurred_at) SELECT ?||p.id,p.company_id,?,'record.exported',p.id,p.version,? FROM env_people p WHERE p.company_id=? AND ${l.sql} AND ${f.sql}`,
+        `INSERT INTO env_audit(id,company_id,actor_id,action,target_id,version,occurred_at) SELECT ?||p.id,p.company_id,?,'record.exported',p.id,p.version,? FROM env_people p WHERE p.company_id=? AND ${l.sql} AND ${f.sql} AND ${retainedPersonAccess(actor,'p')}`,
         [event, this.session.operator.id, Date.now(), actor.company, ...l.args, ...f.args],
       ),
       this.statement(
-        `SELECT p.id,p.name,p.location_id AS locationId,p.version FROM env_people p WHERE p.company_id=? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit a WHERE a.id=?||p.id) ORDER BY p.id`,
+        `SELECT p.id,p.name,p.location_id AS locationId,p.version FROM env_people p WHERE p.company_id=? AND ${l.sql} AND ${f.sql} AND ${retainedPersonAccess(actor,'p')} AND EXISTS(SELECT 1 FROM env_audit a WHERE a.id=?||p.id) ORDER BY p.id`,
         [actor.company, ...l.args, ...f.args, event],
       ),
     ])
