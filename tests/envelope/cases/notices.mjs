@@ -1,3 +1,4 @@
+import {populatedPayrollJourney} from '../custody/populated-payroll.mjs'
 import assert from 'node:assert/strict'
 
 /** Real case doors with immutable private source files; agency text is synthetic evidence. */
@@ -76,5 +77,32 @@ export async function noticeCaseJourney({origin,cookie,api,ui,noticeId,page,capt
   const raw=JSON.stringify(await sql('SELECT cipher FROM env_notice_case_versions'))
   assert.equal(raw.includes('130000'),false,'case amounts and evidence notes remain encrypted')
   await capture(view,'notice-case-agency-reopened')
+  // A real second source follows the already-built human rule door. No case
+  // flag, source text or model proposal can approve its SUI rate.
+  const request=async(path,body,status=200)=>{
+    const r=await fetch(origin+path,{method:body===undefined?'GET':'POST',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+    assert.equal(r.status,status,await r.clone().text());return r.json()
+  }
+  const source='Synthetic DE 2088 format — State of California Employment Development Department. Notice of Contribution Rates and Statement of UI Reserve Account. Calendar year 2026. Federal EIN 00-0000052. UI contribution rate 3.40 percent effective January 1, 2026. Human review is required; this is not a live agency determination.'
+  const sui=await request(api+'/notices',{reference:'Synthetic DE 2088 rate letter',locationId:(await data('')).locationId,body:source},201),suiPath=api+'/notices/'+sui.id,
+    suiDetail=await request(suiPath),backup='synthetic-envelope-253'
+  await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('${backup}','synthetic-envelope-253@example.com','Notice rate backup','member','active',1,1)`)
+  await request(api+'/grants',{operatorId:backup,version:0,role:'approver',locations:['*'],fields:['compensation','tax'],actions:['records:read','rates:approve']})
+  await request(suiPath+'/case',{version:0,action:'intake',kind:'sui-rate',agency:'California Employment Development Department',ein:'00-0000052',period:'2026',ownerId,deadline:'2026-12-01T17:00:00Z',reportedAmountCents:0})
+  const form=new FormData();form.set('file',new File([source],'de-2088-source.txt',{type:'text/plain'}));form.set('version','0')
+  const originalFile=await fetch(origin+suiPath+'/files',{method:'POST',headers:{cookie,origin},body:form});assert.equal(originalFile.status,201)
+  const suiFile=await originalFile.json(),ruleId='synthetic-envelope-256',rule={id:ruleId,version:0,name:'Reviewed synthetic DE 2088 SUI rate',family:'sui',state:'CA',locality:'',effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',publishedDate:'2025-12-15',sourceUrl:'https://edd.ca.gov/en/payroll_taxes/notice_of_contribution_rates/',sourceTitle:'DE 2088 Notice of Contribution Rates and Statement of UI Reserve Account',sourceRef:'notice:'+sui.id+':'+suiDetail.digest,edition:'synthetic-envelope-255',taxYear:2026,determination:'final',value:'3.4',unit:'percent',details:{},ownerId,backupId:backup,approvalDue:'2026-01-04T12:00:00Z',wageDeadline:'2026-01-05T12:00:00Z'}
+  await request(api+'/rules',rule,201)
+  const link={version:1,action:'rate-applied',fileId:suiFile.id,fileVersion:1,note:'Human-reviewed source letter and current approved rule.',reference:ruleId}
+  await request(suiPath+'/case',link,409)
+  const review=await request(api+'/rules/review/'+ruleId)
+  await request(api+'/rules/'+ruleId+'/approve',{version:review.version,reviewToken:review.reviewToken})
+  await request(suiPath+'/case',link)
+  const linked=await request(suiPath+'/case')
+  assert.equal(linked.latest.data.events.at(-1).reference,ruleId+'@1')
+  const rules=await request(api+'/rules')
+  assert.ok(JSON.stringify(rules).includes(rule.sourceRef),'applied rule retains the immutable notice source')
+  await capture(ui+'/notices/'+sui.id,'notice-sui-reviewed-rule-linked')
+  await populatedPayrollJourney({origin,cookie,api,locationId:suiDetail.locationId,ui,capture})
   console.log('NOTICE-CASES passed: native case intake, wrong-EIN ambiguity and OCR repair, immutable provenance/owner/deadline, deposit proof and distinct claimed/actual abatement, current human-approved source-backed nonzero agency disposition, retained missed deadline, reopening and stale/unauthorized refusal at 1440/390')
 }

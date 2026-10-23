@@ -1,3 +1,4 @@
+import { activeCompanySql } from '../effects/fences/restore'
 import { fence, auditStatement, type Actor } from '../access'
 import type { Input } from '../records'
 import { PayrollError, integer, text } from '../security'
@@ -73,7 +74,7 @@ export class RunApprovals {
           `SELECT a.run_id AS runId,a.version,a.approver_id AS approverId,o.display_name AS approverName,a.role,a.grant_version AS grantVersion,
           a.occurred_at AS occurredAt,a.content_digest AS contentDigest,a.debit_cents AS debitCents,
           EXISTS(SELECT 1 FROM env_grants g JOIN oa_operators go ON go.id=g.operator_id WHERE g.company_id=a.company_id AND g.operator_id=a.approver_id
-            AND g.version=a.grant_version AND g.revoked_at IS NULL AND go.status='active'
+            AND g.version=a.grant_version AND g.revoked_at IS NULL AND go.status='active' AND ${activeCompanySql('a.company_id')}
             AND (g.role='owner' OR EXISTS(SELECT 1 FROM json_each(g.actions) WHERE value='pay:approve'))) AS grantCurrent
           FROM env_run_approvals a JOIN oa_operators o ON o.id=a.approver_id WHERE a.company_id=? AND ${f.sql} ORDER BY a.occurred_at`,
           [actor.company, ...f.args],

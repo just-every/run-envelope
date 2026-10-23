@@ -3281,7 +3281,9 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart,
     assert.ok(access.some(a=>a.action==='dispatch:execute' && a.sponsorId===sponsors.accountant.id))
     assert.equal(JSON.stringify(audit).includes('000-00-0001'),false)
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,3)
+    const beforeDeterministic=edge.calls.length
     await noticeCaseJourney({origin,cookie,api,ui,noticeId,page,capture,ownerId:owner.id,limitedCookie:sponsors.preparer.cookie,sql})
+    assert.equal(edge.calls.length,beforeDeterministic,'deterministic source review, earnings approval and held release survive AI removal without provider calls')
     await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql,settings,snapshot})
     assert.ok(browserRequests.every(url=>new URL(url).origin===origin),'operator screens and hostile originals cause no third-party browser load')
     await publicSurfaceJourney({browser,origin})

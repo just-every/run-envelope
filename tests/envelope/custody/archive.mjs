@@ -38,7 +38,7 @@ export async function archiveJourney({persist,settings,formerToken,previousPersi
     await run(source,['export','--output','exports/populated.rer'])
     const archive=await records(join(source,'exports/populated.rer')),before=rows(archive),manifest=archive[0]
     assert.equal(manifest.version,2)
-    for(const table of ['env_companies','env_locations','env_notices','env_notice_analysis','env_notice_replies','env_notice_approvals','env_notice_dispatches','env_private_files','env_audit','env_agent_history','env_agent_access']) assert.ok(before[table]?.length,table+' is populated and archived')
+    for(const table of ['env_companies','env_locations','env_notices','env_notice_analysis','env_notice_replies','env_notice_approvals','env_notice_dispatches','env_private_files','env_audit','env_agent_history','env_agent_access','env_people','env_private_records','env_rate_proposals','env_run_drafts','env_workspace_versions','env_workspace_decisions','env_workspace_people','env_workspace_dependencies','env_workspace_review_inputs','env_run_approvals','env_notice_case_versions','env_privacy_requests','env_privacy_hold_events','env_erasure_fences']) assert.ok(before[table]?.length,table+' is populated and archived')
     for(const table of ['env_grants','env_agent_grants','env_agent_credentials','env_external_providers','oa_sessions','oa_tokens','oa_step_up_challenges','env_notice_reviews']) assert.equal(before[table],undefined,table+' never transfers')
     assert.ok(before.env_companies.length>=2,'mixed company history')
     assert.ok(before.env_companies.every(c=>c.restored===1))
