@@ -1,3 +1,4 @@
+import accessibilityCss from './input/accessibility.css?url'
 import type { ReactNode } from 'react'
 import { appDocument } from '../ui/page.server'
 import { AppBar } from '../ui/bar'
@@ -115,7 +116,13 @@ export function page(
   )
   // Native forms need an Origin header. No secret values enter URLs/referrers.
   response.headers.set('referrer-policy', 'strict-origin')
-  return response
+  return responseWithAccessibility(response)
+}
+function responseWithAccessibility(response:Response) {
+  const stream=response.body!.pipeThrough(new TextDecoderStream()).pipeThrough(new TransformStream<string,string>({
+    transform(chunk,controller) {controller.enqueue(chunk.replace('</head>',`<link rel="stylesheet" href="${accessibilityCss}"></head>`))},
+  })).pipeThrough(new TextEncoderStream())
+  return new Response(stream,{status:response.status,headers:response.headers})
 }
 export const companyIndex = (session: Session, companies: Company[]) =>
   page(
