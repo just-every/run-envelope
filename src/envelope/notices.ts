@@ -2,6 +2,7 @@ import type { Records, Input } from './records'
 import type { Actor } from './access'
 import { requireAction, fence, auditStatement, locationSql } from './access'
 import type { AgentTools } from './agents'
+import { PrivateFiles } from './private-files/store'
 import { PayrollError, text, integer, recordKey, seal, unseal } from './security'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { digest } from './workspace/store'
@@ -64,7 +65,7 @@ export class Notices {
       const {cipher,...metadata}=r
       return {...metadata,data:JSON.parse(await unseal(key,JSON.stringify([actor.company,'reply',r.id,r.version]),String(cipher)))} as Record<string,unknown> & {data:ReplyData}
     }))
-    return {...notice, cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
+    return {...notice, files:await new PrivateFiles(this).list(actor,id), cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
   }
   async saveReply(actor:Actor,noticeId:string,input:Input) {
     await this.notice(actor,noticeId,'notices:write')
