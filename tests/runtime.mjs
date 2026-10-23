@@ -25,6 +25,7 @@ import {
   rulesJourney,
 } from './payroll-runtime.mjs'
 import { approvalJourney } from './payroll-approvals.mjs'
+import { claimsJourney } from './claims-runtime.mjs'
 import { industryJourney } from './industry-runtime.mjs'
 import { firmJourney } from './firm-runtime.mjs'
 
@@ -206,7 +207,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -240,6 +241,26 @@ try {
       assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
     })
     await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
+  }
+  if (!selected || selected.includes('claims')) {
+    await stopWorker()
+    const claimsOrigin=`https://127.0.0.1:${port}`,edge={mails:[]},claimsWorker=await unstable_startWorker({
+      config:resolve('dist/server/wrangler.json'),
+      bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:claimsOrigin,MAIL_PROVIDER:'resend',MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:'synthetic-envelope-6900'}).map(([key,value])=>[key,{type:'plain_text',value}])),
+      dev:{server:{hostname:'127.0.0.1',port,secure:true},origin:{hostname:new URL(claimsOrigin).host,secure:true},inspector:false,remote:false,watch:false,persist,logLevel:'error',outboundService:async request=>{
+        if(request.url==='https://api.resend.com/emails'&&request.method==='POST'){edge.mails.push(await request.json());return Response.json({id:'00000000-0000-4000-8000-000000006900'})}
+        throw new Error('Unexpected claims outbound request')
+      }},
+    })
+    const transport={fetch:(url,init={})=>new Promise((resolve,reject)=>{
+      assert.equal(new URL(url).origin,claimsOrigin)
+      const request=httpsRequest(url,{method:init.method,headers:init.headers,rejectUnauthorized:false},response=>{
+        const chunks=[];response.on('data',chunk=>chunks.push(chunk));response.on('error',reject)
+        response.on('end',()=>{const headers=new Headers();for(let i=0;i<response.rawHeaders.length;i+=2)headers.append(response.rawHeaders[i],response.rawHeaders[i+1]);resolve(new Response([204,304].includes(response.statusCode)?null:Buffer.concat(chunks),{status:response.statusCode,headers}))})
+      });request.on('error',reject);request.end(init.body)
+    })}
+    try{await claimsWorker.ready;await claimsJourney({worker:transport,origin:claimsOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql,settings,edge})}
+    finally{await claimsWorker.dispose();worker=launch(settings);await waitForWorker()}
   }
   if (!selected || selected.includes('identity')) {
     await stopWorker()

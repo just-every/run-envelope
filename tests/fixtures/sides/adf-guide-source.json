@@ -1,0 +1,29 @@
+{
+  "title": "Additional Fact-Finding E-Response Web Site User Guide",
+  "publisher": "National Association of State Workforce Agencies",
+  "hostAgency": "Alaska Department of Labor and Workforce Development",
+  "version": "1",
+  "editionDate": "September 2019",
+  "url": "https://labor.alaska.gov/estax/documents/ADF_E-Response_User_Guide.pdf",
+  "sha256": "0c6a3f91341f0ec5190034c138a2554a6ab1181ca37deda490dfb502143627fb",
+  "pages": 16,
+  "notice": "Official source metadata and observed portal schema stages only. This is not a live agency request, receipt, JSON API, or current Central Broker XML schema.",
+  "pageOrdinalBasis": "PDF page ordinal including cover; printed page numbers are two less from ordinal 3 onward",
+  "stages": [
+    { "pdfPage": 8, "printedPage": 6, "behavior": "Request-specific due date and response status; required questions; late responses still actionable" },
+    { "pdfPage": 9, "printedPage": 7, "behavior": "Prepopulated requesting state, adjudicator and employer information" },
+    { "pdfPage": 10, "printedPage": 8, "behavior": "Review agency attachments and respond to each actual inquiry" },
+    { "pdfPage": 11, "printedPage": 9, "behavior": "Supporting attachments: RTF, PDF, TXT, TIFF and CSV" },
+    { "pdfPage": 12, "printedPage": 10, "behavior": "Preparer information and required-question validation before submission" },
+    { "pdfPage": 13, "printedPage": 11, "behavior": "Human submission and submission confirmation step" },
+    { "pdfPage": 14, "printedPage": 12, "behavior": "Confirmation number and downloadable response; no completed response without confirmation" },
+    { "pdfPage": 15, "printedPage": 13, "behavior": "Amend accepted response with explanation and preserve original response" }
+  ],
+  "observedConfirmationMessage": "Your response has been accepted.",
+  "localTranscriptionConvention": {
+    "questionField": "agency-question:<one-based question number>",
+    "questionText": "Exact retained agency inquiry",
+    "questionSourceRef": "Retained follow-up source reference",
+    "notice": "These are Envelope local custody keys, not official SIDES wire field names."
+  }
+}

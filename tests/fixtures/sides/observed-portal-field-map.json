@@ -1,0 +1,166 @@
+{
+  "notice": "Local map of visible questions transcribed from the actual agency-hosted source screenshots. Not an official JSON schema or wire API. Dynamic date phrases are normalized; original screenshots retain the displayed example dates. No live account request or receipt is represented.",
+  "schemaVersion": "sides-e-response-portal-guides@2026-10-24",
+  "fields": [
+    {
+      "fieldName": "employerReason",
+      "visibleQuestionExpression": "\"Employer's reason for claimant's separation\"",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "jobTitle",
+      "visibleQuestionExpression": "\"Claimant's job title\"",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "firstDayOfWork",
+      "visibleQuestionExpression": "\"What was the claimant's first day of work?\"",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "lastDayWorked",
+      "visibleQuestionExpression": "'What was the last day claimant performed work?'",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "seasonal",
+      "visibleQuestionExpression": "'Was this seasonal employment?'",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "totalGrossWagesSince",
+      "visibleQuestionExpression": "'Total gross wages earned since the date specified by the request'",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 10
+    },
+    {
+      "fieldName": "compensationAfterSeparation",
+      "visibleQuestionExpression": "'Did or will the claimant receive any compensation on or after the last day of work (excluding wages for hours worked)?'",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 10
+    },
+    {
+      "fieldName": "pensionOr401k",
+      "visibleQuestionExpression": "'Is or will the claimant receive a company pension and\u002for 401K disbursement?'",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 10
+    },
+    {
+      "fieldName": "workersCompensation",
+      "visibleQuestionExpression": "\"Is (or was) the claimant receiving workers' compensation?\"",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 10
+    },
+    {
+      "fieldName": "workedOrReceivedPayments",
+      "visibleQuestionExpression": "'Did this person perform work or receive any payments between the dates specified by the request?'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "firstDayWorkedOrPpp",
+      "visibleQuestionExpression": "'What was the first day the claimant physically worked or the first allocated payment date of a Paycheck Protection Program (PPP) between the dates specified by the request?'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "stillWorking",
+      "visibleQuestionExpression": "'Is the claimant still working?'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 8
+    },
+    {
+      "fieldName": "contractAmount",
+      "visibleQuestionExpression": "'Did the claimant work under contract for a specific amount?'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "mileTripUnit",
+      "visibleQuestionExpression": "'Was the claimant paid by the mile or Trip\u002fLoad\u002fUnit?'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "regularRate",
+      "visibleQuestionExpression": "'Regular Rate of Pay'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "overtimeRate",
+      "visibleQuestionExpression": "'Overtime Rate of Pay'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "trainingRate",
+      "visibleQuestionExpression": "'Training Rate of Pay'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "payFrequency",
+      "visibleQuestionExpression": "'How often is\u002fwas the claimant paid?'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "payPeriodStart",
+      "visibleQuestionExpression": "'Pay period start date'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 9
+    },
+    {
+      "fieldName": "earningsSelection",
+      "visibleQuestionExpression": "'Select each type of payment received for the week(s) listed'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 10
+    },
+    {
+      "fieldName": "payPeriodEarnings",
+      "visibleQuestionExpression": "'Pay Period Earnings: Hours, Earnings, Date Paid and applicable additional payment types'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 11
+    },
+    {
+      "fieldName": "additionalInformation",
+      "visibleQuestionExpression": "'Enter any additional information about this Earnings Verification, including details of the PPP (if applicable).'",
+      "exchangeExpression": "'earnings'",
+      "pdfPageOrdinal": 13
+    },
+    {
+      "fieldName": "supportingDocumentation",
+      "visibleQuestionExpression": "'Supporting documentation relevant to the response'",
+      "exchangeExpression": "'separation'",
+      "pdfPageOrdinal": 11
+    }
+  ],
+  "requestFields": [
+    "State",
+    "FEIN",
+    "SEIN",
+    "Name",
+    "SSN",
+    "Claim Number",
+    "Request",
+    "Due",
+    "Response Status"
+  ],
+  "confirmationFields": [
+    "Confirmation",
+    "Your response has been accepted.",
+    "confirmation number",
+    "Response"
+  ],
+  "proofStages": [
+    "View Response is not submitted",
+    "Submit",
+    "Confirmation and downloadable response"
+  ]
+}

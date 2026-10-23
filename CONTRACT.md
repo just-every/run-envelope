@@ -400,8 +400,8 @@ No clause is complete payroll or production readiness.
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 0 | 0 | 0 | 0 |
-| Target and push further | 2 | 14 | 57 | 73 |
-| All | 2 | 14 | 57 | 73 |
+| Target and push further | 3 | 14 | 56 | 73 |
+| All | 3 | 14 | 56 | 73 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -433,7 +433,7 @@ No clause is complete payroll or production readiness.
 | `ENV-071` | SSA name and SSN verification for accurate wage reports | target | missing |  | No implementation exists; the complete ssa name and ssn verification for accurate wage reports behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-018` | Garnishments, levies and remittances | target | missing |  | No implementation exists; the complete garnishments, levies and remittances behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-019` | Benefits, retirement and state savings | target | missing |  | No implementation exists; the complete benefits, retirement and state savings behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |
-| `ENV-069` | Unemployment claim response and agency follow-through | target | missing |  | No implementation exists; the complete unemployment claim response and agency follow-through behavior and its public-door acceptance journey remain to be built and proven. |
+| `ENV-069` | Unemployment claim response and agency follow-through | target | done | `tests/claims-runtime.mjs` claimsJourney: native request import, worker and reviewed payroll match, original completed Willow evidence, employer mandate, exact native human signing proof, original portal preview, once-only transfer and reviewed timely official-schema confirmation; wrong EIN and claimant refuse, request and confirmation replay do not duplicate; missing and disputed facts hold with named before-deadline escalation. `tests/claims-browser.mjs` claimsBrowser: real separation and earnings forms, new agency questions through their own signature and confirmation, immutable earlier responses, empty and held states at 1440 and 390. `tests/claims-portal-edge.mjs` sidesSubmissionEdge and `tests/fixtures/sides/adf-guide-source.json`: named official separation, earnings and Additional Fact-Finding artifacts at the permitted agency edge. | None for the clause acceptance journey. Human portal transfer is the implemented channel; imported reviewed confirmation is distinct from independent live agency verification. Production activation still requires legitimate state access, employer mandate and actual authorized submission under the acceptance conventions. |
 | `ENV-021` | Workers compensation from actual payroll | target | missing |  | No implementation exists; the complete workers compensation from actual payroll behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. |
 | `ENV-025` | Tax notices owned through resolution | target | missing |  | No implementation exists; the complete tax notices owned through resolution behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-066` | Externally enumerated nationwide payroll coverage | target | missing |  | No implementation exists; the complete externally enumerated nationwide payroll coverage behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |

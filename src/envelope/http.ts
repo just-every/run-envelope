@@ -3,6 +3,8 @@ import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
+import { claimsResponse } from './claims/http'
+import { claimsMultipartInput } from './claims/form-input'
 import { HrisHires } from './people/hris-hires'
 import { hirePage } from './people/hire-pages'
 import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
@@ -63,10 +65,12 @@ const json = (value: unknown, status = 200) => Response.json(value, { status, he
 const redirect = (location: string) =>
   new Response(null, { status: 303, headers: { ...headers, location } })
 async function input(request: Request): Promise<Input> {
+  const claims = /^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/claims(?:\/|$)/.test(new URL(request.url).pathname)
+  if (claims && request.headers.get('content-type')?.startsWith('multipart/form-data')) return claimsMultipartInput(request)
   if (!request.body) throw new PayrollError('invalid_input')
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = [],
-    limit = 64000
+    limit = claims ? 3 * 1024 * 1024 : 64000
   let size = 0
   while (true) {
     const { done, value } = await reader.read()
@@ -310,6 +314,8 @@ export async function payrollResponse(
       post = request.method === 'POST',
       value = post ? await input(request) : {},
       companies = ui ? await records.companies() : []
+    const claim = await claimsResponse({ ui, post, parts, value, records, session, companies })
+    if (claim) return claim
     const industry = await industryResponse({ ui, post, parts, value, records, session, companies })
     if (industry) return industry
     const firm = await firmResponse({ url, ui, post, parts, value, records, session, companies })
