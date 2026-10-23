@@ -12,6 +12,9 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { unstable_startWorker } from 'wrangler'
 import {
+  incomeVerificationJourney,
+  sourceIntakeJourney,
+  leaveJourney,
   identityJourney,
   sponsoredJourney,
   payrollJourney,
@@ -201,10 +204,13 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity'].includes(name),
+        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
+  if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql, settings })
+  if (!selected || selected.includes('source-intake')) await sourceIntakeJourney({ origin, cookie, sql, settings })
+  if (!selected || selected.includes('leave')) await leaveJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('allocations'))
     await allocationJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('schedules'))

@@ -145,7 +145,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "804be9a6ebdbaa5c0e12c9a2b86fb6b7ae6733d940de6cbf803d56173b23997c",
+      "sha256": "07348cfb520db31fc21e5beb91914ba7ddd2ec80b7c2eb12b6a7cc6e1295b2d3",
       "executable": false
     },
     "AGENTS.md": {
@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3d52b41531ccf717f9530f57c054c2661551d30332c6b93fca897c55cbee160f",
+      "sha256": "5b147eaad135a772d0e873e587d17c305f322482273b875c8edb4313e4cc5493",
       "executable": false
     },
     "deploy-demo.json": {
@@ -196,6 +196,10 @@
       "sha256": "c29b7d1b49e60a6893a6ad70d88bc8f01a656b89594a0c38e4838eb145f3f4b3",
       "executable": false
     },
+    "docs/payroll-leave.md": {
+      "sha256": "78ac05e3f4dffcf4eee520c4729356cba89c6b7b8db1db10dd0fa782ecfa27f3",
+      "executable": false
+    },
     "docs/payroll-notices.md": {
       "sha256": "4b0faa607f7592fa4f5360a4409e2f4addcb6cfcfd87611188ac279d49b5fd4f",
       "executable": false
@@ -218,6 +222,14 @@
     },
     "docs/payroll-setup.md": {
       "sha256": "22d97433cf220d897b55d6855edb94a5eb433bfd216d7ad6536a1af948a3da47",
+      "executable": false
+    },
+    "docs/payroll-sources.md": {
+      "sha256": "84c9d7724f77b6ecfd5d8de797a5479f0b377f288c032b8fa765dd2d48b21722",
+      "executable": false
+    },
+    "docs/payroll-verification.md": {
+      "sha256": "9a7217358d3b93e7f36927e75abe79c182fb123dd3abaae4df2f1c29f04cbcd3",
       "executable": false
     },
     "edition.json": {
@@ -322,6 +334,14 @@
     },
     "migrations/core/0023_payroll_run_approvals.sql": {
       "sha256": "13038caa4e4b626760c34c790129e6dc8ce6dac64a3a79429d591ccdfd16916b",
+      "executable": false
+    },
+    "migrations/core/0024_income_verification.sql": {
+      "sha256": "ad2a6296d0a5429e3de5844fd415a1d06f8a474f637be4117448386a2bd5e5c8",
+      "executable": false
+    },
+    "migrations/core/0025_hris_people.sql": {
+      "sha256": "575d318ee03c56c59f07f36f63ae472811c492a6fa70faddcccbf16959266600",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -868,8 +888,44 @@
       "sha256": "29a28157f74a2ce20c07c6da07ac02c93603d26ff8fee8f63b314874361b70c4",
       "executable": false
     },
+    "src/envelope/connectors/hris/adapters.ts": {
+      "sha256": "05944062f787ef81362d9411b6645dad71a7dc21e76fe1bc2ea6457d97aae332",
+      "executable": false
+    },
+    "src/envelope/connectors/siblings/earnings.ts": {
+      "sha256": "03e21b3f4585e8144d4f75323ccdcc7780c1978792efcf09a2fa01ef7a2be7a5",
+      "executable": false
+    },
+    "src/envelope/disclosures/protected.ts": {
+      "sha256": "1f91a15de70a3142d4fc292b5de1ffba9d637497746c3b6d87220d107fbb7966",
+      "executable": false
+    },
     "src/envelope/http.ts": {
-      "sha256": "5b05df426937899c108d9eee31d155a9c02fcdb7c9876e03f10ec789eb7e284a",
+      "sha256": "51ec3ce2210b8bfd694a1006ce39aea4711c5505093beaa4acbd242e48493c7b",
+      "executable": false
+    },
+    "src/envelope/income-verification/pages.tsx": {
+      "sha256": "c7c3adce4d04013fe1734365f1258e38a296380c3b3e5aa0789fa535b22a246d",
+      "executable": false
+    },
+    "src/envelope/income-verification/requests.ts": {
+      "sha256": "19c961d8f9b23f2b04a54f9efa4992715044ed800d228b0a7fddea3fd0086414",
+      "executable": false
+    },
+    "src/envelope/intake/pages.tsx": {
+      "sha256": "1eac47429f2fdedfb3bd45aae9470c0daf5416a5be0f84fa0625e16faaba0958",
+      "executable": false
+    },
+    "src/envelope/intake/sources.ts": {
+      "sha256": "2c6b2f54e0c5de8200fe593883bad98328dac133adb9a1df01ff82f957ce1672",
+      "executable": false
+    },
+    "src/envelope/leave/ledger.ts": {
+      "sha256": "7dbddc455fac2a2e94f855d6a408e930f596afd7618d4c234d16e3836a4165a5",
+      "executable": false
+    },
+    "src/envelope/leave/pages.tsx": {
+      "sha256": "bd79373f3838753f43e0580e105128b2a7053adeef1e72442a57b57861b7cd84",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -881,7 +937,15 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "838e5daf47ba87396185bca7aca97d450c8a9cf13d142245e408ac5b51dfa10e",
+      "sha256": "0202316abe0f857acfc0131a0a66aaed2ef437c3763f7bc846643eaf3a2c9122",
+      "executable": false
+    },
+    "src/envelope/people/hire-pages.tsx": {
+      "sha256": "8b2a4177cc022931f80fed76e18c43e9bd998efd2d3a7a8968624041f7462d5b",
+      "executable": false
+    },
+    "src/envelope/people/hris-hires.ts": {
+      "sha256": "ff7e50fbc21eba7d2b704b4403b5af7f40bba6952341adbc16b37efdaf2f5b23",
       "executable": false
     },
     "src/envelope/providers.ts": {
@@ -957,7 +1021,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "7e3178f17b19b31e86acffd0e3c2c4a4c7d8f290ccf32ed76b71896855f7b59a",
+      "sha256": "711c34fcd6c85ad4ce5e1637642027316643ff5de3c1c7dab7fdf82d583cd8f5",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -993,7 +1057,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "07c9de95d01a25be3592ec7ddaa79a9600be41e3e406cb7385784d8778f67218",
+      "sha256": "2d85a61866b9b99af3cf32b434e67a2e7fc9838e7ca930436824b78f6db2313c",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2049,11 +2113,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "8555629298b0498730ea1ed20ffae17301c0ed6a9029f9284a529481f6f0ce46",
+      "sha256": "4f0b5b090a75b380213bf564872517d374a99a334a7b46e35ea6ce1f90409a6e",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "6b9ebe2ca5da5cf8347b12b4e5ca4ae3046c3aab0366d588bda5c553b87f4e62",
+      "sha256": "4a634331ad062a39dacc870e13e808ac7079371b5280aea5d3b5fb9c869bc08c",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

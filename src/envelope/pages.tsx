@@ -106,7 +106,7 @@ export function page(
           <Heading
             lead={title}
             then="Current payroll access."
-            meta={<a href="/app/envelope">Companies and payroll settings</a>}
+            meta={<>{selected && <span>{companies.find(c => c.id === selected)?.name} · </span>}<a href="/app/envelope">Companies and payroll settings</a></>}
           />
         </div>
         <div className="field">{children}</div>
@@ -182,6 +182,7 @@ export function companyPage(
               <a className="btn" href={`${base}/setup`}>
                 Company and tax setup
               </a>
+              <a className="btn" href={`${base}/hris-hires`}>Willow hire handoff</a>
               <a className="btn" href={`${base}/drafts`}>
                 Run input proposals
               </a>
@@ -435,6 +436,8 @@ export function personPage(
     companies,
     actor.company,
     <>
+      <p><a className="btn" href={companyPath(actor.company) + '/people/' + person.id + '/leave'}>Leave ledger</a></p>
+      <p><a className="btn" href={base + '/hris'}>HR changes and source history</a> <a className="btn" href={base + '/earnings-sources'}>Job and commission earnings</a> <a className="btn" href={base + '/verification'}>Employment and income verification</a></p>
       <Card title="Rate history">
         <p>
           Record version {person.version}. Approved hourly rates retain their effective date

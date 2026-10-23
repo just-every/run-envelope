@@ -1,6 +1,15 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { HrisHires } from './people/hris-hires'
+import { hirePage } from './people/hire-pages'
+import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
+import { ProtectedResponses } from './disclosures/protected'
+import { verificationPage, protectedResponsePage } from './income-verification/pages'
+import { SourceIntake } from './intake/sources'
+import { sourcePage } from './intake/pages'
+import { LeaveLedger } from './leave/ledger'
+import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
@@ -302,6 +311,14 @@ export async function payrollResponse(
     let response: Response
     if (ui && parts.join('/') === 'workspace' && !post)
       return workspacePage(session, companies)
+    if (parts[0] === 'protected-response') {
+      if (ui && !post && parts.length===1) return protectedResponsePage(session)
+      if (post && parts.length===2 && ['read','ack'].includes(parts[1])) {
+        const result=await new ProtectedResponses(new WorkspaceStore(records)).retrieve(String(value.id),value,parts[1]==='ack')
+        return ui?protectedResponsePage(session,result,{id:String(value.id),token:String(value.token)}):json(result)
+      }
+      throw new PayrollError('not_found',404)
+    }
     if (parts[0] !== 'companies') throw new PayrollError('not_found', 404)
     if (parts.length === 1) {
       if (post) {
@@ -324,6 +341,14 @@ export async function payrollResponse(
         response = ui
           ? companyPage(session, companies, company, actor, locations, people)
           : json({ company, locations, people })
+      } else if (tail[0]==='hris-hires') {
+        const store=new WorkspaceStore(records),hires=new HrisHires(store),back=base+'/hris-hires'
+        if(tail.length===1 && !post){const rows=await hires.read(actor);response=ui?hirePage(session,companies,actor,rows):json(rows)}
+        else if(tail.length===1 && post){const result=await hires.save(actor,value);response=ui?redirect(back):json(result,201)}
+        else if(tail.length===3 && tail[2]==='review' && !post){const result=await store.review(actor,'hris-hire',tail[1]);response=ui?hirePage(session,companies,actor,await hires.read(actor),result as unknown as import('./workspace/store').Revision<import('./intake/sources').SourceEvent>&{reviewToken:string}):json(result)}
+        else if(tail.length===3 && tail[2]==='approve' && post){const result=await store.decide(actor,'hris-hire',tail[1],value);response=ui?redirect(back):json(result)}
+        else if(tail.length===3 && tail[2]==='apply' && post){const result=await hires.apply(actor,tail[1],value);response=ui?redirect(base+'/people/'+result.id):json(result,result.created?201:200)}
+        else throw new PayrollError('not_found',404)
       } else if (tail.join('/') === 'workspace' && !post) {
         response = ui
           ? workspacePage(session, companies, actor, await records.people(actor))
@@ -590,6 +615,80 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'people' && post) {
         const person = await records.createPerson(actor, value)
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
+      } else if (tail[0]==='people' && tail[2]==='verification') {
+        const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'
+        const view=async()=>{
+          const history=await verification.history(actor,personId,self)
+          const disclosures=self?[]:await store.list<import('./income-verification/requests').ProtectedDisclosure>(actor,'disclosure',personId,true)
+          return {history,bindings:self?[]:await store.list<import('./income-verification/requests').WorkerBinding>(actor,'verification-worker',personId,true),income:self?[]:await store.list<import('./income-verification/requests').IncomeSource>(actor,'income-source',personId,true),disclosures:disclosures.map(r=>{
+            const consent=history.consents.find(c=>c.id===r.data.consentId)
+            return consent && retentionDeadline(consent.retentionUntil)>=Date.now()?r:{...r,data:{...r.data,response:{retention:'restricted-after-selected-date'},provenance:[]}}
+          })}
+        }
+        if(!post && tail.length===3){
+          const result=await view()
+          response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),result,self):json(result)
+        } else if(post && tail.length===4 && ['worker','income','consents','disclosures'].includes(tail[3])){
+          const result=tail[3]==='worker'?await verification.bind(actor,personId,value):tail[3]==='income'?await verification.income(actor,personId,value):tail[3]==='consents'?await verification.consent(actor,personId,value):await verification.propose(actor,personId,value)
+          response=ui?redirect(back):json(result,201)
+        } else if(post && tail.length===6 && tail[3]==='consents' && ['revoke','corrections'].includes(tail[5])){
+          const result=tail[5]==='revoke'?await verification.revoke(actor,personId,tail[4]):await verification.correction(actor,personId,tail[4],value)
+          response=ui?redirect(back):json(result)
+        } else if(tail.length===6 && ['verification-worker','income-source','disclosure'].includes(tail[3])){
+          ownerOnly(actor)
+          const kind=tail[3] as 'verification-worker'|'income-source'|'disclosure'
+          if(!post && tail[5]==='review'){
+            const result=await store.review(actor,kind,tail[4],personId)
+            response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),await view(),false,result):json(result)
+          } else if(post && tail[5]==='approve'){
+            const result=await store.decide(actor,kind,tail[4],value,personId)
+            response=ui?redirect(back):json(result)
+          } else if(post && kind==='disclosure' && tail[5]==='release'){
+            const result=await new ProtectedResponses(store).release(actor,personId,tail[4],value)
+            response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),await view(),false,undefined,result):json(result,201)
+          } else throw new PayrollError('not_found',404)
+        } else throw new PayrollError('not_found',404)
+      } else if (tail.join('/') === 'labor-actuals' && !post) {
+        await new WorkspaceStore(records).authority(actor, 'records:read', undefined, true)
+        throw new PayrollError('reconciled_labor_actuals_unavailable', 409)
+      } else if (tail[0] === 'people' && ['hris','earnings-sources'].includes(tail[2])) {
+        const store = new WorkspaceStore(records), intake = new SourceIntake(store), personId=tail[1], kind=tail[2]==='hris'?'hris-event':'source-earning'
+        const back=base+'/people/'+personId+'/'+tail[2]
+        if (!post && tail.length===3) {
+          const result=await intake.read(actor,personId,kind)
+          response=ui?sourcePage(session,companies,actor,await records.person(actor,personId),kind,result):json(result)
+        } else if (post && tail.length===3) {
+          const result=await intake.save(actor,personId,kind,value)
+          response=ui?redirect(back):json(result,201)
+        } else if (!post && tail.length===5 && tail[4]==='review') {
+          const result=await store.review(actor,kind,tail[3],personId)
+          response=ui?sourcePage(session,companies,actor,await records.person(actor,personId),kind,await intake.read(actor,personId,kind),result as unknown as import('./workspace/store').Revision<import('./intake/sources').SourceEvent> & {reviewToken:string}):json(result)
+        } else if (post && kind==='hris-event' && tail.length===5 && tail[4]==='leave-handoff') {
+          const result=await intake.leave(actor,personId,tail[3],value)
+          response=ui?redirect(base+'/people/'+personId+'/leave'):json(result,201)
+        } else if (post && tail.length===5 && ['approve','withdraw'].includes(tail[4])) {
+          const result=await store.decide(actor,kind,tail[3],value,personId,tail[4]==='withdraw')
+          response=ui?redirect(back):json(result)
+        } else throw new PayrollError('not_found',404)
+      } else if (tail[0] === 'people' && tail[2] === 'leave') {
+        const store = new WorkspaceStore(records), ledger = new LeaveLedger(store), personId = tail[1], id = 'leave-' + personId
+        const back = base + '/people/' + personId + '/leave'
+        if (!post && tail.length === 3) {
+          const rows = await ledger.read(actor, personId)
+          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), rows) : json(rows)
+        } else if (post && tail.length === 3) {
+          const result = await ledger.open(actor, personId, value)
+          response = ui ? redirect(back) : json(result, 201)
+        } else if (post && tail.length === 4 && tail[3] === 'entries') {
+          const result = await ledger.record(actor, personId, value)
+          response = ui ? redirect(back) : json(result, 201)
+        } else if (!post && tail.length === 4 && tail[3] === 'review') {
+          const result = await store.review(actor, 'leave-account', id, personId)
+          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), await ledger.read(actor, personId), result as unknown as import('./workspace/store').Revision<import('./leave/ledger').LeaveAccount> & {reviewToken: string}) : json(result)
+        } else if (post && tail.length === 4 && ['approve','withdraw'].includes(tail[3])) {
+          const result = await store.decide(actor, 'leave-account', id, value, personId, tail[3] === 'withdraw')
+          response = ui ? redirect(back) : json(result)
+        } else throw new PayrollError('not_found', 404)
       } else if (tail[0] === 'people' && tail[2] === 'allocations') {
         const allocations = new Allocations(new WorkspaceStore(records)),
           personId = tail[1]
