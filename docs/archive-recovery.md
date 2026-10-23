@@ -36,7 +36,7 @@ published. A missing original key cannot be reconstructed from the archive.
 
 This is a recovery foundation, not a completed operational restore. Provider
 reconciliation using original accepted identifiers, operational adoption and renewed
-exact authority, erasure fences, and a complete
+exact authority, complete lawful erasure under ENV-054, and a complete
 mixed-year history containing uncertain payments remain owed by
 ENV-053. Imported company records have no active grants until explicit restricted
 historical adoption. Do not
@@ -91,3 +91,21 @@ original correction lineage and period must match retained records. Current
 source withdrawal does not erase valid historical attribution. A transport-valid,
 authenticated correction pointing to a missing original refuses before business
 publication.
+
+The current privacy prerequisite removes only an unused worker row. The original
+configured native owner supplies fresh proof and POSTs the worker's `/erase` door
+with literal JSON `consent: true` and its current `version`. Any existing company
+and person dependency holds the request for retention review. Nothing cascades
+through payroll evidence, and this door cannot release a legal hold. The guarded
+transaction deletes the unused identity, invalidates in-flight exports and records
+Base's erasure tombstone plus an anonymous action target. This conservative
+privacy default awaits ct approval; full retention and cascade work stays ENV-054.
+
+Keep the latest trusted erasure journal with recovery custody. For an older
+archive, place a private copy of the later archive inside the target checkout and
+supply its relative path with `rer import --journal exports/later-journal.rer`.
+The native CLI requires that journal to be an owned private file inside the
+checkout. A fresh empty installation cannot infer erasures that happened after
+an old archive unless the owner supplies that later trusted journal. The journey
+proves that the actual older archive then refuses without restoring the erased
+worker or publishing any business rows.
