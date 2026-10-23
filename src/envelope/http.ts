@@ -4,6 +4,7 @@ import { Records, type Input } from './records'
 import { AgentSettings, AgentTools } from './agents'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
+import { requireActiveCompany } from './effects/fences/restore'
 import { PrivateFiles, privateDownload } from './private-files/store'
 import { providersPage, noticesPage, noticePage, replyReviewPage } from './notice-pages'
 import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
@@ -328,6 +329,7 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
+      if (post) await requireActiveCompany(records,actor)
       if (!tail.length && !post) {
         const company = await records.company(actor),
           locations = await records.locations(actor),

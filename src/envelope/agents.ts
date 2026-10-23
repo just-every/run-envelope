@@ -280,7 +280,7 @@ export class AgentTools {
   fence() {
     const g = this.grant
     return {
-      sql: `EXISTS(SELECT 1 FROM env_agent_grants a JOIN env_agent_credentials c ON c.id=a.id JOIN env_grants s ON s.company_id=a.company_id AND s.operator_id=a.sponsor_id JOIN oa_operators o ON o.id=a.sponsor_id
+      sql: `EXISTS(SELECT 1 FROM env_companies WHERE id=? AND restored=0) AND EXISTS(SELECT 1 FROM env_agent_grants a JOIN env_agent_credentials c ON c.id=a.id JOIN env_grants s ON s.company_id=a.company_id AND s.operator_id=a.sponsor_id JOIN oa_operators o ON o.id=a.sponsor_id
     WHERE a.id=? AND a.company_id=? AND a.version=? AND a.revoked_at IS NULL AND a.expires_at>unixepoch('subsec')*1000
     AND c.token_hash=? AND c.secret_expires_at>unixepoch('subsec')*1000
     AND o.status='active' AND o.version=a.sponsor_operator_version AND s.version=a.sponsor_grant_version AND s.revoked_at IS NULL
@@ -288,7 +288,7 @@ export class AgentTools {
       AND NOT EXISTS(SELECT 1 FROM json_each(a.fields) af WHERE af.value NOT IN (SELECT value FROM json_each(s.fields)))
       AND (EXISTS(SELECT 1 FROM json_each(s.locations) WHERE value='*') OR NOT EXISTS(SELECT 1 FROM json_each(a.locations) al WHERE al.value NOT IN (SELECT value FROM json_each(s.locations))))
       AND NOT EXISTS(SELECT 1 FROM json_each(?) req WHERE req.value NOT IN (SELECT value FROM json_each(s.actions))))))`,
-      args: [g.id, g.company_id, g.version, g.token_hash, JSON.stringify([...new Set((JSON.parse(g.actions) as string[]).flatMap(a => inheritedActions[a] ?? ['ungrantable']))])],
+      args: [g.company_id, g.id, g.company_id, g.version, g.token_hash, JSON.stringify([...new Set((JSON.parse(g.actions) as string[]).flatMap(a => inheritedActions[a] ?? ['ungrantable']))])],
     }
   }
   async rotate() {

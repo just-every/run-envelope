@@ -21,7 +21,7 @@ export const adapter = lifecycle;
 export const { install } = lifecycle;
 export const commandAdapter = createCommandAdapter(lifecycle, {
  dev: developmentTarget, preview: previewTarget, verify: ['pnpm', ['run', 'verify:app']], deploy: ownerDeploy('deploy.json', lifecycle),
- portability: localPortability({ database: 'foundation', policy: { includeTables: ['oa_operators','oa_bootstrap','oa_external_identities','oa_invitation_cancellations','oa_tokens','oa_auth_settings','oa_auth_audit','oa_domain_rules','oa_logout_events','oc_owner_claims','oc_idp_grants'], excludeTables: ['env_external_providers','env_notice_reviews','env_notice_approvals','env_agent_credentials','env_grants','env_rate_reviews','rer_dependency_keys','rer_dependency_pending','rer_dependency_codes'], product: 'just-every/envelope', requiredConfiguration: ['ENVELOPE_RECORD_KEY','OWNER_EMAIL', 'SESSION_SECRET', 'SETUP_TOKEN', 'AUTH_ORIGIN', 'MAIL_PROVIDER', 'MAIL_FROM'] }, transient: ['local runtime caches and logs'] }),
+ portability: localPortability({ database: 'foundation', policyModule: 'src/envelope/archive/policy.mjs', transient: ['local runtime caches and logs'] }),
  setup: { manifestFile: 'rer-setup.json' }, browserModule: 'scripts/installer/ui/seed.mjs',
  // The run site (rer build --site, rer deploy --site, RER_SITE): pages from
  // edition identity and Run data, written to an ignored folder; its domain is in deploy-site.json.
