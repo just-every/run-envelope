@@ -36,8 +36,8 @@ published. A missing original key cannot be reconstructed from the archive.
 
 This is a recovery foundation, not a completed operational restore. Fresh owner
 adoption, provider reconciliation using original accepted identifiers, renewed
-exact authority, erasure fences, rule editions beyond the implemented catalog, and a complete
-mixed-year history containing settled corrections and uncertain payments remain owed by
+exact authority, erasure fences, and a complete
+mixed-year history containing uncertain payments remain owed by
 ENV-053. Restored company records currently have no active access grants. Do not
 reintroduce old credentials or use database edits to bypass those missing doors.
 
