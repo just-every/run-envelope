@@ -17,6 +17,7 @@ export const externalFlows = {
     recipient: 'Resend and the exact human-reviewed email recipient', url: 'https://api.resend.com/emails',
     purpose: 'Deliver only an exact unexpired human-approved tax-notice reply',
     fields: ['approved sender', 'approved recipient', 'approved subject', 'approved redacted reply'],
+    reconciliation: 'Optional separate consent: owner-requested lookup of a recorded original email ID at https://api.resend.com/emails/:id; sends only that ID, never resends',
     custody: 'Owner-provided API credential encrypted in company storage; delivery metadata/content held by Resend under owner terms',
   },
 } as const
@@ -27,6 +28,8 @@ export interface Provider {
   sender: string
   version: number
   secret_cipher: string
+  reconcile_consent:number
+  change_id:string
 }
 export function providerId(value: unknown): ProviderId {
   if (value !== 'openai' && value !== 'resend') throw new PayrollError('provider_not_declared')
@@ -52,7 +55,7 @@ export class Providers {
   async save(actor: Actor, input: Input) {
     this.owner(actor)
     await requirePayrollProof(this.records.env,actor)
-    if(Object.keys(input).some(k=>!['id','version','enabled','consent','secret','sender'].includes(k)) || ![true,false,'true','false'].includes(input.enabled as boolean|string)) throw new PayrollError('invalid_provider_input')
+    if(Object.keys(input).some(k=>!['id','version','enabled','consent','secret','sender','reconcileConsent'].includes(k)) || ![true,false,'true','false'].includes(input.enabled as boolean|string)) throw new PayrollError('invalid_provider_input')
     const id = providerId(input.id), version = input.version === 0 || input.version === '0' ? 0 : integer(input.version),
       enabled = input.enabled === true || input.enabled === 'true' ? 1 : 0,
       f = fence(actor), proof = stepUpFence(actor), change = crypto.randomUUID()
@@ -61,13 +64,14 @@ export class Providers {
     const secret = input.secret ? text(input.secret,4096) : null
     if (enabled && !secret && !prior) throw new PayrollError('provider_credential_required')
     const cipher = secret ? await seal(key,JSON.stringify([actor.company,id,'provider-secret']),secret) : (prior?.secret_cipher ?? '')
+    const reconcileConsent=id==='resend' && enabled && (input.reconcileConsent===true || input.reconcileConsent==='true') ? 1 : 0
     const sender = id==='resend' && enabled ? email(input.sender || prior?.sender) : ''
     if (enabled && input.consent !== 'true' && input.consent !== true) throw new PayrollError('provider_consent_required')
     const result = await this.records.env.DB.batch([
-      this.records.statement(`INSERT INTO env_external_providers(company_id,id,enabled,secret_cipher,sender,version,change_id)
-        SELECT ?,?,?,?,?,1,? WHERE ${f.sql} AND ${proof.sql} AND COALESCE((SELECT version FROM env_external_providers WHERE company_id=? AND id=?),0)=?
-        ON CONFLICT(company_id,id) DO UPDATE SET enabled=excluded.enabled,secret_cipher=excluded.secret_cipher,sender=excluded.sender,version=env_external_providers.version+1,change_id=excluded.change_id WHERE env_external_providers.version=? RETURNING version`,
-        [actor.company,id,enabled,cipher,sender,change,...f.args,...proof.args,actor.company,id,version,version]),
+      this.records.statement(`INSERT INTO env_external_providers(company_id,id,enabled,secret_cipher,sender,reconcile_consent,version,change_id)
+        SELECT ?,?,?,?,?,?,1,? WHERE ${f.sql} AND ${proof.sql} AND COALESCE((SELECT version FROM env_external_providers WHERE company_id=? AND id=?),0)=?
+        ON CONFLICT(company_id,id) DO UPDATE SET enabled=excluded.enabled,secret_cipher=excluded.secret_cipher,sender=excluded.sender,reconcile_consent=excluded.reconcile_consent,version=env_external_providers.version+1,change_id=excluded.change_id WHERE env_external_providers.version=? RETURNING version`,
+        [actor.company,id,enabled,cipher,sender,reconcileConsent,change,...f.args,...proof.args,actor.company,id,version,version]),
       auditStatement(this.records.env,actor,change,'provider.declared',id,version+1,'EXISTS(SELECT 1 FROM env_external_providers WHERE change_id=?)',[change]),
     ])
     if (!result[0].results.length) throw new PayrollError('provider_or_authority_changed',409)
