@@ -101,11 +101,13 @@ sandbox run. Only synthetic credentials/identifiers are used.
 `POST /notices/:id/files` accepts native multipart fields `file`, `version` (0
 for a new file), and optional existing `id`. Supported originals are PDF (with
 its `%PDF-` signature), UTF-8 HTML and UTF-8 text, up to 32,768 bytes each. A new
-version requires the exact previous version. Filenames cannot contain paths.
+version requires the exact previous version. Filenames cannot contain paths, and sensitive identifiers/known credentials are
+redacted from filename labels before storage or display.
 Every version has its own encrypted bytes, SHA-256, author and time. Files are
 never public assets, model inputs or inline PDF/HTML viewers. The authenticated
 `GET /notices/:id/files/:fileId/:version` additionally requires current
-`private:read` and `tax` scope for the notice location, records a sensitive read,
+`private:read` and all `tax`/`ssn`/`bank` field scopes for the notice location
+(unclassified originals can contain any of these values), records a sensitive read,
 and returns an attachment with octet-stream, nosniff, sandbox and no-store.
 Downloading an original does not make it safe to open in an active viewer.
 

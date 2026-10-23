@@ -38,7 +38,7 @@ export class Notices {
   }
   async create(actor:Actor,input:Input) {
     exactKeys(input,['locationId','reference','body'])
-    const location=text(input.locationId), reference=redact(text(input.reference)), body=documentText(input.body)
+    const location=text(input.locationId), reference=redact(text(input.reference),await providerRedactions(this.records.env,actor.company)), body=documentText(input.body)
     requireAction(actor,'notices:write',location,'tax')
     const id=uuid(), f=fence(actor), event=uuid(), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY), hash=await digest(body),
       cipher=await seal(key,JSON.stringify([actor.company,'notice',id]),body)
