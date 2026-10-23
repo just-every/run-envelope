@@ -1,3 +1,5 @@
+import { RestoredCustody } from './restore/custody'
+import { restoredCustodyPage } from './restore/pages'
 import accessibilityCss from './input/accessibility.css?raw'
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
@@ -329,6 +331,18 @@ export async function payrollResponse(
     let response: Response
     if (ui && parts.join('/') === 'workspace' && !post)
       return workspacePage(session, companies)
+    if (parts[0]==='restored') {
+      const custody=new RestoredCustody(records)
+      if(parts.length===1 && !post) {
+        const result=await custody.list(),response=ui ? restoredCustodyPage(session,companies,result) : json(result)
+        return request.method==='HEAD'?new Response(null,{status:response.status,headers:response.headers}):response
+      }
+      if(parts.length===3 && parts[2]==='adopt' && post) {
+        const result=await custody.adopt(parts[1],value)
+        return ui ? redirect(companyPath(result.id)) : json(result)
+      }
+      throw new PayrollError('not_found',404)
+    }
     if (parts[0] !== 'companies') throw new PayrollError('not_found', 404)
     if (parts.length === 1) {
       if (post) {

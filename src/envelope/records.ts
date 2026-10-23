@@ -21,6 +21,7 @@ export interface Company {
   id: string
   name: string
   einSuffix: string
+  restored?:number
 }
 export interface Person {
   id: string
@@ -47,7 +48,7 @@ export class Records {
     const f = sessionFence(this.session)
     return (
       await this.statement(
-        `SELECT c.id,c.name,c.ein_suffix AS einSuffix FROM env_companies c JOIN env_grants g ON g.company_id=c.id
+        `SELECT c.id,c.name,c.ein_suffix AS einSuffix,c.restored FROM env_companies c JOIN env_grants g ON g.company_id=c.id
    WHERE g.operator_id=? AND g.revoked_at IS NULL AND ${f.sql} ORDER BY c.name,c.id`,
         [this.session.operator.id, ...f.args],
       ).all<Company>()
@@ -98,7 +99,7 @@ export class Records {
   async company(actor: Actor) {
     const f = fence(actor)
     const value = await this.statement(
-      `SELECT id,name,ein_suffix AS einSuffix FROM env_companies WHERE id=? AND ${f.sql}`,
+      `SELECT id,name,ein_suffix AS einSuffix,restored FROM env_companies WHERE id=? AND ${f.sql}`,
       [actor.company, ...f.args],
     ).first<Company>()
     if (!value) throw new PayrollError('payroll_access_denied', 403)

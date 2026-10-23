@@ -344,9 +344,10 @@ try {
       })
       await sponsoredWorker.ready
     }
+    let sponsoredReceipt
     try {
       await startSponsored()
-      await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()}})
+      sponsoredReceipt=await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()}})
     } finally {
       await sponsoredWorker?.dispose()
       worker=launch(settings)
@@ -354,7 +355,7 @@ try {
     }
     await stopWorker()
     for (const planted of ['000-00-0001','000000002','synthetic-envelope-510','synthetic-envelope-512']) assert.equal(output.includes(planted),false,'planted sensitive values are absent from captured Worker logs')
-    await archiveJourney({persist})
+    await archiveJourney({persist,settings,formerToken:sponsoredReceipt.discardedAgentToken})
     worker=launch(settings)
     await waitForWorker()
   }
