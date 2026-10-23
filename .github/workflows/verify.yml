@@ -70,7 +70,11 @@ jobs:
       - run: pnpm run deps
       - name: Install Chromium and system libraries
         if: matrix.browser
-        run: pnpm exec playwright install --with-deps chromium
+        run: |
+          # The hosted Azure mirror stalled package downloads past the job limit.
+          # Keep the full browser dependency installation on Ubuntu's primary mirror.
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          pnpm exec playwright install --with-deps chromium
       - name: Reserve disk for native runtime journeys
         if: matrix.browser
         run: |
