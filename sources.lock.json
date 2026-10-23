@@ -2241,7 +2241,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "b7fc9f212e05f3a1b0e481a2a6d6553507f9a12d8a03dc797dbdf117d61e2691",
+      "sha256": "7f3f1fc6a9c07e0d9be03304414885b01c0538c10b75922109a44089b6d26d0e",
       "executable": false
     },
     "tests/runtime.mjs": {

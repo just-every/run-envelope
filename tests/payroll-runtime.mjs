@@ -3457,11 +3457,28 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     assert.equal((await call(download,undefined,renewedCookie)).status,401)
     await data('/auth/operator/status',{operatorId:invited.id,status:'active'})
     assert.equal((await call(download,undefined,renewedCookie)).status,401,'reactivation never restores a session')
-    // Rate limits are durable and apply before provider effects.
+    // Earlier sign-ins can span a fixed window while OIDC and browser work run.
+    // Give this assertion its own admitted identity and one consecutive burst.
+    const rateEmail='synthetic-envelope-624@example.com'
+    await data('/auth/invite',{email:rateEmail,displayName:'Synthetic sign-in limit worker',role:'member'},cookie,202)
+    assert.equal((await call('/auth/confirm',{token:mailLink().searchParams.get('token')},'')).status,303)
+    const sessionsBeforeLimit=await sessionCount(), mailsBeforeBurst=edge.mails.length
+    const rateWindowMs=15*60_000, remaining=rateWindowMs-Date.now()%rateWindowMs
+    // Start clear of the fixed-window boundary, without changing the app clock.
+    if(remaining<10_000) await new Promise(resolve=>setTimeout(resolve,remaining+1))
+    const burstWindow=Math.floor(Date.now()/rateWindowMs)
+    for(let attempt=0;attempt<5;attempt++)
+      await data('/auth/magic-link',{email:rateEmail},'',202)
     const beforeLimit=edge.mails.length
-    const limited=await call('/auth/magic-link',{email},'')
+    const limited=await call('/auth/magic-link',{email:rateEmail},'')
+    assert.equal(Math.floor(Date.now()/rateWindowMs),burstWindow,'sign-in burst stays in one fixed window')
+    assert.equal(beforeLimit,mailsBeforeBurst+5,'each permitted request reaches the mail edge')
     assert.equal(limited.status,429)
+    assert.equal(limited.headers.has('set-cookie'),false)
+    assert.equal(edge.mails.length,beforeLimit,'rate refusal precedes the mail effect')
+    assert.equal((await call('/auth/magic-link',{email:rateEmail},'',{'CF-Connecting-IP':'127.0.0.3'})).status,429,'changing IP cannot evade the email limit')
     assert.equal(edge.mails.length,beforeLimit)
+    assert.equal(await sessionCount(),sessionsBeforeLimit,'rate refusals create no session')
     await context.clearCookies()
     const ownerAt=cookie.indexOf('=')
     await context.addCookies([{name:cookie.slice(0,ownerAt),value:cookie.slice(ownerAt+1),url:origin}])
