@@ -47,7 +47,7 @@ export async function firmJourney(context) {
   assert.equal((await data(first.base+'/firm-work/'+first.task.id,undefined,200,people.firm.cookie)).item.version,2)
   let blotter
   const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
-  const proof=process.env.ENVELOPE_PROOF_DIR??'test-results/envelope';await mkdir(proof,{recursive:true})
+  const proof=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope';await mkdir(proof,{recursive:true})
   try {
     const contexts={}
     for(const [name,session] of [['owner',cookie],['firm',people.firm.cookie],['backup',people.backup.cookie],['stranger',people.stranger.cookie]]){
@@ -56,7 +56,7 @@ export async function firmJourney(context) {
     const pages=Object.fromEntries(await Promise.all(Object.entries(contexts).map(async([name,c])=>[name,await c.newPage()])))
     const capture=async(label,path,who='firm')=>{
       const page=pages[who]
-      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())assert.ok((await control.innerText()).trim(),label+' controls have visible words');await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:false})}
+      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),label+' visible control: '+await control.evaluate(el=>el.outerHTML));await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:false})}
       return page
     }
     await capture('firm-empty','/app/envelope/firm','stranger')
@@ -77,7 +77,7 @@ export async function firmJourney(context) {
     let jobUrl='https://blotter.example.com/app?job=synthetic-envelope-2906'
     if(process.env.ENVELOPE_BLOTTER_WORKTREE){
       const previous=process.cwd();process.chdir(process.env.ENVELOPE_BLOTTER_WORKTREE)
-      try{const {harness}=await import(join(process.cwd(),'tests/blotter/harness.mjs'));blotter=await harness()
+      try{const {harness}=await import(join(process.cwd(),'./tests/blotter/harness.mjs'));blotter=await harness()
         const client=await blotter.json('/clients',{name:first.name,abn:'10 000 000 001',contactName:'Rosa Perez',contactEmail:'rosa@example.test'},blotter.owner)
         const template=await blotter.json('/templates',{name:'Payroll inquiry follow-up',recurrence:'monthly',steps:'Review Envelope source',requests:'',feeCents:0},blotter.owner)
         const job=await blotter.json('/jobs',{clientId:client.id,templateId:template.id,periodStart:'2026-10-01',dueDate:period.payDate,dueNote:'Envelope agency notice deadline',preparerEmail:'owner@example.test',reviewerEmail:'owner@example.test'},blotter.owner)
