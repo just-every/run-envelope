@@ -14,17 +14,17 @@ export async function archiveYearFixture(payroll, company) {
   // Freeze all work inputs before any run captures the complete source collection.
   for (const [index, period] of periods.entries()) {
     await payroll.data(company.base + '/people/' + person.id + '/allocations/work', {
-      id: 'synthetic-envelope-' + (530101 + index), version: 0,
+      id: 'synthetic-envelope-' + (860101 + index), version: 0,
       day: `2026-${period.month}-05`, state: 'TX', locality: 'Austin',
       minutes: 480, earnedCents: 100000, officeState: 'TX', nyReason: 'not-applicable',
-      sourceRef: 'synthetic-envelope-' + (530401 + index),
+      sourceRef: 'synthetic-envelope-' + (860401 + index),
     }, 201)
   }
   const monthlyChecks = [], runs = []
   let priorGrossCents = 0
   for (const [index, period] of periods.entries()) {
     const run = await payroll.data(company.base + '/pay-settings/earnings-run', {
-      id: 'synthetic-envelope-' + (530201 + index), version: 0, groupId,
+      id: 'synthetic-envelope-' + (860201 + index), version: 0, groupId,
       periodStart: period.periodStart, periodEnd: period.periodEnd,
       payDate: period.periodEnd, frequency: 'monthly',
     }, 201)
@@ -34,7 +34,7 @@ export async function archiveYearFixture(payroll, company) {
     const yearToDate = { socialSecurityWagesCents: priorGrossCents,
       medicareWagesCents: priorGrossCents, futaWagesCents: priorGrossCents }
     const check = await payroll.preview({ ...company, run }, person, {
-      id: 'synthetic-envelope-' + (530301 + index), yearToDate,
+      id: 'synthetic-envelope-' + (860301 + index), yearToDate,
       yearToDateEvidence: `Prepared 2026 monthly register through ${index ? periods[index - 1].periodEnd : 'opening balance'}; prior gross ${priorGrossCents} cents. No wage settlement is asserted.`,
     })
     assert.deepEqual(check.data.input.yearToDate, yearToDate)
@@ -55,7 +55,7 @@ export async function archiveYearFixture(payroll, company) {
     version: 1, w4: { ...ordinaryW4, step4cExtraWithholdingCents: 2500 },
   })
   const correction = await payroll.preview({ ...company, run: runs[9] }, person, {
-    id: 'synthetic-envelope-530501', corrects: original.id,
+    id: 'synthetic-envelope-860501', corrects: original.id,
     correctionReason: 'Reviewed corrected W-4 adds 2500 cents of withholding to this prepared October calculation; no payment or filing is asserted.',
     yearToDate: original.data.input.yearToDate,
     yearToDateEvidence: original.data.yearToDateEvidence,

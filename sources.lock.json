@@ -2305,7 +2305,7 @@
       "executable": false
     },
     "tests/archive-year-fixture.mjs": {
-      "sha256": "dc60db3e377f4db80711f8e7f8276a5d766a68be230313bf5e2403d173de30ba",
+      "sha256": "628e6181735bd9b426257e44ef888b7d412a6fc0b6f913af1f648e041f4e6fa1",
       "executable": false
     },
     "tests/claims-browser.mjs": {
