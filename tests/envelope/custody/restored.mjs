@@ -54,6 +54,8 @@ export async function restoredJourney({target,settings,formerToken}) {
     await page.waitForURL(origin+'/app/envelope/companies/'+company.id)
     const current=await (await call('/api/envelope/companies/'+company.id)).json()
     assert.equal(current.company.restored,1)
+    const adoption=(await sql("SELECT actor_id,target_id FROM env_audit WHERE action='archive.custody.adopted' AND company_id='"+company.id+"'"))
+    assert.deepEqual(adoption,[{actor_id:owner.id,target_id:company.id}],'explicit historical read adoption records the current owner and exact company')
     await capture('/app/envelope/companies/'+company.id,'archive-history-paused')
     const historicalPayroll=await (await call('/api/envelope/companies/'+company.id+'/pay-settings')).json()
     assert.ok(historicalPayroll.approvals.some(a=>a.approvals.length>0),'historical approver attribution survives')

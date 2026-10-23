@@ -29,9 +29,13 @@ are expired and revoked in both exported and imported snapshots.
 Every restored company has `restored=1`. Native mutations and agent execution
 are fenced; no schedule, payment, filing or notice action is automatically
 reactivated. Open **Restored archive custody** (or `/app/envelope/restored`) after a fresh
-native sign-in. The original company owner can explicitly adopt historical read
-custody with fresh sensitive-action proof and consent; source sessions and grants
-are never reused. `POST /api/envelope/restored/:company/adopt {confirm:true}`
+native sign-in. Under the ct approval of 23 October 2026, 09:05Z, adoption
+requires the original creator or a current native owner, fresh step-up and explicit
+audited consent naming what becomes readable. The current door conservatively
+requires the original creator to also be a current native owner. The consent names
+company payroll records, historical approvals, notices, private original files and
+provider references; the adoption audit records the company, actor and time. It
+authorizes historical reads only. Source sessions and grants are never reused. `POST /api/envelope/restored/:company/adopt {confirm:true}`
 records this new read custody and keeps `restored=1`. Private originals and
 accepted/unknown original references can then be inspected without any outbound
 request. All mutations remain refused. No unpause door exists yet. The original notice IDs can be inspected at `/app/envelope/companies/:company/restore`.
