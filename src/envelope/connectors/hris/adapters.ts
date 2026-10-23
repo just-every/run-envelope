@@ -29,12 +29,17 @@ export const object = (v: unknown): Input => {
   return v as Input
 }
 export const cents = (v: unknown) => {
-  const s = typeof v === 'number' ? String(v) : text(v, 30)
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) throw new PayrollError('invalid_usd_rate')
-  return integer(
-    Number(s.split('.')[0]) * 100 +
-      Number((s.split('.')[1] ?? '').padEnd(2, '0')),
-  )
+  const raw = typeof v === 'number' ? String(v) : text(v, 40)
+  const s = raw
+    .replace(/^\$/, '')
+    .replace(/\s+USD$/, '')
+    .trim()
+  const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(s)
+  if (!match) throw new PayrollError('invalid_usd_rate')
+  const fraction = (match[2] ?? '').padEnd(2, '0')
+  if (/[1-9]/.test(fraction.slice(2)))
+    throw new PayrollError('fractional_cent_rate_requires_review', 409)
+  return integer(Number(match[1]) * 100 + Number(fraction.slice(0, 2)))
 }
 /** Whitelist payroll facts; source policy, I-9s and documents never enter the payload. */
 export function hrisFacts(

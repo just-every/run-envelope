@@ -58,7 +58,7 @@ These are input/export adapters, not live connection or sandbox receipts:
   employment document. This is a proposed integration door, not a claim that
   Willow currently emits it or that a remote change was acknowledged.
 - BambooHR v1 employee fields: `id`, `payType: Hourly`, `payPer: Hour`,
-  `payRate`, `payRateEffectiveDate`. The local event identity includes the
+  `payRate`, `payRateEffectiveDate`. Plain amounts, dollar-prefixed USD amounts and USD-suffixed text with zero decimal padding preserve exact cents; other currencies and nonzero fractional cents refuse review instead of silently rounding. The local event identity includes the
   employee and effective date, preserving separate future rate changes.
   Source: https://documentation.bamboohr.com/docs/list-of-field-names
 - HiBob Employee data API 1.0.0 `SalaryEntry`: integer `id`, `effectiveDate`,

@@ -225,7 +225,7 @@
       "executable": false
     },
     "docs/payroll-sources.md": {
-      "sha256": "5bfd6a55c40e3d2c8f88cd060f45fb4a3c4b71336d51b8f60895eff1154d2777",
+      "sha256": "84c9d7724f77b6ecfd5d8de797a5479f0b377f288c032b8fa765dd2d48b21722",
       "executable": false
     },
     "docs/payroll-verification.md": {
@@ -889,7 +889,7 @@
       "executable": false
     },
     "src/envelope/connectors/hris/adapters.ts": {
-      "sha256": "79f123e8bfcc6a0f4b39bd067560829cdac0afa4525b631861ff91a0aecbffb2",
+      "sha256": "05944062f787ef81362d9411b6645dad71a7dc21e76fe1bc2ea6457d97aae332",
       "executable": false
     },
     "src/envelope/connectors/siblings/earnings.ts": {
@@ -2113,7 +2113,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "236a9f7606d3dd413dbdf9625789227aba2e4d80555284eb7fbf2dd735cb4f4b",
+      "sha256": "660d884f4cccd3af8f38ba4dbe464efb7b7cb8cce2127a88efce7d32264dd599",
       "executable": false
     },
     "tests/runtime.mjs": {
