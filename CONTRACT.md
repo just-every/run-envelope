@@ -389,7 +389,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Judged from the code and tests at commit `e915ac3db5132118da2151044b05761b6d394d09` (23 October 2026).
+Judged from the code and tests at commit `1d33a0209546ba21c518d92525f72573ed7a2fd7` (23 October 2026).
 
 No clause is complete payroll or production readiness.
 
