@@ -18,6 +18,7 @@ export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,cap
     const body=await response.arrayBuffer()
     return new Response(body,{status:response.status,headers:response.headers})
   }
+  assert.equal((await upload(Buffer.from('not pdf'),'application/pdf')).status,400)
   const before=edge.calls.length
   // Use the native file control for the first hostile HTML original.
   await page.goto(origin+view)
@@ -54,7 +55,6 @@ export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,cap
   }
   assert.equal((await upload(Buffer.alloc(32769),'text/plain','large.txt')).status,413)
   assert.equal((await upload(Buffer.alloc(70000),'text/plain','very-large.txt')).status,413)
-  assert.equal((await upload(Buffer.from('not pdf'),'application/pdf')).status,400)
   assert.equal((await upload(Buffer.from('active'),'application/javascript','active.js')).status,415)
   assert.equal((await upload(Buffer.from([255]),'text/plain','bad.txt')).status,400)
   assert.equal((await upload(Buffer.from('source'),'text/plain','source.txt',{unexpected:'value'})).status,400)

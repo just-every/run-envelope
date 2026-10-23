@@ -4,7 +4,7 @@ export default {
   includeTables:['oa_operators','oa_bootstrap','oa_auth_audit','oa_invitation_cancellations'],
   excludeTables:[
     'env_external_providers','env_grants','env_agent_grants','env_agent_credentials','env_agent_policy',
-    'env_notice_reviews','env_rate_reviews','env_workspace_reviews',
+    'env_notice_reviews','env_rate_reviews','env_workspace_reviews','env_privacy_guard',
     'rer_dependency_link','rer_dependency_installation',
   ],
   requiredConfiguration:['ENVELOPE_RECORD_KEY','OWNER_EMAIL','SESSION_SECRET','SETUP_TOKEN','AUTH_ORIGIN','MAIL_PROVIDER','MAIL_FROM'],
