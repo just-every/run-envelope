@@ -1,4 +1,5 @@
 import { validateEnvelopeArchive } from './validate.mjs';
+import { sourceEditionPayload } from './editions.mjs';
 
 const identityHistory = ['oa_operators', 'oa_bootstrap', 'oa_external_identities',
   'oa_invitation_cancellations', 'oa_auth_settings', 'oa_auth_audit',
@@ -15,6 +16,7 @@ export function createEnvelopeArchivePolicy({ recordKey = () =>
   const getKey = typeof recordKey === 'function' ? recordKey : () => recordKey;
   return {
     product: ['just-every', 'envelope'].join('/'),
+    extraPayloads: { 'envelope-source-editions': sourceEditionPayload },
     includeTables: [...identityHistory],
     excludeTables: ['oa_sessions', 'oa_tokens', 'oa_credentials',
       'oa_step_up_challenges', 'oa_policy_approvals', 'oc_idp_grants',

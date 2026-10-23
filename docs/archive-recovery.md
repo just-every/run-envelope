@@ -36,7 +36,7 @@ published. A missing original key cannot be reconstructed from the archive.
 
 This is a recovery foundation, not a completed operational restore. Fresh owner
 adoption, provider reconciliation using original accepted identifiers, renewed
-exact authority, erasure fences, packaged schema and rule sources, and a complete
+exact authority, erasure fences, rule editions beyond the implemented catalog, and a complete
 mixed-year history containing corrections and uncertain payments remain owed by
 ENV-053. Restored company records currently have no active access grants. Do not
 reintroduce old credentials or use database edits to bypass those missing doors.
@@ -46,3 +46,19 @@ real terminal backup and restore, private key recovery, original ciphertext and
 approval-history comparison, rejection without publication, and prior-session
 replay against the restored Worker. The source includes a working scoped agent, an enabled provider and a human-approved notice reply created through native email proof; restored bearer replay cannot dispatch it. `tests/archive-key-custody.mjs` exercises the
 key commands with generated keys confined to the disposable test installation.
+
+Native export now includes the exact migration SQL and implemented Envelope
+source bytes in a checksummed source-edition payload. Import validates every
+record and retains that payload as an inert private JSON document under
+`.rer/archive-editions/`, named by its SHA-256 digest. It never extracts or runs
+historical code, replaces the current checkout, or downloads a cited rule URL.
+The encrypted business rows retain reviewed rule metadata and source links.
+A missing current checkout rule file does not prevent custody of the historical
+bytes. A damaged source record refuses before business publication.
+
+Archives made before the source payload was introduced must be re-exported from
+the original installation; import explicitly refuses a missing payload inventory.
+Retained public source bytes cover the implemented catalog, not an unlicensed or
+unimplemented tax catalog. The source document is retained before the final
+database transaction; a later database commit failure may leave that verified
+evidence document, while business publication remains atomic.

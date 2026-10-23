@@ -10,6 +10,7 @@ import { fileRecords } from '@runeditrun/rer/modules/portability/files'
 import { archiveFixture } from './archive-fixture.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
 import { unrelatedPersonArchive } from './archive-relationships.mjs'
+import { archiveEditions } from './archive-editions.mjs'
 
 const execute = promisify(execFile)
 const quote = value => '"' + value.replaceAll('"', '""') + '"'
@@ -126,6 +127,8 @@ export async function archiveJourney(context) {
     const rows = Object.fromEntries(manifest.tables.map(table => [table.name, []]))
     for (const record of records) for (const item of record.items ?? []) if (item.kind === 'row') rows[item.table].push(item.row)
     for (const name of Object.keys(rows)) rows[name] = ordered(rows[name])
+    const damagedEditions = join(temporary, 'damaged-editions.rer')
+    const editions = await archiveEditions(records, source, damagedEditions)
     const text = await readFile(archive, 'utf8')
     assert.ok(!text.includes(settings.ENVELOPE_RECORD_KEY), 'record-key custody is separate from archive contents')
     assert.ok(!text.includes(fixture.authority.agentToken) && !text.includes(fixture.authority.providerSecret), 'live agent and provider secrets never enter the archive')
@@ -171,8 +174,21 @@ export async function archiveJourney(context) {
     assert.ok(corrupt.output.includes('closing_missing'), 'corruption is detected by the actual archive verifier')
     assert.equal(digest(populated(await snapshot(state(corruptTarget)))), digest(populated(corruptBefore)), 'corruption writes no business or identity rows')
 
+    const editionRefusal = await rer(target, 'import', damagedEditions)
+    assert.notEqual(editionRefusal.code, 0, 'an internally damaged source edition refuses even with valid archive transport checksums')
+    assert.ok(editionRefusal.output.includes('archive_source_editions_invalid'), 'edition validation checks retained source bytes')
+    assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'damaged source edition publishes no business or identity history')
+    assert.deepEqual(await readdir(join(target, '.rer', 'archive-editions')).catch(error => {
+      if (error.code === 'ENOENT') return []; throw error
+    }), [], 'refused source editions leave no recovered source payload')
+    const removedSource = join(target, 'src', 'envelope', 'workspace', 'nj-withholding.ts')
+    await rm(removedSource)
     const restored = await rer(target, 'import', archive)
     assert.equal(restored.code, 0, 'independently supplying the original record key permits the actual CLI restore')
+    assert.deepEqual(await readFile(join(target, '.rer', 'archive-editions', editions.descriptor.sha256 + '.json')), editions.bytes,
+      'restore retains exact historical source bytes independently of the target checkout')
+    assert.equal(await lstat(removedSource).catch(error => { if (error.code === 'ENOENT') return null; throw error }), null,
+      'historical source retention never recreates or executes application code')
     const targetRows = await snapshot(state(target), manifest.tables.map(table => ({ ...table,
       columns: table.columns.filter(column => !(manifest.excludedColumns[table.name] ?? []).includes(column.name)) })))
     assert.equal(digest(targetRows), digest(rows), 'every archived business and identity row matches the fresh target')
