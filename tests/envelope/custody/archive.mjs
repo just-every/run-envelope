@@ -1,3 +1,4 @@
+import {restoredJourney} from './restored.mjs'
 import assert from 'node:assert/strict'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
@@ -7,7 +8,7 @@ import {join,resolve,dirname} from 'node:path'
 const execute=promisify(execFile)
 
 /** Public rer export/import/export on synthetic populated native local stores. */
-export async function archiveJourney({persist}) {
+export async function archiveJourney({persist,settings,formerToken}) {
   const scratch=await mkdtemp(join(tmpdir(),'envelope-archive-')),root=resolve('.'),
     files=(await execute('git',['ls-files','-z'])).stdout.split('\0').filter(Boolean),
     cli=resolve('node_modules/@runeditrun/rer/bin/rer.mjs')
@@ -62,6 +63,7 @@ export async function archiveJourney({persist}) {
     item.row[Object.keys(item.row)[0]]='synthetic-envelope-599'
     await writeFile(join(damagedTarget,'exports/corrupt.rer'),corrupt.map(r=>JSON.stringify(r)).join('\n')+'\n')
     assert.match(await run(damagedTarget,['import','--input','exports/corrupt.rer','--yes'],1),/verification failed/)
+    await restoredJourney({target,settings,formerToken})
     console.log('ARCHIVE-CUSTODY passed: public native export/import/export preserves every populated mixed-company business row and immutable file/digest; excludes sessions, tokens, live grants/provider keys; restores paused with historical expired approvals and accepted/unknown original IDs; corrupt and nonempty imports refuse')
   } finally {await rm(scratch,{recursive:true,force:true})}
 }

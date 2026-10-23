@@ -3286,6 +3286,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.ok(browserRequests.every(url=>new URL(url).origin===origin),'operator screens and hostile originals cause no third-party browser load')
     await publicSurfaceJourney({browser,origin})
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
+    return {discardedAgentToken:ownerModel.token}
   } finally {await context.close();await browser.close()}
 }
 

@@ -110,6 +110,7 @@ export function page(
             meta={<>{selected && <span>{companies.find(c => c.id === selected)?.name} · </span>}<a href="/app/envelope">Companies and payroll settings</a></>}
           />
         </div>
+        {companies.find(c=>c.id===selected)?.restored===1 && <Card title="Restored history — all changes paused"><p className="evidence-text">This archive is available for historical read custody only. Imported approvals are evidence, never renewed dispatch authority. Fresh connection and reconciliation of original accepted or unknown effects must precede any future activation.</p></Card>}
         <div className="field">{children}</div>
       </main>
     </>,
@@ -147,6 +148,7 @@ export const companyIndex = (session: Session, companies: Company[]) =>
           <a className="btn" href="/auth/settings/identity">
             Identity settings
           </a>
+          <a className="btn" href="/app/envelope/restored">Restored archive custody</a>
         </p>
       )}
       {session.operator.role === 'owner' && (
