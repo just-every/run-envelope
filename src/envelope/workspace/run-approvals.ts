@@ -124,16 +124,20 @@ export class RunApprovals {
     if (status.approvals.some((a) => a.approverId === actor.session.operator.id))
       throw new PayrollError('second_approver_must_differ', 409)
     const token = crypto.randomUUID() + crypto.randomUUID(),
-      f = fence(actor)
-    const result = await this.store.records
-      .statement(
+      f = fence(actor),
+      event = crypto.randomUUID()
+    const result = await this.store.records.env.DB.batch([
+      this.store.records.statement(
         `INSERT INTO env_workspace_reviews(token_hash,company_id,kind,object_id,version,session_id,operator_id,grant_version,expires_at)
         SELECT ?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=? RETURNING token_hash`,
         [await digest(token), actor.company, kind, row.id, row.version, actor.session.id, actor.session.operator.id,
           actor.grant.version, Date.now() + 600000, ...f.args, actor.company, kind, row.id, row.version],
-      )
-      .all()
-    if (!result.results.length) throw new PayrollError('review_stale', 409)
+      ),
+      auditStatement(this.store.records.env, actor, event, 'run.reviewed', row.id, row.version,
+        'EXISTS(SELECT 1 FROM env_workspace_reviews WHERE token_hash=? AND session_id=?)',
+        [await digest(token), actor.session.id]),
+    ])
+    if (!result[0].results.length) throw new PayrollError('review_stale', 409)
     return { ...row, reviewToken: token, approval: status }
   }
   async approve(actor: Actor, id: string, input: Input) {

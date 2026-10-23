@@ -17,8 +17,8 @@ const actionLabels: Record<string, string> = {
   'private:write': 'Store private records',
   export: 'Export record register',
   'bank:edit': 'Store bank documents',
-  'pay:approve': 'Approve payroll (unavailable)',
-  'pay:release': 'Release payroll (unavailable)',
+  'pay:approve': 'Approve exact earnings runs',
+  'pay:release': 'Request payroll release (held)',
   'audit:read': 'Read company audit',
   'notices:read': 'Read tax notices',
   'notices:write': 'Prepare tax notice replies',
@@ -393,9 +393,7 @@ export function grantsPage(
           </fieldset>
           <fieldset>
             <legend>Independent actions</legend>
-            {actions
-              .filter((a) => !a.startsWith('pay:'))
-              .map((a) => (
+            {actions.map((a) => (
                 <label className="field" key={a}>
                   <span>
                     <input
@@ -410,8 +408,9 @@ export function grantsPage(
               ))}
           </fieldset>
           <p>
-            Bank document custody does not change payment instructions. Payroll approvals and
-            payments are unavailable.
+            Bank document custody does not change payment instructions. Exact earnings-run
+            review is available with compensation access and all locations. Release is a
+            separate permission; payments remain held until payroll and rail readiness.
           </p>
           <Submit primary>Save this grant</Submit>
         </form>

@@ -52,7 +52,6 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
   const grant = (who, role, fields, actions, version = 0) =>
     data(base + '/grants', { operatorId: humans[who].id, version, role, locations: ['*'], fields, actions })
   await grant('approver-a', 'approver', ['compensation'], ['records:read', 'pay:approve', 'rates:approve'])
-  await grant('approver-b', 'approver', ['compensation'], ['records:read', 'pay:approve'])
   await grant('admin', 'payroll-admin', ['compensation', 'bank'],
     ['records:read', 'records:write', 'rates:propose', 'private:write', 'bank:edit'])
   const wa = await data(base + '/locations', { name: 'Synthetic Seattle shop', state: 'WA' }, 201),
@@ -124,6 +123,21 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       return page
     }
 
+    // ENV-028: the owner grants real run approval from settings, independently
+    // of export, bank-edit and release. Role labels alone confer none of them.
+    const grantsScreen = base.replace('/api/', '/app/') + '/grants'
+    let grantPage = await capture('payroll-grant-powers', grantsScreen)
+    await grantPage.getByLabel('Person', { exact: true }).selectOption(humans['approver-b'].id)
+    await grantPage.getByLabel('Role label', { exact: true }).selectOption('approver')
+    for (const label of ['All locations', 'compensation', 'View people', 'Approve exact earnings runs'])
+      await grantPage.getByLabel(label, { exact: true }).check()
+    assert.equal(await grantPage.getByLabel('Request payroll release (held)', { exact: true }).isChecked(), false)
+    await grantPage.getByRole('button', { name: 'Save this grant', exact: true }).click()
+    await grantPage.waitForURL(origin + grantsScreen)
+    const savedGrant = (await data(base + '/grants')).find(g => g.operatorId === humans['approver-b'].id)
+    assert.deepEqual(JSON.parse(savedGrant.actions).sort(), ['pay:approve', 'records:read'])
+    await capture('payroll-grant-powers-saved', grantsScreen)
+
     // The owner alone sets the two-person threshold, through exact review.
     const policy = { id: 'synthetic-envelope-340', version: 0, name: 'Two people from $300', secondApprovalAtCents: 30000 }
     await refused(door + '/approval-policy', policy, 'owner_required', humans['approver-a'].cookie, {}, 403)
@@ -157,7 +171,17 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await release(waRun, version, 'approval_required')
 
     // Threshold bypass, self-second-approval, copied review and agent approval all fail closed.
+    await refused(door + '/earnings-run/' + waRun + '/release', { version }, 'payroll_access_denied', humans['approver-b'].cookie, {}, 403)
+    await refused(base + '/export', undefined, 'payroll_access_denied', humans['approver-b'].cookie, {}, 403)
+    await refused(base + '/people/' + w1.id + '/private', {kind:'bank',version:1,value:'synthetic-envelope-380'}, 'payroll_access_denied', humans['approver-b'].cookie, {}, 403)
+    const reviewAuditBefore = (await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='run.reviewed'"))[0].n
     const firstReview = await review(waRun, 'approver-a')
+    const sensitiveRead = (await data(base + '/audit')).find(e => e.action === 'run.reviewed')
+    assert.deepEqual([sensitiveRead.actorId, sensitiveRead.targetId, sensitiveRead.version], [humans['approver-a'].id, waRun, version])
+    assert.ok(sensitiveRead.occurredAt > 0)
+    assert.equal((await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='run.reviewed'"))[0].n, reviewAuditBefore + 1)
+    assert.doesNotMatch(JSON.stringify(sensitiveRead), /40000|synthetic-envelope-bank|reviewToken|cipher/)
+    assert.ok((await data(base + '/audit')).some(e => e.action === 'workspace.approval-policy.reviewed' && e.targetId === policy.id && e.version === 1))
     await data(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 200, humans['approver-a'].cookie)
     await release(waRun, version, 'second_approval_required')
     await release(waRun, version, 'second_approval_required', { approvals: 2, thresholdCents: 99999999, secondApproverId: owner, approved: true })

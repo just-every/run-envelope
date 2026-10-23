@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { unstable_startWorker } from 'wrangler'
 import {
+  identityJourney,
   sponsoredJourney,
   payrollJourney,
   missingKeyJourney,
@@ -199,7 +200,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored'].includes(name),
+        !['records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -228,6 +229,71 @@ try {
       assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
     })
     await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
+  }
+  if (!selected || selected.includes('identity')) {
+    await stopWorker()
+    const identityOrigin='https://envelope.example.com', issuer='https://auth.example.com'
+    const pair=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
+    const appPair=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
+    const publicJwk={...await crypto.subtle.exportKey('jwk',pair.publicKey),kid:'synthetic-envelope-600',alg:'ES256',use:'sig'}
+    const privateJwk={...await crypto.subtle.exportKey('jwk',appPair.privateKey),kid:'synthetic-envelope-601',alg:'ES256'}
+    const appPublicKey=appPair.publicKey
+    const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url')
+    const sign=async claims=>{
+      const input=encode({alg:'ES256',kid:publicJwk.kid,typ:'JWT'})+'.'+encode(claims)
+      return input+'.'+Buffer.from(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},pair.privateKey,new TextEncoder().encode(input))).toString('base64url')
+    }
+    const metadata={issuer,authorization:issuer+'/authorize',token:issuer+'/token',jwks:issuer+'/jwks',algorithms:['ES256'],responseIssuer:true,interfaceVersion:'1.0.0'}
+    const quote=value=>"'"+String(value).replaceAll("'","''")+"'"
+    await sql(`INSERT INTO rer_dependency_link(interface,issuer,client_id,metadata,needs_relink,linked_at) VALUES('oidc-provider@1',${quote(issuer)},'synthetic-envelope-600',${quote(JSON.stringify(metadata))},0,${Date.now()}) ON CONFLICT(interface) DO UPDATE SET issuer=excluded.issuer,client_id=excluded.client_id,metadata=excluded.metadata,needs_relink=0,linked_at=excluded.linked_at; INSERT INTO rer_dependency_keys(interface,private_key) VALUES('oidc-provider@1',${quote(JSON.stringify(privateJwk))}) ON CONFLICT(interface) DO UPDATE SET private_key=excluded.private_key`)
+    const edge={issuer,codes:new Map(),mails:[],mailMode:'normal',authMode:'normal'}
+    let identityWorker
+    try {
+      identityWorker=await unstable_startWorker({
+        config:resolve('dist/server/wrangler.json'),
+        bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:'resend',MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:'synthetic-envelope-600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
+        dev:{server:{hostname:'127.0.0.1',port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
+          outboundService:async request=>{
+            if(request.url==='https://api.resend.com/emails' && request.method==='POST') {
+              const body=await request.json();edge.mails.push(body)
+              assert.equal(body.headers['Auto-Submitted'],'auto-generated')
+              assert.ok(request.headers.get('Idempotency-Key'))
+              if(edge.mailMode==='rejected') return Response.json({name:'validation_error',message:'Synthetic rejection'},{status:422})
+              if(edge.mailMode==='unknown') return Response.json({name:'application_error',message:'Synthetic unknown'},{status:500})
+              return Response.json({id:'00000000-0000-4000-8000-000000000600'})
+            }
+            if(!request.url.startsWith(issuer+'/')) throw Error('Unexpected identity edge')
+            if(edge.authMode==='unavailable') return Response.json({error:'temporarily_unavailable'},{status:503})
+            if(request.url===issuer+'/.well-known/openid-configuration') return Response.json({
+              issuer,authorization_endpoint:metadata.authorization,token_endpoint:metadata.token,jwks_uri:metadata.jwks,
+              response_types_supported:['code'],response_modes_supported:['query'],grant_types_supported:['authorization_code'],
+              code_challenge_methods_supported:['S256'],id_token_signing_alg_values_supported:['ES256'],
+              token_endpoint_auth_methods_supported:['private_key_jwt'],token_endpoint_auth_signing_alg_values_supported:['ES256'],
+              authorization_response_iss_parameter_supported:true,rer_interfaces:['oidc-provider@1.0.0'],
+            })
+            if(request.url===issuer+'/jwks') return Response.json({keys:[publicJwk]})
+            if(request.url===issuer+'/token' && request.method==='POST') {
+              const form=new URLSearchParams(await request.text()), code=edge.codes.get(form.get('code'))
+              assert.ok(code)
+              assert.equal(form.get('grant_type'),'authorization_code')
+              assert.equal(form.get('redirect_uri'),identityOrigin+'/auth/oidc/auth/callback')
+              assert.equal(Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(form.get('code_verifier')))).toString('base64url'),code.challenge)
+              const assertion=form.get('client_assertion').split('.')
+              assert.equal(await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},appPublicKey,Buffer.from(assertion[2],'base64url'),new TextEncoder().encode(assertion[0]+'.'+assertion[1])),true)
+              const now=Math.floor(Date.now()/1000), {challenge,...claims}=code
+              return Response.json({token_type:'Bearer',access_token:'synthetic-envelope-604',id_token:await sign({iss:issuer,aud:'synthetic-envelope-600',sub:'synthetic-envelope-602',iat:now,exp:now+300,email_verified:true,email_verified_at:now,...claims})})
+            }
+            throw Error('Unexpected OIDC edge')
+          },
+        },
+      })
+      await identityWorker.ready
+      await identityJourney({worker:identityWorker,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
+    } finally {
+      await identityWorker?.dispose()
+      worker=launch(settings)
+      await waitForWorker()
+    }
   }
   if (!selected || selected.includes('sponsored')) {
     await stopWorker()

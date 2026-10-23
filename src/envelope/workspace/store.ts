@@ -285,9 +285,10 @@ export class WorkspaceStore {
       throw new PayrollError('review_stale', 409)
     const token = crypto.randomUUID() + crypto.randomUUID(),
       hash = await digest(token),
-      f = fence(actor)
-    const result = await this.records
-      .statement(
+      f = fence(actor),
+      event = crypto.randomUUID()
+    const result = await this.records.env.DB.batch([
+      this.records.statement(
         `INSERT INTO env_workspace_reviews(token_hash,company_id,kind,object_id,version,session_id,operator_id,grant_version,expires_at)
       SELECT ?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=? RETURNING token_hash`,
         [
@@ -306,9 +307,12 @@ export class WorkspaceStore {
           id,
           row.version,
         ],
-      )
-      .all()
-    if (!result.results.length) throw new PayrollError('review_stale', 409)
+      ),
+      auditStatement(this.records.env, actor, event, `workspace.${kind}.reviewed`, id, row.version,
+        'EXISTS(SELECT 1 FROM env_workspace_reviews WHERE token_hash=? AND session_id=?)',
+        [hash, actor.session.id]),
+    ])
+    if (!result[0].results.length) throw new PayrollError('review_stale', 409)
     return { ...row, reviewToken: token }
   }
   async decide(

@@ -3254,3 +3254,185 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
   } finally {await context.close();await browser.close()}
 }
+
+/** PAYROLL-SIGNIN: the emitted production Worker, real Base admission and payroll doors.
+ * Only Resend POST /emails and Auth's OIDC discovery/JWKS/token network edges are faked.
+ */
+export async function identityJourney({ worker, origin, cookie, settings, sql, edge }) {
+  const call = (path, body, who = cookie, extra = {}) => worker.fetch(origin + path, {
+    method: body === undefined ? 'GET' : 'POST', redirect: 'manual',
+    headers: { ...(who ? {cookie:who} : {}), origin, 'content-type':'application/json', 'CF-Connecting-IP':'127.0.0.2', ...extra },
+    ...(body === undefined ? {} : {body:JSON.stringify(body)}),
+  })
+  const data = async (path, body, who = cookie, status = 200) => {
+    const r = await call(path, body, who)
+    assert.equal(r.status, status, await r.clone().text())
+    return r.json()
+  }
+  const sessionCount = async () => (await sql('SELECT COUNT(*) AS n FROM oa_sessions'))[0].n
+  const mailLink = () => new URL(edge.mails.at(-1).text.match(/https:\/\/[^\s]+/)[0])
+  const browser = await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const context = await browser.newContext({serviceWorkers:'block'})
+  // Browser traffic reaches the actual emitted Worker, with its real HTTPS
+  // origin/cookie/Origin checks; no application handler or auth response is mocked.
+  await context.route(origin + '/**', async route => {
+    const request = route.request()
+    const response = await worker.fetch(request.url(), {
+      method:request.method(), headers:{...await request.allHeaders(),'CF-Connecting-IP':'127.0.0.2'},
+      ...(request.postDataBuffer() ? {body:request.postDataBuffer()} : {}), redirect:'manual',
+    })
+    await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())})
+  })
+  const page = await context.newPage()
+  const folder = process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
+  await mkdir(folder,{recursive:true})
+  const capture = async (label, path) => {
+    for (const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000})
+      await page.goto(origin + path)
+      await page.evaluate(() => document.fonts.ready)
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),true,label)
+      // These native documents have no icon-only controls. Any future one must
+      // supply the owner's hover/focus tooltip before this assertion can pass.
+      for (const control of await page.locator('button,a').all())
+        assert.ok((await control.innerText()).trim(),label + ': every control has visible words')
+      await page.screenshot({path:join(folder,`${label}-${width}.png`),fullPage:true})
+    }
+  }
+  try {
+    const company = await data('/api/envelope/companies',{name:'Synthetic identity company',ein:'00-0000600'},cookie,201)
+    const base = '/api/envelope/companies/' + company.id
+    const location = await data(base + '/locations',{name:'Synthetic Oakland',state:'CA'},cookie,201)
+    const person = await data(base + '/people',{name:'Synthetic payroll worker',locationId:location.id},cookie,201)
+    await data(base + '/people/' + person.id + '/private',{kind:'tax',version:0,value:'synthetic-envelope-601'},cookie,201)
+    const download = base + '/people/' + person.id + '/private/tax'
+    const privateScreen = base.replace('/api/','/app/') + '/people/' + person.id
+    const email = 'synthetic-envelope-602@example.com'
+    const beforeUnknown = await sessionCount(), beforeMail = edge.mails.length
+    assert.deepEqual(await data('/auth/magic-link',{email:'synthetic-envelope-603@example.com'},'',202),{status:'accepted'})
+    assert.equal(edge.mails.length,beforeMail,'unknown sign-in sends nothing')
+    assert.equal(await sessionCount(),beforeUnknown,'unknown sign-in creates no session')
+    assert.equal((await sql("SELECT COUNT(*) AS n FROM oa_operators WHERE email='synthetic-envelope-603@example.com'"))[0].n,0)
+    await capture('payroll-signin', '/signin')
+    await data('/auth/invite',{email,displayName:'Synthetic invited accountant',role:'member',returnTo:'/app/envelope'},cookie,202)
+    const invitation = mailLink(), invited = (await sql(`SELECT id FROM oa_operators WHERE email='${email}'`))[0]
+    assert.equal((await call('/auth/magic-link',{email},'')).status,202)
+    assert.equal(mailLink().href,invitation.href,'pending identity needs invitation acceptance')
+    const beforePreview = await sessionCount()
+    await capture('payroll-invitation', invitation.pathname + invitation.search)
+    assert.equal(await sessionCount(),beforePreview,'GET confirmation cannot sign in')
+    await page.getByRole('button',{name:/Confirm/}).click()
+    await page.waitForURL(origin + '/app/envelope')
+    const nativeCookie = (await context.cookies(origin)).filter(c=>c.name==='__Host-operator_session').map(c=>c.name+'='+c.value).join(';')
+    assert.ok(nativeCookie)
+    assert.equal((await call('/auth/confirm',{token:invitation.searchParams.get('token')},'')).status,400,'invitation is single use')
+    assert.deepEqual(await data('/api/envelope/companies',undefined,nativeCookie),[],'native admission grants no payroll authority')
+    await data(base + '/grants',{operatorId:invited.id,version:0,role:'accountant',locations:[location.id],fields:['tax'],actions:['records:read','private:read']})
+    assert.equal((await call(download,undefined,nativeCookie)).status,200)
+    await capture('payroll-invited-private-record',privateScreen)
+    assert.doesNotMatch(await page.locator('main').innerText(),/synthetic-envelope-601/,'default document remains masked')
+
+    await data('/auth/magic-link',{email,returnTo:privateScreen},'',202)
+    const expired = mailLink()
+    await sql(`UPDATE oa_tokens SET expires_at=1 WHERE operator_id='${invited.id}' AND kind='magic' AND consumed_at IS NULL`)
+    assert.equal((await call('/auth/confirm',{token:expired.searchParams.get('token')},'')).status,400)
+    await data('/auth/magic-link',{email,returnTo:privateScreen},'',202)
+    const valid = mailLink(), signed = await call('/auth/confirm',{token:valid.searchParams.get('token')},'')
+    assert.equal(signed.status,303)
+    assert.equal(signed.headers.get('location'),privateScreen)
+    const freshCookie = signed.headers.get('set-cookie').split(';')[0]
+    assert.equal((await call('/auth/confirm',{token:valid.searchParams.get('token')},'')).status,400)
+    assert.equal((await call('/auth/signout',{},freshCookie)).status,204)
+    assert.equal((await call(download,undefined,freshCookie)).status,401,'signout revokes direct downloads')
+
+    // Expiry uses Base's actual seven-day fixed session bound (no sliding renewal).
+    const active = (await sql(`SELECT id,expires_at AS expiresAt,created_at AS createdAt FROM oa_sessions WHERE operator_id='${invited.id}' AND revoked_at IS NULL ORDER BY created_at LIMIT 1`))[0]
+    assert.ok(active.expiresAt-active.createdAt<=7*86400000)
+    await sql(`UPDATE oa_sessions SET expires_at=1 WHERE id='${active.id}'`)
+    assert.equal((await call(download,undefined,nativeCookie)).status,401)
+
+    // An unavailable/uncertain mail edge revokes its link and never creates a session.
+    for (const mode of ['rejected','unknown']) {
+      edge.mailMode=mode
+      const before = await sessionCount()
+      const unavailable = await call('/auth/magic-link',{email},'')
+      assert.equal(unavailable.status,503)
+      assert.equal(unavailable.headers.has('set-cookie'),false)
+      assert.equal(await sessionCount(),before)
+      assert.equal((await call('/auth/confirm',{token:mailLink().searchParams.get('token')},'')).status,400)
+    }
+    edge.mailMode='normal'
+    await data('/auth/settings/identity',{idpSignIn:true})
+    const begin = async (claims = {}) => {
+      const r=await call('/auth/oidc/auth/start',{returnTo:privateScreen},'')
+      assert.equal(r.status,303,await r.clone().text())
+      const authorization=new URL(r.headers.get('location'))
+      assert.equal(authorization.origin,edge.issuer)
+      assert.equal(authorization.searchParams.get('code_challenge_method'),'S256')
+      const code='synthetic-envelope-'+(edge.codes.size+610)
+      edge.codes.set(code,{nonce:authorization.searchParams.get('nonce'),challenge:authorization.searchParams.get('code_challenge'),email,...claims})
+      return {path:'/auth/oidc/auth/callback?'+new URLSearchParams({state:authorization.searchParams.get('state'),code,iss:edge.issuer}),cookie:r.headers.get('set-cookie').split(';')[0]}
+    }
+    const finish=async transaction=>call(transaction.path,undefined,transaction.cookie)
+    const assertDenied=async transaction=>{
+      const before=await sessionCount(), r=await finish(transaction)
+      assert.ok(r.status>=400,await r.clone().text())
+      assert.equal(await sessionCount(),before,'refused OIDC creates no session')
+      assert.equal((await call(download,undefined,transaction.cookie)).status,401)
+    }
+    await capture('payroll-linked-signin','/signin')
+    await assertDenied(await begin({email:'synthetic-envelope-620@example.com'}))
+    await assertDenied(await begin({email_verified:false}))
+    await assertDenied(await begin({nonce:'synthetic-envelope-621'}))
+    await assertDenied(await begin({exp:1}))
+    const transaction=await begin({amr:['pwd','mfa']})
+    const oidc=await finish(transaction)
+    assert.equal(oidc.status,303,await oidc.clone().text())
+    const oidcCookie=oidc.headers.getSetCookie().find(c=>c.startsWith('__Host-operator_session=')).split(';')[0]
+    assert.equal((await call(download,undefined,oidcCookie)).status,200,'linked identity still needs its payroll grant')
+    await assertDenied(transaction)
+    // Provider claims never override company/location/field grants.
+    const deniedBank=await call(base+'/people/'+person.id+'/private',{kind:'bank',version:0,value:'synthetic-envelope-623',mfa:true},oidcCookie)
+    assert.equal(deniedBank.status,403)
+    assert.equal((await deniedBank.json()).error,'payroll_access_denied')
+    // Add the bank scope, then prove a signed MFA claim still cannot fabricate
+    // Base's fresh same-session app-local email proof.
+    await data(base+'/grants',{operatorId:invited.id,version:1,role:'accountant',locations:[location.id],fields:['tax','bank'],actions:['records:read','private:read','private:write','bank:edit']})
+    assert.equal((await call(download,undefined,oidcCookie)).status,401,'grant change ends old provider sessions')
+    const renewed=await finish(await begin({amr:['pwd','mfa']}))
+    const renewedCookie=renewed.headers.getSetCookie().find(c=>c.startsWith('__Host-operator_session=')).split(';')[0]
+    const proofMissing=await call(base+'/people/'+person.id+'/private',{kind:'bank',version:0,value:'synthetic-envelope-623',mfa:true},renewedCookie)
+    assert.equal(proofMissing.status,403)
+    assert.equal((await proofMissing.json()).error,'step_up_required')
+    const proof=await call('/auth/step-up',{action:'credentials:mint',returnTo:privateScreen},renewedCookie)
+    assert.equal(proof.status,202,await proof.clone().text())
+    const proofLink=mailLink(), proofToken=proofLink.searchParams.get('token')
+    assert.equal((await call('/auth/confirm',{token:proofToken},cookie)).status,400,'proof cannot transfer between sessions')
+    const confirmed=await call('/auth/confirm',{token:proofToken},renewedCookie)
+    assert.equal(confirmed.status,303)
+    assert.equal(confirmed.headers.has('set-cookie'),false,'step-up creates no new session')
+    assert.equal((await call('/auth/confirm',{token:proofToken},renewedCookie)).status,400)
+    await data(base+'/people/'+person.id+'/private',{kind:'bank',version:0,value:'synthetic-envelope-623'},renewedCookie,201)
+    // Provider outage never grants admission or turns a pending transaction into a session.
+    const unavailableAuth=await begin()
+    edge.authMode='unavailable'
+    await assertDenied(unavailableAuth)
+    edge.authMode='normal'
+    await data('/auth/settings/identity',{idpSignIn:false})
+    assert.equal((await call(download,undefined,renewedCookie)).status,401,'provider disable revokes direct downloads')
+    assert.equal((await call(privateScreen,undefined,renewedCookie)).headers.get('location'),'/signin?returnTo=%2Fapp%2Fenvelope')
+    await data('/auth/operator/status',{operatorId:invited.id,status:'inactive'})
+    assert.equal((await call(download,undefined,renewedCookie)).status,401)
+    await data('/auth/operator/status',{operatorId:invited.id,status:'active'})
+    assert.equal((await call(download,undefined,renewedCookie)).status,401,'reactivation never restores a session')
+    // Rate limits are durable and apply before provider effects.
+    const beforeLimit=edge.mails.length
+    const limited=await call('/auth/magic-link',{email},'')
+    assert.equal(limited.status,429)
+    assert.equal(edge.mails.length,beforeLimit)
+    console.log('PAYROLL-SIGNIN passed: real mailed invitation/admission, unknown/expired/replayed/refused links, independent current payroll grants, seven-day fixed expiry, signed OIDC/PKCE/nonce/admission failures, unavailable Auth/mail, session-bound app-local step-up and direct-document revocation; 1440/390. Linked MFA policy, passkeys and former-worker forms remain unproved.')
+  } finally {
+    edge.mailMode='normal';edge.authMode='normal'
+    await context.close();await browser.close()
+  }
+}
