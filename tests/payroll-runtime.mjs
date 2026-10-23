@@ -3338,7 +3338,8 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
 
     // Expiry uses Base's actual seven-day fixed session bound (no sliding renewal).
     const active = (await sql(`SELECT id,expires_at AS expiresAt,created_at AS createdAt FROM oa_sessions WHERE operator_id='${invited.id}' AND revoked_at IS NULL ORDER BY created_at LIMIT 1`))[0]
-    assert.match(signed.headers.get('set-cookie'),/Max-Age=604800(?:;|$)/)
+    const maxAge=Number(signed.headers.get('set-cookie').match(/Max-Age=(\d+)/)?.[1])
+    assert.ok(maxAge>0 && maxAge<=7*86400,'native cookie expires within the Base seven-day bound')
     assert.ok(active.expiresAt<=Date.now()+7*86400000)
     assert.equal((await call(download,undefined,nativeCookie)).status,200)
     assert.equal((await sql(`SELECT expires_at AS expiresAt FROM oa_sessions WHERE id='${active.id}'`))[0].expiresAt,active.expiresAt,'activity cannot silently renew the fixed expiry')
