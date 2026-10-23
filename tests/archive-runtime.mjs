@@ -12,6 +12,7 @@ import { archiveKeyCustody } from './archive-key-custody.mjs'
 import { unrelatedPersonArchive, unrelatedCorrectionArchive } from './archive-relationships.mjs'
 import { archiveEditions } from './archive-editions.mjs'
 import { archiveAdoption } from './archive-adoption.mjs'
+import { archiveErasure } from './archive-erasure.mjs'
 
 const execute = promisify(execFile)
 const quote = value => '"' + value.replaceAll('"', '""') + '"'
@@ -105,7 +106,7 @@ export async function archiveJourney(context) {
     await mkdir(join(source, '.wrangler'), { recursive: true, mode: 0o700 })
     await quiesce(() => cp(persist, join(source, '.wrangler', 'state'), { recursive: true }))
     const state = directory => join(directory, '.wrangler', 'state')
-    const before = await snapshot(state(source))
+    let before = await snapshot(state(source))
     for (const id of fixture.companies) assert.ok(before.env_companies.some(row => row.id === id))
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
     for (const year of fixture.years) {
@@ -123,9 +124,14 @@ export async function archiveJourney(context) {
     const env = { ...process.env, WRANGLER_SEND_METRICS: 'false', WRANGLER_LOG: 'warn' }
     delete env.ENVELOPE_RECORD_KEY
     const keys = await archiveKeyCustody({ source, target, corruptTarget, temporary, run, env, key: settings.ENVELOPE_RECORD_KEY })
-    const rer = (directory, verb, file, configuration = env) => run(process.execPath,
+    const rer = (directory, verb, file, configuration = env, journal) => run(process.execPath,
       [cli, verb, '--cwd', directory, verb === 'export' ? '--output' : '--input', file,
-        ...(verb === 'import' ? ['--yes'] : []), '--json', '--non-interactive', '--no-queue'], directory, configuration)
+        ...(verb === 'import' ? ['--yes'] : []), ...(journal ? ['--journal', journal] : []), '--json', '--non-interactive', '--no-queue'], directory, configuration)
+    const oldArchive = join(source, 'exports', 'before-erasure.rer')
+    assert.equal((await rer(source, 'export', oldArchive)).code, 0, 'a real earlier archive retains the soon-erased unused worker')
+    await context.withRestoredWorker(state(source), () => archiveErasure(context, fixture))
+    before = await snapshot(state(source))
+    assert.ok(!before.env_people.some(row => row.id === fixture.unusedId), 'only the unused worker was erased before the current archive')
     const exported = await rer(source, 'export', 'exports/custody.rer')
     assert.equal(exported.code, 0, 'the real rer export succeeds for populated native state')
     const archive = join(source, 'exports', 'custody.rer'), records = []
@@ -166,6 +172,10 @@ export async function archiveJourney(context) {
     assert.ok(wrong.output.includes('archive_record_key_or_cipher_invalid'), 'wrong-key refusal authenticates the retained ciphertext')
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'wrong-key refusal publishes no business or identity rows')
     await keys.original()
+    const stale = await rer(target, 'import', oldArchive, env, archive)
+    assert.notEqual(stale.code, 0, 'a later erasure journal fences the real older archive')
+    assert.ok(stale.output.includes('erased_row'), 'native restore identifies the erased-row fence')
+    assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'stale archive refusal cannot resurrect erased data or publish business history')
     const unrelated = join(temporary, 'unrelated-person.rer')
     await unrelatedPersonArchive(records, unrelated)
     const relation = await rer(target, 'import', unrelated)

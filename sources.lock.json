@@ -1033,7 +1033,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "5b0e6c2ba9deee543cc7b37223bbc4d791c9b8382e1db08228f0e6330cec7a78",
+      "sha256": "0e87f66a37ae8f99c8de45a1b4dc2b656e2ef8eec9a0f36b4ab19c7715142ccc",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -2297,7 +2297,7 @@
       "executable": false
     },
     "tests/archive-fixture.mjs": {
-      "sha256": "12039fa3e357528fa96f51e5a691085d89ddb7c525e30f28062dfe0b9c6c46af",
+      "sha256": "43692240961242d9138684f7a6cbbcab71d47a3b7b3ec2b0097a194082e99581",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
@@ -2309,7 +2309,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "d807a971b21d9841d0abe0db3c0cec42e52c0098ffc7d44412e417fc69a4969b",
+      "sha256": "1a686c5110cbd63ad04fd3cadea87181f04bed66d253d0164df8cba07d22f511",
       "executable": false
     },
     "tests/archive-worker.mjs": {

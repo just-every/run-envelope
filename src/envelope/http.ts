@@ -2,6 +2,7 @@ import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
 import { ArchiveHistory } from './archive-history'
+import { EmptyWorkerErasure } from './empty-worker-erasure'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
 import { claimsResponse } from './claims/http'
@@ -742,6 +743,8 @@ export async function payrollResponse(
             ? redirect(base + '/people/' + personId + '/allocations')
             : json(saved, 201)
         } else throw new PayrollError('not_found', 404)
+      } else if (!ui && tail[0] === 'people' && tail[2] === 'erase' && tail.length === 3 && post) {
+        response = json(await new EmptyWorkerErasure(records).erase(actor, tail[1], value))
       } else if (tail[0] === 'people' && tail.length === 2 && !post) {
         const person = await records.details(actor, tail[1])
         response = ui ? personPage(session, companies, actor, person) : json(person)

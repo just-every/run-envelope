@@ -39,6 +39,7 @@ export async function archiveFixture(context) {
     body: 'Synthetic retained agency notice. Payroll officer must investigate the assessed period.',
   }, 201)
   const authority = await archiveAuthority(context, company, notice)
+  const unused = await payroll.data(company.base + '/people', { name: 'Synthetic unused archive worker', locationId: company.location.id }, 201)
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    claimId: claim.id, noticeId: notice.id, authority, privateValue: '900-69-0001' }
+    claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }
