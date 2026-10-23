@@ -27,7 +27,7 @@ const actionLabels: Record<string, string> = {
 }
 
 export const companyPath = (id: string) => `/app/envelope/companies/${encodeURIComponent(id)}`
-export const Card = ({ title, children }: { title: string; children: ReactNode }) => (
+export const Card = ({ title, children }: { title: ReactNode; children: ReactNode }) => (
   <section className="check card">
     <h2 className="check-name">{title}</h2>
     <div className="field">{children}</div>

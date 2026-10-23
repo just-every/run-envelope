@@ -161,7 +161,7 @@ export function runReviewPage(
     'Review an exact run version',
     companies,
     actor.company,
-    <Card title={`${row.id} · v${row.version}`}>
+    <Card title={<span style={{ overflowWrap: 'anywhere' }}>{row.id} · v{row.version}</span>}>
       <p>
         You are approving exactly this version. Any later edit, source, destination, rule or
         approver-grant change voids this approval before release. Approval sends nothing.
