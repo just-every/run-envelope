@@ -965,7 +965,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "7b5d5651943dfa5334608a1ac766b2603b5d7ba2ffd8b81dd886fd44213fc375",
+      "sha256": "53f0ac221e2856696578fdd19a7f687bfc7f1bc7eadf918b78264b3fdabeeb15",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {

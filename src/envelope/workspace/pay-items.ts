@@ -526,7 +526,7 @@ export class PayItems {
       if (leave.row) {
         objects.push({ kind: 'leave-account', id: leave.row.id, version: leave.row.version, approved: true })
         for (const line of leave.lines)
-          details.push(`Leave ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${leave.row.data.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
+          details.push(`Leave ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${line.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
       }
       taxable += tipped.paycheck
       if (tips.length)
