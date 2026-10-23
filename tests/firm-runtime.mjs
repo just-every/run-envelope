@@ -31,6 +31,9 @@ export async function firmJourney(context) {
   await data(runPath+'/approve',{version:review.version,reviewToken:review.reviewToken},200,people.firm.cookie)
   assert.equal((await call(second.base+'/pay-settings/earnings-run/'+run.id+'/approve',{version:review.version,reviewToken:review.reviewToken},people.firm.cookie)).status,404)
   assert.equal((await call(clients[19].base+'/pay-settings/earnings-run/'+clients[19].run.id+'/review',undefined,people.firm.cookie)).status,403)
+  const secondRunPath=second.base+'/pay-settings/earnings-run/'+result.outcomes[1].id
+  const secondReview=await data(secondRunPath+'/review',undefined,200,people.firm.cookie)
+  await data(secondRunPath+'/approve',{version:secondReview.version,reviewToken:secondReview.reviewToken},200,people.firm.cookie)
   const before=(await sql('SELECT COUNT(*) AS n FROM env_run_approvals'))[0].n
   const blocked=await call(runPath+'/release',{version:review.version},people.firm.cookie)
   assert.equal(blocked.status,409);assert.equal((await blocked.json()).error,'run_not_payable')
@@ -53,13 +56,23 @@ export async function firmJourney(context) {
     const pages=Object.fromEntries(await Promise.all(Object.entries(contexts).map(async([name,c])=>[name,await c.newPage()])))
     const capture=async(label,path,who='firm')=>{
       const page=pages[who]
-      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())assert.ok((await control.innerText()).trim(),label+' controls have visible words');await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:true})}
+      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())assert.ok((await control.innerText()).trim(),label+' controls have visible words');await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:false})}
       return page
     }
     await capture('firm-empty','/app/envelope/firm','stranger')
+    await capture('firm-company-settings','/app/envelope','owner')
     await capture('firm-loaded','/app/envelope/firm')
     let page=await capture('firm-filtered','/app/envelope/firm?due=today&day=2026-10-30&kind=notice')
     assert.equal(await page.getByText(clients[20].name,{exact:true}).count(),0)
+    const preparation=pages.firm
+    for(const width of [1440,390]) {
+      await preparation.setViewportSize({width,height:1000});await preparation.goto(origin+'/app/envelope/firm')
+      for(const c of [first,second]) await preparation.getByRole('group',{name:c.name,exact:true}).getByRole('checkbox').check()
+      await preparation.getByLabel('Period start',{exact:true}).fill(period.periodStart);await preparation.getByLabel('Period end',{exact:true}).fill(period.periodEnd);await preparation.getByLabel('Pay date',{exact:true}).fill(period.payDate)
+      await preparation.getByRole('button',{name:'Prepare selected drafts',exact:true}).scrollIntoViewIfNeeded();await preparation.screenshot({path:join(proof,`firm-batch-selected-${width}.png`)})
+      await preparation.getByRole('button',{name:'Prepare selected drafts',exact:true}).click();await preparation.waitForURL(origin+'/app/envelope/firm/prepare')
+      await preparation.getByRole('heading',{name:'Preparation results',exact:true}).scrollIntoViewIfNeeded();assert.equal(await preparation.getByRole('status').getByRole('link').count(),2);await preparation.screenshot({path:join(proof,`firm-batch-prepared-${width}.png`)})
+    }
     await capture('firm-work-list',first.base.replace('/api/','/app/')+'/firm-work')
     let jobUrl='https://blotter.example.com/app?job=synthetic-envelope-2906'
     if(process.env.ENVELOPE_BLOTTER_WORKTREE){
@@ -87,11 +100,12 @@ export async function firmJourney(context) {
     assert.equal(current.status,'acknowledged')
     assert.equal((await call(first.base+'/firm-work/'+first.task.id+'/handoff',{version:current.version,jobUrl:'https://outside.example.com/app?job=synthetic-envelope-2906',recipientId:people.backup.id,evidenceRef:'Wrong destination'},people.firm.cookie)).status,400)
     await data(second.base+'/grants',{operatorId:people.firm.id,version:1,revoke:true})
-    assert.equal((await call(second.base+'/pay-settings/earnings-run/'+second.run.id+'/release',{version:1},people.firm.cookie)).status,401)
+    assert.equal((await call(secondRunPath+'/release',{version:1},people.firm.cookie)).status,401)
     const transferred=await data(second.base+'/firm-work/'+second.task.id)
+    assert.equal((await sql(`SELECT approver_id FROM env_run_approvals WHERE company_id='${second.id}' AND run_id='${result.outcomes[1].id}'`))[0].approver_id,people.firm.id,'handover does not transfer historical approval');
     assert.equal(transferred.item.assigneeId,owner);assert.equal(transferred.history.at(-1).event,'authority.reassigned')
     await signIn(people.firm)
-    assert.equal((await call(second.base+'/pay-settings/earnings-run/'+second.run.id+'/release',{version:1},people.firm.cookie)).status,403)
+    assert.equal((await call(secondRunPath+'/release',{version:1},people.firm.cookie)).status,403)
     assert.equal((await data('/api/envelope/firm',undefined,200,people.firm.cookie)).clients.length,19)
     const ownerSession=(await sql(`SELECT id,operator_version FROM oa_sessions WHERE operator_id='${owner}' AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`))[0],now=Date.now()
     await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) VALUES ('${randomBytes(16).toString('hex')}','${randomBytes(16).toString('hex')}','${ownerSession.id}','${owner}',${ownerSession.operator_version},'operator:manage','/app',${now},${now+600000},${now})`)
