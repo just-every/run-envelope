@@ -28,20 +28,22 @@ export class Privacy {
       UNION ALL SELECT 'payroll-version',object_id FROM env_workspace_versions WHERE company_id=? AND person_id=?
       UNION ALL SELECT 'shared-payroll-version',object_id FROM env_workspace_people WHERE company_id=? AND person_id=?
       UNION ALL SELECT 'agent-draft',id FROM env_run_drafts WHERE company_id=? AND person_id=?`,[actor.company,person,actor.company,person,actor.company,person,actor.company,person]).all<{category:string;reference:string}>()).results
-    const hold=await this.records.statement('SELECT basis,custodian,release_date AS releaseDate FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at IS NULL',[actor.company,person]).first<{basis:string;custodian:string;releaseDate:string}>()
+    const hold=await this.records.statement('SELECT kind,basis,custodian,release_date AS releaseDate FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at IS NULL',[actor.company,person]).first<{kind:string;basis:string;custodian:string;releaseDate:string}>()
     return {fields:['person.name','person.location_id','person.version',...privateRows.map(r=>'private.'+r.kind+'@'+r.version)],history,hold}
   }
   async hold(actor:Actor,input:Input) {
     this.owner(actor);await requirePayrollProof(this.records.env,actor)
+    const kind=input.kind??'statutory'
+    if(!['statutory','legal'].includes(String(kind))) throw new PayrollError('invalid_hold_kind')
     const person=text(input.personId),basis=redact(text(input.basis,500)),custodian=redact(text(input.custodian,200)),releaseDate=date(input.releaseDate),f=fence(actor),p=stepUpFence(actor)
     await this.records.person(actor,person)
     if(input.confirm!=='true' && input.confirm!==true) throw new PayrollError('explicit_hold_confirmation_required')
     const event=uuid(),fingerprint=await keyFor(actor.company,person),now=Date.now()
     const result=await this.records.env.DB.batch([
-      this.records.statement(`INSERT INTO env_privacy_holds(company_id,person_id,basis,custodian,release_date,created_by,created_at)
-        SELECT ?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql} AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND fingerprint=?) RETURNING person_id`,[actor.company,person,basis,custodian,releaseDate,actor.session.operator.id,now,...f.args,...p.args,actor.company,fingerprint]),
-      this.records.statement(`INSERT INTO env_privacy_hold_events(id,company_id,fingerprint,action,basis,custodian,release_date,evidence,actor_id,occurred_at)
-        SELECT ?,?,?,'recorded',?,?,?,'',?,? WHERE ${f.sql} AND ${p.sql} AND EXISTS(SELECT 1 FROM env_privacy_holds WHERE company_id=? AND person_id=? AND created_at=? AND created_by=?)`,[event,actor.company,fingerprint,basis,custodian,releaseDate,actor.session.operator.id,now,...f.args,...p.args,actor.company,person,now,actor.session.operator.id]),
+      this.records.statement(`INSERT INTO env_privacy_holds(company_id,person_id,kind,basis,custodian,release_date,created_by,created_at)
+        SELECT ?,?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql} AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND fingerprint=?) RETURNING person_id`,[actor.company,person,kind,basis,custodian,releaseDate,actor.session.operator.id,now,...f.args,...p.args,actor.company,fingerprint]),
+      this.records.statement(`INSERT INTO env_privacy_hold_events(id,company_id,fingerprint,action,kind,basis,custodian,release_date,evidence,actor_id,occurred_at)
+        SELECT ?,?,?,'recorded',?,?,?,?,'',?,? WHERE ${f.sql} AND ${p.sql} AND EXISTS(SELECT 1 FROM env_privacy_holds WHERE company_id=? AND person_id=? AND created_at=? AND created_by=?)`,[event,actor.company,fingerprint,kind,basis,custodian,releaseDate,actor.session.operator.id,now,...f.args,...p.args,actor.company,person,now,actor.session.operator.id]),
     ])
     if(!result[0].results.length) throw new PayrollError('privacy_or_authority_changed',409)
     return {personId:person,held:true}
@@ -91,11 +93,14 @@ export class Privacy {
     this.owner(actor);await requirePayrollProof(this.records.env,actor)
     const person=text(input.personId),evidence=redact(text(input.evidence,500)),f=fence(actor),p=stepUpFence(actor)
     if(input.confirm!=='true' && input.confirm!==true) throw new PayrollError('explicit_release_confirmation_required')
+    const hold=await this.records.statement(`SELECT kind,release_date FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at IS NULL AND ${f.sql}`,[actor.company,person,...f.args]).first<{kind:string;release_date:string}>()
+    if(!hold) throw new PayrollError('hold_or_authority_changed',409)
+    if(hold.kind==='statutory' && hold.release_date>new Date().toISOString().slice(0,10)) throw new PayrollError('statutory_retention_not_elapsed',409)
     const now=Date.now(),fingerprint=await keyFor(actor.company,person)
     const result=await this.records.env.DB.batch([
-      this.records.statement(`UPDATE env_privacy_holds SET released_by=?,released_at=?,release_evidence=? WHERE company_id=? AND person_id=? AND released_at IS NULL AND ${f.sql} AND ${p.sql} RETURNING person_id`,[actor.session.operator.id,now,evidence,actor.company,person,...f.args,...p.args]),
-      this.records.statement(`INSERT INTO env_privacy_hold_events(id,company_id,fingerprint,action,basis,custodian,release_date,evidence,actor_id,occurred_at)
-        SELECT ?,company_id,?,'released',basis,custodian,release_date,release_evidence,released_by,released_at FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at=? AND released_by=? AND ${f.sql} AND ${p.sql}`,[uuid(),fingerprint,actor.company,person,now,actor.session.operator.id,...f.args,...p.args]),
+      this.records.statement(`UPDATE env_privacy_holds SET released_by=?,released_at=?,release_evidence=? WHERE company_id=? AND person_id=? AND released_at IS NULL AND (kind='legal' OR release_date<=strftime('%Y-%m-%d','now')) AND ${f.sql} AND ${p.sql} RETURNING person_id`,[actor.session.operator.id,now,evidence,actor.company,person,...f.args,...p.args]),
+      this.records.statement(`INSERT INTO env_privacy_hold_events(id,company_id,fingerprint,action,kind,basis,custodian,release_date,evidence,actor_id,occurred_at)
+        SELECT ?,company_id,?,'released',kind,basis,custodian,release_date,release_evidence,released_by,released_at FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at=? AND released_by=? AND ${f.sql} AND ${p.sql}`,[uuid(),fingerprint,actor.company,person,now,actor.session.operator.id,...f.args,...p.args]),
     ])
     if(!result[0].results.length) throw new PayrollError('hold_or_authority_changed',409)
     return this.erase(actor,{personId:person,confirm:true})
