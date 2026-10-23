@@ -7,7 +7,7 @@ import { PrivateFiles } from './private-files/store'
 import { PayrollError, text, integer, recordKey, seal, unseal } from './security'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { digest } from './workspace/store'
-import { agentProvider, providerSecret, email, redact, externalFlows, type Provider } from './providers'
+import { agentProvider, providerSecret, providerRedactions, email, redact, externalFlows, type Provider } from './providers'
 
 interface Notice {id:string;locationId:string;reference:string;cipher:string;digest:string}
 interface Reply {id:string;version:number;noticeId:string;providerVersion:number;cipher:string;digest:string;locationId:string}
@@ -37,6 +37,7 @@ export class Notices {
     return (await this.records.statement(`SELECT id,reference,location_id AS locationId,created_at AS createdAt FROM env_notices WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY created_at DESC,id LIMIT 100`,[actor.company,...l.args,...f.args]).all()).results
   }
   async create(actor:Actor,input:Input) {
+    exactKeys(input,['locationId','reference','body'])
     const location=text(input.locationId), reference=redact(text(input.reference)), body=documentText(input.body)
     requireAction(actor,'notices:write',location,'tax')
     const id=uuid(), f=fence(actor), event=uuid(), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY), hash=await digest(body),
@@ -66,16 +67,17 @@ export class Notices {
       const {cipher,...metadata}=r
       return {...metadata,data:JSON.parse(await unseal(key,JSON.stringify([actor.company,'reply',r.id,r.version]),String(cipher)))} as Record<string,unknown> & {data:ReplyData}
     }))
-    return {...notice, caseWork:await new NoticeCases(this).read(actor,id), files:await new PrivateFiles(this).list(actor,id), cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
+    return {...notice, caseWork:await new NoticeCases(this).read(actor,id), files:await new PrivateFiles(this).list(actor,id), cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher),await providerRedactions(this.records.env,actor.company)),analyses,replies}
   }
   async saveReply(actor:Actor,noticeId:string,input:Input) {
+    exactKeys(input,['id','version','to','subject','body'])
     await this.notice(actor,noticeId,'notices:write')
     const id=input.id ? text(input.id) : uuid(), version=input.version===undefined || input.version===0 || input.version==='0' ? 0 : integer(input.version),
       f=fence(actor), event=uuid(), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const provider=await this.records.statement(`SELECT * FROM env_external_providers WHERE company_id=? AND id='resend' AND enabled=1 AND ${f.sql}`,[actor.company,...f.args]).first<Provider>()
     if (!provider) throw new PayrollError('provider_not_declared',409)
-    const secret=await providerSecret(this.records.env,actor.company,provider)
-    const payload:ReplyData={sender:provider.sender,to:email(input.to),subject:redact(text(input.subject,200),[secret]),body:redact(documentText(input.body),[secret])}
+    const secrets=await providerRedactions(this.records.env,actor.company)
+    const payload:ReplyData={sender:provider.sender,to:email(input.to),subject:redact(text(input.subject,200),secrets),body:redact(documentText(input.body),secrets)}
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
     const result=await this.records.env.DB.batch([
@@ -153,7 +155,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
   if (!notice) throw new PayrollError('notice_unavailable',403)
   const provider=await agentProvider(agent,'openai'), key=await recordKey(agent.env.ENVELOPE_RECORD_KEY),
     secret=await providerSecret(agent.env,company,provider), original=await unseal(key,JSON.stringify([company,'notice',id]),notice.cipher),
-    body=redact(original,[secret])
+    redactions=await providerRedactions(agent.env,company),body=redact(original,redactions)
   await agentProvider(agent,'openai',provider.version)
   const opened=await agent.log('notices:process',id).run()
   if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked',403)
@@ -176,7 +178,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
     if (output.length!==1 || output[0].type!=='output_text') throw 0
     const parsed=JSON.parse(String(output[0].text))
     if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',')!=='proposedReply,summary') throw 0
-    analysis={summary:redact(documentText(parsed.summary,6000),[secret]),proposedReply:redact(documentText(parsed.proposedReply,6000),[secret])}
+    analysis={summary:redact(documentText(parsed.summary,6000),redactions),proposedReply:redact(documentText(parsed.proposedReply,6000),redactions)}
   } catch { throw new PayrollError('notice_model_unavailable',503) }
   const analysisId=uuid(), cipher=await seal(key,JSON.stringify([company,'analysis',analysisId]),JSON.stringify(analysis))
   // In-flight provider, sponsor and grant revocation fences also protect results.

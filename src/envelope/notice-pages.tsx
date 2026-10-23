@@ -1,3 +1,4 @@
+import type { InstallationFlow } from './external-flows/catalog'
 import type { Session } from '../modules/operator-auth/index.mjs'
 import type { Actor } from './access'
 import type { Company } from './records'
@@ -7,13 +8,14 @@ import { CaseCard } from './notices/case-card'
 import type { Notices } from './notices'
 import { page, Card, Field, Hidden, Submit, companyPath } from './pages'
 
-export function providersPage(session:Session,companies:Company[],actor:Actor,providers:Awaited<ReturnType<Providers['list']>>) {
+export function providersPage(session:Session,companies:Company[],actor:Actor,providers:Awaited<ReturnType<Providers['list']>>,installation:InstallationFlow[]=[]) {
   const base=companyPath(actor.company)
   return page(session,'External notice providers',companies,actor.company,<>
     <Card title="Choose and declare every recipient">
       <p className="evidence-text">Optional AI never calculates or approves payroll. No connection is enabled until you authorize its purpose, fields and custody. SSN and bank values are redacted. Disabling a provider immediately prevents future calls and invalidates its pending reply approvals. Existing unknown sends stay held.</p>
       <form method="post" action="/auth/step-up"><Hidden name="action" value="credentials:mint" /><Hidden name="returnTo" value={base+'/providers'} /><Submit>Send sensitive-change confirmation</Submit></form>
     </Card>
+    {installation.map(flow=><Card key={flow.purpose} title={flow.recipient}><p className="evidence-text">{flow.state}. Purpose: {flow.purpose}. Destination: {flow.destination}. Fields: {flow.fields.join(', ')}. Credential: {flow.credential}. Custody: {flow.custody}.</p></Card>)}
     {providers.map(p => <Card key={p.id} title={p.recipient}>
       <p className="evidence-text">{p.purpose}. Destination: {p.url}. Fields: {p.fields.join(', ')}. {p.custody}. Current state: {p.enabled ? 'Declared and enabled' : 'Unavailable'}.</p>
       <form method="post" action={base+'/providers'}>

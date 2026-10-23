@@ -52,6 +52,7 @@ export class Providers {
   async save(actor: Actor, input: Input) {
     this.owner(actor)
     await requirePayrollProof(this.records.env,actor)
+    if(Object.keys(input).some(k=>!['id','version','enabled','consent','secret','sender'].includes(k)) || ![true,false,'true','false'].includes(input.enabled as boolean|string)) throw new PayrollError('invalid_provider_input')
     const id = providerId(input.id), version = input.version === 0 || input.version === '0' ? 0 : integer(input.version),
       enabled = input.enabled === true || input.enabled === 'true' ? 1 : 0,
       f = fence(actor), proof = stepUpFence(actor), change = crypto.randomUUID()
@@ -86,10 +87,15 @@ export async function agentProvider(agent: AgentTools, id: ProviderId, version?:
 export async function providerSecret(env: Bindings, company: string, provider: Provider) {
   return unseal(await recordKey(env.ENVELOPE_RECORD_KEY),JSON.stringify([company,provider.id,'provider-secret']),provider.secret_cipher)
 }
+/** All configured company credentials are redacted, including a different or disabled provider's key. */
+export async function providerRedactions(env:Bindings,company:string) {
+  const providers=(await env.DB.prepare('SELECT * FROM env_external_providers WHERE company_id=?').bind(company).all<Provider>()).results
+  return Promise.all(providers.filter(p=>p.secret_cipher).map(p=>providerSecret(env,company,p)))
+}
 // These two flows never need identifiers/accounts. Minimize before any request,
 // and again before storing or displaying model output. No payroll record is sent.
 export function redact(value: string, secrets: string[] = []) {
-  let v = value
+  let v = value.normalize('NFKC').replace(/[\u200b-\u200d\u2060\ufeff]/g,'')
   for (const secret of secrets.filter(Boolean)) v = v.split(secret).join('[redacted credential]')
   return v.replace(/\b[A-Za-z0-9_-]{40,}\b/g,'[redacted credential]').replace(/\b\d{3}[- ]\d{2}[- ]\d{4}\b/g,'[redacted SSN]')
     .replace(/\b\d(?:[ -]?\d){7,}\b/g,match => /^\d{4}-\d{2}-\d{2}$/.test(match) ? match : '[redacted identifier]')
