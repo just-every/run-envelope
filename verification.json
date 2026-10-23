@@ -55,7 +55,7 @@
     },
     {
       "name": "archive",
-      "browser": false,
+      "browser": true,
       "hosted": false,
       "commands": [
         "pnpm run build",

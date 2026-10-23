@@ -948,6 +948,10 @@
       "sha256": "29a28157f74a2ce20c07c6da07ac02c93603d26ff8fee8f63b314874361b70c4",
       "executable": false
     },
+    "src/envelope/archive-history.ts": {
+      "sha256": "bb0cd944f1bd6fc78637c2fc63289e7a2df9c43e482bfdd5400de01dd5a2cfaa",
+      "executable": false
+    },
     "src/envelope/claims/form-fields.tsx": {
       "sha256": "ec0f591a0bf74c7e97891278b852987f908c614d6c56240dfb8f5abeeb23d5fd",
       "executable": false
@@ -2280,6 +2284,10 @@
       "sha256": "23896ba1331530dc43fb39deb60e5f6432a7a88fc09cbf80499c6f88a84411b2",
       "executable": false
     },
+    "tests/archive-adoption.mjs": {
+      "sha256": "4134bbfa2abbae838aba52c1ad16273441f8c44004303122d83d66b11acfb9dd",
+      "executable": false
+    },
     "tests/archive-authority.mjs": {
       "sha256": "58c0566df579ca7d5c92aaebb9ada2edd8dc4a54340ab8e911db9fd3ca9f2054",
       "executable": false
@@ -2477,7 +2485,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "d8fc893230418c8b2c9bf30d8eef3dd64a2cff543e8ecd53f7ecdf615acadeb9",
+      "sha256": "fca22cce94878aa380d68f6458ac14fa5fa26a446d119367dfe89f6a95f335fc",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
