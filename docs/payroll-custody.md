@@ -34,9 +34,20 @@ custody with fresh sensitive-action proof and consent; source sessions and grant
 are never reused. `POST /api/envelope/restored/:company/adopt {confirm:true}`
 records this new read custody and keeps `restored=1`. Private originals and
 accepted/unknown original references can then be inspected without any outbound
-request. All mutations remain refused. No unpause door exists yet. Provider
-reconnection, accepted-original-ID reconciliation and renewed exact approval
-must be implemented before restored companies can resume operations. Do not
+request. All mutations remain refused. No unpause door exists yet. The original notice IDs can be inspected at `/app/envelope/companies/:company/restore`.
+Separate fresh owner consent enables a fixed Resend GET lookup with a newly
+entered encrypted credential. Its request sends only the recorded email ID and
+credential; the returned sender, recipient, subject and text must match the
+immutable original. Redirects, mismatched records and unknown IDs refuse. A
+value-free immutable receipt records the exact original ID, content digest,
+observed provider event, current local provider declaration, owner and time.
+Changing that connection invalidates its current lookup proof. No POST/send is
+made to the provider. Unknown sends without a recorded ID remain held for actual
+provider investigation; an ID or no-effect claim cannot be invented.
+
+There is no company activation door. Complete payroll payment/filing
+reconciliation and renewed exact human approval remain required before restored
+companies can resume operations. Do not
 remove the flag manually or treat re-entering a key as reconciliation. These
 restore activation obligations are incomplete.
 

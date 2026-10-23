@@ -2979,7 +2979,7 @@ export async function rulesJourney({ origin, cookie, sql }) {
 
 // SPONSORED-NOTICES: all domain state through public settings/API/MCP doors;
 // only native identity/proof and advancing expiry boundaries are fixture control.
-export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart,snapshot}) {
+export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart,snapshot,expectedIdentityIssuer=null}) {
   const base='/api/envelope/companies'
   const call=(path,who=cookie,body) => fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json','CF-Connecting-IP':'127.0.0.1'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,who=cookie,status=200) => {
@@ -3073,7 +3073,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart,
     assert.equal(encrypted.includes(declaration.secret),false,'provider credentials encrypted at rest')
     const installedText=await page.content()
     assert.ok(installedText.includes('No external sign-in mail recipient'))
-    assert.ok(installedText.includes('No linked identity provider'))
+    assert.ok(installedText.includes(expectedIdentityIssuer??'No linked identity provider'))
     assert.ok(installedText.includes('Owner-selected Cloudflare'))
     await capture(ui+'/providers','notice-providers-enabled')
     const reviewDate=new Date(Date.now()+30*86400000).toISOString().slice(0,10),grantInput={...undeclared,reviewDate}
