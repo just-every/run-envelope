@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 export const ordinaryFacts={employerKind:'business',entityType:'corporation',workerRole:'employee',workKind:'nonagricultural',seasonal:false,taxResidency:'resident',claims:[]}
 export const ordinaryW4={version:'2020_or_later',filingStatus:'single',step2Checked:false,step3AnnualCreditsCents:0,step4aOtherIncomeCents:0,step4bDeductionsCents:0,step4cExtraWithholdingCents:0}
-export function industryFixture({origin,cookie}) {
- const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+export function industryFixture({origin,cookie,worker}) {
+ const transport=worker ? (url,options)=>worker.fetch(url,options) : fetch
+ const call=(path,body,who=cookie)=>transport(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':['application','json'].join('/')},...(body===undefined?{}:{body:JSON.stringify(body)})})
  const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,path+' '+await r.clone().text());return r.json()}
  let sequence=0
  const company=async(name,names,year=2026)=>{

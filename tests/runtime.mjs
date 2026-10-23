@@ -25,6 +25,8 @@ import {
   rulesJourney,
 } from './payroll-runtime.mjs'
 import { approvalJourney } from './payroll-approvals.mjs'
+import { archiveJourney } from './archive-runtime.mjs'
+import { withArchiveWorker } from './archive-worker.mjs'
 import { claimsJourney } from './claims-runtime.mjs'
 import { industryJourney } from './industry-runtime.mjs'
 import { firmJourney } from './firm-runtime.mjs'
@@ -207,7 +209,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['archive', 'claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -241,6 +243,11 @@ try {
       assert.deepEqual(await response.json(), { error: 'payroll_record_key_required' })
     })
     await missingKeyJourney({ origin, cookie, noWrite: records.noWrite })
+  }
+  if (!selected || selected.includes('archive')) {
+    await stopWorker()
+    try { await withArchiveWorker({ origin, cookie, sql, settings, root: process.cwd(), persist }, archiveJourney) }
+    finally { worker=launch(settings); await waitForWorker() }
   }
   if (!selected || selected.includes('claims')) {
     await stopWorker()

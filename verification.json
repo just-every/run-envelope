@@ -52,6 +52,15 @@
         "pnpm run build",
         "ENVELOPE_JOURNEYS=claims pnpm run test:runtime"
       ]
+    },
+    {
+      "name": "archive",
+      "browser": false,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=archive pnpm run test:runtime"
+      ]
     }
   ],
   "nightly": []
