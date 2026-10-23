@@ -1279,7 +1279,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       'PAYROLL-IDENTITY passed: single-use native sign-in and session-bound proof, sign-out/download revocation, expired-proof/client-flag bank and credential refusals, unavailable-mail refusal; full OIDC/MFA/form/release journeys remain unproved',
     )
     console.log(
-      'AGENT-DRAFTS passed: settings issuance, current sponsor, hashed secret, company/location/action/field/provider denials, persisted reviewed-rate MCP draft, replay consistency, access attribution and in-flight revocation, sponsor removal/reinstatement and expiry; payroll dispatch remains unavailable',
+      'AGENT-DRAFTS passed: settings issuance, current sponsor, hashed secret, actual bank-custody bearer refusal without writes, company and location and action and field and provider denials, persisted reviewed-rate MCP draft, replay consistency, access attribution and in-flight revocation, sponsor removal/reinstatement and expiry; payroll dispatch remains unavailable',
     )
     const audit = await data(company + '/audit')
     for (const action of [
