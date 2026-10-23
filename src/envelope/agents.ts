@@ -1,3 +1,4 @@
+import { retainedAgentAccess } from './privacy/access'
 import type { Bindings } from '../auth.server'
 import type { Records, Input } from './records'
 import { fence, auditStatement, type Actor } from './access'
@@ -346,7 +347,7 @@ export class AgentTools {
         ...f.args,
       ),
       this.env.DB.prepare(
-        `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) ORDER BY name,id LIMIT 100`,
+        `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND ${retainedAgentAccess()} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) ORDER BY name,id LIMIT 100`,
       ).bind(this.grant.company_id, ...l.args, ...f.args, event),
     ])
     if (!result[0].meta.changes) throw new PayrollError('agent_authority_revoked', 403)
@@ -390,7 +391,7 @@ export class AgentTools {
       this.env.DB.prepare(
         `INSERT INTO env_run_drafts(company_id,id,credential_id,person_id,person_version,rate_id,period_start,period_end,pay_date,minutes,source_ref,created_at,request_key,fingerprint)
     SELECT p.company_id,?,?,p.id,p.version,r.id,?,?,?,?,?,?,?,? FROM env_people p JOIN env_rate_proposals r ON r.company_id=p.company_id AND r.person_id=p.id
-    WHERE p.company_id=? AND p.id=? AND ${l.sql} AND r.approved_by IS NOT NULL AND r.effective_date<=? AND ${f.sql}
+    WHERE p.company_id=? AND p.id=? AND ${retainedAgentAccess('p')} AND ${l.sql} AND r.approved_by IS NOT NULL AND r.effective_date<=? AND ${f.sql}
     AND r.id=(SELECT rr.id FROM env_rate_proposals rr WHERE rr.company_id=p.company_id AND rr.person_id=p.id AND rr.approved_by IS NOT NULL AND rr.effective_date<=? ORDER BY rr.effective_date DESC,rr.approved_at DESC,rr.id DESC LIMIT 1)
     ON CONFLICT(company_id,credential_id,request_key) DO NOTHING RETURNING id`,
       ).bind(
@@ -441,13 +442,13 @@ export class AgentTools {
       this.log(
         'drafts:read',
         id,
-        `EXISTS(SELECT 1 FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.id=? AND ${l.sql})`,
+        `EXISTS(SELECT 1 FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.id=? AND ${retainedAgentAccess('p')} AND ${l.sql})`,
         [this.grant.company_id, id, ...l.args],
       ),
       this.env.DB.prepare(
         `SELECT d.id,d.person_id AS personId,p.name AS personName,d.person_version AS personVersion,d.rate_id AS rateId,r.hourly_cents AS hourlyCents,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,d.source_ref AS sourceRef,(p.version!=d.person_version) AS stale
     FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id JOIN env_rate_proposals r ON r.company_id=d.company_id AND r.id=d.rate_id
-    WHERE d.company_id=? AND d.id=? AND ${l.sql} AND ${f.sql}`,
+    WHERE d.company_id=? AND d.id=? AND ${retainedAgentAccess('p')} AND ${l.sql} AND ${f.sql}`,
       ).bind(this.grant.company_id, id, ...l.args, ...f.args),
     ])
     if (!result[0].meta.changes || !result[1].results[0])

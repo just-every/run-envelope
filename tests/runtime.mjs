@@ -327,6 +327,7 @@ try {
             const url=request.url, body=JSON.parse(await request.text())
             edge.calls.push({url,body,idempotencyKey:request.headers.get('Idempotency-Key')})
             if(url==='https://api.openai.com/v1/responses' && request.method==='POST') {
+              if(edge.modelBarrier) {edge.modelBarrier.started();await edge.modelBarrier.released}
               if(edge.modelMode==='redirect') return new Response(null,{status:302,headers:{location:'https://ungranted.example/collect'}})
               if(edge.modelMode==='unavailable') return Response.json({error:{message:'Synthetic provider unavailable',type:'server_error',code:'server_error'}},{status:503})
               if(edge.modelMode==='tool') return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',output:[{type:'function_call',call_id:'synthetic-envelope-531',name:'provider.call',arguments:'{}'}]})
@@ -352,6 +353,7 @@ try {
       await waitForWorker()
     }
     await stopWorker()
+    for (const planted of ['000-00-0001','000000002','synthetic-envelope-510','synthetic-envelope-512']) assert.equal(output.includes(planted),false,'planted sensitive values are absent from captured Worker logs')
     await archiveJourney({persist})
     worker=launch(settings)
     await waitForWorker()

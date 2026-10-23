@@ -16,7 +16,8 @@ export class Privacy {
   async list(actor:Actor) {
     this.owner(actor)
     const f=fence(actor)
-    return (await this.records.statement(`SELECT id,person_id AS personId,state,retained,requested_at AS requestedAt,completed_at AS completedAt FROM env_privacy_requests WHERE company_id=? AND ${f.sql} ORDER BY requested_at DESC`,[actor.company,...f.args]).all<{id:string;personId:string|null;state:string;retained:string;requestedAt:number;completedAt:number|null}>()).results.map(r=>({...r,retained:JSON.parse(r.retained)}))
+    const rows=(await this.records.statement(`SELECT id,person_id AS personId,state,retained,requested_at AS requestedAt,completed_at AS completedAt FROM env_privacy_requests WHERE company_id=? AND ${f.sql} ORDER BY requested_at DESC LIMIT 100`,[actor.company,...f.args]).all<{id:string;personId:string|null;state:string;retained:string;requestedAt:number;completedAt:number|null}>()).results
+    return Promise.all(rows.map(async r=>({...r,retained:r.state==='held' && r.personId ? {...await this.inventory(actor,r.personId),reason:JSON.parse(r.retained).reason} : JSON.parse(r.retained)})))
   }
   async inventory(actor:Actor,person:string) {
     await this.records.person(actor,person)
@@ -35,9 +36,14 @@ export class Privacy {
     const person=text(input.personId),basis=redact(text(input.basis,500)),custodian=redact(text(input.custodian,200)),releaseDate=date(input.releaseDate),f=fence(actor),p=stepUpFence(actor)
     await this.records.person(actor,person)
     if(input.confirm!=='true' && input.confirm!==true) throw new PayrollError('explicit_hold_confirmation_required')
-    const result=await this.records.statement(`INSERT INTO env_privacy_holds(company_id,person_id,basis,custodian,release_date,created_by,created_at)
-      SELECT ?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql} AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND fingerprint=?) RETURNING person_id`,[actor.company,person,basis,custodian,releaseDate,actor.session.operator.id,Date.now(),...f.args,...p.args,actor.company,await keyFor(actor.company,person)]).all()
-    if(!result.results.length) throw new PayrollError('privacy_or_authority_changed',409)
+    const event=uuid(),fingerprint=await keyFor(actor.company,person),now=Date.now()
+    const result=await this.records.env.DB.batch([
+      this.records.statement(`INSERT INTO env_privacy_holds(company_id,person_id,basis,custodian,release_date,created_by,created_at)
+        SELECT ?,?,?,?,?,?,? WHERE ${f.sql} AND ${p.sql} AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND fingerprint=?) RETURNING person_id`,[actor.company,person,basis,custodian,releaseDate,actor.session.operator.id,now,...f.args,...p.args,actor.company,fingerprint]),
+      this.records.statement(`INSERT INTO env_privacy_hold_events(id,company_id,fingerprint,action,basis,custodian,release_date,evidence,actor_id,occurred_at)
+        SELECT ?,?,?,'recorded',?,?,?,'',?,? WHERE ${f.sql} AND ${p.sql} AND EXISTS(SELECT 1 FROM env_privacy_holds WHERE company_id=? AND person_id=? AND created_at=? AND created_by=?)`,[event,actor.company,fingerprint,basis,custodian,releaseDate,actor.session.operator.id,now,...f.args,...p.args,actor.company,person,now,actor.session.operator.id]),
+    ])
+    if(!result[0].results.length) throw new PayrollError('privacy_or_authority_changed',409)
     return {personId:person,held:true}
   }
   async erase(actor:Actor,input:Input) {
@@ -85,8 +91,13 @@ export class Privacy {
     this.owner(actor);await requirePayrollProof(this.records.env,actor)
     const person=text(input.personId),evidence=redact(text(input.evidence,500)),f=fence(actor),p=stepUpFence(actor)
     if(input.confirm!=='true' && input.confirm!==true) throw new PayrollError('explicit_release_confirmation_required')
-    const result=await this.records.statement(`UPDATE env_privacy_holds SET released_by=?,released_at=?,release_evidence=? WHERE company_id=? AND person_id=? AND released_at IS NULL AND ${f.sql} AND ${p.sql} RETURNING person_id`,[actor.session.operator.id,Date.now(),evidence,actor.company,person,...f.args,...p.args]).all()
-    if(!result.results.length) throw new PayrollError('hold_or_authority_changed',409)
+    const now=Date.now(),fingerprint=await keyFor(actor.company,person)
+    const result=await this.records.env.DB.batch([
+      this.records.statement(`UPDATE env_privacy_holds SET released_by=?,released_at=?,release_evidence=? WHERE company_id=? AND person_id=? AND released_at IS NULL AND ${f.sql} AND ${p.sql} RETURNING person_id`,[actor.session.operator.id,now,evidence,actor.company,person,...f.args,...p.args]),
+      this.records.statement(`INSERT INTO env_privacy_hold_events(id,company_id,fingerprint,action,basis,custodian,release_date,evidence,actor_id,occurred_at)
+        SELECT ?,company_id,?,'released',basis,custodian,release_date,release_evidence,released_by,released_at FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at=? AND released_by=? AND ${f.sql} AND ${p.sql}`,[uuid(),fingerprint,actor.company,person,now,actor.session.operator.id,...f.args,...p.args]),
+    ])
+    if(!result[0].results.length) throw new PayrollError('hold_or_authority_changed',409)
     return this.erase(actor,{personId:person,confirm:true})
   }
 }
