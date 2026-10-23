@@ -57,7 +57,7 @@ export async function firmJourney(context) {
     const pages=Object.fromEntries(await Promise.all(Object.entries(contexts).map(async([name,c])=>[name,await c.newPage()])))
     const capture=async(label,path,who='firm')=>{
       const page=pages[who]
-      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),label+' visible control: '+await control.evaluate(el=>el.outerHTML));await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:!['firm-loaded','firm-filtered','firm-company-settings'].includes(label)})}
+      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);if(label.includes('handover'))await page.getByText('Handover history',{exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),label+' visible control: '+await control.evaluate(el=>el.outerHTML));await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:!['firm-loaded','firm-filtered','firm-company-settings'].includes(label)})}
       return page
     }
     await capture('firm-empty','/app/envelope/firm','stranger')
@@ -75,7 +75,7 @@ export async function firmJourney(context) {
       await preparation.getByRole('heading',{name:'Preparation results',exact:true}).scrollIntoViewIfNeeded();assert.equal(await preparation.getByRole('status').getByRole('link').count(),2);await preparation.screenshot({path:join(proof,`firm-batch-prepared-${width}.png`)})
     }
     await capture('firm-work-list',first.base.replace('/api/','/app/')+'/firm-work')
-    await capture('firm-exact-client-review',runPath.replace('/api/','/app/')+'/review')
+    page=await capture('firm-exact-client-review',runPath.replace('/api/','/app/')+'/review','backup');await page.getByRole('heading',{name:'Review an exact run version',exact:true}).waitFor()
     for(const [kind,sourceKind,sourceId] of [['funding','earnings-run',first.run.id],['filing','registration','STATE-WH']]) {
       page=await capture('firm-assign-'+kind,first.base.replace('/api/','/app/')+'/firm-work?sourceKind='+sourceKind+'&sourceId='+sourceId+'&sourceVersion=1')
       await page.getByLabel('Work type',{exact:true}).selectOption(kind)

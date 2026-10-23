@@ -23,7 +23,16 @@
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=records,allocations,schedules,pay-items,rules,approvals,sponsored,identity,leave,source-intake,income-verification pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "firm",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=firm pnpm run test:runtime"
       ]
     }
   ],

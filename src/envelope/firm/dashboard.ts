@@ -47,7 +47,7 @@ export async function firmDashboard(records: Records, query: URLSearchParams) {
       groups: payroll?.groups.filter((r, i, all) => all.findIndex(x => x.id === r.id) === i && r.approvedBy && !r.withdrawnBy && r.sourcesCurrent).map(r => ({ id: r.id, version: r.version, name: r.data.name })) || [],
       runs: currentRuns.filter(r => (!filter.due || r.data.payDate === day) && (!filter.kind || filter.kind === 'run')).map(r => {
         const status = statuses.find(s => s.runId === r.id && s.version === r.version)
-        return { id: r.id, version: r.version, periodStart: r.data.periodStart, periodEnd: r.data.periodEnd, payDate: r.data.payDate, sourceStatus: r.sourceStatus, currentApprovals: status?.current ?? 0, requiredApprovals: status?.required ?? 1, held: r.data.holds.map(h => h.reason), payable: r.data.paymentReady }
+        return { id: r.id, version: r.version, canReview: !status?.approvals.some(a => a.approverId === records.session.operator.id), periodStart: r.data.periodStart, periodEnd: r.data.periodEnd, payDate: r.data.payDate, sourceStatus: r.sourceStatus, currentApprovals: status?.current ?? 0, requiredApprovals: status?.required ?? 1, held: r.data.holds.map(h => h.reason), payable: r.data.paymentReady }
       }),
       notices: notices.filter(n => (!filter.kind || filter.kind === 'notice') && (!filter.due || filteredTasks.some(t => t.sourceKind === 'notice' && t.sourceId === n.id))),
       registrations, work: filteredTasks,

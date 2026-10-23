@@ -23,7 +23,7 @@ export function firmPage(session: Session, view: FirmDashboard, result?: BatchRe
         <p><a href={base}>Open client</a> · <a href={base + '/firm-work'}>Assigned work and handovers</a></p>
         <h3>Runs</h3>
         {!client.payrollVisible ? <p>Payroll details are outside your current scope.</p> : !client.runs.length ? <p>No retained runs in this view.</p> : client.runs.map(r => <article key={r.id}>
-          <p><a href={client.canApprove ? base + '/pay-settings/earnings-run/' + r.id + '/review' : base + '/pay-settings'}>{r.periodStart}–{r.periodEnd} · pays {r.payDate} · v{r.version}</a></p>
+          <p><a href={client.canApprove && r.canReview ? base + '/pay-settings/earnings-run/' + r.id + '/review' : base + '/pay-settings'}>{r.periodStart}–{r.periodEnd} · pays {r.payDate} · v{r.version}</a></p>
           <p>{r.sourceStatus === 'current' ? `${r.currentApprovals} of ${r.requiredApprovals} current approvals` : 'Inputs changed; prepare a fresh version'}. {r.payable ? 'Ready for release review' : 'Payment unavailable: calculation and rail setup remain incomplete.'}</p>
           <a href={base + '/firm-work?sourceKind=earnings-run&sourceId=' + r.id + '&sourceVersion=' + r.version}>Assign run or funding work</a>
         </article>)}
