@@ -20,7 +20,16 @@ export async function restoredJourney({target,settings,formerToken}) {
   assert.equal((await sql('SELECT COUNT(*) AS n FROM env_external_providers'))[0].n,0)
   // A fresh native fixture identity is admitted locally, never a transplanted session.
   await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('${session}','${hash}','${owner.id}',${owner.version},'native',${Date.now()},${Date.now()+3600000}); INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) VALUES('${session}','${hash}','${session}','${owner.id}',${owner.version},'credentials:mint','/app',${Date.now()},${Date.now()+600000},${Date.now()})`)
-  const network=[],worker=await unstable_startWorker({config:resolve('dist/server/wrangler.json'),bindings:Object.fromEntries(Object.entries(settings).map(([key,value])=>[key,{type:'plain_text',value}])),dev:{server:{hostname:'127.0.0.1',port:Number(new URL(origin).port)},inspector:false,remote:false,watch:false,persist:join(target,'.wrangler/state'),logLevel:'error',outboundService:async request=>{network.push(new URL(request.url).origin);throw Error('Restored history must not make an external request')}}})
+  const network=[],edge={records:new Map(),mode:'normal'},worker=await unstable_startWorker({config:resolve('dist/server/wrangler.json'),bindings:Object.fromEntries(Object.entries(settings).map(([key,value])=>[key,{type:'plain_text',value}])),dev:{server:{hostname:'127.0.0.1',port:Number(new URL(origin).port)},inspector:false,remote:false,watch:false,persist:join(target,'.wrangler/state'),logLevel:'error',outboundService:async request=>{
+    network.push({url:request.url,method:request.method})
+    assert.equal(request.method,'GET','restore lookup must never POST or resend')
+    assert.equal(request.headers.get('authorization'),'Bearer synthetic-envelope-582')
+    const emailId=new URL(request.url).pathname.split('/').at(-1),original=edge.records.get(emailId)
+    assert.equal(request.url,'https://api.resend.com/emails/'+emailId)
+    assert.ok(original,'only a recorded accepted original ID can be queried')
+    if(edge.mode==='redirect') return new Response(null,{status:302,headers:{location:'https://ungranted.example/collect'}})
+    return Response.json({object:'email',id:emailId,from:original.sender,to:[edge.mode==='mismatch'?'foreign@example.com':original.to],subject:original.subject,text:original.body,created_at:'2026-10-23T00:00:00Z',last_event:'delivered'})
+  }}})
   let browser
   try {
     await worker.ready
@@ -59,6 +68,43 @@ export async function restoredJourney({target,settings,formerToken}) {
     assert.equal(download.status,200)
     assert.ok((await download.arrayBuffer()).byteLength>0,'fresh custody can recover encrypted original bytes')
     assert.deepEqual(network,[],'historical adoption and reads never resume external work')
+    const restore='/api/envelope/companies/'+company.id+'/restore',restoreUi='/app/envelope/companies/'+company.id+'/restore',originalEffects=await (await call(restore)).json(),accepted=originalEffects.effects.find(e=>e.state==='accepted'),unknown=originalEffects.effects.find(e=>e.state==='unknown')
+    assert.ok(accepted && unknown)
+    assert.equal((await call(restore+'/reconcile',{dispatchId:accepted.id})).status,409,'lookup requires fresh separate consent')
+    await capture(restoreUi,'archive-original-ids-unconnected')
+    await page.getByLabel('Restore lookup connection state',{exact:true}).selectOption('true')
+    await page.getByLabel('Fresh Resend API credential (empty to retain)',{exact:true}).fill('synthetic-envelope-582')
+    const payload=notice.replies.find(r=>r.providerReceipt===accepted.providerReceipt).data
+    edge.records.set(accepted.providerReceipt,payload)
+    await page.getByLabel('Verified sender for any future separately approved correspondence',{exact:true}).fill(payload.sender)
+    await page.getByLabel('I authorize the declared Resend correspondence purpose; all sending remains paused.',{exact:true}).check()
+    await page.getByLabel('I separately authorize lookup of recorded original notice email IDs.',{exact:true}).check()
+    await page.getByRole('button',{name:'Save fresh restore lookup consent',exact:true}).click()
+    await page.waitForURL(origin+restoreUi)
+    await capture(restoreUi,'archive-original-ids-fresh-consent')
+    assert.equal((await call(restore+'/reconcile',{dispatchId:unknown.id})).status,409,'unknown original ID cannot be fabricated or resent')
+    assert.equal(network.length,0)
+    edge.mode='mismatch'
+    assert.equal((await call(restore+'/reconcile',{dispatchId:accepted.id})).status,409,'foreign recipient record cannot reconcile this original')
+    edge.mode='redirect'
+    assert.equal((await call(restore+'/reconcile',{dispatchId:accepted.id})).status,409,'redirect cannot forward a lookup credential')
+    edge.mode='normal'
+    await page.locator('form:has(input[name="dispatchId"][value="'+accepted.id+'"]) button').click()
+    await page.waitForURL(origin+restoreUi)
+    const reconciled=await (await call(restore)).json()
+    assert.ok(reconciled.effects.find(e=>e.id===accepted.id).checkedAt)
+    assert.equal(reconciled.effects.find(e=>e.id===unknown.id).checkedAt,null)
+    assert.equal(network.length,3)
+    assert.ok(network.every(r=>r.method==='GET' && r.url==='https://api.resend.com/emails/'+accepted.providerReceipt))
+    assert.equal((await call('/api/envelope/companies/'+company.id+'/locations',{name:'Still cannot resume'})).status,409)
+    assert.equal((await sql('SELECT COUNT(*) AS n FROM env_restore_receipts'))[0].n,1)
+    await capture(restoreUi,'archive-original-id-verified-unknown-held')
+    await call(restore+'/providers',{id:'resend',version:1,enabled:false})
+    const disabled=await (await call(restore)).json()
+    assert.equal(disabled.effects.find(e=>e.id===accepted.id).checkedAt,null,'a changed connection cannot inherit a prior local reconciliation')
+    assert.equal((await call(restore+'/reconcile',{dispatchId:accepted.id})).status,409)
+    assert.equal(network.length,3)
+    await capture(restoreUi,'archive-connection-withdrawn')
     console.log('RESTORED-CUSTODY passed: fresh original-owner native consent adopts read-only history, no transferred grants/keys, private bytes recovered, unknown/accepted original IDs retained, old credential and all mutations refused, zero outbound requests; 1440/390 WCAG proof')
     await context.close()
   } finally {await browser?.close();await worker.dispose()}

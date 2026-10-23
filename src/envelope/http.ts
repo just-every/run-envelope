@@ -1,3 +1,5 @@
+import { RestoredEffects } from './restore/effects'
+import { restoredEffectsPage } from './restore/effect-pages'
 import { RestoredCustody } from './restore/custody'
 import { restoredCustodyPage } from './restore/pages'
 import accessibilityCss from './input/accessibility.css?raw'
@@ -355,7 +357,7 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (post) await requireActiveCompany(records,actor)
+      if (post && tail[0]!=='restore') await requireActiveCompany(records,actor)
       if (!tail.length && !post) {
         const company = await records.company(actor),
           locations = await records.locations(actor),
@@ -529,6 +531,15 @@ export async function payrollResponse(
           const result = await providers.list(actor)
           response = ui ? providersPage(session,companies,actor,result,actor.grant.role==='owner'?await installationFlows(records,actor):[]) : json(result)
         }
+      } else if(tail[0]==='restore') {
+        const recovery=new RestoredEffects(records)
+        if(!post && tail.length===1) {
+          const result=await recovery.list(actor)
+          response=ui ? restoredEffectsPage(session,companies,actor,result) : json(result)
+        } else if(post && tail.length===2 && ['providers','reconcile'].includes(tail[1])) {
+          const result=tail[1]==='providers'?await recovery.connect(actor,value):await recovery.reconcile(actor,value)
+          response=ui ? redirect(base+'/restore') : json(result)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'privacy') {
         const privacy=new Privacy(records)
         if(tail.length===1 && !post) {
