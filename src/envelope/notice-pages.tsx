@@ -49,6 +49,16 @@ export function noticePage(session:Session,companies:Company[],actor:Actor,notic
   const base=companyPath(actor.company), canWrite=actor.grant.role==='owner' || actor.grant.actions.includes('notices:write'), canApprove=actor.grant.role==='owner' || actor.grant.actions.includes('notices:approve')
   return page(session,'Notice review',companies,actor.company,<>
     <Card title="Recorded notice"><p className="evidence-text">{notice.reference}</p><p className="notice-text evidence-text">{redact(notice.body)}</p><p className="evidence-text">Notice ID: {notice.id}. MCP notice.process reads only redacted notice text, never payroll records or credentials.</p></Card>
+    <Card title="Private original files">
+      <p className="evidence-text">Files remain encrypted in owner storage. HTML and PDFs are never rendered here. Downloads contain untrusted originals; open only in a protected viewer. Each version keeps its own digest and author.</p>
+      {notice.files.length ? notice.files.map(f => <p className="evidence-text" key={f.id+'-'+f.version}>{f.name} · version {f.version} · {f.bytes} bytes · SHA-256 {f.digest}. {(actor.grant.role==='owner' || actor.grant.actions.includes('private:read')) && <a href={base+'/notices/'+notice.id+'/files/'+f.id+'/'+f.version}>Download original version {f.version}</a>}</p>) : <p className="evidence-text">No files uploaded.</p>}
+      {canWrite && <form method="post" encType="multipart/form-data" action={base+'/notices/'+notice.id+'/files'}>
+        <label className="field"><span>Private notice file (PDF, HTML or text; 32 KB maximum)</span><input name="file" type="file" accept="application/pdf,text/html,text/plain" required /></label>
+        <Field name="id" label="Existing file ID for a new version (optional)" required={false} />
+        <Field name="version" label="Previous file version (0 for new)" type="number" value={0} />
+        <Submit>Upload private original</Submit>
+      </form>}
+    </Card>
     <Card title="Untrusted model proposals">
       {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3 className="evidence-text">Summary</h3><p className="evidence-text">{String(a.summary)}</p><h3 className="evidence-text">Proposed reply — not approved</h3><p className="evidence-text">{String(a.proposedReply)}</p></div>) : <p className="evidence-text">No model result. A missing connection remains unavailable; no result is invented.</p>}
     </Card>

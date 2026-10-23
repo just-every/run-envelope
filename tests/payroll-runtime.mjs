@@ -1,3 +1,4 @@
+import { privateFileJourney } from './envelope/custody/private-files.mjs'
 // Shared by the existing emitted-Worker runtime journey; no fake app/auth routes.
 // Only synthetic identity sessions are fixtures. Every payroll record, grant,
 // review, read and denial uses the actual HTTP application and migrated D1.
@@ -3112,6 +3113,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await page.waitForURL(/\/notices\/[-a-z0-9]+$/)
     const noticeId=page.url().split('/').at(-1),noticePath=ui+'/notices/'+noticeId
     assert.equal(JSON.stringify(await sql('SELECT cipher FROM env_notices')).includes('000-00-0001'),false)
+    await privateFileJourney({origin,cookie,api,ui,noticeId,page,capture,limitedCookie:sponsors.preparer.cookie,other,edge,sql})
     const processed=await tool('notice.process',{companyId:company,noticeId},adminToken)
     assert.equal(processed.status,'untrusted-proposal')
     assert.equal(processed.approval,'not-approved')

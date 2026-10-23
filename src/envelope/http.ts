@@ -4,6 +4,7 @@ import { Records, type Input } from './records'
 import { AgentSettings, AgentTools } from './agents'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
+import { PrivateFiles, privateDownload } from './private-files/store'
 import { providersPage, noticesPage, noticePage, replyReviewPage } from './notice-pages'
 import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
@@ -73,8 +74,21 @@ async function input(request: Request): Promise<Input> {
     bytes.set(c, pos)
     pos += c.length
   }
-  const body = new TextDecoder('utf-8', { fatal: true }).decode(bytes),
-    type = request.headers.get('content-type')?.split(';')[0]
+  const type = request.headers.get('content-type')?.split(';')[0]
+  if (type === 'multipart/form-data') {
+    let form: FormData
+    try { form = await new Request(request.url, {method:'POST',headers:request.headers,body:bytes}).formData() }
+    catch { throw new PayrollError('invalid_multipart') }
+    const result: Input = {}
+    for (const [key,value] of form.entries()) {
+      if (Object.hasOwn(result,key)) throw new PayrollError('duplicate_input')
+      result[key] = value
+    }
+    return result
+  }
+  let body: string
+  try { body = new TextDecoder('utf-8', { fatal: true }).decode(bytes) }
+  catch { throw new PayrollError('invalid_utf8') }
   if (type === 'application/x-www-form-urlencoded') {
     const params = new URLSearchParams(body),
       result: Input = {}
@@ -498,6 +512,11 @@ export async function payrollResponse(
         } else if (tail.length===2 && !post) {
           const result = await notices.details(actor,tail[1])
           response = ui ? noticePage(session,companies,actor,result) : json(result)
+        } else if (tail.length===3 && tail[2]==='files' && post) {
+          const result = await new PrivateFiles(notices).save(actor,tail[1],value)
+          response = ui ? redirect(base+'/notices/'+tail[1]) : json(result,201)
+        } else if (tail.length===5 && tail[2]==='files' && !post) {
+          response = privateDownload(await new PrivateFiles(notices).download(actor,tail[1],tail[3],tail[4]))
         } else if (tail.length===3 && tail[2]==='replies' && post) {
           const result = await notices.saveReply(actor,tail[1],value)
           response = ui ? redirect(base+'/notices/'+tail[1]) : json(result,201)
