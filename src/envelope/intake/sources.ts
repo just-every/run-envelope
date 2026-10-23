@@ -4,7 +4,7 @@ import { PayrollError, text, integer } from '../security'
 import { WorkspaceStore, digest, revision, choice, type Kind, type Revision } from '../workspace/store'
 import { hrisFacts, hrisProviders, hrisTypes, object } from '../connectors/hris/adapters'
 import { earningFacts, earningProviders } from '../connectors/siblings/earnings'
-import { latest } from '../leave/ledger'
+import { latest, approved, LeaveLedger } from '../leave/ledger'
 import type { EarningsRun } from '../workspace/pay-items'
 
 export interface SourceEvent {
@@ -37,6 +37,7 @@ export class SourceIntake {
     const type = kind === 'hris-event' ? choice(input.type,hrisTypes) : 'earning'
     const raw = object(input.export), sourcePersonId = text(input.sourcePersonId)
     // The owner reviews the local/source identity mapping; names/emails are never an automatic join.
+    if (provider==='rippling' && text(raw.worker_id)!==sourcePersonId) throw new PayrollError('source_person_mapping_conflict',409)
     const normalized: {sourceId:string;effectiveDate:string;values:Input;schema:string} = kind === 'hris-event' ? hrisFacts(provider,type,raw) : earningFacts(provider,raw)
     const id = 'source-' + (await digest(JSON.stringify([provider,sourcePersonId,normalized.sourceId,type]))).slice(0,40)
     const rows = await this.store.list<SourceEvent>(actor,kind,personId,true,false), prior = rows.find((r)=>r.id===id)
@@ -52,6 +53,14 @@ export class SourceIntake {
       ownerUrl: kind==='source-earning' || provider==='willow' ? 'https://github.com/just-every/run-'+provider : provider==='bamboohr' ? 'https://www.bamboohr.com' : 'https://www.hibob.com',
     }
     return this.store.append(actor,kind,id,prior?.version ?? 0,data,personId,true)
+  }
+  async leave(actor:Actor,personId:string,id:string,input:Input) {
+    const event=await this.store.find<SourceEvent>(actor,'hris-event',id,personId,true)
+    approved(event)
+    if(event.data.provider!=='willow' || event.data.type!=='leave')throw new PayrollError('willow_leave_source_required',409)
+    const ledger=new LeaveLedger(this.store),account=(await ledger.read(actor,personId))[0]
+    if(!account || account.data.owner!=='willow')throw new PayrollError('willow_owns_leave_balance',409)
+    return ledger.record(actor,personId,{version:integer(input.ledgerVersion),sourceId:event.id,sourceVersion:event.data.sourceVersion,day:event.data.effectiveDate,operation:'use',owner:'willow',minutes:event.data.values.minutes,code:event.data.values.code,rateCents:event.data.values.rateCents,evidence:event.data.sourceEvidence}, {kind:'hris-event',id:event.id,version:event.version,approved:true})
   }
   async timeline(actor: Actor, personId: string, kind: 'hris-event'|'source-earning') {
     return latest(await this.store.list<SourceEvent>(actor,kind,personId,true,false))

@@ -1,7 +1,7 @@
 import type { Actor } from '../access'
 import type { Input } from '../records'
 import { date, text, integer, PayrollError } from '../security'
-import { WorkspaceStore, revision, choice, type Revision } from '../workspace/store'
+import { WorkspaceStore, revision, choice, type Revision, type Sources } from '../workspace/store'
 import type { WorkDay } from '../workspace/allocations'
 
 export const zero = (v: unknown) => v === 0 || v === '0' ? 0 : integer(v)
@@ -26,6 +26,7 @@ export interface LeaveEntry {
   code: string
   evidence: string
   corrects: number | null
+  handoff?: {kind:'hris-event';id:string;version:number;approved:true}
 }
 export interface LeaveAccount {
   personId: string
@@ -61,7 +62,7 @@ export class LeaveLedger {
     const data: LeaveAccount = { personId, owner: choice(input.owner, ['willow', 'payroll']) as LeaveAccount['owner'], effectiveDate, balanceMinutes, policy, entries: [] }
     return this.store.append(actor, 'leave-account', 'leave-' + personId, 0, data, personId, true)
   }
-  async record(actor: Actor, personId: string, input: Input) {
+  async record(actor: Actor, personId: string, input: Input, handoff?: LeaveEntry['handoff']) {
     const row = (await this.read(actor, personId))[0]
     if (!row) throw new PayrollError('leave_account_required', 409)
     const sourceId = text(input.sourceId, 120), sourceVersion = integer(input.sourceVersion)
@@ -80,7 +81,8 @@ export class LeaveLedger {
     const evidence = text(input.evidence, 500), owner = row.data.owner
     let minutes = zero(input.minutes ?? 0), delta = 0, rateCents = 0, amountCents = 0
     let nextOwner = owner
-    const deps: {kind: 'work'; id: string; version: number}[] = []
+    const deps: NonNullable<Sources['objects']> = []
+    if(prior?.handoff && !handoff) throw new PayrollError('hris_leave_source_required',409)
     if (operation === 'transfer') {
       if (prior) throw new PayrollError('leave_transfer_replay', 409)
       nextOwner = choice(input.owner, ['willow', 'payroll']) as LeaveAccount['owner']
@@ -116,7 +118,7 @@ export class LeaveLedger {
     }
     const balanceMinutes = row.data.balanceMinutes + delta
     if (balanceMinutes < 0 || balanceMinutes > row.data.policy.capMinutes) throw new PayrollError('leave_balance_out_of_range', 409)
-    const entry: LeaveEntry = { sourceId, sourceVersion, owner, operation, day, deltaMinutes: delta, balanceMinutes, minutes, rateCents, amountCents, code: operation === 'use' ? String(input.code) : '', evidence, corrects: prior?.sourceVersion ?? null }
+    const entry: LeaveEntry = { sourceId, sourceVersion, owner, operation, day, deltaMinutes: delta, balanceMinutes, minutes, rateCents, amountCents, code: operation === 'use' ? String(input.code) : '', evidence, corrects: prior?.sourceVersion ?? null, ...(handoff?{handoff}:{}) }
     const workRows = await this.store.list<WorkDay>(actor, 'work', personId, true, false)
     for (const e of row.data.entries.filter((e, i, a) => e.operation === 'accrual' && !a.slice(i + 1).some((n) => n.sourceId === e.sourceId))) {
       if (e.sourceId === sourceId && operation === 'accrual') continue
@@ -124,6 +126,8 @@ export class LeaveLedger {
       if (!w || w.version !== e.sourceVersion || !w.sourcesCurrent) throw new PayrollError('leave_work_reconciliation_required', 409)
       deps.push({kind:'work', id:w.id, version:w.version})
     }
+    const ledgerEntries=[...row.data.entries,entry]
+    for(const e of ledgerEntries.filter((e,i,a)=>e.handoff && !a.slice(i+1).some(n=>n.sourceId===e.sourceId))) deps.push(e.handoff!)
     return this.store.append(actor, 'leave-account', row.id, row.version, { ...row.data, owner: nextOwner, balanceMinutes, entries: [...row.data.entries, entry] }, personId, true, {
       objects: deps,
     })

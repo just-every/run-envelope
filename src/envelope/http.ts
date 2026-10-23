@@ -646,6 +646,9 @@ export async function payrollResponse(
         } else if (!post && tail.length===5 && tail[4]==='review') {
           const result=await store.review(actor,kind,tail[3],personId)
           response=ui?sourcePage(session,companies,actor,await records.person(actor,personId),kind,await intake.read(actor,personId,kind),result as unknown as import('./workspace/store').Revision<import('./intake/sources').SourceEvent> & {reviewToken:string}):json(result)
+        } else if (post && kind==='hris-event' && tail.length===5 && tail[4]==='leave-handoff') {
+          const result=await intake.leave(actor,personId,tail[3],value)
+          response=ui?redirect(base+'/people/'+personId+'/leave'):json(result,201)
         } else if (post && tail.length===5 && ['approve','withdraw'].includes(tail[4])) {
           const result=await store.decide(actor,kind,tail[3],value,personId,tail[4]==='withdraw')
           response=ui?redirect(back):json(result)

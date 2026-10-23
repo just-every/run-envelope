@@ -18,15 +18,17 @@ export const cents = (v: unknown) => {
 export function hrisFacts(provider: string, type: string, raw: Input): {sourceId: string; effectiveDate: string; values: Input; schema: string} {
   if (provider === 'bamboohr') {
     if (type !== 'rate' || raw.payType !== 'Hourly' || raw.payPer !== 'Hour') throw new PayrollError('hris_schema_not_supported', 409)
-    return {sourceId: text(raw.id), effectiveDate: date(raw.payRateEffectiveDate), values: {rateCents:cents(raw.payRate)}, schema:'BambooHR v1 employee fields: id, payType, payPer, payRate, payRateEffectiveDate'}
+    return {sourceId: text(raw.id) + ':' + date(raw.payRateEffectiveDate), effectiveDate: date(raw.payRateEffectiveDate), values: {rateCents:cents(raw.payRate)}, schema:'BambooHR v1 employee fields: id, payType, payPer, payRate, payRateEffectiveDate'}
   }
   if (provider === 'hibob') {
     if (type !== 'rate' || raw.payPeriod !== 'Hourly' || object(raw.base).currency !== 'USD') throw new PayrollError('hris_schema_not_supported', 409)
     return {sourceId: String(integer(raw.id)), effectiveDate: date(raw.effectiveDate), values:{rateCents:cents(object(raw.base).value)}, schema:'HiBob Employee data API 1.0.0 SalaryEntry / CurrencyValue'}
   }
-  // Rippling requires a version-pinned official response adapter. Never guess a
-  // shape, infer a redacted/null compensation, or label this disconnected edge live.
-  if (provider === 'rippling') throw new PayrollError('rippling_schema_pending', 409)
+  if (provider === 'rippling') {
+    if (type !== 'rate' || object(raw.hourly_wage).currency_type !== 'USD') throw new PayrollError('hris_schema_not_supported',409)
+    const effectiveDate = date(raw.salary_effective_date)
+    return {sourceId:text(raw.id)+':'+effectiveDate,effectiveDate,values:{rateCents:cents(object(raw.hourly_wage).value)},schema:'Rippling REST v2 Compensation: hourly_wage / salary_effective_date (published schema, 2026-10-23)'}
+  }
   if (provider !== 'willow') throw new PayrollError('unsupported_hris_source')
   const sourceId = text(raw.sourceId), effectiveDate = date(raw.effectiveDate)
   if (raw.schema !== 'envelope-willow-payroll@1') throw new PayrollError('unsupported_source_schema')

@@ -3540,7 +3540,9 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     const bob=await data(hr,{...rate,provider:'hibob',export:{id:910,effectiveDate:'2026-11-20',payPeriod:'Hourly',base:{currency:'USD',value:14.5}}},201);await approve(hr,bob)
     assert.equal((await preview()).taxableCashCents,1200,'future official-schema rates cannot apply early')
     await data(hr,{...rate,provider:'lodge'},400)
-    await data(hr,{...rate,provider:'rippling'},409)
+    await data(hr,{...rate,provider:'rippling'},400)
+    const rippling=await data(hr,{...rate,provider:'rippling',sourcePersonId:'synthetic-envelope-905',export:{id:'synthetic-envelope-944',created_at:'2026-10-23T00:00:00Z',updated_at:'2026-10-23T00:00:00Z',worker_id:'synthetic-envelope-905',hourly_wage:{currency_type:'USD',value:16.75},salary_effective_date:'2026-11-25'}},201);await approve(hr,rippling)
+    await data(hr,{...rate,provider:'rippling',export:{id:'synthetic-envelope-945',worker_id:'synthetic-envelope-foreign',hourly_wage:{currency_type:'USD',value:16.75},salary_effective_date:'2026-11-25'}},409)
     await data(hr,{...rate,provider:'hibob',export:{id:911,effectiveDate:'2026-11-20',payPeriod:'Hourly',base:{currency:'EUR',value:14.5}}},409)
     await data(hr,rate,409)
     const conflicts=await data(hr,envelope('rate','synthetic-envelope-912','2026-11-01',{rateCents:1500}),201);await approve(hr,conflicts)
@@ -3553,6 +3555,19 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
       const values=type==='location'?{locationId:loc.id}:type==='leave'?{minutes:60,rateCents:1200,code:'sick'}:{amountCents:500,code:'synthetic-envelope-914'}
       const r=await data(hr,envelope(type,'synthetic-envelope-'+type,'2026-11-02',values),201);await approve(hr,r)
     }
+    const leaveDoor=person+'/leave'
+    await data(leaveDoor,{owner:'willow',effectiveDate:'2026-01-01',openingMinutes:480,hireDate:'2025-01-01',capMinutes:960,carryoverMinutes:480,policyEvidence:'synthetic-envelope-946',tiers:[{years:0,earnedMinutes:1,workedMinutes:30}]},201)
+    const approveLeave=async()=>{const r=await data(leaveDoor+'/review');await data(leaveDoor+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+    await approveLeave()
+    const leaveEvent=(await data(hr)).find(r=>r.data.type==='leave')
+    await data(hr+'/'+leaveEvent.id+'/leave-handoff',{ledgerVersion:1},201);await approveLeave()
+    assert.equal((await data(leaveDoor))[0].data.balanceMinutes,420)
+    await data(hr+'/'+leaveEvent.id+'/leave-handoff',{ledgerVersion:2},409)
+    const sourceLeaveCorrection=await data(hr,{...envelope('leave','synthetic-envelope-leave','2026-11-02',{minutes:90,rateCents:1200,code:'sick'}),version:1,sourceVersion:2},201);await approve(hr,sourceLeaveCorrection)
+    await data(hr+'/'+leaveEvent.id+'/leave-handoff',{ledgerVersion:2},201);await approveLeave()
+    assert.equal((await data(leaveDoor))[0].data.balanceMinutes,390,'corrected source leave deducts only the additional thirty minutes')
+    const leavePreview=await data(pay+'/preview',{groupId:group,periodStart:'2026-11-02',periodEnd:'2026-11-02',payDate:'2026-11-03',frequency:'weekly'})
+    assert.equal(leavePreview.taxableCashCents,1800,'the corrected Willow leave enters the real preview once')
     await capture(hr,'hris-history-held-handoff')
     await capture(earn,'earnings-source-empty')
     const earnings=[]
@@ -3593,7 +3608,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     const terminationPreview=await data(pay+'/preview',{groupId:group,periodStart:'2026-11-03',periodEnd:'2026-11-03',payDate:'2026-11-04',frequency:'weekly'})
     assert.equal(terminationPreview.taxableCashCents,0);assert.ok(terminationPreview.holds.some(h=>/final-pay handoff/.test(h.reason)))
     const stored=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('hris-event','source-earning')"));assert.equal(stored.includes('synthetic-envelope-915'),false)
-    console.log('SOURCE-INTAKE passed: native review, effective Willow hire/rate/termination and held location/leave/benefit handoffs, BambooHR/HiBob official rate schemas, future/late-conflict/replay safety, six source earnings and replacement commission correction, affected-run invalidation and current salary-field revocation; 1440/390. Rippling, live sync and reconciled actuals remain unproved.')
+    console.log('SOURCE-INTAKE passed: native review, effective Willow hire/rate/termination and held location/benefit/final-pay handoffs, pinned Willow leave reservation and difference-only correction, BambooHR/HiBob official rate schemas, Rippling official hourly schema, future/late-conflict/replay safety, six source earnings and replacement commission correction, affected-run invalidation and current salary-field revocation; 1440/390. Live sync and reconciled actuals remain unproved.')
   } finally {await browser.close()}
 }
 

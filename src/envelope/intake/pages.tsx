@@ -12,7 +12,7 @@ export function sourcePage(session: Session, companies: Company[], actor: Actor,
     <Card title={kind==='hris-event'?'Reviewed HR changes':'Approved source earnings'}>
       <p>Source exports are proposals until a named human reviews the exact identity mapping, dates and amount. Acknowledgement means accepted for payroll preview. No payment, policy update or source delivery is implied.</p>
       <p><a href={companyPath(actor.company)+'/people/'+person.id}>Person and rates</a> · <a href={companyPath(actor.company)+'/pay-settings'}>Payroll previews</a></p>
-      {kind==='hris-event' ? <p>Willow owns employment, policy, I-9, documents, enrollment and offboarding. Lodge hires must come through Willow. BambooHR and HiBob hourly-rate exports are supported; Rippling and other external event types remain unavailable.</p> : <p><a href="https://github.com/just-every/run-easel">Easel</a> plans headcount; <a href="https://github.com/just-every/run-coaster">Coaster</a> owns reimbursement choice; <a href="https://github.com/just-every/run-purse">Purse</a> owns supplier payments. None can authorize payroll here. Reconciled labor actuals remain unavailable until an actual payroll close exists.</p>}
+      {kind==='hris-event' ? <p>Willow owns employment, policy, I-9, documents, enrollment and offboarding. Lodge hires must come through Willow. BambooHR, Rippling and HiBob hourly-rate exports are supported. Other external event types and live connections remain unavailable.</p> : <p><a href="https://github.com/just-every/run-easel">Easel</a> plans headcount; <a href="https://github.com/just-every/run-coaster">Coaster</a> owns reimbursement choice; <a href="https://github.com/just-every/run-purse">Purse</a> owns supplier payments. None can authorize payroll here. Reconciled labor actuals remain unavailable until an actual payroll close exists.</p>}
     </Card>
     {review && <Card title="Review exact source revision">
       <p>{review.data.provider} · {review.data.type} · source person {review.data.sourcePersonId} → {person.name}. Source {review.data.sourceId} v{review.data.sourceVersion}, effective {review.data.effectiveDate}.</p>
@@ -28,6 +28,7 @@ export function sourcePage(session: Session, companies: Company[], actor: Actor,
         <p>Source person {r.data.sourcePersonId}; source approver {r.data.sourceApprovedBy}; local reviewer {r.approvedBy ?? 'pending'}. {r.data.sourceEvidence}</p>
         <p>Affected retained runs: {r.affectedRuns.map((run)=>run.id+' v'+run.version+' ('+run.periodStart+'–'+run.periodEnd+')').join(', ') || 'none'}.</p>
         {r.acknowledgement==='held-for-human-review' && <a className="btn" href={base+'/'+r.id+'/review'}>Review exact source mapping</a>}
+        {kind==='hris-event' && r.data.provider==='willow' && r.data.type==='leave' && r.approvedBy && !r.withdrawnBy && <form className="field" method="post" action={base+'/'+r.id+'/leave-handoff'}><Field name="ledgerVersion" label="Current reviewed Willow leave ledger version" type="number"/><Submit>Propose this source leave in the ledger</Submit></form>}
         {r.approvedBy && !r.withdrawnBy && <form method="post" action={base+'/'+r.id+'/withdraw'}><Hidden name="version" value={r.version}/><Submit>Withdraw source approval</Submit></form>}
       </article>)}
     </Card>
