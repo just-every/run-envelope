@@ -74,13 +74,17 @@ Under `/api/envelope/companies/:company/privacy`:
   become anonymous, an opaque anti-resurrection fence and Base erasure journal
   commit with the cascade, and staged transfer copies are invalidated. A replay
   returns the existing completion receipt.
-- `POST /holds {personId,basis,custodian,releaseDate,confirm:true}` records an
-  actual statutory/legal hold before a request. Its review/release date never
-  starts deletion automatically. A held request shows the exact retained fields,
+- `POST /holds {personId,kind,basis,custodian,releaseDate,confirm:true}` records an
+  actual statutory/legal hold before a request. `kind` is `statutory` (the
+  conservative default) or `legal`. A statutory hold cannot be released before
+  its owner-verified earliest UTC `releaseDate`; an active legal hold requires
+  explicit verified release evidence. Dates never start deletion automatically. A held request shows the exact retained fields,
   legal basis, custodian and review/release date; it is never called complete.
 - `POST /release {personId,evidence,confirm:true}` records the owner's verified
   lawful release and explicitly requests the eligible cascade. Anonymous
-  immutable hold/release provenance survives the deletion.
+  hold/release category, actor and date provenance survives the deletion.
+  Free-form basis/custodian/evidence text is cleared in the same eligible
+  transaction so an erased name cannot remain in permanent action history.
 
 While held, ordinary person reads, private downloads, register exports and agent
 record/preparation doors cannot reveal the held worker. The owner remains the
