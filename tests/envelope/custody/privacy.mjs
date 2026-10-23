@@ -46,11 +46,11 @@ export async function privacyJourney({origin,cookie,api,limitedCookie,page,captu
   const token=randomBytes(32).toString('base64url'),session='synthetic-envelope-543',hash=await hashToken(settings.SESSION_SECRET,'session',token),readerCookie=localCookieName('operator_session_local',origin)+'='+token
   await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('${session}','${hash}','${readerId}',1,'native',${Date.now()},${Date.now()+3600000})`)
   assert.equal((await call(base+'/people/'+held.id,undefined,readerCookie)).status,200,'ordinary access exists before the privacy hold')
-  await data(base+'/privacy/holds',{personId:held.id,basis:'Synthetic statutory payroll evidence retention',custodian:'Installation owner',releaseDate:'2030-01-01',confirm:true})
+  await data(base+'/privacy/holds',{personId:held.id,kind:'legal',basis:'Synthetic active litigation preservation hold',custodian:'Installation owner',releaseDate:'2030-01-01',confirm:true})
   const heldRequest=await data(base+'/privacy',{personId:held.id,confirm:true})
   assert.equal(heldRequest.state,'held')
   assert.deepEqual(heldRequest.retained.fields,['person.name','person.location_id','person.version','private.tax@1'])
-  assert.deepEqual(heldRequest.retained.hold,{basis:'Synthetic statutory payroll evidence retention',custodian:'Installation owner',releaseDate:'2030-01-01'})
+  assert.deepEqual(heldRequest.retained.hold,{kind:'legal',basis:'Synthetic active litigation preservation hold',custodian:'Installation owner',releaseDate:'2030-01-01'})
   assert.equal((await call(base+'/people/'+held.id+'/private/tax')).status,200,'lawful owner custody remains explicit')
   assert.equal((await call(base+'/people/'+held.id,undefined,readerCookie)).status,404,'held records are restricted to the owner custodian')
   assert.equal((await call(base+'/people/'+held.id+'/private/tax',undefined,readerCookie)).status,404)
@@ -73,5 +73,19 @@ export async function privacyJourney({origin,cookie,api,limitedCookie,page,captu
   assert.equal(JSON.stringify(holdEvents).includes(held.id),false,'hold provenance remains without worker identity')
   assert.equal((await sql('SELECT COUNT(*) AS n FROM rer_portability_journal'))[0].n>=3,true,'native restore tombstones and redaction checkpoint commit with deletion')
   await capture(ui+'/privacy','privacy-released-complete')
+  const statutory=await data(base+'/people',{name:'Synthetic statutory retained worker',locationId:location.id},201)
+  await data(base+'/people/'+statutory.id+'/private',{kind:'tax',version:0,value:'Historical synthetic 2020 employment-tax evidence'},201)
+  await data(base+'/privacy/holds',{personId:statutory.id,kind:'statutory',basis:'26 CFR 31.6001-1(e)(2), employment-tax record retention; owner-verified category and earliest release',custodian:'Installation owner',releaseDate:'2035-01-01',confirm:true})
+  assert.equal((await data(base+'/privacy',{personId:statutory.id,confirm:true})).state,'held')
+  const early=await data(base+'/privacy/release',{personId:statutory.id,evidence:'An owner checkbox cannot shorten the statutory minimum.',confirm:true},409)
+  assert.equal(early.error,'statutory_retention_not_elapsed')
+  assert.equal((await call(base+'/people/'+statutory.id)).status,200)
+  await capture(ui+'/privacy','privacy-statutory-early-release-refused')
+  // Advance only the fixture's eligibility boundary, as the credential expiry
+  // journeys do. Production has no clock override or automatic deletion.
+  await sql(`UPDATE env_privacy_holds SET release_date='2024-01-01' WHERE company_id='${company.id}' AND person_id='${statutory.id}'`)
+  assert.equal((await data(base+'/privacy/release',{personId:statutory.id,evidence:'Owner verified the historical record minimum has elapsed and no legal hold remains.',confirm:true})).state,'complete')
+  assert.equal((await call(base+'/people/'+statutory.id)).status,404)
+  await capture(ui+'/privacy','privacy-statutory-eligible-release-complete')
   console.log('PRIVACY-CUSTODY passed: explicit native owner erase within five minutes, local records/private fields absent, anonymous audit and replay-safe receipt; exact lawful retained set and human release cascade; native archive journal; owner forms at 1440/390')
 }

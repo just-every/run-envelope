@@ -17,12 +17,13 @@ export function privacyPage(session:Session,companies:Company[],actor:Actor,peop
       </form>}
     </Card>
     <Card title="Statutory or legal hold">
-      <p className="evidence-text">Record the actual legal basis, responsible custodian and review/release date. The date never automatically releases a hold. A request remains held until you attest that release is lawful and explicitly request its cascade.</p>
+      <p className="evidence-text">Record the actual legal basis, responsible custodian and hold type. Statutory holds cannot be released before their declared earliest UTC release date. Legal holds require explicit verified release evidence. The date never automatically releases a hold. A request remains held until you attest that release is lawful and explicitly request its cascade.</p>
       {people.length>0 && <form method="post" action={base+'/holds'}>
         <PersonSelect people={people} />
+        <label className="field"><span>Hold type</span><select name="kind" aria-label="Hold type"><option value="statutory">Statutory retention minimum</option><option value="legal">Legal preservation hold</option></select></label>
         <Field name="basis" label="Legal basis for retaining these records" maxLength={500} />
         <Field name="custodian" label="Responsible records custodian" maxLength={200} />
-        <Field name="releaseDate" label="Hold review or release date" type="date" />
+        <Field name="releaseDate" label="Earliest statutory release date or legal review date (UTC)" type="date" />
         <label className="field"><span><input type="checkbox" name="confirm" value="true" required /> I have verified the basis and custodian for this hold.</span></label>
         <Submit>Record lawful hold</Submit>
       </form>}
@@ -31,7 +32,7 @@ export function privacyPage(session:Session,companies:Company[],actor:Actor,peop
       {requests.length ? requests.map(r=><div key={r.id}>
         <h3 className="evidence-text">{r.state==='complete'?'Eligible local erasure complete':'Held — not completed'}</h3>
         <p className="evidence-text">Request {r.id}. Requested {new Date(r.requestedAt).toISOString()}{r.completedAt ? '; completed '+new Date(r.completedAt).toISOString() : ''}.</p>
-        {r.state==='held' && <><div className="evidence-text"><p>Retained fields: {(r.retained.fields??[]).join(', ')}.</p>{r.retained.hold && <p>Legal basis: {r.retained.hold.basis}. Custodian: {r.retained.hold.custodian}. Review/release date: {r.retained.hold.releaseDate}.</p>}{r.retained.history?.length>0 && <p>Payroll evidence awaiting category-specific retention review: {r.retained.history.map((h:{category:string;reference:string})=>h.category+' '+h.reference).join('; ')}.</p>}</div><form method="post" action={base+'/release'}>
+        {r.state==='held' && <><div className="evidence-text"><p>Retained fields: {(r.retained.fields??[]).join(', ')}.</p>{r.retained.hold && <p>Hold type: {r.retained.hold.kind}. Legal basis: {r.retained.hold.basis}. Custodian: {r.retained.hold.custodian}. Review/release date: {r.retained.hold.releaseDate}.</p>}{r.retained.history?.length>0 && <p>Payroll evidence awaiting category-specific retention review: {r.retained.history.map((h:{category:string;reference:string})=>h.category+' '+h.reference).join('; ')}.</p>}</div><form method="post" action={base+'/release'}>
           <Hidden name="personId" value={r.personId!} />
           <Field name="evidence" label="Verified lawful release evidence" maxLength={500} />
           <label className="field"><span><input type="checkbox" name="confirm" value="true" required /> I confirm release is lawful and request eligible deletion now.</span></label>
