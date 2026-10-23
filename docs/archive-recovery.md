@@ -34,11 +34,12 @@ application; an ambient environment value cannot substitute another key. A wrong
 key, damaged archive or nonempty destination refuses before business history is
 published. A missing original key cannot be reconstructed from the archive.
 
-This is a recovery foundation, not a completed operational restore. Fresh owner
-adoption, provider reconciliation using original accepted identifiers, renewed
+This is a recovery foundation, not a completed operational restore. Provider
+reconciliation using original accepted identifiers, operational adoption and renewed
 exact authority, erasure fences, and a complete
 mixed-year history containing uncertain payments remain owed by
-ENV-053. Restored company records currently have no active access grants. Do not
+ENV-053. Imported company records have no active grants until explicit restricted
+historical adoption. Do not
 reintroduce old credentials or use database edits to bypass those missing doors.
 
 `tests/archive-runtime.mjs` contains `archiveJourney`: native business fixtures,
@@ -68,3 +69,25 @@ of two employers, their exact human decisions and linked W-4 corrections, plus a
 third company with retained claim originals. All business records use native HTTP
 doors. This annual prepared history does not establish wage settlement, accepted
 filings, open unknown payments or completed operational recovery.
+
+After import, the configured original owner can sign in through fresh native
+email proof and finish setup. The private recovery API lists that owner's
+unadopted companies with GET `/api/envelope/recovery`. POST the same route with
+`companyId` and literal JSON `consent: true` after reviewing the named company.
+Adoption repeats current identity and fresh proof inside the atomic grant write,
+then records `archive.history.adopted` in the company audit. It cannot replay or
+replace any existing company grant.
+
+The adopted grant is a viewer with compensation and tax history reads. It cannot
+export independently, change records or banks, connect providers, approve or
+release payroll, or dispatch notices. Each employer requires its own explicit
+adoption. The configured owner must also be that company's original creator;
+other restored people receive no access. This conservative identity and custody
+default awaits ct approval. It does not activate operations after recovery.
+
+The importer also validates references inside encrypted federal calculations and
+prepared returns: company, worker, exact source versions, historical approval,
+original correction lineage and period must match retained records. Current
+source withdrawal does not erase valid historical attribution. A transport-valid,
+authenticated correction pointing to a missing original refuses before business
+publication.

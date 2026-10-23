@@ -11,6 +11,7 @@ import { archiveFixture } from './archive-fixture.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
 import { unrelatedPersonArchive, unrelatedCorrectionArchive } from './archive-relationships.mjs'
 import { archiveEditions } from './archive-editions.mjs'
+import { archiveAdoption } from './archive-adoption.mjs'
 
 const execute = promisify(execFile)
 const quote = value => '"' + value.replaceAll('"', '""') + '"'
@@ -226,11 +227,13 @@ export async function archiveJourney(context) {
             version: fixture.authority.replyVersion, digest: fixture.authority.replyDigest } } }) })
       assert.equal(response.status, 401, 'a previously usable agent bearer cannot dispatch the retained approved reply')
       assert.equal(context.edge.mails.length, outboundBefore, 'restored credential replay makes no external request')
+      await archiveAdoption(context, fixture)
     })
+    const adoptedHistory = await snapshot(state(target))
     const occupied = await rer(target, 'import', archive)
     assert.notEqual(occupied.code, 0, 'an already populated target refuses a second import')
     assert.ok(occupied.output.includes('target_not_empty'), 'the refusal is specifically the nonempty target')
-    assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(after)), 'nonempty refusal leaves all prior business and identity history unchanged')
+    assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(adoptedHistory)), 'nonempty refusal leaves all prior business and identity history unchanged')
     await keys.occupied()
     console.log('Archive custody journey passed: native mixed-company history, ciphertext, inactive authority and atomic CLI refusals.')
   } finally { await rm(temporary, { recursive: true, force: true }) }

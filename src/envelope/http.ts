@@ -1,6 +1,7 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { ArchiveHistory } from './archive-history'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
 import { claimsResponse } from './claims/http'
@@ -330,6 +331,10 @@ export async function payrollResponse(
         return ui?protectedResponsePage(session,result,{id:String(value.id),token:String(value.token)}):json(result)
       }
       throw new PayrollError('not_found',404)
+    }
+    if (!ui && parts.length === 1 && parts[0] === 'recovery') {
+      const history = new ArchiveHistory(records)
+      return json(post ? await history.adopt(value) : await history.list(), post ? 201 : 200)
     }
     if (parts[0] !== 'companies') throw new PayrollError('not_found', 404)
     if (parts.length === 1) {
