@@ -1085,7 +1085,7 @@
       "executable": false
     },
     "src/envelope/workspace/run-approval-pages.tsx": {
-      "sha256": "5a42a2147f54e23c7b20ded2c71470ff6491a2df9bfa7372c1418fa74104cda7",
+      "sha256": "dcfbd719b690578665837c81809975087bc319b505c9ac580f5d287b7fa342d2",
       "executable": false
     },
     "src/envelope/workspace/run-approvals.ts": {
@@ -2149,7 +2149,7 @@
       "executable": false
     },
     "tests/firm-runtime.mjs": {
-      "sha256": "38d1bd0b3ff6cf957284c694d39e7dab868589e7ee47407534f33323d1d92058",
+      "sha256": "620536a4754f67c48b641e9da34b5951eee898746de6b57ad065fa0454e39d85",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {
