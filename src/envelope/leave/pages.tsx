@@ -31,7 +31,7 @@ export function leavePage(session: Session, companies: Company[], actor: Actor, 
         <Field name="hireDate" label="Hire date for anniversary tiers" type="date"/>
         <Field name="capMinutes" label="Balance cap in minutes" type="number"/>
         <Field name="carryoverMinutes" label="January carryover cap in minutes" type="number"/>
-        <label className="field"><span>Accrual tiers (JSON: years, earnedMinutes, workedMinutes)</span><textarea name="tiers" required defaultValue={'[{"years":0,"earnedMinutes":1,"workedMinutes":30}]'}/></label>
+        <label className="field"><span>Accrual tiers (JSON: years, earnedMinutes, workedMinutes)</span><textarea name="tiers" aria-label="Accrual tiers (JSON: years, earnedMinutes, workedMinutes)" required defaultValue={'[{"years":0,"earnedMinutes":1,"workedMinutes":30}]'}/></label>
         <Field name="policyEvidence" label="Reviewed policy and lawful rate evidence" maxLength={500}/>
         <Submit primary>Propose opening balance</Submit>
       </form>

@@ -877,7 +877,7 @@
       "executable": false
     },
     "src/envelope/leave/pages.tsx": {
-      "sha256": "ceefc2176f73c1ef89360572233a3673235d734349a571ebf98fa4645e7c2734",
+      "sha256": "c3b64f00bdce11f1bccd7a3bec89066d63efab9012bacdcc8088f574b03f9773",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
