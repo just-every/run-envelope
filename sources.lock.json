@@ -941,7 +941,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "2b575daeeb1d1f2e9570af71ee8f72f0d4295cd85ef5c9d712c70a6e6f0e80d1",
+      "sha256": "f36a45ad9ce4668aeb7e5785595c2c6e7f7de159688c6467ce88ede66d49d24b",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -977,7 +977,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "f6720b30bf60f5e97bca951eae13ecd4edd1fc836322a239cdeba51077b0fc2f",
+      "sha256": "c6e679706a7588669a13f3538a0df5c98d5880093912c05f0747eb21102e6e44",
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
@@ -1097,7 +1097,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "2d85a61866b9b99af3cf32b434e67a2e7fc9838e7ca930436824b78f6db2313c",
+      "sha256": "98d640234ecae199f5230dac05644269fdf1bd7c5eea57b4205c61bc6fc56c6e",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2149,7 +2149,7 @@
       "executable": false
     },
     "tests/firm-runtime.mjs": {
-      "sha256": "15b4eea40a098f1c66b1deccf0ac56eb9ebd0f1b19b86f557f52e6a8b555367a",
+      "sha256": "d886d46348787b5561e74958f0b6da46e9ef8716f36b6ddcd58ea1eb45b7f733",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {
