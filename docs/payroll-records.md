@@ -62,8 +62,15 @@ Concurrent replay, an intervening approved rate, grant change or revoked session
 cannot apply stale authority. The read API returns the historical proposals and
 named decisions; there is no wage calculation or claim of applied paycheck rates.
 Fresh proof now guards bank-document storage and credential issuance; see
-[Sponsored payroll preparation](payroll-agents.md). Actual bank changes, pay-run
-approval and dispatch rechecks remain obligations of ENV-004/011/030/034/051/052.
+[Sponsored payroll preparation](payroll-agents.md). Settings expose independent **Approve exact earnings runs** and **Request payroll
+release (held)** permissions. Exact run approval still needs compensation access
+and all locations; a location-limited grant cannot review a whole-company run.
+Opening a run review records `run.reviewed`; opening an exact setup review records
+`workspace.<kind>.reviewed`, in the same transaction as its session-bound review.
+The audit names actor, time, target and version without amounts, private contents
+or review tokens. Approval alone grants no export, bank-edit or release power.
+Actual verified bank changes and payable dispatch remain obligations of
+ENV-004/011/030/034/051/052.
 [Effective setup records](payroll-setup.md) documents the company register.
 
 ## HTTP API
@@ -112,3 +119,41 @@ Only synthetic identity sessions are fixture setup; payroll behavior is exercise
 through HTTP and native forms. Its 1440/390 browser captures are test artifacts,
 not shipped product files. None of this evidence proves real payroll, tax,
 provider, bank-change or sandbox outcomes.
+
+## Native and linked sign-in
+
+Base admits only an invited or existing active identity. Requesting an email
+sign-in link for an unknown address returns the same accepted answer, sends
+nothing and creates no operator or session. Invitations and sign-in links require
+an explicit confirmation, expire, and cannot be replayed. A successful identity
+receives no payroll company access until the owner grants it separately.
+
+Native cookies and their stored sessions have Base's fixed maximum of seven
+days; activity does not slide that expiry. Sign-out, identity removal, grant
+changes and linked-provider disable end old access, including direct private
+attachments. Reactivation never revives an old session. Linked OIDC sessions are
+also bound to the current provider pin and admission generation. Payroll still
+checks its own company, location, action and field grant independently.
+
+Production mail must report accepted provider submission before its link can
+remain usable. Rejected or uncertain submission revokes that link and creates no
+session; provider acceptance does not prove mailbox delivery. Missing mail/Auth
+never selects a different authentication route or bootstraps an unknown person.
+Base's sign-in limits are five requests per normalized address and 30 per client
+IP in a 15-minute fixed window, with separate confirmation/invitation scopes.
+
+Bank-document custody and credential minting require Base's fresh ten-minute
+same-session app-local email proof. Completing a step-up link sets no new session
+cookie and a different session cannot consume it. Client MFA flags and even a
+signed provider MFA claim do not replace that app-local proof. Trusted linked
+MFA for sensitive payroll operations, optional passkeys, retained former-worker
+forms and step-up on actual bank changes/payroll release remain unfinished.
+
+`tests/payroll-runtime.mjs` — `identityJourney` / PAYROLL-SIGNIN uses the actual
+emitted production Worker over loopback HTTPS. Only the external Resend
+`POST /emails` JSON acceptance/rejection/uncertain responses and Auth's OpenID
+Connect Core 1.0 discovery, JWKS and authorization-code token response are faked.
+The Auth edge signs ES256 ID tokens, checks S256 PKCE and the app's
+`private_key_jwt` signature, and declares `oidc-provider@1.0.0`. These are
+network-edge handling proofs, not live Auth, mail delivery or payroll receipts.
+The fixture's self-signed TLS exception is confined to its loopback origin.

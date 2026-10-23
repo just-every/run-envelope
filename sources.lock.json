@@ -145,7 +145,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "519b3655db4ff4718bf554c54e9890c1aacf3a91d910c9384d2e3167e97266d8",
+      "sha256": "804be9a6ebdbaa5c0e12c9a2b86fb6b7ae6733d940de6cbf803d56173b23997c",
       "executable": false
     },
     "AGENTS.md": {
@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "983ce0c77085e4ea9ce6510308f428c7b5cc633b59c263a18b0ad580960595fb",
+      "sha256": "3d52b41531ccf717f9530f57c054c2661551d30332c6b93fca897c55cbee160f",
       "executable": false
     },
     "deploy-demo.json": {
@@ -205,7 +205,7 @@
       "executable": false
     },
     "docs/payroll-records.md": {
-      "sha256": "c99109e503183b3ca058c4f8584474b4112edb62d332816445d1cc6222b2bd16",
+      "sha256": "da80630181a5f39d492dbf36b511915f536c2fe159a0adedc6d1d42b6d207277",
       "executable": false
     },
     "docs/payroll-rule-editions.md": {
