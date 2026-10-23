@@ -329,7 +329,7 @@
       "executable": false
     },
     "migrations/core/0024_income_verification.sql": {
-      "sha256": "e68de79e09f4355d516e2dbec2606c014e65d3ba71b2db519e8d154cefc84830",
+      "sha256": "ad2a6296d0a5429e3de5844fd415a1d06f8a474f637be4117448386a2bd5e5c8",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -885,7 +885,7 @@
       "executable": false
     },
     "src/envelope/disclosures/protected.ts": {
-      "sha256": "fc0886f0e6c72c0cb64d2028ab347ec764dda31390fed41f141d8eae5c5e5023",
+      "sha256": "dc31cf37710f1cee524f9e8331253b9b94b2bc1d5c3cf1b8ec8f6cd16a040072",
       "executable": false
     },
     "src/envelope/http.ts": {
@@ -893,11 +893,11 @@
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
-      "sha256": "def3da88b832d55184948549e7c55dbc56f9980ca080338e90421074e7eb1b31",
+      "sha256": "064b7edc1569a2a383900dfe6fc33dec39d276bab393d454744233e56a09bcc5",
       "executable": false
     },
     "src/envelope/income-verification/requests.ts": {
-      "sha256": "47d466f0a3599e8a277c96fe5856da634d0e89c3407f36896f9cd39e4b90ef65",
+      "sha256": "59192f5d35699f0ba8fa9916712ba477916b9049fa29f440a8bebe96d6d3a10d",
       "executable": false
     },
     "src/envelope/intake/pages.tsx": {
@@ -909,7 +909,7 @@
       "executable": false
     },
     "src/envelope/leave/ledger.ts": {
-      "sha256": "8d2d2fdc9f23d8739820be72aa6dbd7ebf87102f2c1fd64fbd184fcd6d10d3e7",
+      "sha256": "2257a27f453a755a5c1877482a2a81a9a280eb632d569d72a3c7e364396514f0",
       "executable": false
     },
     "src/envelope/leave/pages.tsx": {
@@ -2093,7 +2093,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "546236397ebc21bde379d8746add878ea54df9263b0e27518fc5faeeeafbe483",
+      "sha256": "0fc4d5633f63f6895634b2de3c1c87ab0a826bd252a5cf0fcf76c1ab43fc8ed5",
       "executable": false
     },
     "tests/runtime.mjs": {

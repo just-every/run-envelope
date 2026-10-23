@@ -99,6 +99,7 @@ export class LeaveLedger {
       minutes = Math.floor(work.data.minutes * tier.earnedMinutes / tier.workedMinutes)
       // Reconcile a corrected source by its difference; never accrue the original twice.
       const credited = row.data.entries.filter((e) => e.sourceId === sourceId).reduce((s, e) => s + e.deltaMinutes, 0)
+      if (prior && (prior.minutes > credited || row.data.entries.some((e) => e.operation === 'carryover' && e.day > day))) throw new PayrollError('leave_capped_or_closed_year_reconciliation_required', 409)
       delta = Math.min(minutes, p.capMinutes - row.data.balanceMinutes + credited) - credited
       deps.push({kind: 'work', id: work.id, version: work.version})
     } else if (operation === 'use') {

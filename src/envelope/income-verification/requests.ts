@@ -14,7 +14,8 @@ export interface Consent extends ConsentData { id:string; personId:string; worke
 export interface ProtectedDisclosure { consentId:string; requesterId:string; corrects:string; response:Input; provenance:{kind:string;id:string;version:number;sourceRef:string}[] }
 const boundedPeriod=(input:Input)=>{const from=date(input.from),through=date(input.through);if(from>through || (Date.parse(through)-Date.parse(from))/86400000>366)throw new PayrollError('verification_period_too_broad');return{from,through}}
 export const ownerOnly=(actor:Actor)=>{if(actor.grant.role!=='owner')throw new PayrollError('owner_required',403)}
-export const bindingFence = (alias:string) => `EXISTS(SELECT 1 FROM env_workspace_versions b
+export const bindingFence = (alias:string) => `EXISTS(SELECT 1 FROM oa_operators wo JOIN env_grants wg ON wg.operator_id=wo.id AND wg.company_id=${alias}.company_id
+ WHERE wo.id=${alias}.worker_id AND wo.version=${alias}.worker_version AND wo.status='active' AND wg.version=${alias}.worker_grant_version AND wg.revoked_at IS NULL) AND EXISTS(SELECT 1 FROM env_workspace_versions b
  WHERE b.company_id=${alias}.company_id AND b.kind='verification-worker' AND b.object_id=${alias}.binding_id AND b.version=${alias}.binding_version
  AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
  AND ${currentSources('b')}
@@ -53,13 +54,13 @@ export class VerificationRequests {
     const payload:ConsentData={...boundedPeriod(input),requesterId,fields:fields.map(String),purpose:choice(input.purpose,['mortgage','rental','employment']),retentionUntil}
     const id=crypto.randomUUID(),event=crypto.randomUUID(),f=fence(actor),cipher=await seal(await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY),JSON.stringify([actor.company,'verification-consent',id]),JSON.stringify(payload))
     const result=await this.store.records.env.DB.batch([
-      this.store.records.statement(`INSERT INTO env_verification_consents(company_id,id,person_id,worker_id,requester_id,binding_id,binding_version,cipher,created_session,created_at,expires_at,change_id)
-      SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
+      this.store.records.statement(`INSERT INTO env_verification_consents(company_id,id,person_id,worker_id,worker_version,worker_grant_version,requester_id,binding_id,binding_version,cipher,created_session,created_at,expires_at,change_id)
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
       AND EXISTS(SELECT 1 FROM env_workspace_versions b WHERE b.company_id=? AND b.kind='verification-worker' AND b.object_id=? AND b.version=? AND ${currentSources('b')}
        AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
        AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='approved')
        AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='withdrawn')) RETURNING id`,
-      [actor.company,id,personId,actor.session.operator.id,requesterId,binding.id,binding.version,cipher,actor.session.id,Date.now(),expiresAt,event,...f.args,actor.company,personId,person.version,actor.company,binding.id,binding.version]),
+      [actor.company,id,personId,actor.session.operator.id,actor.session.operator.version,actor.grant.version,requesterId,binding.id,binding.version,cipher,actor.session.id,Date.now(),expiresAt,event,...f.args,actor.company,personId,person.version,actor.company,binding.id,binding.version]),
       auditStatement(this.store.records.env,actor,event,'verification.consent-given',id,1,'EXISTS(SELECT 1 FROM env_verification_consents WHERE change_id=?)',[event]),
     ])
     if(!result[0].results.length)throw new PayrollError('verification_authority_changed',409)

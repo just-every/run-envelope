@@ -21,7 +21,7 @@ export function verificationPage(session:Session,companies:Company[],actor:Actor
       <p>Interim policy: explicit worker consent, owner-only review and release, no legal-authority override. Expired responses become unavailable; retained history is restricted. Policy approval is pending.</p>
     </Card>
     {issued && <Card title="Protected response prepared for handover">
-      <p>Release ID: <code>{issued.id}</code>. Named requester: {issued.requesterId}. Give these details to that verified person through your approved private channel.</p>
+      <p>Release ID: <code data-release-id="true">{issued.id}</code>. Named requester: {issued.requesterId}. Give these details to that verified person through your approved private channel.</p>
       <p>Token (shown once): <code className="evidence-text" data-release-token="true">{issued.token}</code></p>
       <p><a href="/app/envelope/protected-response">Requester opens a protected response</a>. Expiry: {new Date(issued.expiresAt).toISOString()}. No delivery or acknowledgement is claimed.</p>
     </Card>}

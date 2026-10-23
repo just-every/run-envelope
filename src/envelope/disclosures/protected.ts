@@ -21,13 +21,13 @@ export class ProtectedResponses {
     if(!consent)throw new PayrollError('current_worker_consent_required',403)
     const token=crypto.randomUUID()+crypto.randomUUID(),hash=await digest(token),releaseId=crypto.randomUUID(),event=crypto.randomUUID(),f=fence(actor)
     const result=await this.store.records.env.DB.batch([
-      this.store.records.statement(`INSERT INTO env_verification_releases(company_id,id,consent_id,disclosure_id,disclosure_version,token_hash,requester_id,issued_by,issued_at,expires_at)
-      SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
+      this.store.records.statement(`INSERT INTO env_verification_releases(company_id,id,consent_id,disclosure_id,disclosure_version,token_hash,requester_id,issued_by,issuer_version,issuer_grant_version,issued_at,expires_at)
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
       AND EXISTS(SELECT 1 FROM env_workspace_versions v JOIN env_verification_consents c ON c.company_id=v.company_id AND c.id=?
        WHERE v.company_id=? AND v.object_id=? AND v.version=? AND v.person_id=c.person_id AND c.person_id=? AND c.requester_id=?
        AND c.revoked_at IS NULL AND c.expires_at>? AND ${bindingFence('c')} AND ${disclosureCurrent})
       AND NOT EXISTS(SELECT 1 FROM env_verification_releases WHERE company_id=? AND disclosure_id=? AND disclosure_version=?) RETURNING id`,
-      [actor.company,releaseId,consent.id,row.id,row.version,hash,consent.requesterId,actor.session.operator.id,Date.now(),consent.expiresAt,...f.args,consent.id,actor.company,row.id,row.version,personId,consent.requesterId,Date.now(),actor.company,row.id,row.version]),
+      [actor.company,releaseId,consent.id,row.id,row.version,hash,consent.requesterId,actor.session.operator.id,actor.session.operator.version,actor.grant.version,Date.now(),consent.expiresAt,...f.args,consent.id,actor.company,row.id,row.version,personId,consent.requesterId,Date.now(),actor.company,row.id,row.version]),
       auditStatement(this.store.records.env,actor,event,'verification.response-released',releaseId,row.version,'EXISTS(SELECT 1 FROM env_verification_releases WHERE company_id=? AND id=?)',[actor.company,releaseId]),
     ])
     if(!result[0].results.length)throw new PayrollError('disclosure_or_consent_changed',409)
@@ -35,7 +35,7 @@ export class ProtectedResponses {
   }
   async retrieve(id:string,input:Input,ack=false){
     const session=this.store.records.session,s=sessionFence(session),hash=await digest(text(input.token,100)),event=crypto.randomUUID(),now=Date.now()
-    const where=`r.id=? AND r.token_hash=? AND r.requester_id=? AND r.expires_at>? AND c.expires_at>? AND c.revoked_at IS NULL
+    const where=`EXISTS(SELECT 1 FROM oa_operators issuer JOIN env_grants ig ON ig.operator_id=issuer.id AND ig.company_id=r.company_id WHERE issuer.id=r.issued_by AND issuer.version=r.issuer_version AND issuer.status='active' AND ig.version=r.issuer_grant_version AND ig.role='owner' AND ig.revoked_at IS NULL) AND r.id=? AND r.token_hash=? AND r.requester_id=? AND r.expires_at>? AND c.expires_at>? AND c.revoked_at IS NULL
       AND ${bindingFence('c')} AND ${disclosureCurrent} AND ${s.sql}`
     const args=[id,hash,session.operator.id,now,now,...s.args]
     // Authorization, audit, receipt and encrypted response selection share one D1 batch.
