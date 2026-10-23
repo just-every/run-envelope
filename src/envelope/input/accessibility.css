@@ -1,0 +1,8 @@
+/* Keep the approved white-on-business-color chips. Their goldenrod and teal
+   backgrounds require WCAG large text: at least 18.66px at weight 700. This
+   stylesheet is loaded only by authenticated Envelope record documents. */
+.app .chips .chip b,
+.app .chips .chip small {
+  font-size: 19px;
+  font-weight: 700;
+}
