@@ -15,7 +15,7 @@ consecutive `sourceVersion`, `day`, `operation`, and `evidence`:
 
 - `use`: current `owner`, `minutes`, `code` (sick, pto, holiday, unpaid,
   termination), and a documented lawful `rateCents` for paid leave. This reserves
-  minutes and previews money; it does not claim wages paid or an HRIS receipt.
+  minutes and previews money; unpaid absence never debits the paid bank. It does not claim wages paid or an HRIS receipt.
 - `accrual`: payroll owner only; source ID/version/date must match a persisted
   work entry. Integer worked-minute ratios use hire-anniversary tiers and the
   balance cap. A source correction contributes only its reconciled difference.
@@ -30,7 +30,7 @@ consecutive `sourceVersion`, `day`, `operation`, and `evidence`:
 GET `/review`, then POST `/approve` with that exact `version` and `reviewToken`.
 The token is bound to the reviewing native session/current grant and expires in
 10 minutes. A pending revision cannot feed a payroll preview. POST `/withdraw`
-with its version withdraws an adopted revision. Replays, stale concurrent
+with its version withdraws an adopted revision. If a source changes while a ledger proposal awaits review, explicitly set `revisePending: true` when proposing the correction. This retains the pending entries in a new exact revision and is available only after an initial ledger has been reviewed; it cannot bypass opening approval. Replays, stale concurrent
 versions, wrong owners and negative/over-cap balances refuse. New events cannot
 be backdated across adopted entries; source corrections retain their original
 identity. The bounded ledger refuses at 200 entries rather than truncating it.

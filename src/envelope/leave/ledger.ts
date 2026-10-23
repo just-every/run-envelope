@@ -128,7 +128,8 @@ export class LeaveLedger {
     handoff?: LeaveEntry['handoff'],
   ) {
     await this.store.authority(actor, 'rates:propose', personId, true)
-    const row = (await this.read(actor, personId, false))[0]
+    const history = await this.read(actor, personId, false),
+      row = history[0]
     if (!row) throw new PayrollError('leave_account_required', 409)
     const sourceId = text(input.sourceId, 120),
       sourceVersion = integer(input.sourceVersion)
@@ -137,7 +138,13 @@ export class LeaveLedger {
     )
     // A replay cannot adopt a different payload or create a revision, even while review is pending.
     if (same) throw new PayrollError('leave_source_already_recorded', 409)
-    if (!row.approvedBy || row.withdrawnBy)
+    const revising =
+      input.revisePending === true || input.revisePending === 'true'
+    if (
+      row.withdrawnBy ||
+      (!row.approvedBy &&
+        !(revising && history.some((r) => r.approvedBy && !r.withdrawnBy)))
+    )
       throw new PayrollError('current_human_review_required', 409)
     if (revision(input.version) !== row.version)
       throw new PayrollError('leave_version_changed', 409)
@@ -245,7 +252,9 @@ export class LeaveLedger {
       choice(input.code, ['pto', 'holiday', 'sick', 'unpaid', 'termination'])
       rateCents = input.code === 'unpaid' ? 0 : integer(input.rateCents)
       amountCents = Number((BigInt(minutes) * BigInt(rateCents) + 30n) / 60n)
-      delta = -(minutes - (prior?.minutes ?? 0))
+      const debitMinutes = input.code === 'unpaid' ? 0 : minutes
+      const priorDebit = prior?.code === 'unpaid' ? 0 : (prior?.minutes ?? 0)
+      delta = -(debitMinutes - priorDebit)
     } else {
       // A sourced reconciliation is explicit, reviewed and signed; never an automatic balance plug.
       const direction = choice(input.direction, ['credit', 'debit'])

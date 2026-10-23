@@ -3480,6 +3480,14 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
     await data(work,{...source,version:1,minutes:240},201)
     await entry({sourceId:workId,sourceVersion:2,operation:'accrual',day:'2026-12-31'});await approve()
     ledger=(await data(door))[0];assert.equal(ledger.data.balanceMinutes,436,'source correction reverses exactly eight accrued minutes')
+    const pendingWork={...source,id:'synthetic-envelope-817'}
+    await data(work,pendingWork,201)
+    await entry({sourceId:pendingWork.id,operation:'accrual',day:'2026-12-31'})
+    await data(work,{...pendingWork,version:1,minutes:240},201)
+    await data(door+'/review',undefined,409)
+    await entry({sourceId:pendingWork.id,sourceVersion:2,operation:'accrual',day:'2026-12-31'},409)
+    await entry({sourceId:pendingWork.id,sourceVersion:2,operation:'accrual',day:'2026-12-31',revisePending:true});await approve()
+    assert.equal((await data(door))[0].data.balanceMinutes,444,'a stale unapproved accrual can be reconciled and reviewed without adopting its prior version')
     await entry({sourceId:'synthetic-envelope-808',day:'2026-12-31',operation:'adjustment',direction:'credit',minutes:500});await approve()
     await entry({sourceId:'synthetic-envelope-809',operation:'carryover',day:'2027-01-01'});await approve()
     assert.equal((await data(door))[0].data.balanceMinutes,600)
@@ -3487,13 +3495,15 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
     await entry({sourceId:'synthetic-envelope-811',day:'2027-01-01',operation:'use',owner:'payroll',minutes:601,code:'termination',rateCents:2501},409)
     await entry({sourceId:'synthetic-envelope-811',day:'2027-01-01',operation:'use',owner:'payroll',minutes:600,code:'termination',rateCents:2501});await approve()
     ledger=(await data(door))[0];assert.equal(ledger.data.balanceMinutes,0);assert.equal(ledger.data.entries.at(-1).amountCents,25010)
+    await entry({sourceId:'synthetic-envelope-818',day:'2027-01-02',operation:'use',owner:'payroll',minutes:480,code:'unpaid'});await approve()
+    assert.equal((await data(door))[0].data.balanceMinutes,0,'unpaid absence never consumes the paid-leave bank')
     // Real earnings-preview door binds approved leave in addition to pay setup.
     const pay=api+'/pay-settings', group='synthetic-envelope-812'
     const decide=async(kind,id)=>{const r=await data(pay+'/review/'+kind+'/'+id);await data(pay+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
     await data(pay+'/group',{id:group,version:0,name:'Leave preview group',people:[person.id]},201);await decide('group',group)
     await data(pay+'/pay-change',{id:'synthetic-envelope-813',version:0,name:'Reviewed hourly setup',groupId:group,effectiveDate:'2026-01-01',items:[{personId:person.id,personVersion:person.version,rateCents:2501,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2027-12-31',unpaidDates:[]}]},201);await decide('pay-change','synthetic-envelope-813')
     const preview=await data(pay+'/preview',{groupId:group,periodStart:'2026-12-30',periodEnd:'2027-01-01',payDate:'2027-01-01',frequency:'weekly'})
-    assert.equal(preview.taxableCashCents,57523,'regular work 30012 plus reviewed sick 2501 and termination 25010')
+    assert.equal(preview.taxableCashCents,67527,'regular work 40016 plus reviewed sick 2501 and termination 25010')
     assert.equal(preview.paymentReady,false);assert.equal(preview.netPay,null)
     assert.ok(preview.people[0].details.some(d=>d.includes('willow source synthetic-envelope-801')))
     await capture('leave-ledger-completed')
@@ -3681,7 +3691,11 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     let facts=await get(released)
     assert.deepEqual(facts.response,{periodStart:source.from,periodEnd:source.through,hireDate:'2025-09-15',grossWagesCents:345678,currency:'USD'})
     assert.equal(JSON.stringify(facts).includes('employmentStatus'),false)
-    assert.ok(facts.provenance.some(s=>s.sourceRef===source.sourceRef));assert.ok(facts.provenance.some(s=>s.sourceRef==='synthetic-envelope-1025'))
+    assert.ok(facts.provenance.some(s=>s.id===source.id));assert.ok(facts.provenance.some(s=>s.id===hire.id))
+    assert.ok(facts.provenance.every(s=>Object.keys(s).sort().join(',')==='id,kind,version'),'requesters get opaque provenance, never private document references')
+    assert.equal(JSON.stringify(facts).includes(source.sourceRef),false)
+    const ownerDisclosure=(await data(door)).disclosures.find(r=>r.id===response.id)
+    assert.ok(ownerDisclosure.data.provenance.some(s=>s.sourceRef===source.sourceRef));assert.ok(ownerDisclosure.data.provenance.some(s=>s.sourceRef==='synthetic-envelope-1025'))
     await data('/api/envelope/protected-response/ack',{id:released.id,token:released.token},200,identities.requester.cookie)
     let history=(await data(door,undefined,200,identities.worker.cookie)).history
     assert.ok(history.releases[0].openedAt);assert.ok(history.releases[0].acknowledgedAt);assert.equal(history.releases[0].response.grossWagesCents,345678,'the worker sees the facts actually disclosed')
@@ -3717,6 +3731,6 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     await noWrite(async()=>{await get(finalRelease,identities.requester.cookie,403)})
     const privateRows=JSON.stringify(await sql("SELECT cipher FROM env_verification_consents UNION ALL SELECT cipher FROM env_verification_corrections UNION ALL SELECT cipher FROM env_workspace_versions WHERE kind IN ('income-source','disclosure')"))
     assert.equal(privateRows.includes(source.sourceRef),false);assert.equal(privateRows.includes('345678'),false)
-    console.log('INCOME-VERIFICATION passed: native worker/requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction/history, linked source correction, revocation and actual expiry; native screens 1440/390. Interim policy approval, legal-authority route and full retained-data lifecycle remain unproved.')
+    console.log('INCOME-VERIFICATION passed: native worker/requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction/history, linked source correction, revocation, actual expiry and selected retention boundary; native screens 1440/390. Interim policy approval, legal-authority route and full retained-data lifecycle remain unproved.')
   }finally{await browser.close()}
 }

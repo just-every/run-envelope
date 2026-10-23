@@ -32,7 +32,7 @@ identity, consent and retention policy. They add no acceptance requirement.
   precise gross-wage response.
 - Linked worker POST `/consents`: `requesterId`, `purpose`, `from`, `through`,
   `fields` (hireDate/employmentStatus/grossWages), `expiresOn`, `retentionUntil`.
-  API callers may supply an exact canonical UTC `expiresAt` instead of the date.
+  API callers may supply an exact canonical UTC `expiresAt` instead of the date; `retentionUntil` also accepts a canonical UTC timestamp.
   The actual native worker session signs the immutable consent; a client actor,
   another worker or bearer cannot stand for it. Worker company access may be
   limited to `records:read` at their location with no compensation grant.
@@ -41,7 +41,7 @@ identity, consent and retention policy. They add no acceptance requirement.
 - Owner POST `/disclosures`: `id`, previous `version`, `consentId`, optional
   earlier disclosure `corrects`. The response contains only selected facts;
   employment comes from reviewed Willow hire/termination source versions and
-  wages from reviewed original register references for the complete exact period.
+  wages from reviewed original register references for the complete exact period. Requesters receive only opaque source IDs and versions; the owner review retains original document references.
 - Owner GET `/:kind/:id/review` and POST `/:kind/:id/approve` with its `version`
   and same-session `reviewToken`. Kinds: verification-worker, income-source,
   disclosure. Tokens expire in ten minutes; no client approval flag works.
@@ -60,8 +60,8 @@ acknowledgement. An old source response becomes unavailable after correction;
 a fresh exact reviewed response links back to it without replacing its history.
 
 The worker's verification screen shows scoped requests, requester identity,
-selected periods/fields, releases, opened/acknowledged receipts and correction
-tasks. Every release and receipt is attributed; correction reasons, consents,
+selected periods/fields, the facts actually disclosed, linked corrections, releases, opened/acknowledged receipts and correction
+tasks. Once the selected retention deadline passes, worker and ordinary owner disclosure views retain metadata and restrict the response body; source payroll records retain their separate custody obligations. Every release and receipt is attributed; correction reasons, consents,
 wage facts and response bodies are encrypted at rest. The token hash alone is
 stored. All native controls have visible text labels; no icon-only controls
 are introduced. Browser proof masks the one-time handover token.

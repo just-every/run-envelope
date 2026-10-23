@@ -163,6 +163,17 @@ export function sourcePage(
                     label="Current reviewed Willow leave ledger version"
                     type="number"
                   />
+                  <label className="field">
+                    <span>
+                      <input
+                        type="checkbox"
+                        name="revisePending"
+                        value="true"
+                      />
+                      Revise an existing pending ledger proposal for a new exact
+                      review
+                    </span>
+                  </label>
                   <Submit>Propose this source leave in the ledger</Submit>
                 </form>
               )}

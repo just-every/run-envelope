@@ -154,75 +154,92 @@ export function leavePage(
           </form>
         </Card>
       )}
-      {row?.approvedBy && !row.withdrawnBy && (
-        <Card title="Propose a sourced leave entry">
-          <form className="field" method="post" action={base + '/entries'}>
-            <Hidden name="version" value={row.version} />
-            <Field
-              name="sourceId"
-              label="Source record ID (work ID for accrual)"
-            />
-            <Field
-              name="sourceVersion"
-              label="Source version"
-              type="number"
-              value={1}
-            />
-            <Field name="day" label="Effective date" type="date" />
-            <Select
-              name="operation"
-              label="Entry purpose"
-              choices={[
-                'use',
-                'accrual',
-                'adjustment',
-                'carryover',
-                'transfer',
-              ]}
-            />
-            <Select
-              name="owner"
-              label="Use owner or new transfer owner"
-              choices={['willow', 'payroll']}
-              value={row.data.owner}
-            />
-            <Field
-              name="minutes"
-              label="Leave minutes (use or adjustment)"
-              type="number"
-              value={0}
-            />
-            <Select
-              name="code"
-              label="Leave pay code"
-              choices={['sick', 'pto', 'holiday', 'unpaid', 'termination']}
-            />
-            <Field
-              name="rateCents"
-              label="Lawful hourly rate in cents (paid leave)"
-              type="number"
-              required={false}
-            />
-            <Select
-              name="direction"
-              label="Adjustment direction"
-              choices={['credit', 'debit']}
-            />
-            <Field
-              name="reconciledMinutes"
-              label="Confirmed transfer balance in minutes"
-              type="number"
-              required={false}
-            />
-            <Field
-              name="evidence"
-              label="Source approval, rate or reconciliation evidence"
-              maxLength={500}
-            />
-            <Submit primary>Propose exact leave entry</Submit>
-          </form>
-        </Card>
-      )}
+      {row &&
+        !row.withdrawnBy &&
+        (row.approvedBy ||
+          rows.some((r) => r.approvedBy && !r.withdrawnBy)) && (
+          <Card title="Propose a sourced leave entry">
+            <form className="field" method="post" action={base + '/entries'}>
+              <Hidden name="version" value={row.version} />
+              {!row.approvedBy && (
+                <label className="field">
+                  <span>
+                    <input
+                      type="checkbox"
+                      name="revisePending"
+                      value="true"
+                      required
+                    />
+                    Revise this pending proposal, retaining its entries for a
+                    new exact review
+                  </span>
+                </label>
+              )}
+              <Field
+                name="sourceId"
+                label="Source record ID (work ID for accrual)"
+              />
+              <Field
+                name="sourceVersion"
+                label="Source version"
+                type="number"
+                value={1}
+              />
+              <Field name="day" label="Effective date" type="date" />
+              <Select
+                name="operation"
+                label="Entry purpose"
+                choices={[
+                  'use',
+                  'accrual',
+                  'adjustment',
+                  'carryover',
+                  'transfer',
+                ]}
+              />
+              <Select
+                name="owner"
+                label="Use owner or new transfer owner"
+                choices={['willow', 'payroll']}
+                value={row.data.owner}
+              />
+              <Field
+                name="minutes"
+                label="Leave minutes (use or adjustment)"
+                type="number"
+                value={0}
+              />
+              <Select
+                name="code"
+                label="Leave pay code"
+                choices={['sick', 'pto', 'holiday', 'unpaid', 'termination']}
+              />
+              <Field
+                name="rateCents"
+                label="Lawful hourly rate in cents (paid leave)"
+                type="number"
+                required={false}
+              />
+              <Select
+                name="direction"
+                label="Adjustment direction"
+                choices={['credit', 'debit']}
+              />
+              <Field
+                name="reconciledMinutes"
+                label="Confirmed transfer balance in minutes"
+                type="number"
+                required={false}
+              />
+              <Field
+                name="evidence"
+                label="Source approval, rate or reconciliation evidence"
+                maxLength={500}
+              />
+              <Submit primary={!review}>Propose exact leave entry</Submit>
+            </form>
+          </Card>
+        )}
       <Card title="Retained ledger revisions">
         {rows.map((r) => (
           <article key={r.version}>

@@ -156,7 +156,11 @@ export class ProtectedResponses {
       disclosureId: row.disclosureId,
       version: row.version,
       response: data.response,
-      provenance: data.provenance,
+      provenance: data.provenance.map(({ kind, id, version }) => ({
+        kind,
+        id,
+        version,
+      })),
       corrects: data.corrects || null,
     }
   }

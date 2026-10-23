@@ -176,6 +176,7 @@ export class SourceIntake {
       personId,
       {
         version: integer(input.ledgerVersion),
+        revisePending: input.revisePending,
         sourceId: event.id,
         sourceVersion: event.data.sourceVersion,
         day: event.data.effectiveDate,
