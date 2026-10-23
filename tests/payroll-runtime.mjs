@@ -3261,7 +3261,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
 export async function identityJourney({ worker, origin, cookie, settings, sql, edge }) {
   const call = (path, body, who = cookie, extra = {}) => worker.fetch(origin + path, {
     method: body === undefined ? 'GET' : 'POST', redirect: 'manual',
-    headers: { ...(who ? {cookie:who} : {}), origin, 'content-type':'application/json', 'CF-Connecting-IP':'127.0.0.2', ...extra },
+    headers: { ...(who ? {cookie:who} : {}), host:new URL(origin).host, origin, 'content-type':'application/json', 'CF-Connecting-IP':'127.0.0.2', ...extra },
     ...(body === undefined ? {} : {body:JSON.stringify(body)}),
   })
   const data = async (path, body, who = cookie, status = 200) => {
@@ -3278,7 +3278,7 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
   await context.route(origin + '/**', async route => {
     const request = route.request()
     const response = await worker.fetch(request.url(), {
-      method:request.method(), headers:{...await request.allHeaders(),'CF-Connecting-IP':'127.0.0.2'},
+      method:request.method(), headers:{...await request.allHeaders(),host:new URL(origin).host,'CF-Connecting-IP':'127.0.0.2'},
       ...(request.postDataBuffer() ? {body:request.postDataBuffer()} : {}), redirect:'manual',
     })
     await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())})
