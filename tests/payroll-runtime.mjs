@@ -3490,6 +3490,7 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
     await entry({sourceId:pendingWork.id,sourceVersion:2,operation:'accrual',day:'2026-12-31'},409)
     await entry({sourceId:pendingWork.id,sourceVersion:2,operation:'accrual',day:'2026-12-31',revisePending:true});await approve()
     assert.equal((await data(door))[0].data.balanceMinutes,444,'a stale unapproved accrual can be reconciled and reviewed without adopting its prior version')
+    assert.equal((await entry({sourceId:'synthetic-envelope-819',day:'2026-12-31',operation:'adjustment',direction:'credit',minutes:600},409)).error,'leave_balance_out_of_range','a reviewed leave balance cannot exceed its cap')
     await entry({sourceId:'synthetic-envelope-808',day:'2026-12-31',operation:'adjustment',direction:'credit',minutes:500});await approve()
     await entry({sourceId:'synthetic-envelope-809',operation:'carryover',day:'2027-01-01'});await approve()
     assert.equal((await data(door))[0].data.balanceMinutes,600)
