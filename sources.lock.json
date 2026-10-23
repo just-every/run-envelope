@@ -1000,6 +1000,10 @@
       "sha256": "1f91a15de70a3142d4fc292b5de1ffba9d637497746c3b6d87220d107fbb7966",
       "executable": false
     },
+    "src/envelope/empty-worker-erasure.ts": {
+      "sha256": "eed03c58b723ddaefc45553e975dc65a5f5746982ae3b358d34983969ed89269",
+      "executable": false
+    },
     "src/envelope/firm/batch.ts": {
       "sha256": "59142822d23bd446d5563abade9c9993bbb35f5c169d13f2065bfb3b1282f9b4",
       "executable": false
@@ -2296,6 +2300,10 @@
       "sha256": "c9692044044ac3a351cb25f76d08c6827bcce9076e19486dc2005c79ae238350",
       "executable": false
     },
+    "tests/archive-erasure.mjs": {
+      "sha256": "8c8666aa34eabab15f148cb8555cde0688453ba82e4996ed35d774b53f0da411",
+      "executable": false
+    },
     "tests/archive-fixture.mjs": {
       "sha256": "43692240961242d9138684f7a6cbbcab71d47a3b7b3ec2b0097a194082e99581",
       "executable": false
@@ -2309,7 +2317,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "1a686c5110cbd63ad04fd3cadea87181f04bed66d253d0164df8cba07d22f511",
+      "sha256": "71f19d1ddc2a381b53eede734f0db172cc986dcec1e8513486eccae1a50f67e7",
       "executable": false
     },
     "tests/archive-worker.mjs": {

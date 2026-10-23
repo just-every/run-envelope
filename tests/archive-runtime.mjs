@@ -174,7 +174,7 @@ export async function archiveJourney(context) {
     await keys.original()
     const stale = await rer(target, 'import', oldArchive, env, archive)
     assert.notEqual(stale.code, 0, 'a later erasure journal fences the real older archive')
-    assert.ok(stale.output.includes('erased_row'), 'native restore identifies the erased-row fence')
+    assert.ok(stale.output.includes('erased_row'), 'native restore identifies the erased-row fence; diagnostics: ' + ['erasure_epoch','later_journal','erased_row','target_not_empty','schema_mismatch','payload_inventory','archive_relationship_invalid','archive_source_editions_invalid','archive_record_key_required','transfer_failed','restore_refused','migration_ledger','unknown_option','configuration_inventory'].filter(code => stale.output.includes(code)).join(', '))
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'stale archive refusal cannot resurrect erased data or publish business history')
     const unrelated = join(temporary, 'unrelated-person.rer')
     await unrelatedPersonArchive(records, unrelated)
