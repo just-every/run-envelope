@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { randomBytes } from 'node:crypto'
 import { chromium } from '@playwright/test'
 import { firmFixture } from './firm-fixture.mjs'
 
@@ -58,7 +57,7 @@ export async function firmJourney(context) {
     const pages=Object.fromEntries(await Promise.all(Object.entries(contexts).map(async([name,c])=>[name,await c.newPage()])))
     const capture=async(label,path,who='firm')=>{
       const page=pages[who]
-      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),label+' visible control: '+await control.evaluate(el=>el.outerHTML));await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:false})}
+      for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),label+' visible control: '+await control.evaluate(el=>el.outerHTML));await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),'BODY');await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:!['firm-loaded','firm-filtered','firm-company-settings'].includes(label)})}
       return page
     }
     await capture('firm-empty','/app/envelope/firm','stranger')
@@ -100,6 +99,7 @@ export async function firmJourney(context) {
         await blotter.json('/jobs/'+job.id+'/threads',{title:'Envelope notice handoff',body:'Client '+first.name+'; due '+period.payDate+'; private source '+origin+first.base.replace('/api/','/app/')+'/notices/'+first.notice.id,anchor:'job',mentions:[]},blotter.owner)
         jobUrl=blotter.origin+'/app?job='+job.id
         for(const entry of blotter.owner.split('; ')){const [name,value]=entry.split('=');await contexts.firm.addCookies([{name,value,url:blotter.origin}])}
+        const setupPage=await contexts.firm.newPage();await setupPage.goto(blotter.origin+'/setup');await setupPage.getByRole('checkbox').check();await setupPage.getByRole('button',{name:'Finish setup',exact:true}).click();await setupPage.waitForURL(blotter.origin+'/app');await setupPage.close()
       }finally{process.chdir(previous)}
     }
     const app=first.base.replace('/api/','/app/'),workPath=app+'/firm-work/'+first.task.id
@@ -123,8 +123,6 @@ export async function firmJourney(context) {
     await signIn(people.firm)
     assert.equal((await call(secondRunPath+'/release',{version:1},people.firm.cookie)).status,403)
     assert.equal((await data('/api/envelope/firm',undefined,200,people.firm.cookie)).clients.length,19)
-    const ownerSession=(await sql(`SELECT id,operator_version FROM oa_sessions WHERE operator_id='${owner}' AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`))[0],now=Date.now()
-    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) VALUES ('${randomBytes(16).toString('hex')}','${randomBytes(16).toString('hex')}','${ownerSession.id}','${owner}',${ownerSession.operator_version},'operator:manage','/app',${now},${now+600000},${now})`)
     const removed=await call('/auth/operator/status',{operatorId:people.backup.id,status:'inactive'});assert.equal(removed.status,200,await removed.clone().text())
     const handover=await data(first.base+'/firm-work/'+first.task.id)
     assert.equal(handover.item.assigneeId,owner);assert.equal(handover.item.status,'recipient-changed');assert.equal(handover.history.at(-1).assigneeName, (await sql(`SELECT display_name FROM oa_operators WHERE id='${owner}'`))[0].display_name)

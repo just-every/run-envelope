@@ -2149,7 +2149,7 @@
       "executable": false
     },
     "tests/firm-runtime.mjs": {
-      "sha256": "a50251041ef99cdab3a4987a50f6119cbcc2af778aaaaabb3b9d6e4136c34cf5",
+      "sha256": "c6939b63c3269b13268aebfc832c4db8b6b0cb2d1b56c2a344d62c7649e17d7a",
       "executable": false
     },
     "tests/incremental-typecheck.test.mjs": {
