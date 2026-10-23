@@ -12,7 +12,11 @@ export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,cap
     form.set('file',new File([buffer],name,{type}))
     form.set('version','0')
     for(const [k,v] of Object.entries(extra)) form.set(k,String(v))
-    return request('/files',who,{method:'POST',body:form})
+    const response=await request('/files',who,{method:'POST',body:form})
+    // Fully consume the HTTP response, including refusals, before reusing the
+    // client connection; retain a body for the assertions below.
+    const body=await response.arrayBuffer()
+    return new Response(body,{status:response.status,headers:response.headers})
   }
   const before=edge.calls.length
   // Use the native file control for the first hostile HTML original.
