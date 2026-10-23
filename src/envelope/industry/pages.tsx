@@ -11,10 +11,17 @@ const money=(n:number)=>'$'+(n/100).toLocaleString('en-US',{minimumFractionDigit
 export const Choice=({name,label,options,value}:{name:string;label:string;options:string[];value?:string})=><label className="field"><span>{label}</span><select name={name} aria-label={label} defaultValue={value}>{options.map(o=><option key={o} value={o}>{words(o)}</option>)}</select></label>
 const Check=({name,label,checked=false,value='true'}:{name:string;label:string;checked?:boolean;value?:string})=><label><input type="checkbox" name={name} value={value} defaultChecked={checked}/>{' '}{label}</label>
 const Area=({name,label,value}:{name:string;label:string;value?:string})=><label className="field"><span>{label}</span><textarea name={name} aria-label={label} rows={5} required maxLength={12000} defaultValue={value}/></label>
-export function Facts({value}:{value:unknown}) {
+const factLabel=(key:string)=>{
+ const label=words(key.replace(/Cents$/, ''))
+  .replace(/^w2Box1Wages$/, 'W-2 box 1 wages').replace(/^w2Box1 Wages$/, 'W-2 box 1 wages')
+  .replace(/\bfuta\b/gi,'FUTA').replace(/\bfica\b/gi,'FICA').replace(/\btin\b/gi,'TIN')
+ return label.charAt(0).toUpperCase()+label.slice(1)
+}
+export function Facts({value,field=''}:{value:unknown;field?:string}) {
  if(Array.isArray(value))return <>{value.map((v,i)=><article key={i}><Facts value={v}/></article>)}</>
- if(value&&typeof value==='object')return <dl className="evidence-text">{Object.entries(value).filter(([k,v])=>!['reviewedBy','reviewedAt','documentId'].includes(k)&&v!==undefined&&v!=='').map(([k,v])=><div key={k}><dt>{words(k)}</dt><dd><Facts value={v}/></dd></div>)}</dl>
- return <>{typeof value==='boolean'?(value?'Yes':'No'):String(value??'')}</>
+ if(value&&typeof value==='object')return <dl className="evidence-text">{Object.entries(value).filter(([k,v])=>!['reviewedBy','reviewedAt','documentId'].includes(k)&&v!==undefined&&v!==''&&(!Array.isArray(v)||v.length>0)).map(([k,v])=><div key={k}><dt>{factLabel(k)}</dt><dd><Facts value={v} field={k}/></dd></div>)}</dl>
+ if(typeof value==='number'&&field.endsWith('Cents'))return <>{money(value)}</>
+ return <>{typeof value==='boolean'?(value?'Yes':'No'):typeof value==='string'&&/^[a-z]+(?:_[a-z]+)+$/.test(value)?words(value):String(value??'')}</>
 }
 export function ClassificationFields({row}:{row?:Revision<ClassificationRecord>}) {
  const d=row?.data

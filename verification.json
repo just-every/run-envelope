@@ -34,6 +34,15 @@
         "pnpm run build",
         "ENVELOPE_JOURNEYS=firm pnpm run test:runtime"
       ]
+    },
+    {
+      "name": "industry",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=industry pnpm run test:runtime"
+      ]
     }
   ],
   "nightly": []
