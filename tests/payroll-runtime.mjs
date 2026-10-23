@@ -1,3 +1,4 @@
+import { privacyJourney } from './envelope/custody/privacy.mjs'
 import { privateFileJourney } from './envelope/custody/private-files.mjs'
 // Shared by the existing emitted-Worker runtime journey; no fake app/auth routes.
 // Only synthetic identity sessions are fixtures. Every payroll record, grant,
@@ -3253,6 +3254,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.ok(access.some(a=>a.action==='dispatch:execute' && a.sponsorId===sponsors.accountant.id))
     assert.equal(JSON.stringify(audit).includes('000-00-0001'),false)
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,3)
+    await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql})
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
   } finally {await context.close();await browser.close()}
 }

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 /** Real multipart upload and private immutable downloads on the emitted Worker. */
 export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,capture,limitedCookie,other,edge,sql}) {
   const path=api+'/notices/'+noticeId,view=ui+'/notices/'+noticeId
-  const request=(suffix,who=cookie,options={})=>fetch(origin+path+suffix,{redirect:'manual',...options,headers:{cookie:who,origin,...options.headers}})
+  const request=(suffix,who=cookie,options={})=>fetch(origin+path+suffix,{redirect:'manual',...options,headers:{cookie:who,origin,connection:'close',...options.headers}})
   const html='<html><script>globalThis.plantedNoticeScript=true;fetch("https://ungranted.example/script")</script><img src="https://ungranted.example/pixel"><p>SSN 000-00-0057</p></html>'
   const pdf=Buffer.concat([Buffer.from('%PDF-1.7\n%'),Buffer.from([0xff,0xee,0xdd]),Buffer.from('\n1 0 obj <</OpenAction <</S /JavaScript /JS (app.alert("synthetic-envelope-570"))>>>> endobj\n%%EOF')])
   const upload=async(buffer,type,name='source.pdf',extra={},who=cookie)=>{
