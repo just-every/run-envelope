@@ -106,7 +106,7 @@ export function page(
           <Heading
             lead={title}
             then="Current payroll access."
-            meta={<a href="/app/envelope">Companies and payroll settings</a>}
+            meta={<>{selected && <span>{companies.find(c => c.id === selected)?.name} · </span>}<a href="/app/envelope">Companies and payroll settings</a></>}
           />
         </div>
         <div className="field">{children}</div>
