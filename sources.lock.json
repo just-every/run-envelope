@@ -985,7 +985,7 @@
       "executable": false
     },
     "src/envelope/industry/pages.tsx": {
-      "sha256": "fa1014a67242e1dee258d2e9e38b8201c3caa655a3eff1322225f4c076ffa375",
+      "sha256": "01cd48aa33ce3edc69990f4ef59a1efe49c64ca9af9800cf3925ed3f29c96d52",
       "executable": false
     },
     "src/envelope/industry/records.ts": {
@@ -2233,7 +2233,7 @@
       "executable": false
     },
     "tests/industry-runtime.mjs": {
-      "sha256": "18a174672c92a67d68e42d47f016490f91ea485d3af9355d04c582657651a252",
+      "sha256": "573ef0e6ae629ae8ddc2be657a83918b22a34ed10a2b5c11eede5810ecaf3ce4",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

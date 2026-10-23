@@ -59,6 +59,11 @@ export async function industryJourney(context) {
   await capture('industry-classification-form',path(nonprofit,nonprofit.people[0]).replace('/api/','/app/'),'Change classification with new evidence');await page.getByLabel('Evidence title',{exact:true}).fill('Updated signed charitable employer determination');await page.getByRole('button',{name:'Propose classification',exact:true}).click();await page.waitForURL(context.origin+path(nonprofit,nonprofit.people[0]).replace('/api/','/app/'));await page.getByRole('link',{name:'Review exact classification',exact:true}).click();await capture('industry-classification-review',new URL(page.url()).pathname);await page.getByRole('button',{name:'Approve this exact version',exact:true}).click();await page.waitForURL(context.origin+path(nonprofit,nonprofit.people[0]).replace('/api/','/app/'))
   await capture('industry-exact-check-review',path(farm,farm.people[0]).replace('/api/','/app/')+'/review/industry-check/'+farmCheck.id)
   await page.getByRole('button',{name:'Approve this exact version',exact:true}).click();await page.waitForURL(context.origin+path(farm,farm.people[0]).replace('/api/','/app/'))
+  for(const label of ['social Security wages before this check (cents)','medicare wages before this check (cents)','futa wages before this check (cents)'])await page.getByLabel(label,{exact:true}).fill('0')
+  await page.getByLabel('Year-to-date register or opening-balance reference',{exact:true}).fill('Signed opening register: no earlier wages this year.')
+  await page.getByRole('button',{name:'Calculate federal check',exact:true}).click();await page.waitForURL(context.origin+path(farm,farm.people[0]).replace('/api/','/app/'))
+  assert.equal((await data(path(farm,farm.people[0]))).checks.length,2)
+  await capture('industry-calculated-from-form',path(farm,farm.people[0]).replace('/api/','/app/'))
   const forms=await import('./industry-forms-journey.mjs');await forms.industryFormsJourney({f,context,proof,capture,page,farm,officeCheck,nonprofit,charitable,scorp,ownerCheck,corrected,company,classify,preview,approve})
  }finally{await browser.close()}
  console.log('Industry journey: reviewed farm, office, H-2A, charity, clergy, shareholder, resident, student and family federal checks; original and corrected official forms; current authority passed.')
