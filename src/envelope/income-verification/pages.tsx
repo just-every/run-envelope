@@ -11,7 +11,7 @@ export interface VerificationView {
   income:Revision<IncomeSource>[]
   disclosures:Revision<ProtectedDisclosure>[]
 }
-const Details=({value}:{value:unknown}):import('react').ReactNode=>Array.isArray(value)?<ol>{value.map((v,i)=><li key={i}><Details value={v}/></li>)}</ol>:value && typeof value==='object'?<dl>{Object.entries(value).map(([k,v])=><div key={k}><dt>{k}</dt><dd><Details value={v}/></dd></div>)}</dl>:String(value??'none')
+const Details=({value}:{value:unknown}):import('react').ReactNode=>Array.isArray(value)?<ol className="evidence-text">{value.map((v,i)=><li key={i}><Details value={v}/></li>)}</ol>:value && typeof value==='object'?<dl className="evidence-text">{Object.entries(value).map(([k,v])=><div key={k}><dt>{k}</dt><dd><Details value={v}/></dd></div>)}</dl>:String(value??'none')
 export function verificationPage(session:Session,companies:Company[],actor:Actor,person:Person,result:VerificationView,self=false,review?:Revision & {reviewToken:string},issued?:Awaited<ReturnType<ProtectedResponses['release']>>){
   const base=companyPath(actor.company)+'/people/'+person.id+'/verification',current=result.bindings[0]
   return page(session,person.name+' · Verification',companies,actor.company,<>
@@ -22,7 +22,7 @@ export function verificationPage(session:Session,companies:Company[],actor:Actor
     </Card>
     {issued && <Card title="Protected response prepared for handover">
       <p>Release ID: <code>{issued.id}</code>. Named requester: {issued.requesterId}. Give these details to that verified person through your approved private channel.</p>
-      <p>Token (shown once): <code data-release-token="true">{issued.token}</code></p>
+      <p>Token (shown once): <code className="evidence-text" data-release-token="true">{issued.token}</code></p>
       <p><a href="/app/envelope/protected-response">Requester opens a protected response</a>. Expiry: {new Date(issued.expiresAt).toISOString()}. No delivery or acknowledgement is claimed.</p>
     </Card>}
     {review && <Card title="Review exact protected record">
@@ -63,7 +63,7 @@ export function verificationPage(session:Session,companies:Company[],actor:Actor
     </Card>
     {!self && <>
       <Card title="Prepare a minimal protected response">
-        <form className="field" method="post" action={base+'/disclosures'}><Field name="id" label="Protected response ID"/><Hidden name="version" value={0}/><Field name="consentId" label="Current worker consent request ID"/><Field name="corrects" label="Earlier response ID being corrected (optional)" required={false}/><Submit primary>Prepare selected facts for exact review</Submit></form>
+        <form className="field" method="post" action={base+'/disclosures'}><Field name="id" label="Protected response ID"/><Hidden name="version" value={0}/><Field name="consentId" label="Current worker consent request ID"/><Field name="corrects" label="Earlier response ID being corrected (optional)" required={false}/><Submit primary={!review}>Prepare selected facts for exact review</Submit></form>
       </Card>
       <Card title="Protected response versions">
         {result.disclosures.map(r=><article key={r.id+':'+r.version}><h3>{r.id} v{r.version}</h3><Details value={r.data}/>{!r.approvedBy?<a className="btn" href={base+'/disclosure/'+r.id+'/review'}>Review exact protected response</a>:<form method="post" action={base+'/disclosure/'+r.id+'/release'}><Hidden name="version" value={r.version}/><Submit>Release reviewed protected response</Submit></form>}</article>)}

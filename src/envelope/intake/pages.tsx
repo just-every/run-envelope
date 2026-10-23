@@ -41,7 +41,7 @@ export function sourcePage(session: Session, companies: Company[], actor: Actor,
         <Field name="sourceApprovedBy" label="Named source approver"/>
         <Field name="sourceEvidence" label="Authorized source/version evidence" maxLength={500}/>
         <label className="field"><span>Source export (documented JSON)</span><textarea name="export" aria-label="Source export (documented JSON)" required/></label>
-        <Submit primary>Import for exact review</Submit>
+        <Submit primary={!review}>Import for exact review</Submit>
       </form>
     </Card>
   </>)
