@@ -64,6 +64,8 @@ const redirect = (location: string) =>
   new Response(null, { status: 303, headers: { ...headers, location } })
 async function input(request: Request): Promise<Input> {
   if (!request.body) throw new PayrollError('invalid_input')
+  const declaredLength=request.headers.get('content-length')
+  if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength)>64000) throw new PayrollError('input_too_large',413)
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = [],
     limit = 64000
