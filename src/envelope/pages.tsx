@@ -435,6 +435,7 @@ export function personPage(
     companies,
     actor.company,
     <>
+      <p><a className="btn" href={companyPath(actor.company) + '/people/' + person.id + '/leave'}>Leave ledger</a></p>
       <Card title="Rate history">
         <p>
           Record version {person.version}. Approved hourly rates retain their effective date

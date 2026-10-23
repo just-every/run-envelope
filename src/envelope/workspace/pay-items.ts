@@ -1,3 +1,4 @@
+import { LeaveLedger } from '../leave/ledger'
 import type { Actor } from '../access'
 import type { Input } from '../records'
 import { date, text, integer, PayrollError } from '../security'
@@ -520,6 +521,13 @@ export class PayItems {
         details.push(`Tip ${t.data.day} v${t.version}: $${(t.data.amountCents / 100).toFixed(2)} ${t.data.settlement}` +
           `, employee-furnished funds $${(t.data.furnishedCents / 100).toFixed(2)}`)
       }
+      const leave = await new LeaveLedger(this.store).preview(actor, member.id, periodStart, periodEnd)
+      taxable += leave.amountCents
+      if (leave.row) {
+        objects.push({ kind: 'leave-account', id: leave.row.id, version: leave.row.version, approved: true })
+        for (const line of leave.lines)
+          details.push(`Leave ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${leave.row.data.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
+      }
       taxable += tipped.paycheck
       if (tips.length)
         holds.push({ personId: member.id,
@@ -675,7 +683,7 @@ export class PayItems {
           objects: unique,
           // New work IDs for a payee and any approval-policy change are material.
           reviewSets: await collectionPins(this.store, actor, [
-            ...group.data.people.flatMap((p) => (['work', 'tip'] as Kind[]).map((kind) => ({ kind, personId: p.id, exceptId: '' }))),
+            ...group.data.people.flatMap((p) => (['work', 'tip', 'leave-account'] as Kind[]).map((kind) => ({ kind, personId: p.id, exceptId: '' }))),
             { kind: 'approval-policy', personId: '', exceptId: '' },
           ]),
         },

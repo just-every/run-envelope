@@ -1,6 +1,8 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { LeaveLedger } from './leave/ledger'
+import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
@@ -590,6 +592,25 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'people' && post) {
         const person = await records.createPerson(actor, value)
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
+      } else if (tail[0] === 'people' && tail[2] === 'leave') {
+        const store = new WorkspaceStore(records), ledger = new LeaveLedger(store), personId = tail[1], id = 'leave-' + personId
+        const back = base + '/people/' + personId + '/leave'
+        if (!post && tail.length === 3) {
+          const rows = await ledger.read(actor, personId)
+          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), rows) : json(rows)
+        } else if (post && tail.length === 3) {
+          const result = await ledger.open(actor, personId, value)
+          response = ui ? redirect(back) : json(result, 201)
+        } else if (post && tail.length === 4 && tail[3] === 'entries') {
+          const result = await ledger.record(actor, personId, value)
+          response = ui ? redirect(back) : json(result, 201)
+        } else if (!post && tail.length === 4 && tail[3] === 'review') {
+          const result = await store.review(actor, 'leave-account', id, personId)
+          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), await ledger.read(actor, personId), result as unknown as import('./workspace/store').Revision<import('./leave/ledger').LeaveAccount> & {reviewToken: string}) : json(result)
+        } else if (post && tail.length === 4 && ['approve','withdraw'].includes(tail[3])) {
+          const result = await store.decide(actor, 'leave-account', id, value, personId, tail[3] === 'withdraw')
+          response = ui ? redirect(back) : json(result)
+        } else throw new PayrollError('not_found', 404)
       } else if (tail[0] === 'people' && tail[2] === 'allocations') {
         const allocations = new Allocations(new WorkspaceStore(records)),
           personId = tail[1]

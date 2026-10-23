@@ -869,7 +869,15 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "5b05df426937899c108d9eee31d155a9c02fcdb7c9876e03f10ec789eb7e284a",
+      "sha256": "6c3829f4b8a9a9c6c2f3dc49b86a6cb84f3fb87129c6afc52bb608574e75efa9",
+      "executable": false
+    },
+    "src/envelope/leave/ledger.ts": {
+      "sha256": "8d2d2fdc9f23d8739820be72aa6dbd7ebf87102f2c1fd64fbd184fcd6d10d3e7",
+      "executable": false
+    },
+    "src/envelope/leave/pages.tsx": {
+      "sha256": "ceefc2176f73c1ef89360572233a3673235d734349a571ebf98fa4645e7c2734",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -881,7 +889,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "838e5daf47ba87396185bca7aca97d450c8a9cf13d142245e408ac5b51dfa10e",
+      "sha256": "d62892abca1a3906b4c02706fa5893ae091856c77d86f657c331008883c08526",
       "executable": false
     },
     "src/envelope/providers.ts": {
@@ -957,7 +965,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "7e3178f17b19b31e86acffd0e3c2c4a4c7d8f290ccf32ed76b71896855f7b59a",
+      "sha256": "7b5d5651943dfa5334608a1ac766b2603b5d7ba2ffd8b81dd886fd44213fc375",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -993,7 +1001,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "07c9de95d01a25be3592ec7ddaa79a9600be41e3e406cb7385784d8778f67218",
+      "sha256": "cf97ad5db26a9ebd0eda6f921ea3ece8dd125c7dc92e773f9185b3f90167a030",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2049,11 +2057,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "8555629298b0498730ea1ed20ffae17301c0ed6a9029f9284a529481f6f0ce46",
+      "sha256": "1545a01c2faeaa9332d468c03298312312736ef8557b4b05ddca299c3580677c",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "6b9ebe2ca5da5cf8347b12b4e5ca4ae3046c3aab0366d588bda5c553b87f4e62",
+      "sha256": "8d5e3fda14a61c4dac857ab2ab7842978635a6528e1295bfe069ef82acb54b7e",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

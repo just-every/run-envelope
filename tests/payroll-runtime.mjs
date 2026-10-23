@@ -3431,3 +3431,73 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     await context.close();await browser.close()
   }
 }
+
+/** LEAVE-LEDGER: real native review, source versions, owner handoff and payroll preview. */
+export async function leaveJourney({ origin, cookie, sql, settings }) {
+  const call = (path, body, who = cookie) => fetch(origin + path, {method: body === undefined ? 'GET' : 'POST', redirect:'manual', headers:{cookie:who, origin, 'content-type':'application/json'}, ...(body === undefined ? {} : {body:JSON.stringify(body)})})
+  const data = async (path, body, status=200, who=cookie) => {const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
+  const c=await data('/api/envelope/companies',{name:'Synthetic leave employer',ein:'00-0000800'},201), api='/api/envelope/companies/'+c.id
+  const loc=await data(api+'/locations',{name:'California kitchen',state:'CA'},201)
+  const person=await data(api+'/people',{name:'María, sick leave and anniversary',locationId:loc.id},201)
+  const door=api+'/people/'+person.id+'/leave', screen=door.replace('/api/','/app/')
+  const approve=async()=>{const r=await data(door+'/review');await data(door+'/approve',{version:r.version,reviewToken:r.reviewToken});return r}
+  const entry=async(body,status=201)=>data(door+'/entries',{version:(await data(door))[0].version,sourceId:'synthetic-envelope-801',sourceVersion:1,day:'2026-12-30',evidence:'synthetic-envelope-802',...body},status)
+  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  try {
+    const context=await browser.newContext(), [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+    const capture=async(label,path=screen)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path);assert.equal(r.status(),200);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Every control uses a visible text label; no icon-only control needs a tooltip');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
+    await capture('leave-empty')
+    await page.getByLabel('Balance owner',{exact:true}).selectOption('willow')
+    for(const [label,value] of [['Opening effective date','2026-01-01'],['Reconciled opening minutes','480'],['Hire date for anniversary tiers','2025-12-31'],['Balance cap in minutes','960'],['January carryover cap in minutes','600'],['Reviewed policy and lawful rate evidence','synthetic-envelope-803']]) await page.getByLabel(label,{exact:true}).fill(value)
+    await page.getByLabel('Accrual tiers (JSON: years, earnedMinutes, workedMinutes)',{exact:true}).fill('[{"years":0,"earnedMinutes":1,"workedMinutes":60},{"years":1,"earnedMinutes":1,"workedMinutes":30}]')
+    await page.getByRole('button',{name:'Propose opening balance',exact:true}).click();await page.waitForURL(origin+screen)
+    assert.equal((await data(door))[0].approvedBy,null)
+    await entry({operation:'use',owner:'willow',minutes:60,code:'sick',rateCents:2501},409)
+    await capture('leave-opening-review',screen+'/review')
+    await page.getByRole('button',{name:'Approve this exact leave ledger',exact:true}).click();await page.waitForURL(origin+screen)
+    await entry({operation:'use',owner:'willow',minutes:60,code:'sick',rateCents:2501})
+    await approve()
+    let ledger=(await data(door))[0];assert.equal(ledger.data.balanceMinutes,420);assert.equal(ledger.data.entries[0].amountCents,2501)
+    const counts=()=>sql("SELECT COUNT(*) AS versions FROM env_workspace_versions WHERE kind='leave-account'")
+    let before=await counts();await entry({operation:'use',owner:'willow',minutes:120,code:'sick',rateCents:9999},409);assert.deepEqual(await counts(),before)
+    await entry({sourceId:'synthetic-envelope-804',operation:'transfer',owner:'payroll',reconciledMinutes:999},409)
+    await entry({sourceId:'synthetic-envelope-804',operation:'transfer',owner:'payroll',reconciledMinutes:420});await approve()
+    await entry({operation:'use',owner:'willow',minutes:120,code:'sick',rateCents:2501,sourceVersion:2},409)
+    await entry({sourceId:'synthetic-envelope-805',operation:'use',owner:'willow',minutes:60,code:'sick',rateCents:2501},409)
+    const work=api+'/people/'+person.id+'/allocations/work', workId='synthetic-envelope-806'
+    const source={id:workId,version:0,day:'2026-12-31',state:'CA',locality:'Oakland',minutes:480,earnedCents:20008,officeState:'CA',nyReason:'not-applicable',sourceRef:'synthetic-envelope-807',owner:'Kim Sorensen'}
+    await data(work,{...source,id:'synthetic-envelope-816',day:'2026-12-30'},201)
+    await entry({sourceId:'synthetic-envelope-816',operation:'accrual'})
+    await approve()
+    assert.equal((await data(door))[0].data.balanceMinutes,428,'before anniversary accrual uses the first tier')
+    await data(work,source,201)
+    await entry({sourceId:workId,operation:'accrual',day:'2026-12-31'});await approve()
+    ledger=(await data(door))[0];assert.equal(ledger.data.balanceMinutes,444,'anniversary 1:30 accrual applies')
+    await data(work,{...source,version:1,minutes:240},201)
+    await entry({sourceId:workId,sourceVersion:2,operation:'accrual',day:'2026-12-31'});await approve()
+    ledger=(await data(door))[0];assert.equal(ledger.data.balanceMinutes,436,'source correction reverses exactly eight accrued minutes')
+    await entry({sourceId:'synthetic-envelope-808',day:'2026-12-31',operation:'adjustment',direction:'credit',minutes:500});await approve()
+    await entry({sourceId:'synthetic-envelope-809',operation:'carryover',day:'2027-01-01'});await approve()
+    assert.equal((await data(door))[0].data.balanceMinutes,600)
+    await entry({sourceId:'synthetic-envelope-810',operation:'carryover',day:'2027-01-01'},409)
+    await entry({sourceId:'synthetic-envelope-811',day:'2027-01-01',operation:'use',owner:'payroll',minutes:601,code:'termination',rateCents:2501},409)
+    await entry({sourceId:'synthetic-envelope-811',day:'2027-01-01',operation:'use',owner:'payroll',minutes:600,code:'termination',rateCents:2501});await approve()
+    ledger=(await data(door))[0];assert.equal(ledger.data.balanceMinutes,0);assert.equal(ledger.data.entries.at(-1).amountCents,25010)
+    // Real earnings-preview door binds approved leave in addition to pay setup.
+    const pay=api+'/pay-settings', group='synthetic-envelope-812'
+    const decide=async(kind,id)=>{const r=await data(pay+'/review/'+kind+'/'+id);await data(pay+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+    await data(pay+'/group',{id:group,version:0,name:'Leave preview group',people:[person.id]},201);await decide('group',group)
+    await data(pay+'/pay-change',{id:'synthetic-envelope-813',version:0,name:'Reviewed hourly setup',groupId:group,effectiveDate:'2026-01-01',items:[{personId:person.id,personVersion:person.version,rateCents:2501,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2027-12-31',unpaidDates:[]}]},201);await decide('pay-change','synthetic-envelope-813')
+    const preview=await data(pay+'/preview',{groupId:group,periodStart:'2026-12-30',periodEnd:'2027-01-01',payDate:'2027-01-01',frequency:'weekly'})
+    assert.equal(preview.taxableCashCents,57523,'regular work 30012 plus reviewed sick 2501 and termination 25010')
+    assert.equal(preview.paymentReady,false);assert.equal(preview.netPay,null)
+    assert.ok(preview.people[0].details.some(d=>d.includes('willow source synthetic-envelope-801')))
+    await capture('leave-ledger-completed')
+    const cipher=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind='leave-account'"));assert.equal(cipher.includes('synthetic-envelope-803'),false)
+    assert.equal((await call(door,undefined,'')).status,401)
+    assert.equal((await fetch(origin+door,{headers:{authorization:'Bearer synthetic-envelope-814'}})).status,403)
+    const foreign=await data('/api/envelope/companies',{name:'Synthetic other leave employer',ein:'00-0000815'},201)
+    await data('/api/envelope/companies/'+foreign.id+'/people/'+person.id+'/leave',undefined,404)
+    console.log('LEAVE-LEDGER passed: native exact reviews, Willow use, reconciled owner switch, replay and old-owner refusal, work-version correction, anniversary accrual, January carryover, termination amount, encrypted history and real held earnings preview; 1440/390. Payment, stub, statutory coverage and settled correction remain unproved.')
+  } finally {await browser.close()}
+}

@@ -4,6 +4,7 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'leave-account'
   | 'residence'
   | 'work'
   | 'tip'
