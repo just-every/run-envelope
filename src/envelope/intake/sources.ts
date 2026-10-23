@@ -86,6 +86,11 @@ export class SourceIntake {
       kind === 'hris-event' ? choice(input.type, hrisTypes) : 'earning'
     const raw = object(input.export),
       sourcePersonId = text(input.sourcePersonId)
+    if (
+      kind === 'source-earning' &&
+      text(raw.approvedBy) !== text(input.sourceApprovedBy)
+    )
+      throw new PayrollError('source_approver_conflict', 409)
     // The owner reviews the local/source identity mapping; names/emails are never an automatic join.
     if (provider === 'rippling' && text(raw.worker_id) !== sourcePersonId)
       throw new PayrollError('source_person_mapping_conflict', 409)

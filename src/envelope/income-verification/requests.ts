@@ -124,6 +124,8 @@ export class VerificationRequests {
       sourceRef: text(input.sourceRef, 240),
       evidence: text(input.evidence, 500),
     }
+    if (data.through > new Date().toISOString().slice(0, 10))
+      throw new PayrollError('historical_wage_period_required', 409)
     return this.store.append(
       actor,
       'income-source',
