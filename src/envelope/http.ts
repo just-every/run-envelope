@@ -1,6 +1,7 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { firmResponse } from './firm/http'
 import { HrisHires } from './people/hris-hires'
 import { hirePage } from './people/hire-pages'
 import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
@@ -89,7 +90,7 @@ async function input(request: Request): Promise<Input> {
       result: Input = {}
     for (const key of new Set(params.keys())) {
       const values = params.getAll(key)
-      result[key] = ['actions', 'fields', 'locations', 'people', 'providers', 'models'].includes(key)
+      result[key] = ['actions', 'fields', 'locations', 'people', 'providers', 'models', 'selections'].includes(key)
         ? values
         : values.length === 1
           ? values[0]
@@ -308,6 +309,8 @@ export async function payrollResponse(
       post = request.method === 'POST',
       value = post ? await input(request) : {},
       companies = ui ? await records.companies() : []
+    const firm = await firmResponse({ url, ui, post, parts, value, records, session, companies })
+    if (firm) return firm
     let response: Response
     if (ui && parts.join('/') === 'workspace' && !post)
       return workspacePage(session, companies)

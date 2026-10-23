@@ -124,6 +124,7 @@ export const companyIndex = (session: Session, companies: Company[]) =>
     companies,
     undefined,
     <>
+      <p><a className="btn" href="/app/envelope/firm">Client payroll work</a></p>
       <Card title={companies.length ? 'Your companies' : 'No companies yet'}>
         <p>
           Company records and access settings are available. Pay runs, bank changes, deposits
