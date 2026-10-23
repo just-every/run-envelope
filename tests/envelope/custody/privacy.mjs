@@ -4,7 +4,7 @@ import {localCookieName} from '../../../src/modules/operator-auth/http.mjs'
 import assert from 'node:assert/strict'
 
 /** Owner requests through real HTTP forms; fixture identities are supplied by the host journey. */
-export async function privacyJourney({origin,cookie,api,limitedCookie,page,capture,sql,settings}) {
+export async function privacyJourney({origin,cookie,api,limitedCookie,page,capture,sql,settings,snapshot}) {
   const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
   const company=await data('/api/envelope/companies',{name:'Privacy custody test company',ein:'00-0000054'},201),base='/api/envelope/companies/'+company.id,ui='/app/envelope/companies/'+company.id,
@@ -14,6 +14,7 @@ export async function privacyJourney({origin,cookie,api,limitedCookie,page,captu
   await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:0,value:'000-00-0054'},201)
   await data(base+'/people/'+person.id+'/private',{kind:'tax',version:0,value:'synthetic-envelope-540'},201)
   await data(base+'/people/'+held.id+'/private',{kind:'tax',version:0,value:'synthetic-envelope-541'},201)
+  await snapshot()
   await data(api+'/privacy',{personId:person.id,confirm:true},403,limitedCookie)
   await data(base+'/privacy',{personId:person.id,confirm:false},400)
   await capture(ui+'/privacy','privacy-before-request')

@@ -2979,7 +2979,7 @@ export async function rulesJourney({ origin, cookie, sql }) {
 
 // SPONSORED-NOTICES: all domain state through public settings/API/MCP doors;
 // only native identity/proof and advancing expiry boundaries are fixture control.
-export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}) {
+export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart,snapshot}) {
   const base='/api/envelope/companies'
   const call=(path,who=cookie,body) => fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json','CF-Connecting-IP':'127.0.0.1'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,who=cookie,status=200) => {
@@ -3282,7 +3282,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal(JSON.stringify(audit).includes('000-00-0001'),false)
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,3)
     await noticeCaseJourney({origin,cookie,api,ui,noticeId,page,capture,ownerId:owner.id,limitedCookie:sponsors.preparer.cookie,sql})
-    await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql,settings})
+    await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql,settings,snapshot})
     assert.ok(browserRequests.every(url=>new URL(url).origin===origin),'operator screens and hostile originals cause no third-party browser load')
     await publicSurfaceJourney({browser,origin})
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
@@ -3460,6 +3460,16 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     const limited=await call('/auth/magic-link',{email},'')
     assert.equal(limited.status,429)
     assert.equal(edge.mails.length,beforeLimit)
+    await context.clearCookies()
+    const ownerAt=cookie.indexOf('=')
+    await context.addCookies([{name:cookie.slice(0,ownerAt),value:cookie.slice(ownerAt+1),url:origin}])
+    const declarationPage=base.replace('/api/','/app/')+'/providers'
+    await capture('native-mail-and-linked-identity-declarations',declarationPage)
+    const declaredBody=await page.locator('main').innerText()
+    assert.ok(declaredBody.includes(edge.issuer))
+    assert.ok(declaredBody.includes('https://api.resend.com/emails'))
+    assert.equal(declaredBody.includes('synthetic-envelope-600'),false,'native mail credential stays outside the document')
+    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze()).violations.map(v=>v.id),[])
     console.log('PAYROLL-SIGNIN passed: real mailed invitation/admission, unknown/expired/replayed/refused links, independent current payroll grants, seven-day fixed expiry, signed OIDC/PKCE/nonce/admission failures, unavailable Auth/mail, session-bound app-local step-up and direct-document revocation; 1440/390. Linked MFA policy, passkeys and former-worker forms remain unproved.')
   } finally {
     edge.mailMode='normal';edge.authMode='normal'

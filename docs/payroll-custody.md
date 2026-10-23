@@ -28,7 +28,13 @@ are expired and revoked in both exported and imported snapshots.
 
 Every restored company has `restored=1`. Native mutations and agent execution
 are fenced; no schedule, payment, filing or notice action is automatically
-reactivated. No unpause door exists yet. Fresh custody adoption, provider
+reactivated. Open **Restored archive custody** (or `/app/envelope/restored`) after a fresh
+native sign-in. The original company owner can explicitly adopt historical read
+custody with fresh sensitive-action proof and consent; source sessions and grants
+are never reused. `POST /api/envelope/restored/:company/adopt {confirm:true}`
+records this new read custody and keeps `restored=1`. Private originals and
+accepted/unknown original references can then be inspected without any outbound
+request. All mutations remain refused. No unpause door exists yet. Provider
 reconnection, accepted-original-ID reconciliation and renewed exact approval
 must be implemented before restored companies can resume operations. Do not
 remove the flag manually or treat re-entering a key as reconciliation. These
