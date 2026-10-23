@@ -1,3 +1,4 @@
+import accessibilityCss from './input/accessibility.css?raw'
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Privacy } from './privacy/requests'
@@ -13,6 +14,7 @@ import { sourcePage } from './intake/pages'
 import { LeaveLedger } from './leave/ledger'
 import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
+import { installationFlows } from './external-flows/catalog'
 import { Providers } from './providers'
 import { NoticeCases } from './notices/cases'
 import { Notices, processNotice, dispatchReply } from './notices'
@@ -142,6 +144,7 @@ export async function payrollResponse(
     ui = url.pathname === '/app/envelope' || url.pathname.startsWith('/app/envelope/'),
     api = url.pathname.startsWith('/api/envelope/')
   if (!ui && !api) return null
+  if (url.pathname==='/api/envelope/accessibility.css') return new Response(request.method==='HEAD'?null:accessibilityCss,{status:['GET','HEAD'].includes(request.method)?200:405,headers:{'content-type':'text/css; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','allow':'GET, HEAD'}})
   let session
   let rpcId: string | number | null = null
   try {
@@ -535,7 +538,7 @@ export async function payrollResponse(
         } else {
           providers.owner(actor)
           const result = await providers.list(actor)
-          response = ui ? providersPage(session,companies,actor,result) : json(result)
+          response = ui ? providersPage(session,companies,actor,result,actor.grant.role==='owner'?await installationFlows(records,actor):[]) : json(result)
         }
       } else if (tail[0] === 'privacy') {
         const privacy=new Privacy(records)

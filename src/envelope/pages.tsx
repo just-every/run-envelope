@@ -1,4 +1,4 @@
-import accessibilityCss from './input/accessibility.css?url'
+const accessibilityCss='/api/envelope/accessibility.css'
 import type { ReactNode } from 'react'
 import { appDocument } from '../ui/page.server'
 import { AppBar } from '../ui/bar'

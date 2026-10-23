@@ -22,7 +22,18 @@
       "data": [
         "HTTP requests"
       ],
-      "adapters": []
+      "adapters": [],
+      "recipient": "Owner-selected Cloudflare Worker/D1 account",
+      "purpose": "Hosting and private encrypted payroll storage",
+      "fields": [
+        "HTTP request metadata",
+        "encrypted payroll records"
+      ],
+      "credentials": [
+        "owner deployment credentials",
+        "runtime bindings"
+      ],
+      "custody": "Owner Cloudflare account; encryption key remains installation-local"
     },
     {
       "id": "openai",
@@ -33,7 +44,16 @@
       ],
       "adapters": [
         "https://api.openai.com/v1/responses"
-      ]
+      ],
+      "recipient": "OpenAI",
+      "purpose": "Owner-opted-in redacted tax-notice proposals only; never payroll calculation or approval",
+      "fields": [
+        "redacted notice text"
+      ],
+      "credentials": [
+        "owner-declared encrypted company API credential"
+      ],
+      "custody": "Owner provider terms; keys never returned or archived; no SSN/bank purpose authorized"
     },
     {
       "id": "resend",
@@ -47,7 +67,74 @@
       ],
       "adapters": [
         "https://api.resend.com/emails"
+      ],
+      "recipient": "Resend and exact human-reviewed notice recipient",
+      "purpose": "Exact unexpired human-approved notice correspondence only",
+      "fields": [
+        "approved sender",
+        "approved recipient",
+        "approved subject",
+        "approved redacted reply"
+      ],
+      "credentials": [
+        "owner-declared encrypted company API credential"
+      ],
+      "custody": "Owner provider terms; keys never returned or archived; no SSN/bank purpose authorized"
+    },
+    {
+      "id": "operator-mail",
+      "required": false,
+      "why": "Explicit installation sign-in/invite/confirmation delivery; suppressed locally",
+      "recipient": "Owner-selected Resend, SendGrid or Cloudflare mail plus addressed invited operator",
+      "purpose": "Native operator authentication only",
+      "data": [
+        "addressed operator email",
+        "sender",
+        "expiring purpose-specific sign-in or confirmation link"
+      ],
+      "fields": [
+        "addressed operator email",
+        "sender",
+        "expiring purpose-specific sign-in or confirmation link"
+      ],
+      "credentials": [
+        "MAIL_PROVIDER",
+        "MAIL_FROM",
+        "MAIL_API_KEY",
+        "MAIL_ACCOUNT_ID (Cloudflare only)"
+      ],
+      "custody": "Owner runtime inputs and chosen provider terms; authentication secrets never enter payroll notices",
+      "adapters": [
+        "https://api.resend.com/emails",
+        "https://api.sendgrid.com/v3/mail/send",
+        "https://api.cloudflare.com/client/v4/accounts/<owner-account>/email/sending/send"
       ]
+    },
+    {
+      "id": "linked-identity",
+      "required": false,
+      "why": "Optional explicitly owner-approved pinned OIDC identity link; no payroll authority",
+      "recipient": "Owner-linked issuer and pinned authorization/token/JWKS endpoints shown in settings",
+      "purpose": "Operator identity and step-up claims only",
+      "data": [
+        "OIDC client ID",
+        "one-time authorization code",
+        "PKCE verifier",
+        "short-lived client assertion",
+        "requested identity and step-up claims"
+      ],
+      "fields": [
+        "OIDC client ID",
+        "one-time authorization code",
+        "PKCE verifier",
+        "short-lived client assertion",
+        "requested identity and step-up claims"
+      ],
+      "credentials": [
+        "installation private signing key; no payroll or notice keys"
+      ],
+      "custody": "Identity provider terms; local keys, sessions and provider links do not transfer",
+      "adapters": []
     }
   ],
   "env": [],
