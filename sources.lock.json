@@ -184,6 +184,10 @@
       "sha256": "cdb6aa715bedb827d19d0d4d409309add7bbb8ef2097b7e4045fbbae5ea0390e",
       "executable": false
     },
+    "docs/industry-forms.md": {
+      "sha256": "f4727a3c07d4d0a7477459143443a7c1cc3e0e75c2c50c4dcc225fc12f9c0359",
+      "executable": false
+    },
     "docs/LOOK.md": {
       "sha256": "3e98e12b6b34f3a99d483f05b9aed4f90fec3f13a3d405bf18687d4167720f81",
       "executable": false
@@ -941,7 +945,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "2b575daeeb1d1f2e9570af71ee8f72f0d4295cd85ef5c9d712c70a6e6f0e80d1",
+      "sha256": "f36a45ad9ce4668aeb7e5785595c2c6e7f7de159688c6467ce88ede66d49d24b",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -950,6 +954,54 @@
     },
     "src/envelope/income-verification/requests.ts": {
       "sha256": "19c961d8f9b23f2b04a54f9efa4992715044ed800d228b0a7fddea3fd0086414",
+      "executable": false
+    },
+    "src/envelope/industry/agency-form-map.ts": {
+      "sha256": "1d85ba4c704578ade49f8e110e457f4cb2a8bad24dc598aa9830d738d68eb0df",
+      "executable": false
+    },
+    "src/envelope/industry/agency-forms.ts": {
+      "sha256": "de27f8f8206386c11cc96257b3cb6366f81ba48b87b972216432126e2906b9b0",
+      "executable": false
+    },
+    "src/envelope/industry/calculate.ts": {
+      "sha256": "11b2aefd36ed8ebc0498ada12190f3fb44203a87bc2eae99e480f8b4f402e9fb",
+      "executable": false
+    },
+    "src/envelope/industry/classification.ts": {
+      "sha256": "9a16509f8de147ece45a88a836cc8c795b5edcd16022d0cb008d0793c528e96d",
+      "executable": false
+    },
+    "src/envelope/industry/federal-withholding.ts": {
+      "sha256": "8b24e76f1e6115bd00098857af0665ce3618a6a05c4e8ceabdb1f401c787180c",
+      "executable": false
+    },
+    "src/envelope/industry/form-input.ts": {
+      "sha256": "21037dd8d6be7771f4d3764e867e6d8ae0bb282e403cacd5637e3105802c2a2c",
+      "executable": false
+    },
+    "src/envelope/industry/http.ts": {
+      "sha256": "748f72f801183baffef1d4fe2f0ce2d08374f890a4c24519574628df28b16e9c",
+      "executable": false
+    },
+    "src/envelope/industry/pages.tsx": {
+      "sha256": "d67422c2232c1eed302f5cdba1e26f0d3929eb85b16bc43da627b520c38ea27b",
+      "executable": false
+    },
+    "src/envelope/industry/records.ts": {
+      "sha256": "b96b54b6f5d1f95060a311f09661a8d98cd96f1c34a0a94d6410653956192635",
+      "executable": false
+    },
+    "src/envelope/industry/return-pages.tsx": {
+      "sha256": "2d2290eebe3b96b16f4ff6ff878f724d058f439da732e3b3c0e3ad6ec40f9374",
+      "executable": false
+    },
+    "src/envelope/industry/returns.ts": {
+      "sha256": "4610c5f57ab9a3419841b246bb82ffa129a09e6562f270f2874b073904cf8781",
+      "executable": false
+    },
+    "src/envelope/industry/types.ts": {
+      "sha256": "82e3ddcdd6b7ded0a44c7211060e258a33f288a25480400ff9b9e85c5f794368",
       "executable": false
     },
     "src/envelope/intake/pages.tsx": {
@@ -977,7 +1029,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "f6720b30bf60f5e97bca951eae13ecd4edd1fc836322a239cdeba51077b0fc2f",
+      "sha256": "c6e679706a7588669a13f3538a0df5c98d5880093912c05f0747eb21102e6e44",
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
@@ -1097,7 +1149,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "2d85a61866b9b99af3cf32b434e67a2e7fc9838e7ca930436824b78f6db2313c",
+      "sha256": "98d640234ecae199f5230dac05644269fdf1bd7c5eea57b4205c61bc6fc56c6e",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2152,8 +2204,36 @@
       "sha256": "d886d46348787b5561e74958f0b6da46e9ef8716f36b6ddcd58ea1eb45b7f733",
       "executable": false
     },
+    "tests/fixtures/irs-forms/f941-2026.json": {
+      "sha256": "a56d1940039a8521b075193a8f6cc4642c90bdf4acdeaecf2b4e0251c8fa0100",
+      "executable": false
+    },
+    "tests/fixtures/irs-forms/f941x-2026.json": {
+      "sha256": "b9ddf78cf82267c37de5305ba9c554b14bd5b5f6ac9b1bde110ae09c41b551a9",
+      "executable": false
+    },
+    "tests/fixtures/irs-forms/f943-2025.json": {
+      "sha256": "45b8afa673df5478aa3de58e5ade8c7383960b7c7afc8d6538fbb5ed4a5cf267",
+      "executable": false
+    },
+    "tests/fixtures/irs-forms/f943x-2026.json": {
+      "sha256": "bde4cef2957283dc58e744629b9bf1d08be47e9e6325b4ebfd9adae8b9c2353a",
+      "executable": false
+    },
     "tests/incremental-typecheck.test.mjs": {
       "sha256": "a11d6b89e7219137540c7052683c5f4d9ba7ddf16f66d34c1f56ae34029c0a95",
+      "executable": false
+    },
+    "tests/industry-fixture.mjs": {
+      "sha256": "6fb9f32c8c7082811f2e3ecd40b41da8df5f3348a1ba058906e87a24abac7b47",
+      "executable": false
+    },
+    "tests/industry-forms-journey.mjs": {
+      "sha256": "a092c7f6d55d98e8cafd3b467c054e6144d0d0cfb305f2e129f488fdef36d05a",
+      "executable": false
+    },
+    "tests/industry-runtime.mjs": {
+      "sha256": "ac88d84e781ebd8952b0a526deb646d469e5013c96b29d5337583710b1255738",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
@@ -2165,7 +2245,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "d2b1819c21213cf0f825ff45dbc31e547e8fc925b24027f7c536346626b2a9f0",
+      "sha256": "db9995ea7a7da6dd346969057fa4d4c39dbdc5ddeb36b4e1a7759056dcabc780",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

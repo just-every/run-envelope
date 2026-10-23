@@ -4,6 +4,9 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'industry-classification'
+  | 'industry-check'
+  | 'industry-return'
   | 'verification-worker'
   | 'income-source'
   | 'disclosure'
@@ -285,8 +288,8 @@ export class WorkspaceStore {
     if (!row) throw new PayrollError('record_not_found', 404)
     return row
   }
-  async review(actor: Actor, kind: Kind, id: string, personId?: string) {
-    const row = await this.find(actor, kind, id, personId, true)
+  async review<T = Input>(actor: Actor, kind: Kind, id: string, personId?: string) {
+    const row = await this.find<T>(actor, kind, id, personId, true)
     await this.authority(actor, 'rates:approve', personId, true)
     if (!row.sourcesCurrent || row.approvedBy || row.withdrawnBy)
       throw new PayrollError('review_stale', 409)

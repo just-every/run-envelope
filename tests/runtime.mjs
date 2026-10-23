@@ -25,6 +25,7 @@ import {
   rulesJourney,
 } from './payroll-runtime.mjs'
 import { approvalJourney } from './payroll-approvals.mjs'
+import { industryJourney } from './industry-runtime.mjs'
 import { firmJourney } from './firm-runtime.mjs'
 
 const socket = createServer()
@@ -205,10 +206,11 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
+  if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('source-intake')) await sourceIntakeJourney({ origin, cookie, sql, settings })

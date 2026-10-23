@@ -1,0 +1,31 @@
+import type { Session } from '../../modules/operator-auth/index.mjs'
+import type { Actor } from '../access'
+import type { Company,Person } from '../records'
+import { page,Card,Field,Hidden,Submit,companyPath } from '../pages'
+import type { Revision } from '../workspace/store'
+import type { IndustryCheck } from './records'
+import type { IndustryReturn } from './returns'
+import { Choice,Facts } from './pages'
+const certifications=[['adjust-repaid','I repaid or reimbursed the affected employees, with every required employee statement.'],['adjust-employer-only','I am correcting only the employer share because the employee share is ineligible.'],['adjust-not-withheld','The overreported tax was not withheld from employee wages.'],['claim-repaid','For this claim I repaid or reimbursed employees and obtained the required statements.'],['claim-consent','I have every affected employee’s written consent and required statements.'],['claim-employer-only','This claim is for eligible employer tax only.'],['claim-not-withheld','The tax claimed was not withheld from employee wages.']]
+export function returnsPage(session:Session,companies:Company[],actor:Actor,returns:Revision<IndustryReturn>[],workers:{person:Person;checks:Revision<IndustryCheck>[]}[]) {
+ const base=companyPath(actor.company)+'/industry-returns'
+ return page(session,'Employment tax forms',companies,actor.company,<>
+  <Card title="Official forms from reviewed checks"><p>Prepare form data for the exact published IRS PDF. An exported form is unsigned and has not been filed, accepted or paid. Review the complete period and required schedules before filing through your authorized channel.</p></Card>
+  {returns.map(r=><Card key={r.id+':'+r.version} title={`Form ${r.data.form}${r.data.corrects?'-X':''} · ${r.data.taxYear}`}><p>{r.data.quarter?'Quarter '+r.data.quarter+' · ':''}v{r.version} · {r.approvedBy?'reviewed':'awaiting review'} · {r.sourcesCurrent?'current checks':'sources changed'}</p><p>{r.data.basis}</p><Facts value={r.data.totals}/><p className="evidence-text">Return {r.id}</p>{r.approvedBy?<a href={base+'/'+r.id+'/download'}>Download reviewed IRS form data</a>:<a href={base+'/'+r.id+'/review'}>Review exact employment return</a>}<details><summary>Required filing steps</summary>{r.data.export.requiredManualSteps.map(s=><p key={s}>{s}</p>)}</details></Card>)}
+  <details><summary>Prepare a return or correction</summary><Card title="Retained checks and tax period"><form className="field" method="post" action={base}><Hidden name="id" value={crypto.randomUUID()}/><Hidden name="version" value={0}/>
+   <Choice name="form" label="Employment return" options={['941','943']}/><Field name="taxYear" label="Tax year" type="number" value={2026}/><Choice name="quarter" label="Quarter for Form 941" options={['1','2','3','4']}/>
+   <p>Final Form 943 is available for 2025. The final 2026 edition is not yet available.</p>
+   {workers.map(w=><fieldset key={w.person.id}><legend>{w.person.name}</legend>{w.checks.filter(c=>c.approvedBy&&!c.withdrawnBy&&c.sourcesCurrent).map(c=><label key={c.id}><input type="checkbox" name="checks" value={`${w.person.id}:${c.id}:${c.version}`}/>{' '}{c.data.result.payDate} · Form {c.data.result.formAssignment} · check v{c.version}</label>)}</fieldset>)}
+   <Field name="employeeCount" label="Employees paid in the form’s specified reference pay period" type="number"/><Field name="depositsCents" label="Actual deposits for this return (cents)" type="number" value={0}/><Field name="basis" label="Complete period, employee count and deposit evidence" maxLength={2000}/>
+   <h3>Employer mailing address</h3><p>The employer name and EIN come from this company’s protected record.</p><Field name="street" label="Street address"/><Field name="city" label="City"/><Field name="state" label="Two-letter state"/><Field name="postalCode" label="ZIP code"/>
+   <label><input type="checkbox" name="seasonal" value="true"/> Seasonal Form 941 employer</label>
+   <details><summary>Correct a previously reviewed return</summary><Field name="corrects" label="Original return ID" required={false}/><Field name="discoveredOn" label="Error discovered on" type="date" required={false}/><Field name="reason" label="Correction explanation and affected workers" maxLength={3000} required={false}/><Choice name="process" label="Correction process" options={['adjustment','claim']}/><label><input type="checkbox" name="w2FiledOrWillFile" value="true"/> I filed or will file all required W-2 or W-2c statements.</label>
+    {certifications.map(([value,label])=><label key={value}><input type="checkbox" name="certifications" value={value}/>{' '}{label}</label>)}<p>These selections certify the complete corresponding statements on the official form. Read those statements and retain the required employee documentation.</p><label><input type="checkbox" name="priorYearWithholdingAdministrativeError" value="true"/> A prior-year withholding change is solely an administrative reporting error.</label>
+   </details><Submit primary>Prepare exact form data</Submit>
+  </form></Card></details>
+ </>)
+}
+export function returnReviewPage(session:Session,companies:Company[],actor:Actor,row:Revision<IndustryReturn>&{reviewToken:string}) {
+ const base=companyPath(actor.company)+'/industry-returns',d=row.data
+ return page(session,'Review employment return',companies,actor.company,<Card title={`Form ${d.form}${d.corrects?'-X':''} · ${d.taxYear}`}><Facts value={{company:d.company,quarter:d.quarter,totals:d.totals,employeeCount:d.employeeCount,basis:d.basis,sourceEdition:d.export.edition}}/><details><summary>Exact official form fields</summary><Facts value={d.export.fields}/></details>{d.export.requiredManualSteps.map(s=><p key={s}>{s}</p>)}<a href={d.export.officialPdfUrl}>Read the exact IRS form edition</a><form method="post" action={base+'/'+row.id+'/decision'}><Hidden name="version" value={row.version}/><Hidden name="reviewToken" value={row.reviewToken}/><Submit primary>Approve these exact form fields</Submit></form><p>Approval permits a protected form-data download. It does not sign, send, file or pay this return.</p><a href={base}>Return without approving</a></Card>)
+}
