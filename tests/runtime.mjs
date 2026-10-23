@@ -8,7 +8,7 @@ import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
 import { request as httpsRequest } from 'node:https'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, cp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { unstable_startWorker } from 'wrangler'
@@ -94,6 +94,7 @@ function launch(bindings) {
   })
   return child
 }
+let beforeErasurePersist
 let worker = launch(settings)
 async function stopWorker() {
   worker.kill('SIGTERM')
@@ -353,7 +354,14 @@ try {
     let sponsoredReceipt
     try {
       await startSponsored()
-      sponsoredReceipt=await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()}})
+      sponsoredReceipt=await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()},snapshot:async()=>{
+        // A pre-existing installation identity is fixture setup. Both archives
+        // below are then produced and verified by the real public CLI.
+        await sql(`INSERT OR IGNORE INTO rer_portability_state(id,source_identity) VALUES(1,'${crypto.randomUUID()}')`)
+        await sponsoredWorker.dispose()
+        try {beforeErasurePersist=await mkdtemp(join(tmpdir(),'envelope-before-erasure-'));await cp(persist,beforeErasurePersist,{recursive:true})}
+        finally {await startSponsored()}
+      }})
     } finally {
       await sponsoredWorker?.dispose()
       worker=launch(settings)
@@ -361,11 +369,12 @@ try {
     }
     await stopWorker()
     for (const planted of ['000-00-0001','000000002','synthetic-envelope-510','synthetic-envelope-512']) assert.equal(output.includes(planted),false,'planted sensitive values are absent from captured Worker logs')
-    await archiveJourney({persist,settings,formerToken:sponsoredReceipt.discardedAgentToken})
+    await archiveJourney({persist,settings,formerToken:sponsoredReceipt.discardedAgentToken,previousPersist:beforeErasurePersist})
     worker=launch(settings)
     await waitForWorker()
   }
 } finally {
   await stopWorker()
   await rm(persist, { recursive: true, force: true })
+  if(beforeErasurePersist) await rm(beforeErasurePersist,{recursive:true,force:true})
 }

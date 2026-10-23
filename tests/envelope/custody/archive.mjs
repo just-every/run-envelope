@@ -8,7 +8,7 @@ import {join,resolve,dirname} from 'node:path'
 const execute=promisify(execFile)
 
 /** Public rer export/import/export on synthetic populated native local stores. */
-export async function archiveJourney({persist,settings,formerToken}) {
+export async function archiveJourney({persist,settings,formerToken,previousPersist}) {
   const scratch=await mkdtemp(join(tmpdir(),'envelope-archive-')),root=resolve('.'),
     files=(await execute('git',['ls-files','-z'])).stdout.split('\0').filter(Boolean),
     cli=resolve('node_modules/@runeditrun/rer/bin/rer.mjs')
@@ -63,6 +63,21 @@ export async function archiveJourney({persist,settings,formerToken}) {
     item.row[Object.keys(item.row)[0]]='synthetic-envelope-599'
     await writeFile(join(damagedTarget,'exports/corrupt.rer'),corrupt.map(r=>JSON.stringify(r)).join('\n')+'\n')
     assert.match(await run(damagedTarget,['import','--input','exports/corrupt.rer','--yes'],1),/verification failed/)
+    const olderSource=await fixture('older-source'),fencedTarget=await fixture('older-target')
+    await mkdir(join(olderSource,'.wrangler'),{recursive:true})
+    await cp(previousPersist,join(olderSource,'.wrangler/state'),{recursive:true})
+    await run(olderSource,['export','--output','exports/older.rer'])
+    const older=await records(join(olderSource,'exports/older.rer'))
+    assert.equal(older[0].sourceIdentity,manifest.sourceIdentity)
+    assert.ok(older[0].epoch<manifest.epoch,'later archive carries the real committed erasure epoch')
+    await mkdir(join(fencedTarget,'exports'),{recursive:true})
+    await cp(join(olderSource,'exports/older.rer'),join(fencedTarget,'exports/older.rer'))
+    await cp(join(source,'exports/populated.rer'),join(fencedTarget,'exports/after-erasure.rer'))
+    assert.match(await run(fencedTarget,['import','--input','exports/older.rer','--journal','exports/after-erasure.rer','--yes'],4),/erasure_epoch|erased_row/,'trusted later journal refuses pre-erasure history')
+    await run(fencedTarget,['export','--output','exports/after-fenced-refusal.rer'])
+    const fencedRows=rows(await records(join(fencedTarget,'exports/after-fenced-refusal.rer')))
+    assert.equal(fencedRows.env_companies?.length??0,0)
+    assert.equal(fencedRows.env_people?.length??0,0,'erased people never reach destination business tables')
     await restoredJourney({target,settings,formerToken})
     console.log('ARCHIVE-CUSTODY passed: public native export/import/export preserves every populated mixed-company business row and immutable file/digest; excludes sessions, tokens, live grants/provider keys; restores paused with historical expired approvals and accepted/unknown original IDs; corrupt and nonempty imports refuse')
   } finally {await rm(scratch,{recursive:true,force:true})}

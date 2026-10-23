@@ -23,7 +23,16 @@
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=records,allocations,schedules,pay-items,rules,approvals,identity pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "custody",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=sponsored pnpm run test:runtime"
       ]
     }
   ],
