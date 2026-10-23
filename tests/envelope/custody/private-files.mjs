@@ -33,7 +33,7 @@ export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,cap
   assert.equal(await page.evaluate(()=>globalThis.plantedNoticeScript),undefined)
   assert.equal(edge.calls.length,before,'uploads do not contact a provider')
   await capture(view,'private-hostile-original')
-  const uploaded=await upload(pdf,'application/pdf')
+  const uploaded=await upload(pdf,'application/pdf','SSN-000-00-0057-source.pdf')
   assert.equal(uploaded.status,201,await uploaded.clone().text())
   const stored=await uploaded.json()
   const version2=await upload(Buffer.from('<p>corrected source</p>'),'text/html','corrected.html',{id:original.id,version:1})
@@ -49,7 +49,7 @@ export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,cap
     assert.match(download.headers.get('content-security-policy'),/sandbox; default-src 'none'/)
     assert.equal(download.headers.get('cache-control'),'no-store')
     assert.equal(download.headers.get('x-content-type-options'),'nosniff')
-    assert.equal((await request(suffix,limitedCookie)).status,403,'notice read is not private download authority')
+    assert.equal((await request(suffix,limitedCookie)).status,403,'tax private-read scope cannot reveal unclassified SSN/bank originals')
     assert.equal((await request(suffix,'')).status,401)
     assert.equal((await fetch(origin+'/api/envelope/companies/'+other+'/notices/'+noticeId+suffix,{headers:{cookie}})).status,403)
   }
@@ -63,6 +63,7 @@ export async function privateFileJourney({origin,cookie,api,ui,noticeId,page,cap
   }
   details=await (await request('')).json()
   assert.equal(details.files.length,3,'rejected/stale uploads create no version')
+  assert.ok(details.files.every(f=>!f.name.includes('000-00-0057')),'source filenames cannot bypass identifier redaction')
   const atRest=JSON.stringify(await sql('SELECT cipher FROM env_private_files'))
   assert.equal(atRest.includes('000-00-0057'),false)
   assert.equal(atRest.includes('OpenAction'),false)

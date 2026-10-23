@@ -3004,7 +3004,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart,
   for(const [n,role,locations,fields,actions] of [
     [501,'payroll-admin',['*'],['compensation','tax'],allActions],
     [502,'accountant',['*'],['compensation','tax'],allActions],
-    [503,'preparer',[ca.id],['tax'],['records:read','notices:read','notices:write']],
+    [503,'preparer',[ca.id],['tax'],['records:read','private:read','notices:read','notices:write']],
   ]) {
     const id='synthetic-envelope-'+n
     // Invite/admission is ENV-051; this fixture only supplies active identities.
