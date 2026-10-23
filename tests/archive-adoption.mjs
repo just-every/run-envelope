@@ -36,6 +36,12 @@ export async function archiveAdoption(context, fixture) {
   assert.equal(adopted.status, 201, await adopted.clone().text())
   const grant = await adopted.json()
   assert.equal(grant.role, 'viewer')
+  const nativeIdentity = await (await call('/auth/session', undefined, cookie)).json()
+  const adoptionAudit = (await (await call(company + '/audit', undefined, cookie)).json())
+    .filter(event => event.action === 'archive.history.adopted')
+  assert.equal(adoptionAudit.length, 1, 'one explicit adoption records one durable attributed event')
+  assert.equal(adoptionAudit[0].actorId, nativeIdentity.operator.id)
+  assert.equal(adoptionAudit[0].targetId, fixture.companies[0])
   assert.equal((await call(company, undefined, cookie)).status, 200)
   const nativeCompany = await (await call(company, undefined, cookie)).json()
   const person = nativeCompany.people[0]
@@ -49,6 +55,8 @@ export async function archiveAdoption(context, fixture) {
   assert.equal((await call(company + '/export', undefined, cookie)).status, 403, 'history access does not confer independent export rights')
   const replay = await call('/api/envelope/recovery', { companyId: fixture.companies[0], consent: true }, cookie)
   assert.equal(replay.status, 409, 'adoption cannot replay or replace a current company grant')
+  assert.deepEqual((await (await call(company + '/audit', undefined, cookie)).json()).filter(event => event.action === 'archive.history.adopted'), adoptionAudit,
+    'refused replay and denied mutations never create another adoption or rewrite its attribution')
   assert.equal((await call('/api/envelope/companies/' + fixture.companies[1], undefined, cookie)).status, 403,
     'adopting one employer grants no access to another restored employer')
 

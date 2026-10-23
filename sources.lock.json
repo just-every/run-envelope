@@ -2285,7 +2285,7 @@
       "executable": false
     },
     "tests/archive-adoption.mjs": {
-      "sha256": "4134bbfa2abbae838aba52c1ad16273441f8c44004303122d83d66b11acfb9dd",
+      "sha256": "88b1eadc449d7378ddbe5c4209711c346b61175ce8d24630bfa193ca9abfd157",
       "executable": false
     },
     "tests/archive-authority.mjs": {
