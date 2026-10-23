@@ -56,6 +56,7 @@ export class Providers {
     this.owner(actor)
     await requirePayrollProof(this.records.env,actor)
     if(Object.keys(input).some(k=>!['id','version','enabled','consent','secret','sender','reconcileConsent'].includes(k)) || ![true,false,'true','false'].includes(input.enabled as boolean|string)) throw new PayrollError('invalid_provider_input')
+    if((input.secret!==undefined && typeof input.secret!=='string') || (input.consent!==undefined && ![true,false,'true','false'].includes(input.consent as boolean|string))) throw new PayrollError('invalid_provider_input')
     const id = providerId(input.id), version = input.version === 0 || input.version === '0' ? 0 : integer(input.version),
       enabled = input.enabled === true || input.enabled === 'true' ? 1 : 0,
       f = fence(actor), proof = stepUpFence(actor), change = crypto.randomUUID()
@@ -65,7 +66,7 @@ export class Providers {
     if (enabled && !secret && !prior) throw new PayrollError('provider_credential_required')
     const cipher = secret ? await seal(key,JSON.stringify([actor.company,id,'provider-secret']),secret) : (prior?.secret_cipher ?? '')
     const reconcileConsent=id==='resend' && enabled && (input.reconcileConsent===true || input.reconcileConsent==='true') ? 1 : 0
-    const sender = id==='resend' && enabled ? email(input.sender || prior?.sender) : ''
+    const sender = id==='resend' && enabled ? email(input.sender===undefined || input.sender==='' ? prior?.sender : input.sender) : ''
     if (enabled && input.consent !== 'true' && input.consent !== true) throw new PayrollError('provider_consent_required')
     const result = await this.records.env.DB.batch([
       this.records.statement(`INSERT INTO env_external_providers(company_id,id,enabled,secret_cipher,sender,reconcile_consent,version,change_id)

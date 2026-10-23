@@ -35,7 +35,7 @@ export class NoticeCases {
     let data:CaseData
     let sensitive=false
     if(!prior) {
-      if(action!=='intake' || !['sui-rate','irs-deposit','irs-lock-in','other'].includes(String(input.kind))) throw new PayrollError('invalid_notice_case')
+      if(action!=='intake' || typeof input.kind!=='string' || !['sui-rate','irs-deposit','irs-lock-in','other'].includes(input.kind)) throw new PayrollError('invalid_notice_case')
       const ownerId=text(input.ownerId),f=fence(actor),
         owner=await records.statement(`SELECT 1 FROM env_grants g JOIN oa_operators o ON o.id=g.operator_id WHERE g.company_id=? AND g.operator_id=? AND g.revoked_at IS NULL AND o.status='active'
         AND (g.role='owner' OR (EXISTS(SELECT 1 FROM json_each(g.actions) WHERE value='notices:write') AND EXISTS(SELECT 1 FROM json_each(g.fields) WHERE value='tax') AND EXISTS(SELECT 1 FROM json_each(g.locations) WHERE value='*' OR value=?))) AND ${f.sql}`,[actor.company,ownerId,notice.locationId,...f.args]).first()

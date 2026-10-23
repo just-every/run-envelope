@@ -34,7 +34,7 @@ export class Privacy {
   async hold(actor:Actor,input:Input) {
     this.owner(actor);await requirePayrollProof(this.records.env,actor)
     const kind=input.kind??'statutory'
-    if(!['statutory','legal'].includes(String(kind))) throw new PayrollError('invalid_hold_kind')
+    if(typeof kind!=='string' || !['statutory','legal'].includes(kind)) throw new PayrollError('invalid_hold_kind')
     const person=text(input.personId),basis=redact(text(input.basis,500)),custodian=redact(text(input.custodian,200)),releaseDate=date(input.releaseDate),f=fence(actor),p=stepUpFence(actor)
     await this.records.person(actor,person)
     if(input.confirm!=='true' && input.confirm!==true) throw new PayrollError('explicit_hold_confirmation_required')
@@ -79,6 +79,7 @@ export class Privacy {
         ON CONFLICT(company_id,fingerprint) DO UPDATE SET person_id=NULL,state='complete',retained='[]',completed_at=excluded.completed_at`,[requestId,actor.company,fingerprint,actor.session.operator.id,now,now]),
       this.records.statement('UPDATE env_audit SET target_id=? WHERE company_id=? AND target_id=?',[fingerprint,actor.company,person]),
       this.records.statement('UPDATE env_agent_access SET target_id=? WHERE company_id=? AND target_id=?',[fingerprint,actor.company,person]),
+      this.records.statement("UPDATE env_privacy_hold_events SET basis='',custodian='',evidence='' WHERE company_id=? AND fingerprint=?",[actor.company,fingerprint]),
       ...tombstones,...checkpoint,...transfers,
       this.records.statement('DELETE FROM env_private_records WHERE company_id=? AND person_id=?',[actor.company,person]),
       this.records.statement('DELETE FROM env_privacy_holds WHERE company_id=? AND person_id=? AND released_at IS NOT NULL',[actor.company,person]),
