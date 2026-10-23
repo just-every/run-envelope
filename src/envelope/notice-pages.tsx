@@ -18,6 +18,7 @@ export function providersPage(session:Session,companies:Company[],actor:Actor,pr
     {installation.map(flow=><Card key={flow.purpose} title={flow.recipient}><p className="evidence-text">{flow.state}. Purpose: {flow.purpose}. Destination: {flow.destination}. Fields: {flow.fields.join(', ')}. Credential: {flow.credential}. Custody: {flow.custody}.</p></Card>)}
     {providers.map(p => <Card key={p.id} title={p.recipient}>
       <p className="evidence-text">{p.purpose}. Destination: {p.url}. Fields: {p.fields.join(', ')}. {p.custody}. Current state: {p.enabled ? 'Declared and enabled' : 'Unavailable'}.</p>
+      {'reconciliation' in p && <p className="evidence-text">{String(p.reconciliation)}. This requires a separate fresh owner consent in restored archive custody; ordinary provider consent never enables lookup.</p>}
       <form method="post" action={base+'/providers'}>
         <Hidden name="id" value={p.id} /><Hidden name="version" value={p.version} />
         <label className="field"><span>Connection state for {p.id}</span><select name="enabled" defaultValue={String(Boolean(p.enabled))}><option value="false">Disabled</option><option value="true">Enabled with explicit consent</option></select></label>

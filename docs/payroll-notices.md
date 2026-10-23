@@ -159,3 +159,11 @@ HR/time/POS/ledger/SMS/chat/push flows are not advertised as connected adapters.
 All configured company provider keys, including a disabled provider's key, are
 removed from notice model requests/output and correspondence. Unicode identifier
 variants are normalized for redaction; original evidence is preserved encrypted.
+
+Restore lookup uses the separate `reconcileConsent` flag, default false. Enabling
+ordinary Resend correspondence does not grant lookup permission. Only the native
+owner in inactive restored custody can request `GET /emails/:recorded-id`; no
+agent can inherit that power. The official Resend Retrieve Email response fields
+are `object`, `id`, `from`, `to`, `subject`, `text` and `last_event`; payload
+matching and current authority are checked before recording a local receipt.
+Reference: https://resend.com/docs/api-reference/emails/retrieve-email

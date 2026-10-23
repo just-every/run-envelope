@@ -11,7 +11,7 @@ export function restoredEffectsPage(session:Session,companies:Company[],actor:Ac
       <form method="post" action="/auth/step-up"><Hidden name="action" value="credentials:mint" /><Hidden name="returnTo" value={base} /><Submit>Send reconciliation confirmation</Submit></form>
       <form method="post" action={base+'/providers'}>
         <Hidden name="id" value="resend" /><Hidden name="version" value={work.provider?.version??0} />
-        <label className="field"><span>Restore lookup connection state</span><select name="enabled" defaultValue={work.provider?.enabled?'true':'false'}><option value="false">Disabled</option><option value="true">Enabled with fresh consent</option></select></label>
+        <label className="field"><span>Restore lookup connection state</span><select name="enabled" aria-label="Restore lookup connection state" defaultValue={work.provider?.enabled?'true':'false'}><option value="false">Disabled</option><option value="true">Enabled with fresh consent</option></select></label>
         <Field name="secret" label="Fresh Resend API credential (empty to retain)" type="password" required={false} maxLength={4096} />
         <Field name="sender" label="Verified sender for any future separately approved correspondence" type="email" value={work.provider?.sender} required={false} />
         <label className="field"><span><input type="checkbox" name="consent" value="true" /> I authorize the declared Resend correspondence purpose; all sending remains paused.</span></label>

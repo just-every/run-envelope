@@ -58,23 +58,26 @@
     {
       "id": "resend",
       "required": false,
-      "why": "Exact unexpired human-approved notice correspondence only",
+      "why": "Exact unexpired human-approved notice correspondence; separately consented owner lookup of recorded original IDs during inactive restore",
       "data": [
         "approved sender",
         "approved recipient",
         "approved subject",
-        "approved redacted reply"
+        "approved redacted reply",
+        "recorded original notice email ID (separate restore lookup consent only)"
       ],
       "adapters": [
-        "https://api.resend.com/emails"
+        "https://api.resend.com/emails",
+        "https://api.resend.com/emails/:recorded-original-id"
       ],
       "recipient": "Resend and exact human-reviewed notice recipient",
-      "purpose": "Exact unexpired human-approved notice correspondence only",
+      "purpose": "Exact unexpired human-approved notice correspondence; separately consented owner lookup of recorded original IDs during inactive restore",
       "fields": [
         "approved sender",
         "approved recipient",
         "approved subject",
-        "approved redacted reply"
+        "approved redacted reply",
+        "recorded original notice email ID (separate restore lookup consent only)"
       ],
       "credentials": [
         "owner-declared encrypted company API credential"

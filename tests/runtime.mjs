@@ -348,7 +348,7 @@ try {
     let sponsoredReceipt
     try {
       await startSponsored()
-      sponsoredReceipt=await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()},snapshot:async()=>{
+      sponsoredReceipt=await sponsoredJourney({origin,cookie,settings,sql,edge,expectedIdentityIssuer:!selected||selected.includes('identity')?'https://auth.example.com':null,restart:async() => {await sponsoredWorker.dispose();await startSponsored()},snapshot:async()=>{
         // A pre-existing installation identity is fixture setup. Both archives
         // below are then produced and verified by the real public CLI.
         await sql(`INSERT OR IGNORE INTO rer_portability_state(id,source_identity) VALUES(1,'${crypto.randomUUID()}')`)
