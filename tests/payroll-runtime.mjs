@@ -961,6 +961,26 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
           403,
           name,
         )
+      const privateBefore = await sql('SELECT * FROM env_private_records ORDER BY company_id,person_id,kind')
+      for (const humanCookie of ['', cookie]) {
+        const bankChange = await fetch(
+          origin + company + '/people/' + maria.id + '/private',
+          {
+            method: 'POST',
+            headers: {
+              ...(humanCookie ? { cookie: humanCookie } : {}),
+              authorization: 'Bearer ' + agentToken,
+              origin,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ kind: 'bank', value: 'synthetic-envelope-52', version: 1 }),
+          },
+        )
+        assert.equal(bankChange.status, 403, 'agent bearer cannot change bank custody through the real private-record door')
+        assert.deepEqual(await bankChange.json(), { error: 'human_session_required' })
+      }
+      assert.deepEqual(await sql('SELECT * FROM env_private_records ORDER BY company_id,person_id,kind'), privateBefore,
+        'refused bearer bank writes preserve every private record and ciphertext')
       const confused = await fetch(
         origin + company + '/people/' + maria.id + '/private/ssn',
         {
