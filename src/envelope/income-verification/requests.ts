@@ -20,7 +20,7 @@ import {
 } from '../workspace/store'
 import { collectionPins } from '../workspace/review-inputs'
 import { latest, approved, zero } from '../leave/ledger'
-import type { SourceEvent } from '../intake/sources'
+import { SourceIntake, type SourceEvent } from '../intake/sources'
 
 export interface WorkerBinding {
   workerId: string
@@ -349,14 +349,8 @@ export class VerificationRequests {
       binding.version !== consent.bindingVersion
     )
       throw new PayrollError('worker_link_changed', 403)
-    const hr = latest(
-      await this.store.list<SourceEvent>(
-        actor,
-        'hris-event',
-        personId,
-        true,
-        false,
-      ),
+    const hr = (
+      await new SourceIntake(this.store).timeline(actor, personId, 'hris-event')
     )
       .filter(
         (r) =>
@@ -379,14 +373,14 @@ export class VerificationRequests {
         approved: true,
       },
       ...hr.map((r) => ({
-        kind: 'hris-event' as const,
+        kind: r.kind,
         id: r.id,
         version: r.version,
         approved: true,
       })),
     ]
     const provenance: ProtectedDisclosure['provenance'] = hr.map((r) => ({
-      kind: 'hris-event',
+      kind: r.kind,
       id: r.id,
       version: r.version,
       sourceRef: r.data.sourceId,
@@ -626,11 +620,21 @@ export class VerificationRequests {
           consentId: String(r.consentId),
           workerId: String(r.workerId),
           createdAt: Number(r.createdAt),
-          reason: await unseal(
-            key,
-            JSON.stringify([actor.company, 'verification-correction', r.id]),
-            String(cipher),
-          ),
+          reason: consents.some(
+            (c) =>
+              c.id === r.consentId &&
+              retentionDeadline(c.retentionUntil) >= Date.now(),
+          )
+            ? await unseal(
+                key,
+                JSON.stringify([
+                  actor.company,
+                  'verification-correction',
+                  r.id,
+                ]),
+                String(cipher),
+              )
+            : 'Restricted after selected retention date',
         })),
       ),
     }

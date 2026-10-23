@@ -40,7 +40,7 @@ identity, consent and retention policy. They add no acceptance requirement.
   `reason` records an owner source-review task and changes no wages.
 - Owner POST `/disclosures`: `id`, previous `version`, `consentId`, optional
   earlier disclosure `corrects`. The response contains only selected facts;
-  employment comes from reviewed Willow hire/termination source versions and
+  employment comes from the real reviewed Willow hire-to-person link or reviewed Willow hire/termination source versions and
   wages from reviewed original register references for the complete exact period. Requesters receive only opaque source IDs and versions; the owner review retains original document references.
 - Owner GET `/:kind/:id/review` and POST `/:kind/:id/approve` with its `version`
   and same-session `reviewToken`. Kinds: verification-worker, income-source,
@@ -61,7 +61,7 @@ a fresh exact reviewed response links back to it without replacing its history.
 
 The worker's verification screen shows scoped requests, requester identity,
 selected periods/fields, the facts actually disclosed, linked corrections, releases, opened/acknowledged receipts and correction
-tasks. Once the selected retention deadline passes, worker and ordinary owner disclosure views retain metadata and restrict the response body; source payroll records retain their separate custody obligations. Every release and receipt is attributed; correction reasons, consents,
+tasks. Once the selected retention deadline passes, worker and ordinary owner disclosure views retain metadata and restrict response bodies and correction text; source payroll records retain their separate custody obligations. Every release and receipt is attributed; correction reasons, consents,
 wage facts and response bodies are encrypted at rest. The token hash alone is
 stored. All native controls have visible text labels; no icon-only controls
 are introduced. Browser proof masks the one-time handover token.

@@ -69,6 +69,11 @@ export function hirePage(
                   : 'Awaiting human review'}
               .
             </p>
+            {!r.approvedBy && !r.withdrawnBy && (
+              <a className="btn" href={base + '/' + r.id + '/review'}>
+                Review exact hire mapping
+              </a>
+            )}
             {r.personId ? (
               <p>
                 <a href={companyPath(actor.company) + '/people/' + r.personId}>
@@ -76,11 +81,7 @@ export function hirePage(
                 </a>
                 . Employment and source corrections remain owned by Willow.
               </p>
-            ) : !r.approvedBy ? (
-              <a className="btn" href={base + '/' + r.id + '/review'}>
-                Review exact hire mapping
-              </a>
-            ) : !r.withdrawnBy ? (
+            ) : r.approvedBy && !r.withdrawnBy ? (
               <form method="post" action={base + '/' + r.id + '/apply'}>
                 <Hidden name="version" value={r.version} />
                 <Submit>Create linked payroll person</Submit>

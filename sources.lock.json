@@ -145,7 +145,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "b0640b55db0779f1a1a4f6141cd7f2dbd186b29987fb99558398456fb2c86fc1",
+      "sha256": "07348cfb520db31fc21e5beb91914ba7ddd2ec80b7c2eb12b6a7cc6e1295b2d3",
       "executable": false
     },
     "AGENTS.md": {
@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "38a9a52097668be3b262dfc7432ae4571e2dc81507dfa2640bc72ebafcf35000",
+      "sha256": "5b147eaad135a772d0e873e587d17c305f322482273b875c8edb4313e4cc5493",
       "executable": false
     },
     "deploy-demo.json": {
@@ -225,11 +225,11 @@
       "executable": false
     },
     "docs/payroll-sources.md": {
-      "sha256": "fde5287ee0d290cfdad1863ce87bccd29a7fb1e8d7867cbbf6266d78fff82913",
+      "sha256": "5bfd6a55c40e3d2c8f88cd060f45fb4a3c4b71336d51b8f60895eff1154d2777",
       "executable": false
     },
     "docs/payroll-verification.md": {
-      "sha256": "0cd2eb9f6179a745475c6fe927c9b1769ba470cd9929cf543cc7175ae899cd7e",
+      "sha256": "9a7217358d3b93e7f36927e75abe79c182fb123dd3abaae4df2f1c29f04cbcd3",
       "executable": false
     },
     "edition.json": {
@@ -909,7 +909,7 @@
       "executable": false
     },
     "src/envelope/income-verification/requests.ts": {
-      "sha256": "e9c9156d681b1c7c5171d5e8eae41a0a82c277f5f26fc2319263e271cf55d570",
+      "sha256": "19c961d8f9b23f2b04a54f9efa4992715044ed800d228b0a7fddea3fd0086414",
       "executable": false
     },
     "src/envelope/intake/pages.tsx": {
@@ -941,7 +941,7 @@
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
-      "sha256": "ced85af6c8fe5bed669d54ed7a3fd1506fd4d98d0e0347c1acd9697ff10d3866",
+      "sha256": "8b2a4177cc022931f80fed76e18c43e9bd998efd2d3a7a8968624041f7462d5b",
       "executable": false
     },
     "src/envelope/people/hris-hires.ts": {
@@ -2113,7 +2113,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "942a66b766cef7d6f2706ef4d130dd8e978cb39a21273eb22c6d79a5acb1395b",
+      "sha256": "236a9f7606d3dd413dbdf9625789227aba2e4d80555284eb7fbf2dd735cb4f4b",
       "executable": false
     },
     "tests/runtime.mjs": {

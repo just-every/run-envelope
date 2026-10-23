@@ -3445,7 +3445,7 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
   const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   try {
     const context=await browser.newContext(), [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
-    const capture=async(label,path=screen)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path);assert.equal(r.status(),200);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Every control uses a visible text label; no icon-only control needs a tooltip');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
+    const capture=async(label,path=screen,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path);assert.equal(r.status(),status);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Every control uses a visible text label; no icon-only control needs a tooltip');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
     await capture('leave-empty')
     await page.getByLabel('Balance owner',{exact:true}).selectOption('willow')
     for(const [label,value] of [['Opening effective date','2026-01-01'],['Reconciled opening minutes','480'],['Hire date for anniversary tiers','2025-12-31'],['Balance cap in minutes','960'],['January carryover cap in minutes','600'],['Reviewed policy and lawful rate evidence','synthetic-envelope-803']]) await page.getByLabel(label,{exact:true}).fill(value)
@@ -3485,6 +3485,8 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
     await entry({sourceId:pendingWork.id,operation:'accrual',day:'2026-12-31'})
     await data(work,{...pendingWork,version:1,minutes:240},201)
     await data(door+'/review',undefined,409)
+    await capture('leave-stale-source-review',screen+'/review',409)
+    await capture('leave-pending-source-reconciliation')
     await entry({sourceId:pendingWork.id,sourceVersion:2,operation:'accrual',day:'2026-12-31'},409)
     await entry({sourceId:pendingWork.id,sourceVersion:2,operation:'accrual',day:'2026-12-31',revisePending:true});await approve()
     assert.equal((await data(door))[0].data.balanceMinutes,444,'a stale unapproved accrual can be reconciled and reviewed without adopting its prior version')
@@ -3568,6 +3570,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     assert.equal(hireCorrection.id,actualHireRow.id)
     assert.equal((await data(pay)).runs.find(r=>r.id==='synthetic-envelope-954').sourceStatus,'changed-repreview-required')
     await data(hireDoor+'/'+actualHireRow.id+'/apply',{version:2},409)
+    await capture(hireDoor,'hris-hire-source-correction')
     await capture(hr,'hris-empty')
     const hire=envelope('hire','synthetic-envelope-907','2026-10-01')
     // Import using the actual native source form; employment policy and I-9 fields are discarded.
@@ -3665,7 +3668,10 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
   const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
   const c=await data('/api/envelope/companies',{name:'Synthetic protected verification employer',ein:'00-0001000'},201),api='/api/envelope/companies/'+c.id
-  const location=await data(api+'/locations',{name:'Pennsylvania office',state:'PA'},201),p=await data(api+'/people',{name:'María, mortgage applicant',locationId:location.id},201),foreign=await data(api+'/people',{name:'Unrelated worker',locationId:location.id},201),person=api+'/people/'+p.id,door=person+'/verification'
+  const location=await data(api+'/locations',{name:'Pennsylvania office',state:'PA'},201)
+  const hire=await data(api+'/hris-hires',{provider:'willow',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-1023',sourceEvidence:'synthetic-envelope-1024',sourceApprovedBy:'Synthetic HR reviewer',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-1025',effectiveDate:'2025-09-15',values:{name:'María, mortgage applicant',locationId:location.id}}},201)
+  const reviewedHire=await data(api+'/hris-hires/'+hire.id+'/review');await data(api+'/hris-hires/'+hire.id+'/approve',{version:reviewedHire.version,reviewToken:reviewedHire.reviewToken})
+  const p=await data(api+'/hris-hires/'+hire.id+'/apply',{version:1},201),foreign=await data(api+'/people',{name:'Unrelated worker',locationId:location.id},201),person=api+'/people/'+p.id,door=person+'/verification'
   const identities={}
   for(const [i,name] of ['worker','requester','forged','coworker'].entries()){
     const token=randomBytes(32).toString('base64url'),id='synthetic-envelope-'+(1001+i),sid='synthetic-envelope-'+(1011+i),hash=await hashToken(settings.SESSION_SECRET,'session',token)
@@ -3689,8 +3695,6 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     await capture(page,door,'verification-empty')
     const binding=await data(door+'/worker',{version:0,workerId:identities.worker.id,evidence:'synthetic-envelope-1022'},201)
     await capture(page,door+'/verification-worker/'+binding.id+'/review','verification-worker-review');await approve('verification-worker',binding.id)
-    const hire=await data(person+'/hris',{provider:'willow',type:'hire',sourceVersion:1,version:0,sourcePersonId:'synthetic-envelope-1023',sourceApprovedBy:'Synthetic HR reviewer',sourceEvidence:'synthetic-envelope-1024',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-1025',effectiveDate:'2025-09-15',values:{}}},201)
-    const h=await data(person+'/hris/'+hire.id+'/review');await data(person+'/hris/'+hire.id+'/approve',{version:h.version,reviewToken:h.reviewToken})
     await data(door+'/income',{...source,through:dateAfter(1)},409);
     await data(door+'/income',source,201);await capture(page,door+'/income-source/'+source.id+'/review','verification-wage-source-review');await approve('income-source',source.id)
     await noWrite(async()=>{
@@ -3746,12 +3750,19 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     const expiringResponse=await prepare('synthetic-envelope-1034',expiring.id);await approve('disclosure',expiringResponse.id)
     const expiringRelease=await data(door+'/disclosure/'+expiringResponse.id+'/release',{version:1},201)
     await get(expiringRelease)
+    await data(door+'/consents/'+expiring.id+'/corrections',{reason:'synthetic-envelope-1036 private timed correction'},200,identities.worker.cookie)
     await new Promise(resolve=>setTimeout(resolve,3600))
     await noWrite(async()=>{await get(expiringRelease,identities.requester.cookie,403)})
     await new Promise(resolve=>setTimeout(resolve,Math.max(0,Date.parse(expiring.retentionUntil)-Date.now()+25)))
     history=(await data(door,undefined,200,identities.worker.cookie)).history
     const restricted=history.releases.find(r=>r.id===expiringRelease.id)
     assert.equal(restricted.response,null);assert.equal(restricted.retentionStatus,'restricted-after-selected-date')
+    assert.equal(history.corrections.find(r=>r.consentId===expiring.id).reason,'Restricted after selected retention date')
+    await requesterPage.goto(origin+'/app/envelope/protected-response')
+    await requesterPage.getByLabel('Protected release ID',{exact:true}).fill(expiringRelease.id);await requesterPage.getByLabel('Private response token',{exact:true}).fill(expiringRelease.token)
+    const expiredResponse=await Promise.all([requesterPage.waitForResponse(r=>r.url()===origin+'/app/envelope/protected-response/read' && r.request().method()==='POST'),requesterPage.getByRole('button',{name:'Open selected reviewed facts',exact:true}).click()])
+    assert.equal(expiredResponse[0].status(),403)
+    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal((await requesterPage.locator('main').innerText()).includes('grossWagesCents'),false);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope','verification-expired-refusal-'+width+'.png'),fullPage:true})}
     const ownerView=await data(door)
     assert.deepEqual(ownerView.disclosures.find(r=>r.id===expiringResponse.id).data.response,{retention:'restricted-after-selected-date'})
     await capture(page,door,'verification-corrected-revoked-history');await capture(workerPage,door,'verification-worker-revoked-history')

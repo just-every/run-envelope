@@ -23,6 +23,30 @@ both revisions. The acknowledgement identifies human-review holds, source
 changes and affected retained run IDs/periods. `reviewed-for-preview` never
 means delivered, paid or accepted by the source product.
 
+## Create a payroll person from a Willow hire
+
+The company page links to `/app/envelope/companies/:company/hris-hires` (JSON
+under `/api/`). POST a Willow statement with the same source/version/evidence
+fields and `export: {schema: "envelope-willow-payroll@1", sourceId,
+effectiveDate, values: {name, locationId}}`. The location must belong to this
+company. No HR document, policy or I-9 is copied. Only Willow is admitted;
+Lodge must hand its hire through Willow.
+
+GET `/:id/review`, POST `/:id/approve` with the exact version and same-session
+review token, then POST `/:id/apply` with `version`. Creation requires current
+people-write and compensation authority as well as exact source approval. A
+single D1 transaction binds the source worker to one payroll person and records
+the acknowledgement. Replaying apply returns that same person without a second
+record or audit. An unreviewed or stale hire creates nothing. Corrected source
+versions retain their original person link; they never duplicate or silently
+rename/move the payroll record.
+
+Payroll previews bind the source hire version. Work before the reviewed hire
+date becomes an explicit employment/date conflict; the source cannot authorize
+underpayment or late wages. A changed source invalidates a retained preview and
+needs fresh review. Payroll-only standalone records remain available without
+an HRIS; a real linked hire uses this source door instead of re-keying an HR file.
+
 ## HR schemas
 
 These are input/export adapters, not live connection or sandbox receipts:
@@ -50,7 +74,7 @@ These are input/export adapters, not live connection or sandbox receipts:
 Only exact reviewed effective hourly rates feed hourly previews. Same-date
 conflicts and unreviewed corrections stay held. A reviewed termination excludes
 subsequent workdays from the provisional earnings and retains a final-pay
-handoff hold. Location and benefit changes need their own reviewed allocation
+handoff hold. Later location and benefit changes need their own reviewed allocation
 and deduction implementation; this door never changes HR policy or enrollment.
 
 For reviewed Willow leave only, POST `/:id/leave-handoff` with the current
@@ -82,4 +106,4 @@ close exists. It never relabels an earnings preview as actual cost. Complete
 payroll tax calculation, actual payroll/leave-result return, live connection
 lifecycle, all named external event types and reconciled labor actuals remain
 unfinished. ENV-028/034/042/051/053/054/055 inherit these source doors, encrypted
-workspace kinds and approval dependencies when their full workflows are built.
+workspace kinds, the source-to-person mapping table and approval dependencies when their full workflows are built.
