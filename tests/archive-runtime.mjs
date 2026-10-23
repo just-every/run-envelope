@@ -107,6 +107,10 @@ export async function archiveJourney(context) {
     const before = await snapshot(state(source))
     for (const id of fixture.companies) assert.ok(before.env_companies.some(row => row.id === id))
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
+    for (const year of fixture.years) {
+      for (const check of [...year.monthlyChecks, { id: year.correctionId }])
+        assert.ok(before.env_workspace_versions.some(row => row.kind === 'industry-check' && row.object_id === check.id), 'annual calculations and linked correction are real archived records')
+    }
     assert.ok(before.env_grants.length && before.oa_sessions.length, 'the source has active company authority and native sessions to exclude')
     assert.ok(before.env_agent_grants.some(row => row.id === fixture.authority.agentId && row.expires_at > Date.now()), 'a live sponsored agent grant exists before export')
     assert.ok(before.env_agent_credentials.some(row => row.id === fixture.authority.agentId), 'the source agent has a usable credential')

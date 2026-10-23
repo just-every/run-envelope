@@ -145,7 +145,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "ec7a934fc2277dc5ae412db46bdef9d0a092d1bbf54d662aa822421dc410a35d",
+      "sha256": "cacaa548fbc345031ecbd6352a1375f1e177a89c00bc2a710ac9a0972974e4c7",
       "executable": false
     },
     "AGENTS.md": {
@@ -165,7 +165,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "759130fa5e93701a0fc8645a424a6deeb0a47d92e6af801a359e1ac32d54c5bc",
+      "sha256": "16b51eb45760348aa3e254573e1f3663be4acd6e4f7549a0f686c46132dd2acb",
       "executable": false
     },
     "deploy-demo.json": {
@@ -181,7 +181,7 @@
       "executable": false
     },
     "docs/archive-recovery.md": {
-      "sha256": "e404ead89b1c12aa58cad598ba5f6796d70d971a7f8737f5c155d677bdb804c3",
+      "sha256": "f399bad916a5b1fc45d35a30c41f2b43ef9fab53d6acbabcf03124c2875dfffc",
       "executable": false
     },
     "docs/claims-follow-up.md": {
@@ -754,6 +754,10 @@
     },
     "scripts/operations-config.mjs": {
       "sha256": "decbd8619e40c741708b49639d54282bd19edc4581a782b240d96a423ad47f01",
+      "executable": false
+    },
+    "scripts/portability/editions.mjs": {
+      "sha256": "74e7d803813f145a29f599de1665e62c14c20135e1d3ea4dc5e1e89d1e1b20af",
       "executable": false
     },
     "scripts/portability/encryption.mjs": {
@@ -2276,8 +2280,12 @@
       "sha256": "58c0566df579ca7d5c92aaebb9ada2edd8dc4a54340ab8e911db9fd3ca9f2054",
       "executable": false
     },
+    "tests/archive-editions.mjs": {
+      "sha256": "68af06f0e08261a205f703c90a74cd108f6107bdf83e5c904d9255ba7695196e",
+      "executable": false
+    },
     "tests/archive-fixture.mjs": {
-      "sha256": "c0d5da35b95bf4dd2207ff4449e7e4596b94248b8d47023ff9aaf038278ab4b8",
+      "sha256": "12039fa3e357528fa96f51e5a691085d89ddb7c525e30f28062dfe0b9c6c46af",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
@@ -2289,7 +2297,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "a9549f643ce5c4ca0a87c8f83d06d343b6d6465355ead03ec031c5535ed40167",
+      "sha256": "d38091adba60cd8f0f629839538405f87ecd5951fe323589f2aa63e9c60c0ead",
       "executable": false
     },
     "tests/archive-worker.mjs": {

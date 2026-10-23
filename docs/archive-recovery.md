@@ -37,7 +37,7 @@ published. A missing original key cannot be reconstructed from the archive.
 This is a recovery foundation, not a completed operational restore. Fresh owner
 adoption, provider reconciliation using original accepted identifiers, renewed
 exact authority, erasure fences, rule editions beyond the implemented catalog, and a complete
-mixed-year history containing corrections and uncertain payments remain owed by
+mixed-year history containing settled corrections and uncertain payments remain owed by
 ENV-053. Restored company records currently have no active access grants. Do not
 reintroduce old credentials or use database edits to bypass those missing doors.
 
@@ -62,3 +62,9 @@ Retained public source bytes cover the implemented catalog, not an unlicensed or
 unimplemented tax catalog. The source document is retained before the final
 database transaction; a later database commit failure may leave that verified
 evidence document, while business publication remains atomic.
+
+The archive journey creates twelve monthly prepared federal calculations for each
+of two employers, their exact human decisions and linked W-4 corrections, plus a
+third company with retained claim originals. All business records use native HTTP
+doors. This annual prepared history does not establish wage settlement, accepted
+filings, open unknown payments or completed operational recovery.

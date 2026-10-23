@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
 import { claimsFixture } from './claims-fixture.mjs'
 import { archiveAuthority } from './archive-authority.mjs'
+import { archiveYearFixture } from './archive-year-fixture.mjs'
 
 /** Real native business records; only the retained agency request is a source-edge fixture. */
 export async function archiveFixture(context) {
@@ -14,6 +15,10 @@ export async function archiveFixture(context) {
   await payroll.approve(company, person, 'industry-check', check.id)
   const checkBefore = await payroll.data(payroll.path(company, person))
   assert.ok(checkBefore.checks.some(row => row.id === check.id), 'a persisted calculated check exists before archiving')
+  const year = await archiveYearFixture(payroll, company)
+  const second = await payroll.company('Synthetic second annual employer', ['Synthetic second annual worker'])
+  await payroll.classify(second, second.people[0], ordinaryFacts)
+  const secondYear = await archiveYearFixture(payroll, second)
 
   const capture = JSON.parse(await readFile(new URL('./fixtures/sides/willow-native-capture.json', import.meta.url)))
   capture.originals = Object.fromEntries(Object.entries(capture.originals).map(([key, value]) =>
@@ -34,6 +39,6 @@ export async function archiveFixture(context) {
     body: 'Synthetic retained agency notice. Payroll officer must investigate the assessed period.',
   }, 201)
   const authority = await archiveAuthority(context, company, notice)
-  return { companies: [company.id, claims.company.id], checkId: check.id,
+  return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
     claimId: claim.id, noticeId: notice.id, authority, privateValue: '900-69-0001' }
 }

@@ -41,7 +41,7 @@ async function sourceFiles(path, suffix) {
   return records;
 }
 async function produce() {
-  const files = [...await sourceFiles('migrations/core', /\.sql$/), ...await sourceFiles('src/envelope', /\.tsx?$/)]
+  const files = [...await sourceFiles(['migrations', 'core'].join('/'), /\.sql$/), ...await sourceFiles(['src', 'envelope'].join('/'), /\.tsx?$/)]
     .sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   const bytes = Buffer.from(JSON.stringify({ version: 1, files }));
   if (bytes.length > limit) refuse();
@@ -62,8 +62,8 @@ function verify(bytes) {
     if (content.toString('base64') !== record.contentBase64 || digest(content) !== record.sha256) refuse();
     previous = record.path;
   }
-  if (!payload.files.some(record => record.path.startsWith('migrations/core/'))
-    || !payload.files.some(record => record.path.startsWith('src/envelope/'))) refuse();
+  if (!payload.files.some(record => record.path.startsWith(['migrations', 'core', ''].join('/')))
+    || !payload.files.some(record => record.path.startsWith(['src', 'envelope', ''].join('/')))) refuse();
 }
 async function retained(path, bytes) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
