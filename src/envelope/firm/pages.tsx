@@ -10,8 +10,8 @@ export function firmPage(session: Session, view: FirmDashboard, result?: BatchRe
       <form className="field" action="/app/envelope/firm" method="get">
         <Field name="day" label="Due date" type="date" value={view.filter.day} />
         <label><input name="due" type="checkbox" value="today" defaultChecked={view.filter.due} /> Due on this date</label>
-        <label className="field"><span>Client</span><select name="company" defaultValue={view.filter.company}><option value="">All permitted clients</option>{view.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <label className="field"><span>Work type</span><select name="kind" defaultValue={view.filter.kind}><option value="">All work</option>{['run','notice','registration','funding','filing'].map(k => <option key={k}>{k}</option>)}</select></label>
+        <label className="field"><span>Client</span><select aria-label="Client" name="company" defaultValue={view.filter.company}><option value="">All permitted clients</option>{view.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label className="field"><span>Work type</span><select aria-label="Work type" name="kind" defaultValue={view.filter.kind}><option value="">All work</option>{['run','notice','registration','funding','filing'].map(k => <option key={k}>{k}</option>)}</select></label>
         <Submit>Apply filters</Submit><a href="/app/envelope/firm">Clear filters</a>
       </form>
     </details>
@@ -40,7 +40,7 @@ export function firmPage(session: Session, view: FirmDashboard, result?: BatchRe
         <Hidden name="requestKey" value={crypto.randomUUID()} />
         {view.clients.filter(c => c.canPrepare).map(c => <fieldset key={c.id}><legend>{c.name}</legend>{c.groups.map(g => <label key={g.id}><input type="checkbox" name="selections" value={`${c.id}:${g.id}:${g.version}`} /> {g.name} · reviewed v{g.version}</label>)}</fieldset>)}
         <Field name="periodStart" label="Period start" type="date" /><Field name="periodEnd" label="Period end" type="date" /><Field name="payDate" label="Pay date" type="date" />
-        <label className="field"><span>Pay frequency</span><select name="frequency"><option value="weekly">Weekly</option><option value="biweekly">Every two weeks</option><option value="semimonthly">Twice monthly</option><option value="monthly">Monthly</option></select></label>
+        <label className="field"><span>Pay frequency</span><select name="frequency" aria-label="Pay frequency"><option value="weekly">Weekly</option><option value="biweekly">Every two weeks</option><option value="semimonthly">Twice monthly</option><option value="monthly">Monthly</option></select></label>
         <Submit primary>Prepare selected drafts</Submit>
         <p>Each client is checked separately. Review each exact draft in its client before approving.</p>
       </form>

@@ -5,7 +5,7 @@ import { page, Card, Field, Hidden, Submit, companyPath } from '../pages'
 import type { FirmWorkItem, FirmSettings, FirmPerson, FirmWorkHistory } from './work-types'
 
 const personName = (people: FirmPerson[], id: string | null) => !id ? 'Client owner' : people.find(p => p.id === id)?.name ?? 'Former staff member'
-const PersonSelect = ({ people, name, label, value }: { people: FirmPerson[]; name: string; label: string; value?: string }) => <label className="field"><span>{label}</span><select name={name} defaultValue={value} required>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+const PersonSelect = ({ people, name, label, value }: { people: FirmPerson[]; name: string; label: string; value?: string }) => <label className="field"><span>{label}</span><select name={name} aria-label={label} defaultValue={value} required>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
 export function firmSettingsPage(session: Session, companies: Company[], actor: Actor, settings: FirmSettings) {
   return page(session, 'Practice handoff settings', companies, actor.company, <Card title="Blotter destination"><form className="field" method="post" action={companyPath(actor.company) + '/firm-settings'}>
     <Hidden name="version" value={settings.version} /><Field name="blotterOrigin" label="Your Blotter website" type="url" value={settings.blotterOrigin} />
@@ -20,7 +20,7 @@ export function firmWorkPage(session: Session, companies: Company[], actor: Acto
     <Card title={items.length ? 'Current assignments' : 'No assignments yet'}>{items.map(w => <p key={w.id}><a href={base + '/firm-work/' + w.id}>{w.data.title}</a> · {personName(people,w.assigneeId)} · {w.data.dueDate} {w.data.dueTime} {w.data.timeZone} · {w.status.replaceAll('-', ' ')}</p>)}{!items.length && <p>Assign work from a run, notice or registration in the client workspace.</p>}</Card>
     {canWrite && sourceKind && sourceId && sourceVersion && <Card title="Assign sourced work"><form className="field" action={base + '/firm-work'} method="post">
       <Hidden name="sourceKind" value={sourceKind} /><Hidden name="sourceId" value={sourceId} /><Hidden name="sourceVersion" value={sourceVersion} />
-      <label className="field"><span>Work type</span><select name="workKind">{(sourceKind === 'earnings-run' ? ['run','funding'] : sourceKind === 'notice' ? ['notice'] : ['registration','filing']).map(k => <option key={k}>{k}</option>)}</select></label>
+      <label className="field"><span>Work type</span><select name="workKind" aria-label="Work type">{(sourceKind === 'earnings-run' ? ['run','funding'] : sourceKind === 'notice' ? ['notice'] : ['registration','filing']).map(k => <option key={k}>{k}</option>)}</select></label>
       <Hidden name="action" value={sourceKind === 'earnings-run' ? 'rates:propose' : sourceKind === 'notice' ? 'notices:write' : 'records:write'} />
       <Field name="title" label="Work to do" /><Field name="details" label="Handover notes" maxLength={2000} /><Field name="dueDate" label="Due date" type="date" /><Field name="dueTime" label="Due time" type="time" />
       <Field name="timeZone" label="Deadline time zone" value="America/New_York" /><Field name="evidenceRef" label="Deadline source reference" maxLength={1000} />

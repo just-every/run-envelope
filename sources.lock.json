@@ -925,11 +925,11 @@
       "executable": false
     },
     "src/envelope/firm/pages.tsx": {
-      "sha256": "1be81c539c4e2da4db9e5a5397ae1f3cc70b10430ec5fae1e25f56d7227ddc95",
+      "sha256": "daef3ba9e33f2cc84de89ca6fc1fa4c5c4d3bab7e8b6726de8bd27b8a2f4ef60",
       "executable": false
     },
     "src/envelope/firm/work-pages.tsx": {
-      "sha256": "a1b9b277d3febe3c10545c4b9a6b83900645d0956b3c8f11eaaf49b98ef8eaeb",
+      "sha256": "3d9fae00c964eb039ac0478ea16f09b62f3aefb6da47f55eaa2982039b0c71d8",
       "executable": false
     },
     "src/envelope/firm/work-types.ts": {
