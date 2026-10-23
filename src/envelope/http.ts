@@ -1,5 +1,7 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
+import { Privacy } from './privacy/requests'
+import { privacyPage } from './privacy/pages'
 import { Records, type Input } from './records'
 import { HrisHires } from './people/hris-hires'
 import { hirePage } from './people/hire-pages'
@@ -530,6 +532,18 @@ export async function payrollResponse(
           const result = await providers.list(actor)
           response = ui ? providersPage(session,companies,actor,result) : json(result)
         }
+      } else if (tail[0] === 'privacy') {
+        const privacy=new Privacy(records)
+        if(tail.length===1 && !post) {
+          const result=await privacy.list(actor)
+          response=ui ? privacyPage(session,companies,actor,await records.people(actor),result) : json(result)
+        } else if(post && tail.length===1) {
+          const result=await privacy.erase(actor,value)
+          response=ui ? redirect(base+'/privacy') : json(result)
+        } else if(post && tail.length===2 && ['holds','release'].includes(tail[1])) {
+          const result=tail[1]==='holds' ? await privacy.hold(actor,value) : await privacy.release(actor,value)
+          response=ui ? redirect(base+'/privacy') : json(result)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'notices') {
         const notices = new Notices(records)
         if (tail.length===1 && post) {

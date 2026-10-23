@@ -189,6 +189,7 @@ export function companyPage(
             </>
           )}
           {(actor.grant.role === 'owner' || actor.grant.actions.includes('records:read')) && <a className="btn" href={`${base}/agents`}>Agent credentials</a>}
+          {actor.grant.role==='owner' && <a className="btn" href={`${base}/privacy`}>Privacy and retention</a>}
           {can(actor, 'notices:read', 'tax') && <a className="btn" href={`${base}/notices`}>Tax notices and replies</a>}
           {can(actor, 'export') && can(actor, 'records:read') && (
             <a className="btn" href={`/api/envelope/companies/${company.id}/export`}>
