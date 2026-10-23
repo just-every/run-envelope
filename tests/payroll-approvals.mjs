@@ -118,6 +118,8 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, label)
         await page.keyboard.press('Tab')
         assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'A', 'keyboard reaches native app navigation')
+        for (const control of await page.locator('button,a').all())
+          assert.ok((await control.innerText()).trim(), label + ': every control has visible words')
         await page.screenshot({ path: join(folder, `${label}-${width}.png`), fullPage: true })
       }
       return page

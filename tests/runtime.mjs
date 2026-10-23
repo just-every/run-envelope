@@ -252,7 +252,7 @@ try {
       identityWorker=await unstable_startWorker({
         config:resolve('dist/server/wrangler.json'),
         bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:'resend',MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:'synthetic-envelope-600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
-        dev:{server:{hostname:'127.0.0.1',port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
+        dev:{server:{hostname:'127.0.0.1',port},origin:{hostname:new URL(identityOrigin).host,secure:true},inspector:false,remote:false,watch:false,persist,logLevel:'error',
           outboundService:async request=>{
             if(request.url==='https://api.resend.com/emails' && request.method==='POST') {
               const body=await request.json();edge.mails.push(body)
