@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict'
+
+/** Owner requests through real HTTP forms; fixture identities are supplied by the host journey. */
+export async function privacyJourney({origin,cookie,api,limitedCookie,page,capture,sql}) {
+  const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
+  const company=await data('/api/envelope/companies',{name:'Privacy custody test company',ein:'00-0000054'},201),base='/api/envelope/companies/'+company.id,ui='/app/envelope/companies/'+company.id,
+    location=await data(base+'/locations',{name:'Records office',state:'CA'},201),
+    person=await data(base+'/people',{name:'Synthetic eligible worker',locationId:location.id},201),
+    held=await data(base+'/people',{name:'Synthetic legally held worker',locationId:location.id},201)
+  await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:0,value:'000-00-0054'},201)
+  await data(base+'/people/'+person.id+'/private',{kind:'tax',version:0,value:'synthetic-envelope-540'},201)
+  await data(base+'/people/'+held.id+'/private',{kind:'tax',version:0,value:'synthetic-envelope-541'},201)
+  await data(api+'/privacy',{personId:person.id,confirm:true},403,limitedCookie)
+  await data(base+'/privacy',{personId:person.id,confirm:false},400)
+  await capture(ui+'/privacy','privacy-before-request')
+  // The same original-data erasure is requested using the visible native form.
+  await page.locator('form[action="'+ui+'/privacy"] select[name="personId"]').selectOption(person.id)
+  await page.locator('form[action="'+ui+'/privacy"] input[name="confirm"]').check()
+  const start=Date.now()
+  await page.getByRole('button',{name:'Request eligible erasure',exact:true}).click()
+  await page.waitForURL(origin+ui+'/privacy')
+  assert.ok(Date.now()-start<300000,'eligible cascade completes within five minutes')
+  const history=await data(base+'/privacy'),completed=history.find(r=>r.state==='complete')
+  assert.ok(completed)
+  assert.equal(completed.personId,null,'completed receipt carries no subject identity')
+  assert.equal((await call(base+'/people/'+person.id)).status,404)
+  assert.equal((await call(base+'/people/'+person.id+'/private/ssn')).status,404)
+  assert.equal((await call(base+'/people/'+person.id+'/private/tax')).status,404)
+  const remaining=await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${company.id}' AND person_id='${person.id}'`)
+  assert.equal(remaining[0].n,0)
+  const audit=await data(base+'/audit')
+  assert.equal(JSON.stringify(audit).includes(person.id),false,'all subject-targeted actions are anonymized')
+  assert.ok(audit.some(a=>a.action==='privacy.erased'))
+  const replay=await data(base+'/privacy',{personId:person.id,confirm:true})
+  assert.equal(replay.replayed,true)
+  assert.equal(replay.id,completed.id)
+  await capture(ui+'/privacy','privacy-eligible-complete')
+  await data(base+'/privacy/holds',{personId:held.id,basis:'Synthetic statutory payroll evidence retention',custodian:'Installation owner',releaseDate:'2030-01-01',confirm:true})
+  const heldRequest=await data(base+'/privacy',{personId:held.id,confirm:true})
+  assert.equal(heldRequest.state,'held')
+  assert.deepEqual(heldRequest.retained.fields,['person.name','person.location_id','person.version','private.tax@1'])
+  assert.deepEqual(heldRequest.retained.hold,{basis:'Synthetic statutory payroll evidence retention',custodian:'Installation owner',releaseDate:'2030-01-01'})
+  assert.equal((await call(base+'/people/'+held.id+'/private/tax')).status,200,'lawful owner custody remains explicit')
+  await capture(ui+'/privacy','privacy-held-exact-set')
+  await page.getByLabel('Verified lawful release evidence',{exact:true}).fill('Synthetic legal release authorization 2026-10-23')
+  await page.getByLabel('I confirm release is lawful and request eligible deletion now.',{exact:true}).check()
+  await page.getByRole('button',{name:'Release hold and request erasure',exact:true}).click()
+  await page.waitForURL(origin+ui+'/privacy')
+  assert.equal((await call(base+'/people/'+held.id)).status,404)
+  const done=await data(base+'/privacy')
+  assert.equal(done.filter(r=>r.state==='complete').length,2)
+  assert.equal(done.filter(r=>r.state==='held').length,0)
+  assert.equal((await sql(`SELECT COUNT(*) AS n FROM env_privacy_guard`))[0].n,0)
+  assert.equal((await sql('SELECT COUNT(*) AS n FROM rer_portability_journal'))[0].n>=3,true,'native restore tombstones and redaction checkpoint commit with deletion')
+  await capture(ui+'/privacy','privacy-released-complete')
+  console.log('PRIVACY-CUSTODY passed: explicit native owner erase within five minutes, local records/private fields absent, anonymous audit and replay-safe receipt; exact lawful retained set and human release cascade; native archive journal; owner forms at 1440/390')
+}
