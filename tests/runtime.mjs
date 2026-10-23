@@ -288,10 +288,7 @@ try {
         },
       })
       await identityWorker.ready
-      // Dispatch directly to the emitted Worker service. Wrangler's dev proxy
-      // rewrites hosted redirect/cookie origins for its loopback browser UI.
-      const identityService=await identityWorker.raw.runtimes.find(runtime=>runtime.mf).mf.getWorker(identityWorker.config.name)
-      await identityJourney({worker:identityService,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
+      await identityJourney({worker:identityWorker,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
     } finally {
       await identityWorker?.dispose()
       worker=launch(settings)

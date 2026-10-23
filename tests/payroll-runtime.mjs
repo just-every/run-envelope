@@ -3281,6 +3281,10 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
       method:request.method(), headers:{...await request.allHeaders(),host:new URL(origin).host,'CF-Connecting-IP':'127.0.0.2'},
       ...(request.postDataBuffer() ? {body:request.postDataBuffer()} : {}), redirect:'manual',
     })
+    if(request.method()==='POST') {
+      const location=response.headers.get('location')
+      console.log('IDENTITY browser POST',new URL(request.url()).pathname,response.status,location ? new URL(location,origin).origin+new URL(location,origin).pathname : 'no redirect')
+    }
     await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())})
   })
   const page = await context.newPage()
