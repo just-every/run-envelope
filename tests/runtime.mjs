@@ -1,3 +1,4 @@
+import { archiveJourney } from './envelope/custody/archive.mjs'
 import { queuedEntrypoint } from '@runeditrun/rer/queued-entry'
 const queued = await queuedEntrypoint(import.meta.url, 'verify:runtime')
 if (queued !== null) process.exit(queued)
@@ -356,6 +357,10 @@ try {
       worker=launch(settings)
       await waitForWorker()
     }
+    await stopWorker()
+    await archiveJourney({persist})
+    worker=launch(settings)
+    await waitForWorker()
   }
 } finally {
   await stopWorker()
