@@ -16,6 +16,8 @@ export async function firmJourney(context) {
   assert.ok(!JSON.stringify(dashboard).includes('accountNumber'))
   const due=await data('/api/envelope/firm?due=today&day=2026-10-30&kind=notice',undefined,200,people.firm.cookie)
   assert.equal(due.clients.length,10)
+  const dueRuns=await data('/api/envelope/firm?due=today&day=2026-10-30&kind=run',undefined,200,people.firm.cookie)
+  assert.equal(dueRuns.clients.length,19);assert.ok(dueRuns.clients.every(c=>c.runs.every(r=>r.payDate===period.payDate)))
   assert.ok(due.clients.every(c=>c.work.every(w=>w.data.dueDate==='2026-10-30')))
   const denied=clients[20],first=clients[0],second=clients[1],third=clients[2]
   const batch={...period,requestKey:'synthetic-envelope-2904',selections:[first,second,clients[19],denied].map(c=>`${c.id}:${c.groupId}:1`)}
@@ -74,12 +76,26 @@ export async function firmJourney(context) {
       await preparation.getByRole('heading',{name:'Preparation results',exact:true}).scrollIntoViewIfNeeded();assert.equal(await preparation.getByRole('status').getByRole('link').count(),2);await preparation.screenshot({path:join(proof,`firm-batch-prepared-${width}.png`)})
     }
     await capture('firm-work-list',first.base.replace('/api/','/app/')+'/firm-work')
+    await capture('firm-exact-client-review',runPath.replace('/api/','/app/')+'/review')
+    for(const [kind,sourceKind,sourceId] of [['funding','earnings-run',first.run.id],['filing','registration','STATE-WH']]) {
+      page=await capture('firm-assign-'+kind,first.base.replace('/api/','/app/')+'/firm-work?sourceKind='+sourceKind+'&sourceId='+sourceId+'&sourceVersion=1')
+      await page.getByLabel('Work type',{exact:true}).selectOption(kind)
+      await page.getByLabel('Work to do',{exact:true}).fill('Review '+kind+' deadline')
+      await page.getByLabel('Handover notes',{exact:true}).fill('Check the sourced deadline and current client authority before any action.')
+      await page.getByLabel('Due date',{exact:true}).fill(period.payDate);await page.getByLabel('Due time',{exact:true}).fill('16:00')
+      await page.getByLabel('Deadline source reference',{exact:true}).fill('Client reviewed October '+kind+' instruction')
+      await page.getByLabel('Responsible person',{exact:true}).selectOption(people.firm.id);await page.getByLabel('Backup person',{exact:true}).selectOption(owner)
+      await page.getByRole('button',{name:'Assign this work',exact:true}).click();await page.waitForURL(/\/firm-work\/[^/?]+$/)
+      assert.ok((await page.locator('main').innerText()).includes('Jordan Lee'))
+    }
+    const assigned=await data(first.base+'/firm-work',undefined,200,people.firm.cookie)
+    assert.ok(assigned.some(w=>w.workKind==='funding'&&w.sourceId===first.run.id));assert.ok(assigned.some(w=>w.workKind==='filing'&&w.sourceId==='STATE-WH'))
     let jobUrl='https://blotter.example.com/app?job=synthetic-envelope-2906'
     if(process.env.ENVELOPE_BLOTTER_WORKTREE){
       const previous=process.cwd();process.chdir(process.env.ENVELOPE_BLOTTER_WORKTREE)
       try{const {harness}=await import(join(process.cwd(),'./tests/blotter/harness.mjs'));blotter=await harness()
         const client=await blotter.json('/clients',{name:first.name,abn:'10 000 000 001',contactName:'Rosa Perez',contactEmail:'rosa@example.test'},blotter.owner)
-        const template=await blotter.json('/templates',{name:'Payroll inquiry follow-up',recurrence:'monthly',steps:'Review Envelope source',requests:'',feeCents:0},blotter.owner)
+        const template=await blotter.json('/templates',{name:'Payroll inquiry follow-up',recurrence:'monthly',steps:'Review Envelope source',requests:'Protected Envelope notice source',feeCents:0},blotter.owner)
         const job=await blotter.json('/jobs',{clientId:client.id,templateId:template.id,periodStart:'2026-10-01',dueDate:period.payDate,dueNote:'Envelope agency notice deadline',preparerEmail:'owner@example.test',reviewerEmail:'owner@example.test'},blotter.owner)
         await blotter.json('/jobs/'+job.id+'/threads',{title:'Envelope notice handoff',body:'Client '+first.name+'; due '+period.payDate+'; private source '+origin+first.base.replace('/api/','/app/')+'/notices/'+first.notice.id,anchor:'job',mentions:[]},blotter.owner)
         jobUrl=blotter.origin+'/app?job='+job.id
