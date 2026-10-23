@@ -3536,6 +3536,38 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
   try {
     const context=await browser.newContext(), [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
     const capture=async(path,label)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),200);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'All source controls have visible words');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
+    const hireDoor=api+'/hris-hires'
+    await capture(hireDoor,'hris-hire-empty')
+    const actualHire={provider:'willow',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-947',sourceEvidence:'synthetic-envelope-948',sourceApprovedBy:'Synthetic Willow HR reviewer',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-949',effectiveDate:'2026-11-01',values:{name:'Luis, reviewed Willow hire',locationId:loc.id,i9:'never copy',policy:'never copy'}}}
+    const actualHireRow=await data(hireDoor,actualHire,201)
+    const peopleCount=()=>sql('SELECT (SELECT COUNT(*) FROM env_people) AS people,(SELECT COUNT(*) FROM env_hris_people) AS mappings,(SELECT COUNT(*) FROM env_audit) AS audit')
+    const beforeHire=await peopleCount()
+    await data(hireDoor+'/'+actualHireRow.id+'/apply',{version:1},409)
+    assert.deepEqual(await peopleCount(),beforeHire,'an unreviewed hire cannot create payroll people or acknowledgement')
+    await capture(hireDoor+'/'+actualHireRow.id+'/review','hris-hire-review')
+    await page.getByRole('button',{name:'Approve this exact hire mapping',exact:true}).click();await page.waitForURL(origin+hireDoor.replace('/api/','/app/'))
+    await page.getByRole('button',{name:'Create linked payroll person',exact:true}).click();await page.waitForURL(/\/people\/[-a-z0-9]+$/)
+    const hiredId=page.url().split('/').at(-1), hiredPerson=await data(api+'/people/'+hiredId)
+    assert.equal(hiredPerson.name,actualHire.export.values.name);assert.equal(hiredPerson.locationId,loc.id)
+    const afterHire=await peopleCount()
+    const sameHire=await data(hireDoor+'/'+actualHireRow.id+'/apply',{version:1})
+    assert.equal(sameHire.id,hiredId);assert.equal(sameHire.created,false);assert.deepEqual(await peopleCount(),afterHire,'replayed approved hire has no new person, mapping or audit')
+    await data(hireDoor,actualHire,409)
+    await data(hireDoor,{...actualHire,provider:'lodge'},403)
+    assert.equal(JSON.stringify(await data(hireDoor)).includes('never copy'),false)
+    await capture(hireDoor,'hris-hire-linked')
+    await capture(api,'hris-company-entry')
+    const hireGroup='synthetic-envelope-950'
+    await setup('group',hireGroup,{name:'Reviewed Willow hire preview',people:[hiredId]})
+    await setup('pay-change','synthetic-envelope-951',{name:'Reviewed new-hire hourly setup',groupId:hireGroup,effectiveDate:'2026-01-01',items:[{personId:hiredId,personVersion:1,rateCents:1000,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2027-12-31',unpaidDates:[]}]})
+    for(const [i,day] of ['2026-10-31','2026-11-01'].entries())await data(api+'/people/'+hiredId+'/allocations/work',{...work,id:'synthetic-envelope-'+(952+i),day},201)
+    const hirePreview=await data(pay+'/earnings-run',{id:'synthetic-envelope-954',version:0,groupId:hireGroup,periodStart:'2026-10-31',periodEnd:'2026-11-01',payDate:'2026-11-02',frequency:'weekly'},201)
+    assert.equal(hirePreview.preview.taxableCashCents,1000);assert.ok(hirePreview.preview.holds.some(h=>/precede the reviewed Willow hire/.test(h.reason)))
+    assert.ok(hirePreview.preview.people[0].details.some(d=>d.includes('Willow employment source synthetic-envelope-949')))
+    const hireCorrection=await data(hireDoor,{...actualHire,version:1,sourceVersion:2,export:{...actualHire.export,effectiveDate:'2026-11-02'}},201)
+    assert.equal(hireCorrection.id,actualHireRow.id)
+    assert.equal((await data(pay)).runs.find(r=>r.id==='synthetic-envelope-954').sourceStatus,'changed-repreview-required')
+    await data(hireDoor+'/'+actualHireRow.id+'/apply',{version:2},409)
     await capture(hr,'hris-empty')
     const hire=envelope('hire','synthetic-envelope-907','2026-10-01')
     // Import using the actual native source form; employment policy and I-9 fields are discarded.
@@ -3624,7 +3656,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     const terminationPreview=await data(pay+'/preview',{groupId:group,periodStart:'2026-11-03',periodEnd:'2026-11-03',payDate:'2026-11-04',frequency:'weekly'})
     assert.equal(terminationPreview.taxableCashCents,0);assert.ok(terminationPreview.holds.some(h=>/final-pay handoff/.test(h.reason)))
     const stored=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('hris-event','source-earning')"));assert.equal(stored.includes('synthetic-envelope-915'),false)
-    console.log('SOURCE-INTAKE passed: native review, effective Willow hire/rate/termination and held location/benefit/final-pay handoffs, pinned Willow leave reservation and difference-only correction, BambooHR/HiBob official rate schemas, Rippling official hourly schema, future/late-conflict/replay safety, six source earnings and replacement commission correction, affected-run invalidation and current salary-field revocation; 1440/390. Live sync and reconciled actuals remain unproved.')
+    console.log('SOURCE-INTAKE passed: native reviewed Willow hire creates one source-linked payroll person under replay, effective hire-period preview/source correction, effective Willow rate/termination and held location/benefit/final-pay handoffs, pinned Willow leave reservation and difference-only correction, BambooHR/HiBob official rate schemas, Rippling official hourly schema, future/late-conflict/replay safety, six source earnings and replacement commission correction, affected-run invalidation and current salary-field revocation; 1440/390. Live sync and reconciled actuals remain unproved.')
   } finally {await browser.close()}
 }
 

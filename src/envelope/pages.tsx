@@ -182,6 +182,7 @@ export function companyPage(
               <a className="btn" href={`${base}/setup`}>
                 Company and tax setup
               </a>
+              <a className="btn" href={`${base}/hris-hires`}>Willow hire handoff</a>
               <a className="btn" href={`${base}/drafts`}>
                 Run input proposals
               </a>

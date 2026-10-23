@@ -410,6 +410,8 @@ export class PayItems {
     for (const member of group.data.people) {
       const intake = new SourceIntake(this.store), hr = await intake.timeline(actor, member.id, 'hris-event')
       const sourceEarnings = await intake.timeline(actor, member.id, 'source-earning')
+      for(const hire of hr.filter(r=>r.kind==='hris-hire')) objects.push({kind:hire.kind,id:hire.id,version:hire.version,approved:true})
+      const firstHire=hr.filter(r=>r.data.type==='hire' && r.approvedBy && !r.withdrawnBy && r.sourcesCurrent).sort((a,b)=>a.data.effectiveDate.localeCompare(b.data.effectiveDate))[0]
       const work = latest(
         await this.store.list<WorkDay>(actor, 'work', member.id, true, false),
       ).filter((w) => w.data.day >= periodStart && w.data.day <= periodEnd)
@@ -458,6 +460,14 @@ export class PayItems {
           continue
         }
         used.set(current.id, current)
+        if(firstHire && day<firstHire.data.effectiveDate) {
+          if(work.some(w=>w.data.day===day && w.data.minutes>0)) holds.push({personId:member.id,reason:'Worked hours precede the reviewed Willow hire. Resolve the employment/date conflict; it cannot authorize underpayment or late wages.'})
+          continue
+        }
+        if(firstHire) {
+          const detail=`Willow employment source ${firstHire.data.sourceId} v${firstHire.data.sourceVersion}, effective ${firstHire.data.effectiveDate}`
+          if(!details.includes(detail))details.push(detail)
+        }
         const sourceRate = reviewedRate(hr, day)
         if (sourceRate.hold) {
           if (!holds.some((h)=>h.personId===member.id && h.reason===sourceRate.hold)) holds.push({personId:member.id,reason:sourceRate.hold})
@@ -473,7 +483,7 @@ export class PayItems {
         for (const event of events) {
           const reason= !event.approvedBy || event.withdrawnBy || !event.sourcesCurrent ? 'HRIS '+event.data.type+' requires current exact human review.' : ['location','leave','benefit','termination'].includes(event.data.type) ? 'HRIS '+event.data.type+' requires its separately reviewed allocation, leave, deduction or final-pay handoff.' : undefined
           if(reason && !holds.some((h)=>h.personId===member.id && h.reason===reason)) holds.push({personId:member.id,reason})
-          objects.push({kind:'hris-event',id:event.id,version:event.version})
+          objects.push({kind:event.kind,id:event.id,version:event.version})
         }
         const employment=events.filter((r)=>['hire','termination'].includes(r.data.type)).sort((a,b)=>b.data.effectiveDate.localeCompare(a.data.effectiveDate))[0]
         if (employment?.approvedBy && !employment.withdrawnBy && employment.sourcesCurrent && employment.data.type==='termination' && employment.data.effectiveDate<day) continue

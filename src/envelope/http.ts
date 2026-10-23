@@ -1,6 +1,8 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { HrisHires } from './people/hris-hires'
+import { hirePage } from './people/hire-pages'
 import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
 import { ProtectedResponses } from './disclosures/protected'
 import { verificationPage, protectedResponsePage } from './income-verification/pages'
@@ -339,6 +341,14 @@ export async function payrollResponse(
         response = ui
           ? companyPage(session, companies, company, actor, locations, people)
           : json({ company, locations, people })
+      } else if (tail[0]==='hris-hires') {
+        const store=new WorkspaceStore(records),hires=new HrisHires(store),back=base+'/hris-hires'
+        if(tail.length===1 && !post){const rows=await hires.read(actor);response=ui?hirePage(session,companies,actor,rows):json(rows)}
+        else if(tail.length===1 && post){const result=await hires.save(actor,value);response=ui?redirect(back):json(result,201)}
+        else if(tail.length===3 && tail[2]==='review' && !post){const result=await store.review(actor,'hris-hire',tail[1]);response=ui?hirePage(session,companies,actor,await hires.read(actor),result as unknown as import('./workspace/store').Revision<import('./intake/sources').SourceEvent>&{reviewToken:string}):json(result)}
+        else if(tail.length===3 && tail[2]==='approve' && post){const result=await store.decide(actor,'hris-hire',tail[1],value);response=ui?redirect(back):json(result)}
+        else if(tail.length===3 && tail[2]==='apply' && post){const result=await hires.apply(actor,tail[1],value);response=ui?redirect(base+'/people/'+result.id):json(result,result.created?201:200)}
+        else throw new PayrollError('not_found',404)
       } else if (tail.join('/') === 'workspace' && !post) {
         response = ui
           ? workspacePage(session, companies, actor, await records.people(actor))

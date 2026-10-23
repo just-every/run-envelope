@@ -200,9 +200,25 @@ export class SourceIntake {
     personId: string,
     kind: 'hris-event' | 'source-earning',
   ) {
-    return latest(
+    const events = latest(
       await this.store.list<SourceEvent>(actor, kind, personId, true, false),
     )
+    if (kind !== 'hris-event') return events
+    const link = await this.store.records
+      .statement(
+        'SELECT source_id AS sourceId FROM env_hris_people WHERE company_id=? AND person_id=?',
+        [actor.company, personId],
+      )
+      .first<{ sourceId: string }>()
+    if (!link) return events
+    const hires = await this.store.list<SourceEvent>(
+      actor,
+      'hris-hire',
+      undefined,
+      true,
+      false,
+    )
+    return [...events, ...latest(hires).filter((r) => r.id === link.sourceId)]
   }
 }
 export function currentEvents(rows: Revision<SourceEvent>[], day: string) {
