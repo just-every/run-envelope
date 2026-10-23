@@ -26,6 +26,7 @@ async function respond({url,ui,post,parts,value,records,session,companies}: Cont
   if (parts[0] !== 'companies' || !['firm-work','firm-settings'].includes(parts[2])) return null
   const actor = await records.actor(parts[1]), work = new FirmWork(records), base = companyPath(actor.company)
   if (parts[2] === 'firm-settings' && parts.length === 3) {
+    if (ui && actor.grant.role !== 'owner') throw new PayrollError('owner_required',403)
     if (post) { const saved = await work.configure(actor,value); return ui ? redirect(base + '/firm-settings') : json(saved) }
     const settings = await work.settings(actor)
     return ui ? firmSettingsPage(session,companies,actor,settings) : json(settings)

@@ -15,7 +15,7 @@ export function firmPage(session: Session, view: FirmDashboard, result?: BatchRe
         <Submit>Apply filters</Submit><a href="/app/envelope/firm">Clear filters</a>
       </form>
     </details>
-    {result && <Card title="Preparation results"><div role="status">{result.outcomes.map(r => <p key={r.companyId + r.groupId}>{view.companies.find(c => c.id === r.companyId)?.name ?? 'Requested client'}: {r.state === 'refused' ? `Refused: ${r.error?.replaceAll('_', ' ')}` : <a href={companyPath(r.companyId) + '/pay-settings/earnings-run/' + r.id + '/review'}>{r.state === 'prepared' ? 'Draft prepared' : 'Draft already prepared'} · review exact v{r.version}</a>}</p>)}</div></Card>}
+    {result && <Card title="Preparation results"><div role="status">{result.outcomes.map(r => <p key={r.companyId + r.groupId}>{view.companies.find(c => c.id === r.companyId)?.name ?? 'Requested client'}: {r.state === 'refused' ? `Refused: ${r.error?.replaceAll('_', ' ')}` : <a href={view.clients.find(c => c.id === r.companyId)?.canApprove ? companyPath(r.companyId) + '/pay-settings/earnings-run/' + r.id + '/review' : companyPath(r.companyId) + '/pay-settings'}>{r.state === 'prepared' ? 'Draft prepared' : 'Draft already prepared'} · review exact v{r.version}</a>}</p>)}</div></Card>}
     {!view.clients.length && <Card title="No client work in this view"><p>{view.companies.length ? 'Change the filters to see other permitted work.' : 'A client owner must grant your payroll access before any client records appear.'}</p></Card>}
     {view.clients.map(client => {
       const base = companyPath(client.id)
@@ -23,7 +23,7 @@ export function firmPage(session: Session, view: FirmDashboard, result?: BatchRe
         <p><a href={base}>Open client</a> · <a href={base + '/firm-work'}>Assigned work and handovers</a></p>
         <h3>Runs</h3>
         {!client.payrollVisible ? <p>Payroll details are outside your current scope.</p> : !client.runs.length ? <p>No retained runs in this view.</p> : client.runs.map(r => <article key={r.id}>
-          <p><a href={base + '/pay-settings/earnings-run/' + r.id + '/review'}>{r.periodStart}–{r.periodEnd} · pays {r.payDate} · v{r.version}</a></p>
+          <p><a href={client.canApprove ? base + '/pay-settings/earnings-run/' + r.id + '/review' : base + '/pay-settings'}>{r.periodStart}–{r.periodEnd} · pays {r.payDate} · v{r.version}</a></p>
           <p>{r.sourceStatus === 'current' ? `${r.currentApprovals} of ${r.requiredApprovals} current approvals` : 'Inputs changed; prepare a fresh version'}. {r.payable ? 'Ready for release review' : 'Payment unavailable: calculation and rail setup remain incomplete.'}</p>
           <a href={base + '/firm-work?sourceKind=earnings-run&sourceId=' + r.id + '&sourceVersion=' + r.version}>Assign run or funding work</a>
         </article>)}

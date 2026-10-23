@@ -31,7 +31,7 @@ export function firmWorkPage(session: Session, companies: Company[], actor: Acto
 }
 export function firmWorkDetail(session: Session, companies: Company[], actor: Actor, item: FirmWorkItem, people: FirmPerson[], history: FirmWorkHistory[], settings: FirmSettings) {
   const base = companyPath(actor.company) + '/firm-work/' + item.id, canWrite = actor.grant.role === 'owner' || actor.grant.actions.includes('records:write')
-  const source = companyPath(actor.company) + (item.sourceKind === 'notice' ? '/notices/' + item.sourceId : item.sourceKind === 'earnings-run' ? '/pay-settings/earnings-run/' + item.sourceId + '/review' : '/firm-work')
+  const source = companyPath(actor.company) + (item.sourceKind === 'notice' ? '/notices/' + item.sourceId : item.sourceKind === 'earnings-run' ? '/pay-settings' : '/firm-work')
   return page(session, item.data.title, companies, actor.company, <>
     <Card title="Current handover"><p>{item.data.details}</p><p>Due {item.data.dueDate} at {item.data.dueTime} {item.data.timeZone}. Source: {item.data.evidenceRef}</p>
       <p>Responsible: {personName(people,item.assigneeId)}. Backup: {personName(people,item.backupId)}.</p><p>{item.status.replaceAll('-', ' ')} · v{item.version} · {item.sourceCurrent ? 'source version current' : 'source changed; review again'}</p><p><a href={source}>Open source in this client</a> · <a href="/app/envelope/firm">All client work</a></p>

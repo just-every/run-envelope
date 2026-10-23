@@ -921,15 +921,15 @@
       "executable": false
     },
     "src/envelope/firm/http.ts": {
-      "sha256": "9e37e1ec5812301c2f23c69c5c2f6d52e8e829178fba8cc1e0f6a55bf55a84b6",
+      "sha256": "0ebc49b58d68165af78de1b6259c61ef51ea4739d4a9d940fe2f5e6ca61a92bc",
       "executable": false
     },
     "src/envelope/firm/pages.tsx": {
-      "sha256": "1ff9e8488d65e247ae322d0a1e6a52479dc5aec46c361275ada7a5ad3e1697f9",
+      "sha256": "1be81c539c4e2da4db9e5a5397ae1f3cc70b10430ec5fae1e25f56d7227ddc95",
       "executable": false
     },
     "src/envelope/firm/work-pages.tsx": {
-      "sha256": "526ccb2d52d98d527dfb920f9a909d53903e424b015f6b5d76a7a8889c628eb8",
+      "sha256": "a1b9b277d3febe3c10545c4b9a6b83900645d0956b3c8f11eaaf49b98ef8eaeb",
       "executable": false
     },
     "src/envelope/firm/work-types.ts": {
