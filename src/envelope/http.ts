@@ -1,6 +1,8 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
+import { SourceIntake } from './intake/sources'
+import { sourcePage } from './intake/pages'
 import { LeaveLedger } from './leave/ledger'
 import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
@@ -592,6 +594,25 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'people' && post) {
         const person = await records.createPerson(actor, value)
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
+      } else if (tail.join('/') === 'labor-actuals' && !post) {
+        await new WorkspaceStore(records).authority(actor, 'records:read', undefined, true)
+        throw new PayrollError('reconciled_labor_actuals_unavailable', 409)
+      } else if (tail[0] === 'people' && ['hris','earnings-sources'].includes(tail[2])) {
+        const store = new WorkspaceStore(records), intake = new SourceIntake(store), personId=tail[1], kind=tail[2]==='hris'?'hris-event':'source-earning'
+        const back=base+'/people/'+personId+'/'+tail[2]
+        if (!post && tail.length===3) {
+          const result=await intake.read(actor,personId,kind)
+          response=ui?sourcePage(session,companies,actor,await records.person(actor,personId),kind,result):json(result)
+        } else if (post && tail.length===3) {
+          const result=await intake.save(actor,personId,kind,value)
+          response=ui?redirect(back):json(result,201)
+        } else if (!post && tail.length===5 && tail[4]==='review') {
+          const result=await store.review(actor,kind,tail[3],personId)
+          response=ui?sourcePage(session,companies,actor,await records.person(actor,personId),kind,await intake.read(actor,personId,kind),result as unknown as import('./workspace/store').Revision<import('./intake/sources').SourceEvent> & {reviewToken:string}):json(result)
+        } else if (post && tail.length===5 && ['approve','withdraw'].includes(tail[4])) {
+          const result=await store.decide(actor,kind,tail[3],value,personId,tail[4]==='withdraw')
+          response=ui?redirect(back):json(result)
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'people' && tail[2] === 'leave') {
         const store = new WorkspaceStore(records), ledger = new LeaveLedger(store), personId = tail[1], id = 'leave-' + personId
         const back = base + '/people/' + personId + '/leave'

@@ -3501,3 +3501,94 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
     console.log('LEAVE-LEDGER passed: native exact reviews, Willow use, reconciled owner switch, replay and old-owner refusal, work-version correction, anniversary accrual, January carryover, termination amount, encrypted history and real held earnings preview; 1440/390. Payment, stub, statutory coverage and settled correction remain unproved.')
   } finally {await browser.close()}
 }
+
+/** SOURCE-INTAKE: effective HR facts and named earning sources through real doors. */
+export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
+  const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
+  const company=await data('/api/envelope/companies',{name:'Synthetic source handoff employer',ein:'00-0000900'},201), api='/api/envelope/companies/'+company.id
+  const loc=await data(api+'/locations',{name:'Colorado remote office',state:'CO'},201)
+  const p=await data(api+'/people',{name:'Dev, reviewed job and HR sources',locationId:loc.id},201), person=api+'/people/'+p.id, hr=person+'/hris', earn=person+'/earnings-sources', pay=api+'/pay-settings'
+  const approve=async(door,row)=>{const r=await data(door+'/'+row.id+'/review');await data(door+'/'+row.id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+  const setup=async(kind,id,body)=>{await data(pay+'/'+kind,{id,version:0,...body},201);const r=await data(pay+'/review/'+kind+'/'+id);await data(pay+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+  const group='synthetic-envelope-901'
+  await setup('group',group,{name:'Source preview group',people:[p.id]})
+  await setup('pay-change','synthetic-envelope-902',{name:'Reviewed base hourly rate',groupId:group,effectiveDate:'2026-01-01',items:[{personId:p.id,personVersion:p.version,rateCents:1000,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2027-12-31',unpaidDates:[]}]})
+  const work={id:'synthetic-envelope-903',version:0,day:'2026-11-01',state:'CO',locality:'Denver',minutes:60,earnedCents:1000,officeState:'CO',nyReason:'not-applicable',sourceRef:'synthetic-envelope-904',owner:'Kim Sorensen'}
+  await data(person+'/allocations/work',work,201)
+  const preview=()=>data(pay+'/preview',{groupId:group,periodStart:'2026-11-01',periodEnd:'2026-11-01',payDate:'2026-11-02',frequency:'weekly'})
+  const envelope=(type,sourceId,effectiveDate,values={})=>({provider:'willow',type,version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-905',sourceEvidence:'synthetic-envelope-906',sourceApprovedBy:'Synthetic HR reviewer',export:{schema:'envelope-willow-payroll@1',sourceId,effectiveDate,values}})
+  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  try {
+    const context=await browser.newContext(), [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
+    const capture=async(path,label)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),200);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'All source controls have visible words');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
+    await capture(hr,'hris-empty')
+    const hire=envelope('hire','synthetic-envelope-907','2026-10-01')
+    // Import using the actual native source form; employment policy and I-9 fields are discarded.
+    await page.getByLabel('Owning source',{exact:true}).selectOption('willow');await page.getByLabel('Payroll change',{exact:true}).selectOption('hire')
+    for(const [label,value] of [['Person ID in the source product',hire.sourcePersonId],['Named source approver',hire.sourceApprovedBy],['Authorized source/version evidence',hire.sourceEvidence]]) await page.getByLabel(label,{exact:true}).fill(value)
+    await page.getByLabel('Source export (documented JSON)',{exact:true}).fill(JSON.stringify({...hire.export,policy:'do not copy',i9:'do not copy'}))
+    await page.getByRole('button',{name:'Import for exact review',exact:true}).click();await page.waitForURL(origin+hr.replace('/api/','/app/'))
+    const hired=(await data(hr))[0];assert.deepEqual(hired.data.values,{});assert.equal(JSON.stringify(hired).includes('do not copy'),false)
+    await approve(hr,hired)
+    const rate=envelope('rate','synthetic-envelope-908','2026-11-01',{rateCents:1200}), imported=await data(hr,rate,201)
+    let result=await preview();assert.equal(result.taxableCashCents,1000);assert.ok(result.holds.some(h=>/HRIS rate review/.test(h.reason)))
+    await capture(hr+'/'+imported.id+'/review','hris-rate-review')
+    await page.getByRole('button',{name:'Approve this exact source mapping',exact:true}).click();await page.waitForURL(origin+hr.replace('/api/','/app/'))
+    result=await preview();assert.equal(result.taxableCashCents,1200);assert.ok(result.people[0].details.some(d=>d.includes('willow reviewed rate 1200')))
+    const bamboo=await data(hr,{...rate,provider:'bamboohr',export:{id:'synthetic-envelope-909',payType:'Hourly',payPer:'Hour',payRate:'13.25',payRateEffectiveDate:'2026-11-10'}},201);await approve(hr,bamboo)
+    const bob=await data(hr,{...rate,provider:'hibob',export:{id:910,effectiveDate:'2026-11-20',payPeriod:'Hourly',base:{currency:'USD',value:14.5}}},201);await approve(hr,bob)
+    assert.equal((await preview()).taxableCashCents,1200,'future official-schema rates cannot apply early')
+    await data(hr,{...rate,provider:'lodge'},400)
+    await data(hr,{...rate,provider:'rippling'},409)
+    await data(hr,{...rate,provider:'hibob',export:{id:911,effectiveDate:'2026-11-20',payPeriod:'Hourly',base:{currency:'EUR',value:14.5}}},409)
+    await data(hr,rate,409)
+    const conflicts=await data(hr,envelope('rate','synthetic-envelope-912','2026-11-01',{rateCents:1500}),201);await approve(hr,conflicts)
+    assert.ok((await preview()).holds.some(h=>/Conflicting HRIS rates/.test(h.reason)))
+    await data(hr+'/'+conflicts.id+'/withdraw',{version:1})
+    // A withdrawn conflict remains explicit until its source is corrected to the right date.
+    await data(hr,{...envelope('rate','synthetic-envelope-912','2026-12-01',{rateCents:1500}),version:1,sourceVersion:2},201)
+    const ending=await data(hr,envelope('termination','synthetic-envelope-913','2026-11-02'),201);await approve(hr,ending)
+    for(const type of ['location','leave','benefit']) {
+      const values=type==='location'?{locationId:loc.id}:type==='leave'?{minutes:60,rateCents:1200,code:'sick'}:{amountCents:500,code:'synthetic-envelope-914'}
+      const r=await data(hr,envelope(type,'synthetic-envelope-'+type,'2026-11-02',values),201);await approve(hr,r)
+    }
+    await capture(hr,'hris-history-held-handoff')
+    await capture(earn,'earnings-source-empty')
+    const earnings=[]
+    for(const [i,provider] of ['gauge','plinth','glove','mallet','strap','orbit'].entries()) {
+      const body={provider,version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-905',sourceApprovedBy:'Synthetic job reviewer',sourceEvidence:'synthetic-envelope-915',export:{schema:'envelope-job-earning@1',sourceId:'synthetic-envelope-'+(920+i),effectiveDate:'2026-11-01',status:'approved',currency:'USD',paymentState:'unpaid',amountCents:100+i,jobId:'synthetic-envelope-'+(930+i),approvedBy:'Synthetic job reviewer',earningType:i===0?'commission':'job'}}
+      const row=await data(earn,body,201);earnings.push({body,row});await approve(earn,row)
+    }
+    result=await preview();assert.equal(result.taxableCashCents,1815);assert.equal(result.people[0].earningsCents,1815)
+    const run=await data(pay+'/earnings-run',{id:'synthetic-envelope-940',version:0,groupId:group,periodStart:'2026-11-01',periodEnd:'2026-11-01',payDate:'2026-11-02',frequency:'weekly'},201)
+    assert.equal(run.preview.taxableCashCents,1815)
+    const changed={...earnings[0].body,version:1,sourceVersion:2,export:{...earnings[0].body.export,amountCents:200}}
+    const correction=await data(earn,changed,201)
+    await capture(earn+'/'+correction.id+'/review','earnings-correction-review')
+    await approve(earn,correction)
+    assert.equal((await preview()).taxableCashCents,1915,'commission correction replaces rather than duplicates the source amount')
+    assert.equal((await data(pay)).runs.find(r=>r.id==='synthetic-envelope-940').sourceStatus,'changed-repreview-required')
+    await data(earn,changed,409)
+    assert.ok((await data(earn)).find(r=>r.id===correction.id).affectedRuns.some(r=>r.id==='synthetic-envelope-940'))
+    for(const provider of ['easel','purse','coaster']) await data(earn,{...earnings[0].body,provider},400)
+    await data(earn,{...earnings[0].body,export:{...earnings[0].body.export,paymentState:'paid'}},409)
+    await data(earn,{...earnings[0].body,export:{...earnings[0].body.export,status:'proposal'}},409)
+    const token=randomBytes(32).toString('base64url'),id='synthetic-envelope-941',session='synthetic-envelope-942',hash=await hashToken(settings.SESSION_SECRET,'session',token)
+    await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('${id}','source-reader@example.com','Easel cost planner','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('${session}','${hash}','${id}',1,'native',${Date.now()},${Date.now()+3600000});`)
+    const who=localCookieName('operator_session_local',origin)+'='+token
+    await data(api+'/grants',{operatorId:id,version:0,role:'viewer',locations:['*'],fields:['compensation'],actions:['records:read']})
+    assert.equal((await data(api+'/labor-actuals',undefined,409,who)).error,'reconciled_labor_actuals_unavailable')
+    assert.ok((await data(earn,undefined,200,who)).some(r=>r.data.values.amountCents===200))
+    await data(api+'/grants',{operatorId:id,version:1,role:'viewer',locations:['*'],fields:[],actions:['records:read']})
+    await data(earn,undefined,403,who)
+    await data(hr,undefined,403,who)
+    await data(api+'/labor-actuals',undefined,403,who)
+    await capture(earn,'earnings-sources-reviewed')
+    await capture(pay,'source-payroll-preview')
+    const terminationPreview=await data(pay+'/preview',{groupId:group,periodStart:'2026-11-03',periodEnd:'2026-11-03',payDate:'2026-11-04',frequency:'weekly'})
+    assert.equal(terminationPreview.taxableCashCents,0);assert.ok(terminationPreview.holds.some(h=>/final-pay handoff/.test(h.reason)))
+    const stored=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('hris-event','source-earning')"));assert.equal(stored.includes('synthetic-envelope-915'),false)
+    console.log('SOURCE-INTAKE passed: native review, effective Willow hire/rate/termination and held location/leave/benefit handoffs, BambooHR/HiBob official rate schemas, future/late-conflict/replay safety, six source earnings and replacement commission correction, affected-run invalidation and current salary-field revocation; 1440/390. Rippling, live sync and reconciled actuals remain unproved.')
+  } finally {await browser.close()}
+}

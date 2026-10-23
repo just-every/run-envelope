@@ -1,3 +1,4 @@
+import { SourceIntake, reviewedRate, currentEvents } from '../intake/sources'
 import { LeaveLedger } from '../leave/ledger'
 import type { Actor } from '../access'
 import type { Input } from '../records'
@@ -407,6 +408,8 @@ export class PayItems {
         .all<{ id: string; state: string }>()
     ).results
     for (const member of group.data.people) {
+      const intake = new SourceIntake(this.store), hr = await intake.timeline(actor, member.id, 'hris-event')
+      const sourceEarnings = await intake.timeline(actor, member.id, 'source-earning')
       const work = latest(
         await this.store.list<WorkDay>(actor, 'work', member.id, true, false),
       ).filter((w) => w.data.day >= periodStart && w.data.day <= periodEnd)
@@ -455,7 +458,26 @@ export class PayItems {
           continue
         }
         used.set(current.id, current)
-        const setup = current.data.items.find((p) => p.personId === member.id)!
+        const sourceRate = reviewedRate(hr, day)
+        if (sourceRate.hold) {
+          if (!holds.some((h)=>h.personId===member.id && h.reason===sourceRate.hold)) holds.push({personId:member.id,reason:sourceRate.hold})
+        }
+        let setup = current.data.items.find((p) => p.personId === member.id)!
+        if (sourceRate.row && setup.basis === 'hourly') {
+          setup = {...setup,rateCents:Number(sourceRate.row.data.values.rateCents)}
+          objects.push({kind:'hris-event',id:sourceRate.row.id,version:sourceRate.row.version,approved:true})
+          const detail=`${sourceRate.row.data.provider} reviewed rate ${setup.rateCents} cents, source ${sourceRate.row.data.sourceId} v${sourceRate.row.data.sourceVersion}, effective ${sourceRate.row.data.effectiveDate}`
+          if (!details.includes(detail)) details.push(detail)
+        }
+        const events=currentEvents(hr,day).filter((r)=>r.data.type!=='rate')
+        for (const event of events) {
+          const reason= !event.approvedBy || event.withdrawnBy || !event.sourcesCurrent ? 'HRIS '+event.data.type+' requires current exact human review.' : ['location','leave','benefit','termination'].includes(event.data.type) ? 'HRIS '+event.data.type+' requires its separately reviewed allocation, leave, deduction or final-pay handoff.' : undefined
+          if(reason && !holds.some((h)=>h.personId===member.id && h.reason===reason)) holds.push({personId:member.id,reason})
+          objects.push({kind:'hris-event',id:event.id,version:event.version})
+        }
+        const employment=events.filter((r)=>['hire','termination'].includes(r.data.type)).sort((a,b)=>b.data.effectiveDate.localeCompare(a.data.effectiveDate))[0]
+        if (employment?.approvedBy && !employment.withdrawnBy && employment.sourcesCurrent && employment.data.type==='termination' && employment.data.effectiveDate<day) continue
+
         if (setup.basis === 'annual-salary') {
           const applicable = latest(policies.filter((p) => p.data.effectiveDate <= day))
             .sort((a, b) => b.data.effectiveDate.localeCompare(a.data.effectiveDate) || b.createdAt - a.createdAt)
@@ -520,6 +542,16 @@ export class PayItems {
         objects.push({ kind: 'tip', id: t.id, version: t.version })
         details.push(`Tip ${t.data.day} v${t.version}: $${(t.data.amountCents / 100).toFixed(2)} ${t.data.settlement}` +
           `, employee-furnished funds $${(t.data.furnishedCents / 100).toFixed(2)}`)
+      }
+      for (const earning of sourceEarnings.filter((r)=>r.data.effectiveDate>=periodStart && r.data.effectiveDate<=periodEnd)) {
+        if (!earning.approvedBy || earning.withdrawnBy || !earning.sourcesCurrent) {
+          holds.push({personId:member.id,reason:'Source earning requires current exact human review: '+earning.data.sourceId})
+          continue
+        }
+        const amount=Number(earning.data.values.amountCents)
+        earnings+=amount;taxable+=amount
+        details.push(`${earning.data.provider} ${earning.data.values.earningType}: ${amount} cents, job ${earning.data.values.jobId}, source ${earning.data.sourceId} v${earning.data.sourceVersion}`)
+        objects.push({kind:'source-earning',id:earning.id,version:earning.version,approved:true})
       }
       const leave = await new LeaveLedger(this.store).preview(actor, member.id, periodStart, periodEnd)
       taxable += leave.amountCents
@@ -683,7 +715,7 @@ export class PayItems {
           objects: unique,
           // New work IDs for a payee and any approval-policy change are material.
           reviewSets: await collectionPins(this.store, actor, [
-            ...group.data.people.flatMap((p) => (['work', 'tip', 'leave-account'] as Kind[]).map((kind) => ({ kind, personId: p.id, exceptId: '' }))),
+            ...group.data.people.flatMap((p) => (['work', 'tip', 'leave-account', 'hris-event', 'source-earning'] as Kind[]).map((kind) => ({ kind, personId: p.id, exceptId: '' }))),
             { kind: 'approval-policy', personId: '', exceptId: '' },
           ]),
         },

@@ -4,6 +4,8 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'hris-event'
+  | 'source-earning'
   | 'leave-account'
   | 'residence'
   | 'work'
