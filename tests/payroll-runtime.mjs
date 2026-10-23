@@ -1,3 +1,5 @@
+import { noticeCaseJourney } from './envelope/cases/notices.mjs'
+import AxeBuilder from '@axe-core/playwright'
 import { privacyJourney } from './envelope/custody/privacy.mjs'
 import { privateFileJourney } from './envelope/custody/private-files.mjs'
 // Shared by the existing emitted-Worker runtime journey; no fake app/auth routes.
@@ -3030,6 +3032,11 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
       await page.evaluate(()=>document.fonts.ready)
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label+' fits '+width)
       assert.equal(await page.locator('script:not([type="application/json"])').count(),0)
+      const accessibility=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze()
+      assert.deepEqual(accessibility.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)})),[],label+' automated WCAG 2.2 AA at '+width)
+      const unnamedIcons=await page.locator('a,button').evaluateAll(nodes=>nodes.filter(n=>!n.textContent.trim() && !n.querySelector('input')).map(n=>n.outerHTML))
+      assert.deepEqual(unnamedIcons,[],label+' has no icon-only controls without visible labels/tooltips')
+      assert.ok((await page.locator('main').ariaSnapshot()).includes('heading'),label+' exposes its headings to assistive technology')
       await page.keyboard.press('Tab')
       assert.equal(await page.evaluate(()=>document.activeElement?.tagName==='A'),true)
       await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
@@ -3254,6 +3261,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.ok(access.some(a=>a.action==='dispatch:execute' && a.sponsorId===sponsors.accountant.id))
     assert.equal(JSON.stringify(audit).includes('000-00-0001'),false)
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,3)
+    await noticeCaseJourney({origin,cookie,api,ui,noticeId,page,capture,ownerId:owner.id,limitedCookie:sponsors.preparer.cookie,sql})
     await privacyJourney({origin,cookie,api,limitedCookie:sponsors.accountant.cookie,page,capture,sql})
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
   } finally {await context.close();await browser.close()}
