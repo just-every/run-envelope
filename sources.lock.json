@@ -180,6 +180,10 @@
       "sha256": "57d612582c41cc15e8c565a2661f9de8f7c8dbf8c9d573e240a691fd90278e21",
       "executable": false
     },
+    "docs/firm-work.md": {
+      "sha256": "cdb6aa715bedb827d19d0d4d409309add7bbb8ef2097b7e4045fbbae5ea0390e",
+      "executable": false
+    },
     "docs/LOOK.md": {
       "sha256": "3e98e12b6b34f3a99d483f05b9aed4f90fec3f13a3d405bf18687d4167720f81",
       "executable": false
