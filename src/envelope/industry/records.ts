@@ -1,3 +1,4 @@
+import { zero } from '../leave/ledger'
 import { requireAction, type Actor } from '../access'
 import type { Input } from '../records'
 import { date, integer, text, PayrollError } from '../security'
@@ -20,6 +21,7 @@ export interface IndustryCheck {
 const human = (actor: Actor) => {
   if (!['native','oidc','password','dev'].includes(actor.session.kind)) throw new PayrollError('human_session_required',403)
 }
+const evidenceText=(value:unknown)=>{if(typeof value!=='string'||!value.trim()||value.length>12000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))throw new PayrollError('classification_evidence_required');return value.trim()}
 export class IndustryRecords {
   constructor(public store: WorkspaceStore) {}
   async scope(actor: Actor, personId: string, action = 'records:read') {
@@ -44,7 +46,7 @@ export class IndustryRecords {
     facts.claims=facts.claims.map(claim=>({...claim,documentId:`industry-${personId}-v${revision(input.version)+1}-evidence`,reviewedAt:'',reviewedBy:'',effectiveFrom,effectiveThrough}))
     try{classifyIndustryWorker(facts,effectiveFrom,{requireReview:false});validateW4(input.w4 as FederalW4)}catch(error){throw new PayrollError(error instanceof Error?error.message:'invalid_classification')}
     const data:ClassificationRecord={effectiveFrom,effectiveThrough,facts,w4:structuredClone(input.w4) as FederalW4,
-      evidenceTitle:text(input.evidenceTitle,160),evidenceIssuer:text(input.evidenceIssuer,240),evidenceReference:text(input.evidenceReference,500),evidenceText:text(input.evidenceText,12000)}
+      evidenceTitle:text(input.evidenceTitle,160),evidenceIssuer:text(input.evidenceIssuer,240),evidenceReference:text(input.evidenceReference,500),evidenceText:evidenceText(input.evidenceText)}
     return this.store.append(actor,'industry-classification','industry-'+personId,revision(input.version),data,personId,true)
   }
   async review(actor: Actor, personId: string, kind: 'industry-classification'|'industry-check', id: string) {
@@ -72,7 +74,7 @@ export class IndustryRecords {
     facts.claims=facts.claims.map((claim,i)=>({...claim,documentId:`${classification.id}-v${classification.version}-evidence-${i+1}`,reviewedBy:classification.approvedBy!,reviewedAt:new Date(classification.approvedAt!).toISOString(),effectiveFrom,effectiveThrough}))
     const ytd=input.yearToDate as IndustryPayInput['yearToDate']
     if(!ytd||typeof ytd!=='object')throw new PayrollError('year_to_date_basis_required')
-    const payInput:IndustryPayInput={payDate:run.data.payDate,cashGrossCents:worker.earningsCents,housingAllowanceCents:integer(input.housingAllowanceCents??0),shareholderHealthInsuranceCents:integer(input.shareholderHealthInsuranceCents??0),periodsPerYear:({weekly:52,biweekly:26,semimonthly:24,monthly:12} as const)[run.data.frequency as 'weekly']!,facts,w4:classification.data.w4,yearToDate:ytd}
+    const payInput:IndustryPayInput={payDate:run.data.payDate,cashGrossCents:worker.earningsCents,housingAllowanceCents:zero(input.housingAllowanceCents??0),shareholderHealthInsuranceCents:zero(input.shareholderHealthInsuranceCents??0),periodsPerYear:({weekly:52,biweekly:26,semimonthly:24,monthly:12} as const)[run.data.frequency as 'weekly']!,facts,w4:classification.data.w4,yearToDate:ytd}
     let result:IndustryPayResult;try{result=calculateIndustryPay(payInput)}catch(error){throw new PayrollError(error instanceof Error?error.message:'invalid_industry_calculation')}
     const corrects=input.corrects?objectId(input.corrects):''
     const prior=corrects?await this.store.find<IndustryCheck>(actor,'industry-check',corrects,personId,true):null

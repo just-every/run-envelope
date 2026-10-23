@@ -977,7 +977,7 @@
       "executable": false
     },
     "src/envelope/industry/form-input.ts": {
-      "sha256": "21037dd8d6be7771f4d3764e867e6d8ae0bb282e403cacd5637e3105802c2a2c",
+      "sha256": "dfcd8789d996bb45efa19acd09e86dd5456fe432f0dea0d3d233a5a43b323ec2",
       "executable": false
     },
     "src/envelope/industry/http.ts": {
@@ -985,11 +985,11 @@
       "executable": false
     },
     "src/envelope/industry/pages.tsx": {
-      "sha256": "d67422c2232c1eed302f5cdba1e26f0d3929eb85b16bc43da627b520c38ea27b",
+      "sha256": "1fa28ed789a273d3c65bc684f0e4d39c6c7691e1b568968ad77953caf25fa3c5",
       "executable": false
     },
     "src/envelope/industry/records.ts": {
-      "sha256": "b96b54b6f5d1f95060a311f09661a8d98cd96f1c34a0a94d6410653956192635",
+      "sha256": "658af462854fb3500e5a5e27b444f404463b65e0c274a0c2d35e81fdda7fd19a",
       "executable": false
     },
     "src/envelope/industry/return-pages.tsx": {
@@ -997,7 +997,7 @@
       "executable": false
     },
     "src/envelope/industry/returns.ts": {
-      "sha256": "4610c5f57ab9a3419841b246bb82ffa129a09e6562f270f2874b073904cf8781",
+      "sha256": "88ca1ce88afef57b46dba0810843cc5c5534a9de631387f4e3ac7bdb04a1ec19",
       "executable": false
     },
     "src/envelope/industry/types.ts": {
@@ -1029,7 +1029,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "c6e679706a7588669a13f3538a0df5c98d5880093912c05f0747eb21102e6e44",
+      "sha256": "2697b7116302c77f9ce7b78b60ae18e3d0a3d2a2a8a982355715fe74e74a8e13",
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
@@ -2233,7 +2233,7 @@
       "executable": false
     },
     "tests/industry-runtime.mjs": {
-      "sha256": "ac88d84e781ebd8952b0a526deb646d469e5013c96b29d5337583710b1255738",
+      "sha256": "b55d47fe34702dea6571cd7be79c9fea6191bdf339c61a426aecc75588511586",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

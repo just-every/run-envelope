@@ -1,3 +1,4 @@
+import { zero } from '../leave/ledger'
 import { auditStatement, fence, requireAction, type Actor } from '../access'
 import type { Input } from '../records'
 import { date, integer, text, recordKey, unseal, PayrollError } from '../security'
@@ -8,7 +9,7 @@ export interface IndustryReturn {
  form:'941'|'943';taxYear:number;quarter?:1|2|3|4;company:AgencyCompany;totals:AgencyTotals;employeeCount:number
  checks:{personId:string;id:string;version:number}[];corrects:string;export:AgencyFormExport;basis:string
 }
-const zero=():AgencyTotals=>({incomeTaxWagesCents:0,incomeTaxWithheldCents:0,socialSecurityWagesCents:0,socialSecurityTaxCents:0,medicareWagesCents:0,medicareTaxCents:0,additionalMedicareWagesCents:0,additionalMedicareTaxCents:0})
+const emptyTotals=():AgencyTotals=>({incomeTaxWagesCents:0,incomeTaxWithheldCents:0,socialSecurityWagesCents:0,socialSecurityTaxCents:0,medicareWagesCents:0,medicareTaxCents:0,additionalMedicareWagesCents:0,additionalMedicareTaxCents:0})
 export class IndustryReturns {
  constructor(public store:WorkspaceStore){}
  async authority(actor:Actor,action='records:read'){
@@ -36,7 +37,7 @@ export class IndustryReturns {
   if(!['941','943'].includes(form)||![2025,2026].includes(taxYear))throw new PayrollError('unsupported_return_period')
   const selections=input.checks
   if(!Array.isArray(selections)||!selections.length||selections.length>200)throw new PayrollError('reviewed_checks_required')
-  const checks:IndustryReturn['checks']=[],totals=zero(),workers=new Set<string>(),dependencies:NonNullable<Sources['objects']>=[],seen=new Set<string>()
+  const checks:IndustryReturn['checks']=[],totals=emptyTotals(),workers=new Set<string>(),dependencies:NonNullable<Sources['objects']>=[],seen=new Set<string>()
   for(const selection of selections){
    const s=selection as Input,personId=objectId(s.personId),id=objectId(s.id),version=integer(s.version)
    const row=await this.store.find<IndustryCheck>(actor,'industry-check',id,personId,true)
@@ -55,14 +56,14 @@ export class IndustryReturns {
   }
   const company=await this.entity(actor,input),corrects=input.corrects?objectId(input.corrects):'',basis=text(input.basis,2000)
   // Line 1 counts the form's specified reference pay period; it is not the annual unique worker count.
-  const employeeCount=integer(input.employeeCount)
+  const employeeCount=zero(input.employeeCount)
   if(employeeCount>workers.size)throw new PayrollError('employee_count_exceeds_selected_workers')
   let output:AgencyFormExport
   if(corrects){
    const prior=await this.store.find<IndustryReturn>(actor,'industry-return',corrects,undefined,true)
    if(!prior.approvedBy||prior.withdrawnBy||prior.data.form!==form||prior.data.taxYear!==taxYear||prior.data.quarter!==quarter)throw new PayrollError('reviewed_matching_original_required',409)
    output=exportAgencyCorrection({form,taxYear,quarter,company,original:prior.data.totals,corrected:totals,discoveredOn:date(input.discoveredOn),reason:text(input.reason,3000),process:input.process as 'adjustment'|'claim',w2FiledOrWillFile:input.w2FiledOrWillFile===true||input.w2FiledOrWillFile==='true'?true:false as true,certifications:input.certifications as AgencyCorrectionInput['certifications'],priorYearWithholdingAdministrativeError:input.priorYearWithholdingAdministrativeError===true?true:undefined})
-  }else output=exportAgencyForm({form,taxYear,quarter,company,totals,employeeCount,depositsCents:integer(input.depositsCents),seasonal:input.seasonal===true,monthlyLiabilityCents:input.monthlyLiabilityCents as number[]|undefined})
+  }else output=exportAgencyForm({form,taxYear,quarter,company,totals,employeeCount,depositsCents:zero(input.depositsCents),seasonal:input.seasonal===true,monthlyLiabilityCents:input.monthlyLiabilityCents as number[]|undefined})
   const data:IndustryReturn={form,taxYear,quarter,company,totals,employeeCount,checks,corrects,export:output,basis}
   return this.store.append(actor,'industry-return',objectId(input.id),revision(input.version),data,undefined,true,{objects:dependencies})
  }

@@ -40,6 +40,7 @@ export const Field = ({
   value,
   required = true,
   maxLength,
+  step,
 }: {
   name: string
   label: string
@@ -47,6 +48,7 @@ export const Field = ({
   value?: string | number
   required?: boolean
   maxLength?: number
+  step?: string
 }) => (
   <label className="field">
     <span>{label}</span>
@@ -54,6 +56,7 @@ export const Field = ({
       name={name}
       type={type}
       defaultValue={value}
+      step={step}
       required={required}
       maxLength={maxLength ?? (type === 'password' ? 16000 : 120)}
       autoComplete="off"
