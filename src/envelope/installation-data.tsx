@@ -7,7 +7,7 @@ export async function installationDataResponse(response: Response, env: Bindings
   if (response.status !== 200 || !/^text[/]html(?:;|$)/.test(response.headers.get('content-type') ?? '')) return response
   const linked = await env.DB.prepare("SELECT issuer FROM rer_dependency_link WHERE interface='oidc-provider@1'").first<{issuer: string}>()
   const local = env.AUTH_LOCAL === 'true' || env.RER_DEMO === '1'
-  const mail = local ? 'Local mail is suppressed' : ['resend', 'sendgrid', 'cloudflare'].includes(env.MAIL_PROVIDER ?? '')
+  const mail = local ? 'Local mail is suppressed' : ['rer', 'resend', 'sendgrid', 'cloudflare'].includes(env.MAIL_PROVIDER ?? '')
     ? `Selected native mail: ${env.MAIL_PROVIDER}` : 'Native mail is unavailable'
   const content = renderToStaticMarkup(<section aria-labelledby="external-data-heading">
     <h2 id="external-data-heading">External data recipients</h2>

@@ -9,6 +9,10 @@
     {
       "id": "owner",
       "label": "First owner"
+    },
+    {
+      "id": "mail",
+      "label": "Sign-in mail"
     }
   ],
   "fields": [
@@ -68,12 +72,150 @@
       "group": "owner"
     },
     {
+      "name": "INSTALLATION_KEY",
+      "label": "Installation encryption key",
+      "kind": "secret",
+      "required": true,
+      "ownerVisible": false,
+      "input": "managed",
+      "generate": "hex",
+      "group": "owner"
+    },
+    {
       "name": "IDENTITY_PROVIDER",
       "label": "Identity provider",
       "kind": "url",
       "required": false,
       "help": "Optional Auth install. Leave empty to use email links.",
       "default": ""
+    },
+    {
+      "name": "MAIL_PROVIDER",
+      "label": "Mail provider",
+      "kind": "select",
+      "required": true,
+      "default": "resend",
+      "options": [
+        {
+          "value": "resend",
+          "label": "Resend"
+        },
+        {
+          "value": "sendgrid",
+          "label": "SendGrid"
+        },
+        {
+          "value": "cloudflare",
+          "label": "Cloudflare Email Sending"
+        },
+        {
+          "value": "rer",
+          "label": "RER managed mail"
+        }
+      ],
+      "group": "mail",
+      "help": "Managed hosting supplies RER mail automatically. For Assisted hosting, choose your provider and enter its verified sender and credentials. Local development suppresses mail."
+    },
+    {
+      "name": "MAIL_FROM",
+      "label": "Sender address",
+      "kind": "text",
+      "required": false,
+      "presentations": [
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "resend"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "sendgrid"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "cloudflare"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "rer"
+          },
+          "required": true
+        }
+      ],
+      "group": "mail",
+      "help": "Use a sender verified with the selected provider. Managed hosting assigns the RER sender."
+    },
+    {
+      "name": "MAIL_RELAY_URL",
+      "label": "Managed mail relay URL",
+      "kind": "url",
+      "required": true,
+      "when": {
+        "field": "MAIL_PROVIDER",
+        "equals": "rer"
+      },
+      "group": "mail",
+      "help": "The HTTPS relay URL assigned by Run Edit Run; required only for RER managed mail."
+    },
+    {
+      "name": "MAIL_API_KEY",
+      "label": "Mail API key",
+      "kind": "secret",
+      "input": "entered",
+      "ownerVisible": true,
+      "required": false,
+      "presentations": [
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "resend"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "sendgrid"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "cloudflare"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "rer"
+          },
+          "required": true
+        }
+      ],
+      "group": "mail",
+      "help": "Use the selected provider\u2019s sending credential. Managed hosting supplies the RER credential."
+    },
+    {
+      "name": "MAIL_ACCOUNT_ID",
+      "label": "Cloudflare account ID",
+      "kind": "text",
+      "required": true,
+      "when": {
+        "field": "MAIL_PROVIDER",
+        "equals": "cloudflare"
+      },
+      "group": "mail"
     }
   ],
   "steps": [

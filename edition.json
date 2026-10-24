@@ -111,6 +111,70 @@
           "scripts/edition-authoring"
         ]
       }
+    },
+    {
+      "id": "just-every/envelope-adapted-foundation",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          ".github/workflows/verify.yml",
+          "src/mail.server.mjs",
+          "tests/incremental-typecheck.test.mjs",
+          "verification.json"
+        ],
+        "origin": {
+          "repository": "https://github.com/runeditrun/base.git",
+          "revision": "91c082876d6560150f3dc012ec57b92bd9895228",
+          "paths": [
+            "export/verify.yml",
+            "foundation/template/src/mail.server.mjs",
+            "foundation/template/tests/incremental-typecheck.test.mjs",
+            "foundation/template/verification.json"
+          ]
+        },
+        "mappings": [
+          {
+            "path": ".github/workflows/verify.yml",
+            "originPath": "export/verify.yml"
+          },
+          {
+            "path": "src/mail.server.mjs",
+            "originPath": "foundation/template/src/mail.server.mjs"
+          },
+          {
+            "path": "tests/incremental-typecheck.test.mjs",
+            "originPath": "foundation/template/tests/incremental-typecheck.test.mjs"
+          },
+          {
+            "path": "verification.json",
+            "originPath": "foundation/template/verification.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "just-every/envelope-delivery-setup",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "scripts/delivery/base/setup-manifest.mjs"
+        ],
+        "origin": {
+          "repository": "https://github.com/runeditrun/base.git",
+          "revision": "4280971d7c0295b8a88c3e1179048efcbbe14f30",
+          "paths": [
+            "modules/delivery-producer/setup-manifest.mjs"
+          ]
+        },
+        "mappings": [
+          {
+            "path": "scripts/delivery/base/setup-manifest.mjs",
+            "originPath": "modules/delivery-producer/setup-manifest.mjs"
+          }
+        ]
+      }
     }
   ]
 }

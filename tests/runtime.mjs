@@ -77,6 +77,7 @@ const settings = {
   AUTH_ORIGIN: origin,
   OWNER_EMAIL: 'owner@example.com',
   SESSION_SECRET: randomBytes(32).toString('hex'),
+  INSTALLATION_KEY: randomBytes(32).toString('hex'),
   SETUP_TOKEN: setupToken,
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }

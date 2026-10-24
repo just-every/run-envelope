@@ -25,11 +25,13 @@ Runs on macOS, Linux or Windows with WSL2, with git. The installer brings Node
 when it is missing, and rer brings pnpm. Local mail is silently suppressed.
 
 Read [RUN-LOCALLY.md](RUN-LOCALLY.md), [OPERATIONS.md](OPERATIONS.md) and
-[AGENTS.md](AGENTS.md). Node 22.20.0, pnpm 10.12.4 and `@runeditrun/rer` 0.2.76
+[AGENTS.md](AGENTS.md). Node 22.20.0, pnpm 10.12.4 and `@runeditrun/rer` 0.2.79
 are pinned. `rer check` validates the command and contract declarations;
 `rer verify` runs the foundation's checks. No payroll functionality is implied.
 
 ## Run site
+
+Install Envelope from https://run-envelope.com/run.
 
 `rer build --site` builds `/`, `/run` and `/contract` from this checkout.
 The independent Run site workflow deploys `run-envelope.com` only when repository

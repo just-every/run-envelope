@@ -16,3 +16,6 @@ logs/
 test-results/
 
 .rer/demo/
+
+rer-package/
+delivery-artifact/
