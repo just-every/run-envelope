@@ -945,7 +945,7 @@
       "executable": false
     },
     "scripts/installer/local.mjs": {
-      "sha256": "6e96c56931a6d766a7c501c9a2fddd60e72ae4e15b519bcc270643c4cf22092c",
+      "sha256": "43aa510c2e8470c539e832177ef12f62dcdd5802bcf9af2ef59c3617cd01b71c",
       "executable": false
     },
     "scripts/installer/seed.mjs": {

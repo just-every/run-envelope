@@ -10,7 +10,10 @@ import * as model from './ui/seed.mjs';
 export { selectLocalState };
 const lifecycle = operatorInstaller({
  database: 'foundation', features: model.features,
- async prepare({ root, input, store }) {
+ async prepare(context) {
+  const { root, input, store } = context;
+  // Hosted mail choices remain installer answers; local setup always suppresses mail.
+  context.input = Object.fromEntries(Object.entries(input).filter(([name]) => !name.startsWith('MAIL_')));
   // export and import run prepare without answers; the saved branding stays.
   if (input.APP_NAME === undefined && input.PRIMARY_COLOR === undefined) return;
   await store.step('Saving application branding');
