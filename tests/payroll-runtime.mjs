@@ -3288,9 +3288,9 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
 }
 
 /** PAYROLL-SIGNIN: the emitted production Worker, real Base admission and payroll doors.
- * Only Resend POST /emails and Auth's OIDC discovery/JWKS/token network edges are faked.
+ * Native mail transports and the linked issuer are faked only at their network edges.
  */
-export async function identityJourney({ worker, origin, cookie, settings, sql, edge }) {
+export async function identityJourney({ worker, origin, cookie, settings, sql, edge, restartMail }) {
   const call = (path, body, who = cookie, extra = {}) => worker.fetch(origin + path, {
     method: body === undefined ? 'GET' : 'POST', redirect: 'manual',
     headers: { ...(who ? {cookie:who} : {}), host:new URL(origin).host, origin, 'content-type':'application/json', 'CF-Connecting-IP':'127.0.0.2', ...extra },
@@ -3313,16 +3313,23 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     for (const width of [1440,390]) {
       await page.setViewportSize({width,height:1000})
       await page.goto(origin + path)
+      if (label === 'installation-external-data') await page.locator('details').evaluateAll(details => details.forEach(detail => detail.open = true))
       await page.evaluate(() => document.fonts.ready)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),true,label)
       // These native documents have no icon-only controls. Any future one must
       // supply the owner's hover/focus tooltip before this assertion can pass.
-      for (const control of await page.locator('button,a').all())
+      for (const control of await page.locator('button,a,summary').all())
         assert.ok((await control.innerText()).trim(),label + ': every control has visible words')
       await page.screenshot({path:join(folder,`${label}-${width}.png`),fullPage:true})
     }
   }
   try {
+    assert.equal((await call('/auth/settings/identity', undefined, '', {accept:['text', 'html'].join('/')})).status, 401)
+    await context.addCookies([{name:'__Host-operator_session',value:cookie.split('=')[1],url:origin,secure:true,httpOnly:true}])
+    await capture('installation-external-data', '/auth/settings/identity')
+    assert.match(await page.locator('main').innerText(), /External data recipients/)
+    assert.match(await page.locator('main').innerText(), /https:\/\/auth.example.com/)
+    await context.clearCookies()
     const company = await data('/api/envelope/companies',{name:'Synthetic identity company',ein:'00-0000600'},cookie,201)
     const base = '/api/envelope/companies/' + company.id
     const location = await data(base + '/locations',{name:'Synthetic Oakland',state:'CA'},cookie,201)
@@ -3348,6 +3355,7 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     await page.waitForURL(origin + '/app/envelope')
     const nativeCookie = (await context.cookies(origin)).filter(c=>c.name==='__Host-operator_session').map(c=>c.name+'='+c.value).join(';')
     assert.ok(nativeCookie)
+    assert.equal((await call('/auth/settings/identity', undefined, nativeCookie, {accept:['text', 'html'].join('/')})).status, 403)
     assert.equal((await call('/auth/confirm',{token:invitation.searchParams.get('token')},'')).status,400,'invitation is single use')
     assert.deepEqual(await data('/api/envelope/companies',undefined,nativeCookie),[],'native admission grants no payroll authority')
     await data(base + '/grants',{operatorId:invited.id,version:0,role:'accountant',locations:[location.id],fields:['tax'],actions:['records:read','private:read']})
@@ -3389,6 +3397,40 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
       assert.equal((await call('/auth/confirm',{token:mailLink().searchParams.get('token')},'')).status,400)
     }
     edge.mailMode='normal'
+    // Exercise real native sign-in with each configured transport, including
+    // uncertain delivery and missing credentials. No alternate transport runs.
+    for (const [index, provider] of ['sendgrid', 'cloudflare'].entries()) {
+      await restartMail('resend')
+      const transportEmail = `synthetic-envelope-${608 + index}@example.com`
+      await data('/auth/invite', {email:transportEmail, displayName:'Synthetic transport accountant', role:'member'}, cookie, 202)
+      const admitted = await call('/auth/confirm', {token:mailLink().searchParams.get('token')}, '')
+      assert.equal(admitted.status, 303)
+      await call('/auth/signout', {}, admitted.headers.get('set-cookie').split(';')[0])
+      const transportPerson = (await sql(`SELECT id FROM oa_operators WHERE email='${transportEmail}'`))[0]
+      await data(base + '/grants', {operatorId:transportPerson.id, version:0, role:'accountant', locations:[location.id], fields:['tax'], actions:['records:read','private:read']})
+      edge.mailRecipient = transportEmail
+      await restartMail(provider)
+      for (const mode of ['normal', 'rejected', 'unknown']) {
+        edge.mailMode = mode
+        const before = await sessionCount(), beforeMail = edge.mails.length
+        await data('/auth/magic-link', {email:transportEmail, returnTo:privateScreen}, '', mode === 'normal' ? 202 : 503)
+        assert.equal(edge.mails.length, beforeMail + 1)
+        assert.equal(await sessionCount(), before)
+        const confirmation = await call('/auth/confirm', {token:mailLink().searchParams.get('token')}, '')
+        assert.equal(confirmation.status, mode === 'normal' ? 303 : 400)
+        if (mode === 'normal') {
+          const signedCookie = confirmation.headers.get('set-cookie').split(';')[0]
+          assert.equal((await call(download, undefined, signedCookie)).status, 200)
+          await call('/auth/signout', {}, signedCookie)
+        }
+      }
+      edge.mailMode = 'normal'
+      await restartMail(provider, '')
+      const beforeMail = edge.mails.length
+      await data('/auth/magic-link', {email:transportEmail}, '', 503)
+      assert.equal(edge.mails.length, beforeMail, 'Missing credential sends nothing and never selects another transport')
+    }
+    await restartMail('resend')
     await data('/auth/settings/identity',{idpSignIn:true})
     const begin = async (claims = {}) => {
       const r=await call('/auth/oidc/auth/start',{returnTo:privateScreen},'')

@@ -37,15 +37,26 @@ globalThis.fetch = (input, init) => {
 export function workerLog(log) { counts.workerLogs++; inspect(log, 'Worker log') }
 export async function startRecordedWorker(options) {
   const edge = options.dev?.outboundService
+  const binding = name => options.bindings?.[name]?.value
+  const mailProvider = binding('MAIL_PROVIDER')
+  const mailUrl = mailProvider === 'sendgrid' ? 'https://api.sendgrid.com/v3/mail/send'
+    : mailProvider === 'cloudflare' ? `https://api.cloudflare.com/client/v4/accounts/${binding('MAIL_ACCOUNT_ID')}/email/sending/send`
+    : mailProvider === 'resend' ? 'https://api.resend.com/emails' : null
+  if (binding('MAIL_API_KEY')) privateValue(binding('MAIL_API_KEY'))
   const server = options.dev.server
   installations.add(`http${server.secure ? 's' : ''}://${server.hostname}:${server.port}`)
   return unstable_startWorker({ ...options, dev: { ...options.dev,
     structuredLogsHandler: workerLog,
     outboundService: async request => {
       counts.outbound++
-      const allowed = new Set(['https://api.openai.com/v1/responses', 'https://api.resend.com/emails',
+      const allowed = new Set(['https://api.openai.com/v1/responses',
         'https://auth.example.com/.well-known/openid-configuration', 'https://auth.example.com/jwks', 'https://auth.example.com/token'])
-      if (!allowed.has(request.url)) violations.push('Undeclared Worker destination')
+      if (!mailProvider) allowed.add('https://api.resend.com/emails')
+      if (mailUrl) allowed.add(mailUrl)
+      if (binding('MAIL_API_KEY') && request.headers.get('authorization') === 'Bearer ' + binding('MAIL_API_KEY'))
+        assert.equal(request.url, mailUrl, 'Native credential never reaches a different recipient')
+      if (request.url === mailUrl) assert.equal(request.headers.get('authorization'), 'Bearer ' + binding('MAIL_API_KEY'), 'Native mail credential stays at its declared transport')
+      if (!allowed.has(request.url) && request.url !== mailUrl) violations.push('Undeclared Worker destination')
       inspect(request.url, 'Outbound URL')
       const payload = await request.clone().text()
       inspect(payload, 'Outbound body')

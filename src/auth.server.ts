@@ -8,6 +8,7 @@ import { operatorMail } from './mail.server.mjs'
 import branding from './branding.json'
 import { payRunDocument } from './ui/page.server'
 import { Records } from './envelope/records'
+import { installationDataResponse } from './envelope/installation-data'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
 const theme = { href: '/rer-theme.css', productName: branding.name, accentColor: branding.primaryColor }
@@ -75,10 +76,15 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
   })(request)
   if (page) return fontDocumentResponse(page)
  }
- if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(operatorAuth(env))(request))
+ if (url.pathname.startsWith('/auth/')) {
+  const response = await createAuthHandler(operatorAuth(env))(request)
+  return fontDocumentResponse(response && url.pathname === '/auth/settings/identity' && request.method === 'GET'
+   ? await installationDataResponse(response, env) : response)
+ }
  if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
   const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
-  if (setup) return setup
+  if (setup) return request.method === 'GET' && url.pathname === '/setup'
+   ? installationDataResponse(setup, env) : setup
  }
  if (url.pathname === '/app') {
   const session = await operatorAuth(env).getSession(request)

@@ -1,3 +1,4 @@
+import { chromium } from '@playwright/test'
 import { queuedEntrypoint } from '@runeditrun/rer/queued-entry'
 const queued = await queuedEntrypoint(import.meta.url, 'verify:runtime')
 if (queued !== null) process.exit(queued)
@@ -7,7 +8,7 @@ import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
 import { request as httpsRequest } from 'node:https'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
@@ -139,6 +140,23 @@ try {
     (await manual('/app', { headers: { cookie } })).headers.get('location'),
     '/setup',
   )
+  const setupBrowser = await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  try {
+    const context = await setupBrowser.newContext()
+    await context.addCookies([{name:cookie.split('=')[0],value:cookie.split('=')[1],url:origin,httpOnly:true}])
+    const page = await context.newPage(), folder = process.env.ENVELOPE_PROOF_DIR ?? './test-results/envelope'
+    await mkdir(folder, {recursive:true})
+    for (const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000})
+      await page.goto(origin + '/setup')
+      await page.locator('details').evaluateAll(details => details.forEach(detail => detail.open = true))
+      await page.evaluate(() => document.fonts.ready)
+      assert.match(await page.locator('main').innerText(), /External data recipients/)
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+      for (const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim())
+      await page.screenshot({path:join(folder, `installation-setup-${width}.png`),fullPage:true})
+    }
+  } finally { await setupBrowser.close() }
   const finished = await manual('/setup', {
     method: 'POST',
     headers: { cookie, origin, 'content-type': 'application/x-www-form-urlencoded' },
@@ -302,10 +320,11 @@ try {
     await sql(`INSERT INTO rer_dependency_link(interface,issuer,client_id,metadata,needs_relink,linked_at) VALUES('oidc-provider@1',${quote(issuer)},'synthetic-envelope-600',${quote(JSON.stringify(metadata))},0,${Date.now()}) ON CONFLICT(interface) DO UPDATE SET issuer=excluded.issuer,client_id=excluded.client_id,metadata=excluded.metadata,needs_relink=0,linked_at=excluded.linked_at; INSERT INTO rer_dependency_keys(interface,private_key) VALUES('oidc-provider@1',${quote(JSON.stringify(privateJwk))}) ON CONFLICT(interface) DO UPDATE SET private_key=excluded.private_key`)
     const edge={issuer,codes:new Map(),mails:[],mailMode:'normal',authMode:'normal'}
     let identityWorker
-    try {
+    const startIdentity = async (mailProvider = 'resend', apiKey = 'synthetic-envelope-607') => {
+      edge.mailProvider = mailProvider
       identityWorker=await unstable_startWorker({
         config:resolve('dist/server/wrangler.json'),
-        bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:'resend',MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:'synthetic-envelope-600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
+        bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:mailProvider,MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:apiKey,MAIL_ACCOUNT_ID:'00000000000000000000000000000600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
         dev:{server:{hostname:'127.0.0.1',port,secure:true},origin:{hostname:new URL(identityOrigin).host,secure:true},inspector:false,remote:false,watch:false,persist,logLevel:'error',
           outboundService:async request=>{
             if(request.url==='https://api.resend.com/emails' && request.method==='POST') {
@@ -315,6 +334,22 @@ try {
               if(edge.mailMode==='rejected') return Response.json({name:'validation_error',message:'Synthetic rejection'},{status:422})
               if(edge.mailMode==='unknown') return Response.json({name:'application_error',message:'Synthetic unknown'},{status:500})
               return Response.json({id:'00000000-0000-4000-8000-000000000600'})
+            }
+            if (request.url === 'https://api.sendgrid.com/v3/mail/send' || request.url === 'https://api.cloudflare.com/client/v4/accounts/00000000000000000000000000000600/email/sending/send') {
+              assert.equal(request.method, 'POST')
+              const body = await request.json()
+              assert.equal(body.from.email ?? body.from.address, 'signin@example.com')
+              const recipients = body.personalizations ? body.personalizations[0].to.map(value => value.email) : body.to
+              assert.deepEqual(recipients, [edge.mailRecipient])
+              assert.equal(body.attachments, undefined)
+              assert.equal(body.cc, undefined)
+              assert.equal(body.bcc, undefined)
+              const text = body.content ? body.content.find(value => /^text[/]plain$/.test(value.type)).value : body.text
+              assert.equal(body.headers['Auto-Submitted'], 'auto-generated')
+              edge.mails.push({...body, text})
+              if (edge.mailMode !== 'normal') return Response.json({errors:[]}, {status:edge.mailMode === 'rejected' ? 422 : 500})
+              if (edge.mailProvider === 'sendgrid') return new Response(null, {status:202, headers:{'x-message-id':'synthetic-envelope-605'}})
+              return Response.json({success:true, errors:[], result:{message_id:'synthetic-envelope-606', delivered:[], queued:recipients, permanent_bounces:[]}})
             }
             if(!request.url.startsWith(issuer+'/')) throw Error('Unexpected identity edge')
             if(edge.authMode==='unavailable') return Response.json({error:'temporarily_unavailable'},{status:503})
@@ -342,6 +377,9 @@ try {
         },
       })
       await identityWorker.ready
+    }
+    try {
+      await startIdentity()
       const identityTransport={fetch:(url,init={})=>new Promise((resolve,reject)=>{
         assert.equal(new URL(url).origin,identityOrigin,'TLS exception is confined to this loopback fixture')
         const request=httpsRequest(url,{method:init.method,headers:init.headers,rejectUnauthorized:false},response=>{
@@ -358,7 +396,7 @@ try {
         recordPrivateInput(url,init.body)
         request.end(init.body)
       })}
-      await identityJourney({worker:identityTransport,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
+      await identityJourney({worker:identityTransport,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge,restartMail:async (provider, key) => {await identityWorker.dispose();await startIdentity(provider, key)}})
     } finally {
       await identityWorker?.dispose()
       worker=await launch(settings)

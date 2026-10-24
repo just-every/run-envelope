@@ -6,8 +6,11 @@ credential does not configure installation sign-in mail. Missing configuration
 refuses the affected operation; it never selects another provider.
 
 The metadata in `seed.json` describes these existing boundaries. This inventory
-is partial under ENV-073: complete installation settings declarations and the
-full payroll, worker portal and future connector journeys remain owed.
+appears in the owner’s native sign-in settings and first-run review, before setup
+confirmation. Those documents share the seed metadata and show the selected
+native mail transport and linked identity issuer without credentials. ENV-073
+remains partial: the full payroll, worker portal and future connector journeys
+remain owed.
 
 | Recipient | Purpose and permitted data | Credential and custody |
 | --- | --- | --- |
@@ -24,3 +27,27 @@ mail adapter, which does not supply that configuration. No author relay or
 telemetry service is required. Payroll rails, agency submissions, recordkeepers,
 carriers and further connected systems remain future ENV-073 inventory work;
 metadata is not an authorization or a connected-state claim for those services.
+
+## Native authentication mail
+
+Only explicitly configured Resend, SendGrid and Cloudflare native transports
+can send. Local and demo modes suppress real mail. Missing credentials, rejected
+requests and uncertain responses never select an alternate transport and cannot
+leave a usable sign-in link. API acceptance does not establish mailbox delivery.
+The installation credential is sent only in the selected provider's Authorization
+header. No attachments, payroll records, SSNs or bank values are needed.
+
+Cloudflare uses the configured owner's exact account endpoint:
+`https://api.cloudflare.com/client/v4/accounts/{owner-account-id}/email/sending/send`.
+The account identifier is a path selector, not a payroll identifier. SendGrid and
+Resend use the fixed endpoints listed above. Subject, text and HTML contain only
+the authentication ceremony, intended recipient and single-use link; native
+anti-auto-reply headers and a delivery identifier support that ceremony.
+
+No bank rail, account-verification service, tax or identity agency, recordkeeper,
+carrier, HR, time, POS, ledger, Inkwell, SMS, chat or push outbound connection is
+activated by this inventory. Reviewed source uploads and manual SIDES portal
+handoff do not create a live connector. Future implementations must declare each
+exact destination, minimum fields, credential custody and data retention before
+the first request, under ENV-073 and their own connector clauses. No provider
+agreement, live payroll settlement or complete deterministic payroll is claimed.

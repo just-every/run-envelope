@@ -24,14 +24,18 @@
         "owner identity and sessions",
         "company and payroll records",
         "encrypted private identifiers",
-        "configured native authentication mail when Cloudflare mail is selected"
+        "configured native authentication mail when Cloudflare mail is selected",
+        "authentication recipient and sender",
+        "single-use authentication or invitation link"
       ],
-      "adapters": []
+      "adapters": [
+        "https://api.cloudflare.com/client/v4/accounts/{owner-account-id}/email/sending/send"
+      ]
     },
     {
       "id": "openai",
       "required": false,
-      "why": "Owner-opted-in redacted tax-notice proposals only; never payroll calculation or approval",
+      "why": "Owner-opted-in redacted tax-notice proposals only; never payroll calculation or approval. The company credential is encrypted in owner D1 with the independent record key. Requests set store:false; OpenAI processing and retention follow owner terms.",
       "data": [
         "redacted notice text"
       ],
