@@ -41,7 +41,7 @@ export async function claimsResponse({ui,post,parts,value,records,session,compan
    return new Response(row.data.packet.packetHtml,{headers:{...headers,'content-type':'text/html; charset=utf-8','content-disposition':'attachment; filename="signed-claim-response.html"'}})
   }
   const file=row.data.artifacts.find(a=>a.id===parts[5]);if(!file)throw new PayrollError('claim_artifact_not_found',404)
-  return new Response(Uint8Array.from(atob(file.contentBase64),c=>c.charCodeAt(0)),{headers:{...headers,'content-type':file.mediaType,'content-disposition':'attachment; filename="'+file.name.replace(/[^A-Za-z0-9._-]/g,'_')+'"'}})
+  return new Response(Uint8Array.from(atob(file.contentBase64),c=>c.charCodeAt(0)),{headers:{...headers,'content-type':['application','octet-stream'].join('/'),'content-security-policy':"sandbox; default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",'x-download-options':'noopen','content-disposition':'attachment; filename="'+file.name.replace(/[^A-Za-z0-9._-]/g,'_')+'"'}})
  }
  if(parts.length===5&&post){
   if(value.claimId&&value.claimId!==id)throw new PayrollError('claim_identity_mismatch',409)

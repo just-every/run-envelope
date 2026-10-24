@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp,writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { portalViewResponse,sidesSubmissionEdge } from './claims-portal-edge.mjs'
@@ -73,4 +73,128 @@ export async function claimsBrowser({context,f,completedDoor,wageDoor,edge}){
   await capture('claims-wage-review',wageDoor.replace('/api/','/app/')+'/review')
   return proof
  }finally{await browser.close()}
+}
+
+// Native file doors are exercised in a disposable claims installation.
+export async function safeInputsBrowser({context,f}) {
+ const {default:axe}=await import('axe-core')
+ const {claimArtifact}=await import('./claims-fixture.mjs')
+ const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ const proof=await mkdtemp(join(process.env.ENVELOPE_PROOF_ROOT??tmpdir(),'envelope-safe-inputs-'))
+ const audits=[]
+ try {
+  const visitor=await browser.newContext({ignoreHTTPSErrors:true}),requests=[]
+  visitor.on('request',r=>requests.push(r.url()))
+  const page=await visitor.newPage()
+  const capture=async(label)=>{
+   await page.evaluate(()=>document.fonts.ready)
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label+' fits viewport')
+   await page.evaluate(axe.source)
+   const audit=await page.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+   assert.deepEqual(audit.violations.map(v=>v.id),[],label+' automated WCAG checks')
+   audits.push({label,url:new URL(page.url()).pathname,violations:audit.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),incomplete:audit.incomplete.map(v=>v.id)})
+   await writeFile(join(proof,label+'.aria.txt'),await page.locator('body').ariaSnapshot())
+   await page.screenshot({path:join(proof,label+'.png'),fullPage:true})
+  }
+  for(const width of [1440,390]) {
+   await page.setViewportSize({width,height:1000})
+   for(const [label,path] of [['lobby','/'],['signin','/signin'],['setup','/setup'],['invalid-confirmation','/auth/confirm?token=synthetic-envelope-570']]) {
+    const response=await page.goto(context.origin+path)
+    assert.equal(response.headers()['set-cookie'],undefined,label)
+    const html=await page.content()
+    for(const privateValue of [f.company.name,f.person.name,f.company.ein,'900-69-0001'])assert.ok(!html.includes(privateValue),label+' private response')
+    assert.deepEqual(await visitor.cookies(),[])
+    await capture(label+'-'+width)
+   }
+   await page.goto(context.origin+'/signin')
+   await page.keyboard.press('Tab')
+   assert.ok(await page.evaluate(()=>document.activeElement!==document.body),'keyboard reaches a control')
+   const email=page.getByRole('textbox',{name:'Email',exact:true})
+   await email.focus();assert.equal(await email.evaluate(n=>n===document.activeElement),true)
+   assert.notEqual(await email.evaluate(n=>getComputedStyle(n).outlineStyle),'none','visible keyboard focus')
+  }
+  assert.ok(requests.every(url=>new URL(url).origin===context.origin),'no third-party request before interaction')
+  for(const path of ['/auth/session','/auth/operators','/api/envelope/companies',f.claims]) {
+   const response=await visitor.request.get(context.origin+path)
+   assert.equal(response.status(),401,path)
+   for(const privateValue of [f.company.name,f.person.name,'900-69-0001'])assert.ok(!(await response.text()).includes(privateValue))
+  }
+  const beforeMails=context.edge.mails.length
+  for(let attempt=0;attempt<6;attempt++) {
+   const response=await visitor.request.post(context.origin+'/auth/magic-link',{headers:{origin:context.origin},data:{email:'synthetic-envelope-570@example.com',returnTo:'/app'}})
+   assert.equal(response.status(),attempt<5?202:429,await response.text())
+  }
+  assert.equal(context.edge.mails.length,beforeMails,'unknown and limited sign-ins send nothing')
+  const owner=await browser.newContext({ignoreHTTPSErrors:true}),[name,value]=context.cookie.split('=')
+  await owner.addCookies([{name,value,url:context.origin}])
+  const payload='<script>globalThis.syntheticEnvelope570=true;fetch("https://ungranted.example/collect")</script><img src="https://ungranted.example/pixel">'
+  const hostile=claimArtifact('synthetic-envelope-571','hostile-original.html',payload,['text','html'].join('/'))
+  const pdf=claimArtifact('synthetic-envelope-572','hostile-original.pdf','%PDF-1.7\n1 0 obj << /OpenAction << /S /JavaScript /JS (app.alert("synthetic-envelope-572")) >> >> endobj\n%%EOF',['application','pdf'].join('/'))
+  const input=f.validRequest({requestId:'synthetic-envelope-573',sourceRef:payload})
+  const imported=await f.data(f.claims+'/import',{...input,artifacts:[...input.artifacts,hostile,pdf]},201),door=f.claims+'/'+imported.id
+  const ui=door.replace('/api/','/app/'),owned=await owner.newPage(),outbound=[]
+  owner.on('request',r=>{if(new URL(r.url()).origin!==context.origin)outbound.push(r.url())})
+  for(const width of [1440,390]) {
+   await owned.setViewportSize({width,height:1000});await owned.goto(context.origin+ui)
+   const originals=owned.getByText('Retained original evidence',{exact:true});await originals.focus();await owned.keyboard.press('Enter')
+   assert.ok(await originals.evaluate(n=>n.parentElement.open),'keyboard opens retained evidence')
+   assert.ok(await owned.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'retained evidence fits viewport')
+   await owned.evaluate(axe.source)
+   const operatorAudit=await owned.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+   audits.push({label:'hostile-retained-'+width,violations:operatorAudit.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),incomplete:operatorAudit.incomplete.map(v=>v.id)})
+   await writeFile(join(proof,'hostile-retained-'+width+'.aria.txt'),await owned.locator('body').ariaSnapshot())
+   assert.equal(await owned.evaluate(()=>globalThis.syntheticEnvelope570),undefined)
+   assert.equal(await owned.locator('img[src^="https://ungranted.example"]').count(),0)
+   await owned.screenshot({path:join(proof,'hostile-retained-'+width+'.png'),fullPage:true})
+   const link=owned.getByRole('link',{name:hostile.name,exact:true})
+   const [download]=await Promise.all([owned.waitForEvent('download'),link.click()])
+   assert.equal(download.suggestedFilename(),hostile.name)
+  }
+  assert.deepEqual(outbound,[],'retained imports cannot execute a script or request')
+  for(const file of [hostile,pdf]) {
+   const path=door+'/artifacts/'+file.id,response=await owner.request.get(context.origin+path)
+   assert.equal(response.status(),200)
+   assert.equal(response.headers()['content-type'],['application','octet-stream'].join('/'))
+   assert.match(response.headers()['content-disposition'],/^attachment;/)
+   assert.match(response.headers()['content-security-policy'],/sandbox;/)
+   assert.equal(response.headers()['x-content-type-options'],'nosniff')
+   assert.deepEqual(await response.body(),Buffer.from(file.contentBase64,'base64'))
+   assert.equal((await visitor.request.get(context.origin+path)).status(),401)
+   assert.equal((await owner.request.get(context.origin+f.claims+'/foreign-claim/artifacts/'+file.id)).status(),404)
+  }
+  const refused=async(body,status)=>{
+   const before=await f.data(f.claims)
+   const response=await owner.request.post(context.origin+f.claims+'/import',{headers:{origin:context.origin,'content-type':['application','json'].join('/')},data:body})
+   assert.equal(response.status(),status,await response.text())
+   assert.deepEqual(await f.data(f.claims),before,'rejected import writes no claim')
+  }
+  await refused('{',400)
+  const malformed=await owner.request.post(context.origin+f.claims+'/import',{headers:{origin:context.origin,'content-type':['application','json'].join('/')},data:Buffer.from([0xff,0xfe])})
+  assert.equal(malformed.status(),400)
+  await refused({...input,artifacts:[{...hostile,mediaType:['image','svg+xml'].join('/')}]},400)
+  await refused({...input,artifacts:[{...hostile,contentBase64:'!invalid!'}]},400)
+  await refused({...input,artifacts:[{...hostile,sha256:'0'.repeat(64)}]},400)
+  const upload=await owner.request.post(context.origin+f.claims.replace('/api/','/app/')+'/import',{headers:{origin:context.origin},multipart:{requestFile:{name:'oversized.html',mimeType:hostile.mediaType,buffer:Buffer.alloc(512*1024+1,65)}}})
+  assert.equal(upload.status(),413)
+  const oversized=await owner.request.post(context.origin+f.claims+'/import',{headers:{origin:context.origin,'content-type':['application','json'].join('/')},data:' '.repeat(3*1024*1024+1)})
+  assert.equal(oversized.status(),413)
+  const foreignCompany=await f.data('/api/envelope/companies',{name:'Synthetic private-file boundary',ein:'00-0000574'},201)
+  const foreignPath='/api/envelope/companies/'+foreignCompany.id+'/claims/'+imported.id+'/artifacts/'+hostile.id
+  assert.equal((await owner.request.get(context.origin+foreignPath)).status(),404)
+  await f.data('/auth/invite',{email:'synthetic-envelope-574@example.com',displayName:'Synthetic ungranted member',role:'member'},202)
+  const invitation=context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&')
+  const member=await browser.newContext({ignoreHTTPSErrors:true})
+  const admitted=await member.request.post(context.origin+'/auth/confirm',{headers:{origin:context.origin},data:{token:new URL(invitation).searchParams.get('token')},maxRedirects:0})
+  assert.equal(admitted.status(),303)
+  for(const path of [door+'/artifacts/'+hostile.id,door+'/artifacts/'+pdf.id])assert.equal((await member.request.get(context.origin+path)).status(),403,'a signed-in member without a company grant cannot download')
+  await member.close()
+  const before=await f.data(door)
+  await f.data(door+'/evidence',{version:before.version,artifacts:[{...hostile,contentBase64:Buffer.from('replacement').toString('base64'),sha256:undefined}]},409)
+  assert.equal((await f.data(door)).version,before.version,'retained file identity cannot change')
+  await owner.close();await visitor.close()
+ } finally {
+  await writeFile(join(proof,'accessibility.json'),JSON.stringify(audits,null,2))
+  await browser.close()
+ }
+ console.log('Safe inputs and public doors passed; proof: '+proof+'; accessibility violations: '+audits.reduce((n,a)=>n+a.violations.length,0)+' (manual AA review remains required)')
 }

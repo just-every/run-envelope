@@ -90,8 +90,10 @@ async function input(request: Request): Promise<Input> {
     bytes.set(c, pos)
     pos += c.length
   }
-  const body = new TextDecoder('utf-8', { fatal: true }).decode(bytes),
-    type = request.headers.get('content-type')?.split(';')[0]
+  let body: string
+  try { body = new TextDecoder('utf-8', { fatal: true }).decode(bytes) }
+  catch { throw new PayrollError('invalid_input') }
+  const type = request.headers.get('content-type')?.split(';')[0]
   if (type === 'application/x-www-form-urlencoded') {
     const params = new URLSearchParams(body),
       result: Input = {}

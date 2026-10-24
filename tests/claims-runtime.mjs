@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { claimsBrowser } from './claims-browser.mjs'
+import { claimsBrowser,safeInputsBrowser } from './claims-browser.mjs'
 import { portalViewResponse,sidesSubmissionEdge } from './claims-portal-edge.mjs'
 import { claimsFixture,claimArtifact } from './claims-fixture.mjs'
 import { capturedWillowClaimsFixture } from './claims-willow-fixture.mjs'
@@ -13,10 +13,11 @@ export async function claimsJourney(context){
  const f=await claimsFixture(context,{willow:capture}),{data,call}=f
  const create=async(overrides={})=>data(f.claims+'/import',f.validRequest(overrides),201)
  await data(f.claims+'/import',f.validRequest({employerEin:'000006902'}),403)
+ await safeInputsBrowser({context,f})
  const c=await create(),door=f.claims+'/'+c.id
  const get=()=>data(door)
  assert.equal((await create()).id,c.id)
- assert.equal((await data(f.claims)).length,1)
+ assert.equal((await data(f.claims)).length,2)
  assert.equal((await call(door,undefined,'')).status,401)
  let row=await get();assert.equal(row.data.status,'awaiting-evidence');assert.ok(row.data.escalations[0].beforeDeadline)
  const unrelated=await data(f.base+'/people',{name:'Jordan Reed',locationId:f.location.id},201)
@@ -78,6 +79,9 @@ export async function claimsJourney(context){
  await data(pendingDoor+'/handoff',{version:pendingRow.version,responseDigest:pendingRow.data.responseDigest},409)
  assert.equal((await data(pendingDoor)).data.handoff,undefined)
  assert.equal((await call('/auth/signout',{})).status,204)
+ assert.equal((await call(door+'/packet')).status,401)
+ assert.equal((await call(door+'/artifacts/'+f.files.request.id)).status,401)
+ assert.equal((await call(door+'/versions/1/packet')).status,401)
  assert.equal((await call(pendingDoor+'/handoff',{version:pendingRow.version,responseDigest:pendingRow.data.responseDigest})).status,401)
  console.log('Claims journey passed; screenshots: '+proof)
 }

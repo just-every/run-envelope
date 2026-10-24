@@ -221,7 +221,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "402c0993d347e462019540237862e56e91925294ecad5f2eb098a64ec949a306",
+      "sha256": "5f26ffcad078160a7e7cfeb66a41aad7aed42a023400e13e94db966fb7fc93cd",
       "executable": false
     },
     "AGENTS.md": {
@@ -241,7 +241,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "476af027cb7d6d617a63d7b6cfe6e37b42d0b825d73230c83db0e92ba0adf389",
+      "sha256": "3e7a89172f2cac6ad8b083f17e09c3caacc63187f08c61ad812ae94b94004236",
       "executable": false
     },
     "deploy-demo.json": {
@@ -330,6 +330,10 @@
     },
     "docs/payroll-verification.md": {
       "sha256": "9a7217358d3b93e7f36927e75abe79c182fb123dd3abaae4df2f1c29f04cbcd3",
+      "executable": false
+    },
+    "docs/private-inputs.md": {
+      "sha256": "3fa8f71700322dc5c577092045110966f966183dd356b19482403b595adb2468",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -473,7 +477,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "02c5fe94b8ce50381abc669614ddd7fafc0979e506ba9ce4292e2560f1d90ab0",
+      "sha256": "77f45507772316c3cfebebee1648d25d98f5cd50efec5ca2ff98b7488584df49",
       "executable": false
     },
     "packaging.json": {
@@ -481,7 +485,7 @@
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "67c70c7010475fedc7f958d12d95cc2d1a9e0a071094b54cc8a0c4a5860f2776",
+      "sha256": "1dff5a3b6926208660eb5652a06011a839543827752ed4898069633c57ab3838",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -1165,7 +1169,7 @@
       "executable": false
     },
     "src/envelope/claims/http.ts": {
-      "sha256": "77490951b5e24f0aa50ba280b4661bad99bed26a9402d5c549da7863813e6658",
+      "sha256": "1d860c2f1edd7932afac41f012ade771bbb0ee0a0dcbd8f67aeb1ce1a51c2d61",
       "executable": false
     },
     "src/envelope/claims/lifecycle.ts": {
@@ -1241,7 +1245,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "0e87f66a37ae8f99c8de45a1b4dc2b656e2ef8eec9a0f36b4ab19c7715142ccc",
+      "sha256": "cd00bdc9070094aab2d7e4adcecc0973383c2c8c3b8de555ecaea43878ccd5f7",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -2553,7 +2557,7 @@
       "executable": false
     },
     "tests/claims-browser.mjs": {
-      "sha256": "9251d84e365173d27af0946c1f1842d3abd78792f49ae1efebc5d472b6af5b84",
+      "sha256": "d271128ad5a145b031ff6b3390b42ab416e32cc40e54bf06c815bd0216392eee",
       "executable": false
     },
     "tests/claims-fixture.mjs": {
@@ -2565,7 +2569,7 @@
       "executable": false
     },
     "tests/claims-runtime.mjs": {
-      "sha256": "22d0b54a0e237fc6bb4e40a7a5f426665d3fcfc06b9efb1ffc4ae815e4b8302e",
+      "sha256": "f6fd5e5b530893254dc4d5ccab44cf5c2b2892051e579bd09e4e01f81ce5722b",
       "executable": false
     },
     "tests/claims-willow-fixture.mjs": {
