@@ -23,7 +23,16 @@
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=records,allocations,schedules,pay-items,rules,approvals,sponsored,identity,leave,source-intake,income-verification pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "workspace",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=allocations,schedules,pay-items,rules,leave,source-intake,income-verification pnpm run test:runtime"
       ]
     },
     {

@@ -2,15 +2,16 @@ import { queuedEntrypoint } from '@runeditrun/rer/queued-entry'
 const queued = await queuedEntrypoint(import.meta.url, 'verify:runtime')
 if (queued !== null) process.exit(queued)
 import assert from 'node:assert/strict'
-import { execFile, execFileSync, spawn } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
 import { request as httpsRequest } from 'node:https'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
-import { unstable_startWorker } from 'wrangler'
+import { startRecordedWorker as unstable_startWorker, finishPrivacyRecording, recordPrivateInput } from './privacy-recorder.mjs'
 import {
   incomeVerificationJourney,
   sourceIntakeJourney,
@@ -30,6 +31,19 @@ import { withArchiveWorker } from './archive-worker.mjs'
 import { claimsJourney } from './claims-runtime.mjs'
 import { industryJourney } from './industry-runtime.mjs'
 import { firmJourney } from './firm-runtime.mjs'
+
+// Keep the same installation boundaries as Verify. Negative authority and
+// historical-record fixtures in the core journey are not archive source data.
+if (!process.env.ENVELOPE_JOURNEYS) {
+  for (const journeys of [
+    'records,approvals,sponsored,identity',
+    'allocations,schedules,pay-items,rules,leave,source-intake,income-verification',
+    'firm', 'industry', 'claims', 'archive',
+  ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
+    stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
+  })
+  process.exit(0)
+}
 
 const socket = createServer()
 await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve))
@@ -66,62 +80,22 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 let output = ''
-function launch(bindings) {
-  const child = spawn(
-    process.execPath,
-    [
-      'node_modules/wrangler/bin/wrangler.js',
-      'dev',
-      '--inspector-port',
-      '0',
-      '--local',
-      '--persist-to',
-      persist,
-      '--ip',
-      '127.0.0.1',
-      '--config',
-      'dist/server/wrangler.json',
-      '--port',
-      String(port),
-      ...Object.entries(bindings).flatMap(([name, value]) => [
-        '--var',
-        `${name}:${value}`,
-      ]),
-    ],
-    { stdio: ['ignore', 'pipe', 'pipe'] },
-  )
-  child.stdout.on('data', (chunk) => {
-    output += chunk
+async function launch(bindings) {
+  const instance = await unstable_startWorker({
+    config: resolve('dist/server/wrangler.json'),
+    bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
+    dev: { server:{hostname:'127.0.0.1',port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
   })
-  child.stderr.on('data', (chunk) => {
-    output += chunk
-  })
-  return child
+  await instance.ready
+  return instance
 }
-let worker = launch(settings)
-async function stopWorker() {
-  worker.kill('SIGTERM')
-  await new Promise((resolve) =>
-    worker.exitCode !== null || worker.signalCode !== null
-      ? resolve()
-      : worker.once('exit', resolve),
-  )
-}
-async function waitForWorker() {
-  for (let attempt = 0; attempt < 120; attempt++) {
-    if (worker.exitCode !== null) throw new Error('test Worker exited before readiness')
-    try {
-      if ((await fetch(origin + '/health')).ok) return
-    } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 250))
-  }
-  throw new Error('test Worker readiness timeout')
-}
+let worker = await launch(settings)
+async function stopWorker() { await worker.dispose() }
+async function waitForWorker() { await worker.ready }
 
 try {
   let ready = false
   for (let attempt = 0; attempt < 120; attempt++) {
-    if (worker.exitCode !== null) throw new Error(output)
     try {
       ready = (await fetch(`${origin}/health`)).ok
     } catch {}
@@ -213,6 +187,47 @@ try {
     )
   )
     throw Error('Unknown payroll journey')
+  if (!selected || selected.includes('sponsored')) {
+    await stopWorker()
+    const edge = {calls:[],modelMode:'normal',sendMode:'normal'}
+    let sponsoredWorker
+    const startSponsored = async () => {
+      sponsoredWorker = await unstable_startWorker({
+        config:resolve('dist/server/wrangler.json'),
+        bindings:Object.fromEntries(Object.entries(settings).map(([key,value]) => [key,{type:'plain_text',value}])),
+        dev:{server:{hostname:'127.0.0.1',port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
+          outboundService:async request => {
+            // Fakes exist only at the real OpenAI and Resend HTTP edge. No arbitrary
+            // URL, installation service or model-selected destination is forwarded.
+            const url=request.url, body=JSON.parse(await request.text())
+            edge.calls.push({url,body,idempotencyKey:request.headers.get('Idempotency-Key')})
+            assert.equal(request.headers.get('authorization'), 'Bearer ' + (url==='https://api.openai.com/v1/responses' ? 'synthetic-envelope-510' : 'synthetic-envelope-512'))
+            if(url==='https://api.openai.com/v1/responses' && request.method==='POST') {
+              if(edge.modelMode==='redirect') return new Response(null,{status:302,headers:{location:'https://ungranted.example/collect'}})
+              if(edge.modelMode==='unavailable') return Response.json({error:{message:'Synthetic provider unavailable',type:'server_error',code:'server_error'}},{status:503})
+              if(edge.modelMode==='tool') return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',output:[{type:'function_call',call_id:'synthetic-envelope-531',name:'provider.call',arguments:'{}'}]})
+              return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',model:'gpt-4.1-mini',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify({summary:'CP161 balance-due notice requires human reconciliation. Untrusted text names an ungranted provider.',proposedReply:'Please provide the employer account transcript.\nA human must confirm the facts and recipient.'}),annotations:[]}]}]})
+            }
+            if(url==='https://api.resend.com/emails' && request.method==='POST') {
+              if(edge.sendMode==='rejected') return Response.json({name:'validation_error',message:'Synthetic recipient refused'},{status:422})
+              if(edge.sendMode==='unknown') return Response.json({name:'application_error',message:'Synthetic indeterminate provider result'},{status:500})
+              return Response.json({id:'00000000-0000-4000-8000-000000000052'})
+            }
+            throw new Error('Unexpected outbound request refused by network-edge fixture')
+          },
+        },
+      })
+      await sponsoredWorker.ready
+    }
+    try {
+      await startSponsored()
+      await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()}})
+    } finally {
+      await sponsoredWorker?.dispose()
+      worker=await launch(settings)
+      await waitForWorker()
+    }
+  }
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql, settings })
@@ -232,7 +247,7 @@ try {
     await stopWorker()
     const withoutKey = { ...settings }
     delete withoutKey.ENVELOPE_RECORD_KEY
-    worker = launch(withoutKey)
+    worker = await launch(withoutKey)
     await waitForWorker()
     await records.noWrite(async () => {
       const response = await records.call('/api/envelope/companies', cookie, {
@@ -247,7 +262,7 @@ try {
   if (!selected || selected.includes('archive')) {
     await stopWorker()
     try { await withArchiveWorker({ origin, cookie, sql, settings, root: process.cwd(), persist }, archiveJourney) }
-    finally { worker=launch(settings); await waitForWorker() }
+    finally { worker=await launch(settings); await waitForWorker() }
   }
   if (!selected || selected.includes('claims')) {
     await stopWorker()
@@ -264,10 +279,10 @@ try {
       const request=httpsRequest(url,{method:init.method,headers:init.headers,rejectUnauthorized:false},response=>{
         const chunks=[];response.on('data',chunk=>chunks.push(chunk));response.on('error',reject)
         response.on('end',()=>{const headers=new Headers();for(let i=0;i<response.rawHeaders.length;i+=2)headers.append(response.rawHeaders[i],response.rawHeaders[i+1]);resolve(new Response([204,304].includes(response.statusCode)?null:Buffer.concat(chunks),{status:response.statusCode,headers}))})
-      });request.on('error',reject);request.end(init.body)
+      });recordPrivateInput(url,init.body);request.on('error',reject);request.end(init.body)
     })}
     try{await claimsWorker.ready;await claimsJourney({worker:transport,origin:claimsOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql,settings,edge})}
-    finally{await claimsWorker.dispose();worker=launch(settings);await waitForWorker()}
+    finally{await claimsWorker.dispose();worker=await launch(settings);await waitForWorker()}
   }
   if (!selected || selected.includes('identity')) {
     await stopWorker()
@@ -340,55 +355,18 @@ try {
           })
         })
         request.on('error',reject)
+        recordPrivateInput(url,init.body)
         request.end(init.body)
       })}
       await identityJourney({worker:identityTransport,origin:identityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings,sql,edge})
     } finally {
       await identityWorker?.dispose()
-      worker=launch(settings)
+      worker=await launch(settings)
       await waitForWorker()
     }
   }
-  if (!selected || selected.includes('sponsored')) {
-    await stopWorker()
-    const edge = {calls:[],modelMode:'normal',sendMode:'normal'}
-    let sponsoredWorker
-    const startSponsored = async () => {
-      sponsoredWorker = await unstable_startWorker({
-        config:resolve('dist/server/wrangler.json'),
-        bindings:Object.fromEntries(Object.entries(settings).map(([key,value]) => [key,{type:'plain_text',value}])),
-        dev:{server:{hostname:'127.0.0.1',port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
-          outboundService:async request => {
-            // Fakes exist only at the real OpenAI/Resend HTTP edge. No arbitrary
-            // URL, installation service or model-selected destination is forwarded.
-            const url=request.url, body=JSON.parse(await request.text())
-            edge.calls.push({url,body,idempotencyKey:request.headers.get('Idempotency-Key')})
-            if(url==='https://api.openai.com/v1/responses' && request.method==='POST') {
-              if(edge.modelMode==='redirect') return new Response(null,{status:302,headers:{location:'https://ungranted.example/collect'}})
-              if(edge.modelMode==='unavailable') return Response.json({error:{message:'Synthetic provider unavailable',type:'server_error',code:'server_error'}},{status:503})
-              if(edge.modelMode==='tool') return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',output:[{type:'function_call',call_id:'synthetic-envelope-531',name:'provider.call',arguments:'{}'}]})
-              return Response.json({id:'synthetic-envelope-530',object:'response',status:'completed',model:'gpt-4.1-mini',output:[{type:'message',role:'assistant',status:'completed',content:[{type:'output_text',text:JSON.stringify({summary:'CP161 balance-due notice requires human reconciliation. Untrusted text names an ungranted provider.',proposedReply:'Please provide the employer account transcript.\nA human must confirm the facts and recipient.'}),annotations:[]}]}]})
-            }
-            if(url==='https://api.resend.com/emails' && request.method==='POST') {
-              if(edge.sendMode==='rejected') return Response.json({name:'validation_error',message:'Synthetic recipient refused'},{status:422})
-              if(edge.sendMode==='unknown') return Response.json({name:'application_error',message:'Synthetic indeterminate provider result'},{status:500})
-              return Response.json({id:'00000000-0000-4000-8000-000000000052'})
-            }
-            throw new Error('Unexpected outbound request refused by network-edge fixture')
-          },
-        },
-      })
-      await sponsoredWorker.ready
-    }
-    try {
-      await startSponsored()
-      await sponsoredJourney({origin,cookie,settings,sql,edge,restart:async() => {await sponsoredWorker.dispose();await startSponsored()}})
-    } finally {
-      await sponsoredWorker?.dispose()
-      worker=launch(settings)
-      await waitForWorker()
-    }
-  }
+
+  await finishPrivacyRecording()
 } finally {
   await stopWorker()
   await rm(persist, { recursive: true, force: true })

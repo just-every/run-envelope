@@ -57,9 +57,11 @@ export class Providers {
       f = fence(actor), proof = stepUpFence(actor), change = crypto.randomUUID()
     const prior = await this.records.statement('SELECT * FROM env_external_providers WHERE company_id=? AND id=?',[actor.company,id]).first<Provider>()
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
+    const remove = input.removeCredential === true || input.removeCredential === 'true'
+    if (remove && (enabled || input.secret)) throw new PayrollError('provider_removal_requires_disabled')
     const secret = input.secret ? text(input.secret,4096) : null
-    if (enabled && !secret && !prior) throw new PayrollError('provider_credential_required')
-    const cipher = secret ? await seal(key,JSON.stringify([actor.company,id,'provider-secret']),secret) : (prior?.secret_cipher ?? '')
+    if (enabled && !secret && !prior?.secret_cipher) throw new PayrollError('provider_credential_required')
+    const cipher = remove ? '' : secret ? await seal(key,JSON.stringify([actor.company,id,'provider-secret']),secret) : (prior?.secret_cipher ?? '')
     const sender = id==='resend' && enabled ? email(input.sender || prior?.sender) : ''
     if (enabled && input.consent !== 'true' && input.consent !== true) throw new PayrollError('provider_consent_required')
     const result = await this.records.env.DB.batch([

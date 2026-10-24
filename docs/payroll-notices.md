@@ -1,7 +1,8 @@
 # Declared notice processing and exact correspondence
 
-These optional notice doors implement part of ENV-052/055, using the existing
-company/location/field authority. They do not complete ENV-025/034/035/055/062
+These optional notice doors use the existing company, location and field
+authority. Their scoped credential and implemented privacy boundaries are covered
+by ENV-052 and ENV-055. They do not complete ENV-025, ENV-034, ENV-035, ENV-062
 or the payroll engine. No notice text, model output or client approval flag can
 approve, choose a new provider, change bank details, pay wages or sign a filing.
 
@@ -9,7 +10,11 @@ approve, choose a new provider, change bank details, pay wages or sign a filing.
 
 Open **Agent credentials → Declare external providers**. Fresh app-local proof
 and explicit consent are required to enable a declaration. `POST /providers`
-accepts `{id,version,enabled,consent,secret?,sender?}`. Keys are encrypted with the
+accepts `{id,version,enabled,consent,secret?,sender?,removeCredential?}`.
+An owner with fresh proof may set `removeCredential:true` only with the provider
+disabled and no replacement secret. This clears its encrypted credential, bumps
+the declaration version and records the existing declaration audit. Re-enabling
+requires a new credential and explicit consent. Keys are encrypted with the
 independent payroll record key, never returned, placed in the DOM, logged or
 exported. Omitting a replacement key retains the existing ciphertext. Version
 checks prevent concurrent setting overwrite. Disable rather than silently fall
@@ -95,3 +100,22 @@ sandbox run. Only synthetic credentials/identifiers are used.
 - Resend send: https://resend.com/docs/api-reference/emails/send-email
 - Resend idempotency: https://resend.com/docs/dashboard/emails/idempotency-keys
 - IRS CP161 notice context: https://www.irs.gov/individuals/understanding-your-cp161-notice
+
+## Privacy recording across implemented controls
+
+`tests/privacy-recorder.mjs` observes the emitted Worker outbound edge, browser
+requests and console output, structured Worker logs and emitted client assets.
+Planted private values are learned from actual private-record and provider
+submissions. Provider credentials may appear only in the appropriate declared
+recipient's authorization header; existing edge assertions verify that header
+and the exact permitted payload. An undeclared request remains a failure even
+when application code catches its network error.
+
+The default `tests/runtime.mjs` sweep retains Verify's separate installations
+for authority, workspace, firm, industry, claims and archive journeys. It runs
+the existing native screens at both widths. The sponsored journey removes the
+stored OpenAI key, restarts the Worker and checks unavailable processing without
+an invented analysis while human correspondence review remains available. All
+other implemented non-agent controls run without an AI credential. Full future
+payroll independence and complete external declarations remain ENV-073; see
+[installed data boundaries](./payroll-external-data.md).

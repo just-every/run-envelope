@@ -18,9 +18,13 @@
     {
       "id": "cloudflare",
       "required": true,
-      "why": "Worker hosting",
+      "why": "Owner-controlled Worker hosting and D1 storage. The owner supplies account authority and holds installation bindings; company private records use the independent payroll record key. Optional native email uses only the configured account and credential. See ./docs/payroll-external-data.md for custody.",
       "data": [
-        "HTTP requests"
+        "HTTP requests",
+        "owner identity and sessions",
+        "company and payroll records",
+        "encrypted private identifiers",
+        "configured native authentication mail when Cloudflare mail is selected"
       ],
       "adapters": []
     },
@@ -38,8 +42,10 @@
     {
       "id": "resend",
       "required": false,
-      "why": "Exact unexpired human-approved notice correspondence only",
+      "why": "Configured native sign-in, invitation and sensitive-change mail, plus exact human-approved notice correspondence. Installation mail credentials stay in owner Worker bindings; company notice credentials are encrypted in D1. Resend holds delivery data under owner terms.",
       "data": [
+        "authentication recipient and sender",
+        "single-use authentication or invitation link",
         "approved sender",
         "approved recipient",
         "approved subject",
@@ -48,6 +54,31 @@
       "adapters": [
         "https://api.resend.com/emails"
       ]
+    },
+    {
+      "id": "sendgrid",
+      "required": false,
+      "why": "Alternative explicitly configured native authentication mail transport. The owner supplies the API credential in installation bindings; SendGrid holds messages and delivery metadata under owner terms. No payroll record or private identifier is needed.",
+      "data": [
+        "authentication recipient and sender",
+        "single-use authentication or invitation link"
+      ],
+      "adapters": [
+        "https://api.sendgrid.com/v3/mail/send"
+      ]
+    },
+    {
+      "id": "identity-provider",
+      "required": false,
+      "why": "Optional owner-linked identity issuer, selected and reviewed in native sign-in settings. Discovery, token, key and link endpoints stay on the approved issuer origin. Installation signing keys stay in owner D1; only signed client assertions leave. Identity processing follows the selected issuer terms.",
+      "data": [
+        "installation origin and callback",
+        "client identifier and signed client assertion",
+        "single-use link or authorization code",
+        "PKCE verifier",
+        "requested identity scopes and nonce"
+      ],
+      "adapters": []
     }
   ],
   "env": [],

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { request as httpsRequest } from 'node:https';
 import { resolve } from 'node:path';
-import { unstable_startWorker } from 'wrangler';
+import { startRecordedWorker as unstable_startWorker, recordPrivateInput } from './privacy-recorder.mjs';
 
 // A native TLS installation with only the paid mail transport replaced at its
 // network edge. Sign-in proof and all payroll mutations remain real HTTP flows.
@@ -34,7 +34,7 @@ export async function withArchiveWorker(context, journey) {
         resolve(new Response([204, 304].includes(response.statusCode) ? null : Buffer.concat(chunks), { status: response.statusCode, headers }));
       });
     });
-    request.on('error', reject); request.end(init.body);
+    recordPrivateInput(url, init.body); request.on('error', reject); request.end(init.body);
   }) };
   let instance = await start(context.persist);
   try {
