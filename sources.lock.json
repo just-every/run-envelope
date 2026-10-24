@@ -860,10 +860,6 @@
       "sha256": "5a32dec3274b66474e12d5141e973542248ceeecf0f8464f6e9da87d60228cb4",
       "executable": false
     },
-    "scripts/delivery/base/packaging.json": {
-      "sha256": "43b16be10ad9d88a4821cf3f329033ec9bf53fb4a319a4bf09321a929ddaa40d",
-      "executable": false
-    },
     "scripts/delivery/base/paths.mjs": {
       "sha256": "32af2ee0d6e8ce048d04978e2d70f476bdc2a690b1a270d580056641f87a1731",
       "executable": false
