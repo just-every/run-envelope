@@ -8,7 +8,7 @@ import { archiveYearFixture } from './archive-year-fixture.mjs'
 /** Real native business records; only the retained agency request is a source-edge fixture. */
 export async function archiveFixture(context) {
   const payroll = industryFixture(context)
-  const company = await payroll.company('Synthetic archive payroll employer', ['Synthetic archive payroll worker'])
+  const company = await payroll.company('Synthetic archive payroll employer', ['<img src="https://ungranted.example/pixel" onerror="globalThis.syntheticEnvelope586=true">'])
   const person = company.people[0]
   await payroll.classify(company, person, ordinaryFacts)
   const check = await payroll.preview(company, person)

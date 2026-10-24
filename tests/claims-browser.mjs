@@ -6,11 +6,51 @@ import { join } from 'node:path'
 import { portalViewResponse,sidesSubmissionEdge } from './claims-portal-edge.mjs'
 
 export async function claimsBrowser({context,f,completedDoor,wageDoor,edge}){
+ const {default:axe}=await import('axe-core')
+ const interactionAudits=[]
  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']}),proof=await mkdtemp(join(process.env.ENVELOPE_PROOF_ROOT??tmpdir(),'envelope-claims-'))
  console.log('Claims screenshot directory: '+proof)
  try{
   const ctx=await browser.newContext({ignoreHTTPSErrors:true}),[name,value]=context.cookie.split('=');await ctx.addCookies([{name,value,url:context.origin}]);const page=await ctx.newPage();page.on('response',async response=>{if(response.status()>=400&&response.url().startsWith(context.origin))console.log('Claim browser refused '+response.status()+' '+response.url()+' '+await response.text())})
-  const capture=async(label,url,open)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(context.origin+url);await page.evaluate(()=>document.fonts.ready);for(const label of (Array.isArray(open)?open:open?[open]:[])){const summary=page.getByText(label,{exact:true});if(!await summary.evaluate(n=>n.parentElement.open))await summary.click()}await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label);for(const el of await page.locator('button,a,summary').all())if(await el.isVisible())assert.ok((await el.innerText()).trim(),label+' unnamed control')}}
+  const capture=async(label,url,open,expectedStatus=200)=>{
+   for(const width of [1440,390]) {
+    await page.setViewportSize({width,height:1000})
+    const response=await page.goto(context.origin+url)
+    assert.equal(response.status(),expectedStatus,label+' HTTP status')
+    await page.evaluate(()=>document.fonts.ready)
+    for(const title of (Array.isArray(open)?open:open?[open]:[])) {
+     const summary=page.getByText(title,{exact:true})
+     if(!await summary.evaluate(n=>n.parentElement.open)) {
+      await summary.focus();await page.keyboard.press('Enter')
+      assert.ok(await summary.evaluate(n=>n.parentElement.open),label+' opens disclosure by keyboard')
+     }
+    }
+    await page.evaluate(axe.source)
+    const audit=await page.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+    interactionAudits.push({label,width,violations:audit.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),incomplete:audit.incomplete.map(v=>v.id)})
+    // Colour findings stay explicit until br's approved correction is on main.
+    assert.deepEqual(audit.violations.filter(v=>v.id!=='color-contrast').map(v=>v.id),[],label+' structural accessibility')
+    await writeFile(join(proof,`${label}-${width}.aria.txt`),await page.locator('body').ariaSnapshot())
+    const controls=page.locator('a[href],button:enabled,input:enabled:not([type="hidden"]),select:enabled,textarea:enabled,summary').filter({visible:true})
+    await page.keyboard.press('Tab')
+    for(const control of await controls.all()) {
+     await control.focus()
+     assert.ok(await control.evaluate(n=>n===document.activeElement),label+' focus reaches control')
+     assert.notEqual(await control.evaluate(n=>getComputedStyle(n).outlineStyle),'none',label+' visible focus '+await control.evaluate(n=>n.tagName+' '+(n.name||n.textContent.trim())))
+     if(await control.evaluate(n=>n.tagName==='INPUT'&&n.type==='checkbox')) {
+      const checked=await control.isChecked()
+      await page.keyboard.press('Space');assert.equal(await control.isChecked(),!checked)
+      await page.keyboard.press('Space');assert.equal(await control.isChecked(),checked)
+     }
+    }
+    await page.keyboard.press('Tab')
+    assert.ok(await page.evaluate(()=>document.activeElement===document.body||document.activeElement.tabIndex>=0),label+' tab leaves control')
+    await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:true})
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label)
+    for(const el of await page.locator('button,a,summary').all())
+     if(await el.isVisible())assert.ok((await el.innerText()).trim(),label+' unnamed control')
+   }
+  }
   const app=f.claims.replace('/api/','/app/'),fill=async(name,value)=>page.locator(`[name="${name}"]:visible`).fill(String(value)),select=async(name,value)=>page.locator(`[name="${name}"]:visible`).selectOption(String(value))
   const upload=async(name,file)=>page.locator(`[name="${name}"]`).setInputFiles({name:file.name,mimeType:file.mediaType,buffer:Buffer.from(file.contentBase64,'base64')})
   const empty=await f.data('/api/envelope/companies',{name:'Clearwater Laundry',ein:'00-0006903'},201);await capture('claims-empty','/app/envelope/companies/'+empty.id+'/claims')
@@ -22,7 +62,7 @@ export async function claimsBrowser({context,f,completedDoor,wageDoor,edge}){
   await select('exchange','separation');await select('claimantStatedReason',f.portalReason);await select('representativeId',f.operator.id)
   for(const key of ['requestId','agency','state','employerEin','stateEmployerId','claimantName','claimantIdentifier','issuedOn','dueOn','timeZone','sourceRef'])await fill(key,request[key])
   await fill('deadlineAt',request.deadlineAt.slice(0,16));await fill('escalationAt',input.escalationAt.slice(0,16))
-  await page.getByRole('button',{name:'Import and assign this request',exact:true}).click();await page.waitForURL(url=>url.pathname.startsWith(app+'/claim-'))
+  await page.getByRole('button',{name:'Import and assign this request',exact:true}).focus();await page.keyboard.press('Enter');await page.waitForURL(url=>url.pathname.startsWith(app+'/claim-'))
   const path=new URL(page.url()).pathname,door=path.replace('/app/','/api/')
   await capture('claims-evidence-form',path)
   await select('personId',f.person.id);await page.locator('[name="payroll.0"]').check()
@@ -71,6 +111,8 @@ export async function claimsBrowser({context,f,completedDoor,wageDoor,edge}){
   await capture('claims-follow-up-confirmed',followPath)
   await capture('claims-wage-response',wageDoor.replace('/api/','/app/'),'Prepare the cited agency response')
   await capture('claims-wage-review',wageDoor.replace('/api/','/app/')+'/review')
+  await capture('claims-failed',app+'/synthetic-envelope-missing',undefined,404)
+  await writeFile(join(proof,'interaction-accessibility.json'),JSON.stringify(interactionAudits,null,2))
   return proof
  }finally{await browser.close()}
 }
@@ -263,6 +305,46 @@ export async function safeInputsBrowser({context,f}) {
   assert.deepEqual(outbound,[],'notice text never executes or loads remote images')
   assert.equal((await member.request.get(context.origin+noticePath)).status(),403)
   assert.equal((await visitor.request.get(context.origin+noticePath)).status(),401)
+  // Real structured imports retain inert text and enforce immutable revisions.
+  const source={provider:'willow',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-578',sourceEvidence:payload,sourceApprovedBy:'Synthetic payroll reviewer',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-579',effectiveDate:'2026-10-01',values:{name:'<img src="https://ungranted.example/pixel">',locationId:f.location.id,unrequestedImage:payload}}}
+  const hire=await f.data(f.base+'/hris-hires',source,201)
+  const event={...source,type:'rate',export:{...source.export,values:{rateCents:2500,unrequestedImage:payload}}}
+  const hr=await f.data(personDoor+'/hris',event,201)
+  const earning={provider:'gauge',version:0,sourceVersion:1,sourcePersonId:source.sourcePersonId,sourceEvidence:payload,sourceApprovedBy:source.sourceApprovedBy,export:{schema:'envelope-job-earning@1',sourceId:'synthetic-envelope-580',effectiveDate:'2026-10-01',status:'approved',currency:'USD',paymentState:'unpaid',amountCents:2500,jobId:'synthetic-envelope-581',approvedBy:source.sourceApprovedBy,earningType:'job',unrequestedImage:payload}}
+  const earned=await f.data(personDoor+'/earnings-sources',earning,201)
+  for(const [path,input,row] of [[f.base+'/hris-hires',source,hire],[personDoor+'/hris',event,hr],[personDoor+'/earnings-sources',earning,earned]]) {
+   const original=await f.data(path)
+   assert.ok(original.some(r=>r.id===row.id&&r.data.sourceEvidence===payload),'hostile evidence is retained as data')
+   assert.ok(!JSON.stringify(original).includes('unrequestedImage'),'unrequested source fields do not enter payroll')
+   await f.data(path,{...input,version:1,sourceVersion:2,sourceEvidence:'synthetic-envelope-582'},201)
+   const corrected=await f.data(path)
+   assert.ok(corrected.some(r=>r.id===row.id&&r.version===1&&r.data.sourceEvidence===payload),'original source revision retained')
+   assert.ok(corrected.some(r=>r.id===row.id&&r.version===2&&r.data.sourceEvidence==='synthetic-envelope-582'))
+   await f.data(path,{...input,sourceVersion:3},409)
+   assert.deepEqual(await f.data(path),corrected,'stale source cannot overwrite retained revisions')
+   for(const width of [1440,390]) {
+    await owned.setViewportSize({width,height:1000});await owned.goto(context.origin+path.replace('/api/','/app/'))
+    assert.equal(await owned.evaluate(()=>globalThis.syntheticEnvelope570),undefined)
+    assert.equal(await owned.locator('script[src^="https://ungranted.example"],img[src^="https://ungranted.example"]').count(),0)
+    assert.ok((await owned.locator('main').innerText()).includes(path.endsWith('hris-hires')?source.export.values.name:payload),'import evidence is escaped visible text')
+    await owned.screenshot({path:join(proof,'structured-'+row.id+'-'+width+'.png'),fullPage:true})
+   }
+  }
+  const {ordinaryFacts,ordinaryW4}=await import('./industry-fixture.mjs')
+  const classification={version:0,effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',facts:ordinaryFacts,w4:ordinaryW4,evidenceTitle:'Synthetic classification evidence',evidenceIssuer:'Employer',evidenceReference:payload,evidenceText:payload}
+  const classified=await f.data(personDoor+'/industry/classification',classification,201)
+  await f.data(personDoor+'/industry/classification',{...classification,version:1,evidenceText:'synthetic-envelope-583'},201)
+  const classifications=await f.data(personDoor+'/industry')
+  assert.ok(classifications.classifications.some(r=>r.id===classified.id&&r.version===1&&r.data.evidenceText===payload))
+  await f.data(personDoor+'/industry/classification',classification,409)
+  assert.deepEqual(await f.data(personDoor+'/industry'),classifications)
+  for(const width of [1440,390]) {
+   await owned.setViewportSize({width,height:1000});await owned.goto(context.origin+personDoor.replace('/api/','/app/')+'/industry')
+   assert.equal(await owned.evaluate(()=>globalThis.syntheticEnvelope570),undefined)
+   assert.equal(await owned.locator('img[src^="https://ungranted.example"]').count(),0)
+   await owned.screenshot({path:join(proof,'structured-industry-'+width+'.png'),fullPage:true})
+  }
+  assert.deepEqual(outbound,[],'structured source and classification text never executes a remote request')
   // The real import and document boundaries share the bounded JSON reader.
   const snapshot=()=>context.sql('SELECT (SELECT COUNT(*) FROM env_private_records) AS privateRecords,(SELECT COUNT(*) FROM env_notices) AS notices,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit')
   for(const path of [personDoor+'/private',f.base+'/notices',f.base+'/hris-hires',personDoor+'/hris',personDoor+'/earnings-sources',personDoor+'/industry/classification',f.base+'/industry-returns']) {
@@ -272,6 +354,19 @@ export async function safeInputsBrowser({context,f}) {
     assert.equal(response.status(),status,path+' rejects malformed or oversized input')
    }
    assert.deepEqual(await snapshot(),before,'rejected input writes no private version or audit')
+  }
+  const structuredSnapshot=()=>context.sql('SELECT company_id,kind,object_id,version,cipher FROM env_workspace_versions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_notice_replies; SELECT * FROM env_verification_releases')
+  for(const [path,body,status] of [
+   [f.base+'/hris-hires',{...source,version:2,sourceVersion:3,export:[]},400],
+   [personDoor+'/hris',{...event,version:2,sourceVersion:3,export:{...event.export,values:{rateCents:payload}}},400],
+   [personDoor+'/earnings-sources',{...earning,version:2,sourceVersion:3,export:{...earning.export,amountCents:payload}},400],
+   [personDoor+'/industry/classification',{...classification,version:2,facts:{...ordinaryFacts,claims:[null]}},400],
+   [noticePath+'/replies',{to:payload,subject:payload,body:payload},409],
+   ['/api/envelope/protected-response/read',{id:payload,token:payload},400],
+  ]) {
+   const before=await structuredSnapshot()
+   await f.data(path,body,status)
+   assert.deepEqual(await structuredSnapshot(),before,'hostile structured input creates no private revision, reply or release')
   }
   await f.data(personDoor+'/private',{kind:'tax',version:2,value:'x'.repeat(16001)},400)
   await f.data(f.base+'/notices',{locationId:f.location.id,reference:'synthetic-envelope-577',body:'x'.repeat(12001)},400)

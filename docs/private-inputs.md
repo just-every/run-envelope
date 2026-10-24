@@ -58,3 +58,30 @@ Verified callbacks redirect to the requested native document; callback responses
 are non-cacheable and do not contain private payroll text. Human screen-reader
 review remains a separate obligation. Keyboard focus and automated accessibility checks cover
 specific interactions, not the full WCAG 2.2 AA target.
+
+## Structured source revisions and interaction proof
+
+The native safe-input journey also imports hostile text in Willow hire evidence,
+HR changes, job earnings and industry classification evidence. It checks escaped
+rendering at 1440 and 390, no script execution or remote image request, retained
+original revisions after correction, and write-free stale-version refusals.
+Unrequested source fields are discarded before payroll storage. Invalid numeric
+source values and malformed structured exports cannot create a private revision.
+
+The claims browser journey records automated findings and accessibility trees
+for empty, loaded, held, prepared, signed, handoff, confirmed and follow-up
+screens. It checks visible focus, keyboard checkbox state and native keyboard
+submission. This is bounded interaction evidence, with contrast findings kept
+visible. ENV-057 remains partial. ENV-074 preserves the approved split’s scripted
+accessibility-tree announcement assertions and the owner’s recorded VoiceOver
+or NVDA pre-release pass. No human screen-reader pass is claimed here.
+
+Notice-reply text remains plain text through exact human review and dispatch;
+stale edits cannot replace the current reply. Protected-response requesters
+receive selected facts and opaque provenance identifiers, never private source
+evidence. The native verification source review and restored company history
+use the existing evidence wrapping for long imported text at phone widths.
+The archive journey carries hostile person text through a real CLI export and
+restore and verifies that native rendering remains inert under restricted
+current authority. These checks extend the exercised cases; exhaustive input
+and interaction coverage remains open in ENV-057.

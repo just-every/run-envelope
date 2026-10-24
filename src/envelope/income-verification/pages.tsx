@@ -175,7 +175,7 @@ export function verificationPage(
                   {r.data.from}–{r.data.through} · $
                   {(r.data.grossCents / 100).toFixed(2)}
                 </h3>
-                <p>
+                <p className="evidence-text">
                   {r.data.sourceRef} v{r.version};{' '}
                   {r.approvedBy && !r.withdrawnBy
                     ? 'reviewed'

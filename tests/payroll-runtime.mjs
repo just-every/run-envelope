@@ -3,7 +3,7 @@
 // review, read and denial uses the actual HTTP application and migrated D1.
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
 import { privateValue } from './privacy-recorder.mjs'
@@ -3032,6 +3032,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     sponsors[role]={id,session,cookie:localCookieName('operator_session_local',origin)+'='+token}
   }
   const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const hostileReply='<script>globalThis.syntheticEnvelope584=true</script><img src="https://ungranted.example/pixel">'
   const proof=process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
   await mkdir(proof,{recursive:true})
   const context=await browser.newContext(),page=await context.newPage()
@@ -3050,6 +3051,8 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
       await page.evaluate(()=>document.fonts.ready)
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label+' fits '+width)
       assert.equal(await page.locator('script:not([type="application/json"])').count(),0)
+      assert.equal(await page.evaluate(()=>globalThis.syntheticEnvelope584),undefined)
+      assert.equal(await page.locator('img[src^="https://ungranted.example"]').count(),0)
       await page.keyboard.press('Tab')
       assert.equal(await page.evaluate(()=>document.activeElement?.tagName==='A'),true)
       await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
@@ -3175,10 +3178,11 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await page.goto(origin+noticePath)
     await page.getByLabel('Verified reply recipient email',{exact:true}).fill('agency-contact@example.com')
     await page.getByLabel('Reply subject',{exact:true}).fill('CP161 evidence request')
-    await page.getByLabel('Exact reply text',{exact:true}).fill('Please provide the account transcript for human reconciliation.\nReference synthetic-envelope-518.')
+    await page.getByLabel('Exact reply text',{exact:true}).fill('Please provide the account transcript for human reconciliation.\nReference synthetic-envelope-518. '+hostileReply)
     await page.getByRole('button',{name:'Save unapproved reply version',exact:true}).click()
     await page.waitForURL(origin+noticePath)
     let reply=(await data(api+'/notices/'+noticeId)).replies[0]
+    assert.ok(reply.data.body.includes(hostileReply),'untrusted reply text is retained as text')
     const execute=(r=reply) => tool('reply.dispatch',{companyId:company,replyId:r.id,version:r.version,digest:r.digest},dispatcher.token)
     const executeStatus=async(r,status) => tool('reply.dispatch',{companyId:company,replyId:r.id,version:r.version,digest:r.digest},dispatcher.token,status)
     await executeStatus(reply,409)
@@ -3195,6 +3199,8 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     const edited=await data(api+'/notices/'+noticeId+'/replies',{id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:reply.data.body+' Edited.'},cookie,201)
     await executeStatus(reply,409)
     await executeStatus(edited,409)
+    await data(api+'/notices/'+noticeId+'/replies',{id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:'stale overwrite'},cookie,409)
+    assert.equal((await data(api+'/notices/'+noticeId)).replies[0].data.body,reply.data.body+' Edited.')
     assert.equal(edge.calls.length,unapprovedCalls)
     await capture(noticePath,'notice-edited-unapproved')
     const review=await data(api+'/notice-replies/'+edited.id+'/review')
@@ -3801,7 +3807,8 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     if(name==='worker'||name==='coworker')await data(api+'/grants',{operatorId:id,version:0,role:'employee',locations:[location.id],fields:[],actions:['records:read']})
   }
   const approve=async(kind,id)=>{const r=await data(door+'/'+kind+'/'+id+'/review');await data(door+'/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken});return r}
-  const source={id:'synthetic-envelope-1020',version:0,from:'2026-06-01',through:'2026-06-30',grossCents:345678,sourceRef:'synthetic-envelope-1021',evidence:'Synthetic documented historical payroll register, reviewed against original'}
+  const hostileEvidence='<script>globalThis.syntheticEnvelope585=true</script><img src="https://ungranted.example/pixel">'
+  const source={id:'synthetic-envelope-1020',version:0,from:'2026-06-01',through:'2026-06-30',grossCents:345678,sourceRef:hostileEvidence,evidence:hostileEvidence}
   const now=Date.now(),dateAfter=days=>new Date(now+days*86400000).toISOString().slice(0,10)
   const consent={requesterId:identities.requester.id,purpose:'mortgage',from:source.from,through:source.through,fields:['hireDate','grossWages'],expiresOn:dateAfter(3),retentionUntil:dateAfter(30)}
   const snapshot=()=>sql("SELECT (SELECT COUNT(*) FROM env_verification_consents) AS consents,(SELECT COUNT(*) FROM env_verification_releases) AS releases,(SELECT COUNT(*) FROM env_workspace_versions WHERE kind='disclosure') AS disclosures,(SELECT COUNT(*) FROM env_audit) AS audit")
@@ -3811,7 +3818,14 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
     const workerContext=await browser.newContext(),workerParts=identities.worker.cookie.split('=');await workerContext.addCookies([{name:workerParts[0],value:workerParts[1],url:origin}]);const workerPage=await workerContext.newPage()
     const requesterContext=await browser.newContext(),requesterParts=identities.requester.cookie.split('=');await requesterContext.addCookies([{name:requesterParts[0],value:requesterParts[1],url:origin}]);const requesterPage=await requesterContext.newPage()
-    const capture=async(target,path,label,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',{recursive:true});for(const width of [1440,390]){await target.setViewportSize({width,height:1000});const r=await target.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),status);await target.evaluate(()=>document.fonts.ready);assert.equal(await target.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await target.keyboard.press('Tab');assert.equal(await target.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await target.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Verification controls have visible words');await target.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',label+'-'+width+'.png'),fullPage:true,mask:[target.locator('[data-release-token]')]})}}
+    const capture=async(target,path,label,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope',{recursive:true});for(const width of [1440,390]){await target.setViewportSize({width,height:1000});const r=await target.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),status);await target.evaluate(()=>document.fonts.ready);assert.equal(await target.evaluate(()=>globalThis.syntheticEnvelope585),undefined);assert.equal(await target.locator('img[src^="https://ungranted.example"]').count(),0);assert.equal(await target.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await target.keyboard.press('Tab');assert.equal(await target.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await target.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Verification controls have visible words');if(label==='verification-wage-source-review') {
+      const {default:axe}=await import('axe-core')
+      await target.evaluate(axe.source)
+      const audit=await target.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+      await writeFile(join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope',label+'-'+width+'.accessibility.json'),JSON.stringify(audit.violations,null,2))
+      assert.deepEqual(audit.violations.filter(v=>v.id!=='color-contrast').map(v=>v.id),[],'protected source review structural accessibility')
+     }
+     await target.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope',label+'-'+width+'.png'),fullPage:true,mask:[target.locator('[data-release-token]')]})}}
     await capture(page,person,'verification-person-entry')
     await capture(page,door,'verification-empty')
     const binding=await data(door+'/worker',{version:0,workerId:identities.worker.id,evidence:'synthetic-envelope-1022'},201)
@@ -3842,7 +3856,7 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     await page.waitForURL(origin+door.replace('/api/','/app/')+'/disclosure/'+response.id+'/release')
     const released={id:await page.locator('[data-release-id]').innerText(),token:await page.locator('[data-release-token]').innerText()}
     assert.ok((await page.locator('main').innerText()).includes('No delivery or acknowledgement is claimed.'))
-    for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope','verification-protected-handover-'+width+'.png'),fullPage:true,mask:[page.locator('[data-release-token]')]})}
+    for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope','verification-protected-handover-'+width+'.png'),fullPage:true,mask:[page.locator('[data-release-token]')]})}
     const get=(release,who=identities.requester.cookie,status=200)=>data('/api/envelope/protected-response/read',{id:release.id,token:release.token},status,who)
     await noWrite(async()=>{await get(released,identities.forged.cookie,403);await get({...released,token:'synthetic-envelope-1031'},identities.requester.cookie,403)})
     let facts=await get(released)
@@ -3851,6 +3865,7 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     assert.ok(facts.provenance.some(s=>s.id===source.id));assert.ok(facts.provenance.some(s=>s.id===hire.id))
     assert.ok(facts.provenance.every(s=>Object.keys(s).sort().join(',')==='id,kind,version'),'requesters get opaque provenance, never private document references')
     assert.equal(JSON.stringify(facts).includes(source.sourceRef),false)
+    assert.equal(JSON.stringify(facts).includes('ungranted.example'),false,'requester cannot retrieve private hostile source evidence')
     const ownerDisclosure=(await data(door)).disclosures.find(r=>r.id===response.id)
     assert.ok(ownerDisclosure.data.provenance.some(s=>s.sourceRef===source.sourceRef));assert.ok(ownerDisclosure.data.provenance.some(s=>s.sourceRef==='synthetic-envelope-1025'))
     await data('/api/envelope/protected-response/ack',{id:released.id,token:released.token},200,identities.requester.cookie)
@@ -3859,7 +3874,7 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     await capture(workerPage,door,'verification-worker-disclosure-history')
     await capture(requesterPage,'/app/envelope/protected-response','verification-requester-empty')
     await requesterPage.getByLabel('Protected release ID',{exact:true}).fill(released.id);await requesterPage.getByLabel('Private response token',{exact:true}).fill(released.token);await requesterPage.getByRole('button',{name:'Open selected reviewed facts',exact:true}).click();await requesterPage.waitForURL(origin+'/app/envelope/protected-response/read')
-    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope','verification-protected-facts-'+width+'.png'),fullPage:true})}
+    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope','verification-protected-facts-'+width+'.png'),fullPage:true})}
     await data(door+'/consents/'+signed.id+'/corrections',{reason:'Please reconcile the gross amount to the corrected June register.'},200,identities.worker.cookie)
     await data(door+'/income',{...source,version:1,grossCents:345600},201);await approve('income-source',source.id)
     await noWrite(async()=>{await get(released,identities.requester.cookie,403)})
@@ -3883,7 +3898,7 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     await requesterPage.getByLabel('Protected release ID',{exact:true}).fill(expiringRelease.id);await requesterPage.getByLabel('Private response token',{exact:true}).fill(expiringRelease.token)
     const expiredResponse=await Promise.all([requesterPage.waitForResponse(r=>r.url()===origin+'/app/envelope/protected-response/read' && r.request().method()==='POST'),requesterPage.getByRole('button',{name:'Open selected reviewed facts',exact:true}).click()])
     assert.equal(expiredResponse[0].status(),403)
-    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal((await requesterPage.locator('main').innerText()).includes('grossWagesCents'),false);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope','verification-expired-refusal-'+width+'.png'),fullPage:true})}
+    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal((await requesterPage.locator('main').innerText()).includes('grossWagesCents'),false);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope','verification-expired-refusal-'+width+'.png'),fullPage:true})}
     const ownerView=await data(door)
     assert.deepEqual(ownerView.disclosures.find(r=>r.id===expiringResponse.id).data.response,{retention:'restricted-after-selected-date'})
     await capture(page,door,'verification-corrected-revoked-history');await capture(workerPage,door,'verification-worker-revoked-history')

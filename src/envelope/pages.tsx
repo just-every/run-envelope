@@ -210,7 +210,7 @@ export function companyPage(
       <Card title="People">
         {people.length ? (
           people.map((p) => (
-            <p key={p.id}>
+            <p key={p.id} className="evidence-text">
               <a href={`${base}/people/${p.id}`}>{p.name}</a>
             </p>
           ))

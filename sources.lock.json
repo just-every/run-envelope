@@ -221,7 +221,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "5c3e29dcadae7fc1b32396ad44cf98ef3e3422ed586384d74826db384c079328",
+      "sha256": "67d5ff248f6afdb216662b4f780526326a7bfa24617568ebbc57ac5a0426a27c",
       "executable": false
     },
     "AGENTS.md": {
@@ -241,7 +241,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "1393af1384caadaa09f8ec08e8015d66cd50a7e3b86ef8b3ed82037237e79f6b",
+      "sha256": "7dcea4e41bcb2da09eb1580c09d8a70f992c894d20694a12082e380602123b26",
       "executable": false
     },
     "deploy-demo.json": {
@@ -333,7 +333,7 @@
       "executable": false
     },
     "docs/private-inputs.md": {
-      "sha256": "854ab9476d241025d4dddd8995609afc17756b3307030caa3f8594380d039d61",
+      "sha256": "9c2845a041e58ecdec0265014ef9f4f2f87ca06930665aed55da00fe75397d01",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -1249,7 +1249,7 @@
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
-      "sha256": "c7c3adce4d04013fe1734365f1258e38a296380c3b3e5aa0789fa535b22a246d",
+      "sha256": "045cef3be43e52242707c53a177034c06d85ffb70a5849219e7b9bf85de065ec",
       "executable": false
     },
     "src/envelope/income-verification/requests.ts": {
@@ -1333,7 +1333,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "2527933c1e2bb21d0fdf4b5c27226226d0c6a49647d80dc4fd2fdca627863281",
+      "sha256": "6b160cfc2dc5d3c0dc5a06b4c020fd80f222f7c3dcbcc25b7703a622e0e8b97b",
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
@@ -2517,7 +2517,7 @@
       "executable": false
     },
     "tests/archive-adoption.mjs": {
-      "sha256": "88b1eadc449d7378ddbe5c4209711c346b61175ce8d24630bfa193ca9abfd157",
+      "sha256": "6e02eb3993be79ce6aa021672f8a86f93d8c8a3d2841a9ae6787a43cbd26874d",
       "executable": false
     },
     "tests/archive-authority.mjs": {
@@ -2533,7 +2533,7 @@
       "executable": false
     },
     "tests/archive-fixture.mjs": {
-      "sha256": "43692240961242d9138684f7a6cbbcab71d47a3b7b3ec2b0097a194082e99581",
+      "sha256": "85276c15219e092ac659e1ab0e8af11617353bf5753c1e267013b2122c9e5dd3",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
@@ -2545,7 +2545,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "f575c9e56b7afac2b78cac71547122fdaf8702dc4bc5889f785aeb3864118ce4",
+      "sha256": "96211026b5d80c5aef8edbbca6388f68ceef350374bfa804970a873798728446",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -2557,7 +2557,7 @@
       "executable": false
     },
     "tests/claims-browser.mjs": {
-      "sha256": "edc36fbecacfa0c3f80c1d0752c22e178cf9243bfe7710a200da1b0bcb5df5df",
+      "sha256": "8a07d90ba89d97abd6827dcf1a98cca6a55beab14a8377843114cc9602be5209",
       "executable": false
     },
     "tests/claims-fixture.mjs": {
@@ -2705,7 +2705,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "087a4ff50ff7611ade75b923c2d5592fce5905e7c0fc4f28ff3c6d6559303d9b",
+      "sha256": "51a8c0673fe55eff68381da7af5db03349f372b19b3627b041c98273f2b49326",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {

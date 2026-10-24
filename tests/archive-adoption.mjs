@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export async function archiveAdoption(context, fixture) {
@@ -60,6 +60,7 @@ export async function archiveAdoption(context, fixture) {
   assert.equal((await call('/api/envelope/companies/' + fixture.companies[1], undefined, cookie)).status, 403,
     'adopting one employer grants no access to another restored employer')
 
+  const {default:axe}=await import('axe-core')
   const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] })
   try {
     const session = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -74,6 +75,16 @@ export async function archiveAdoption(context, fixture) {
       await page.evaluate(() => document.fonts.ready)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
       assert.ok((await page.locator('main').innerText()).includes(person.name))
+      await page.evaluate(axe.source)
+      const audit=await page.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+      await writeFile(join(proof,'archive-adopted-history-'+width+'.accessibility.json'),JSON.stringify(audit.violations,null,2))
+      assert.deepEqual(audit.violations.filter(v=>v.id!=='color-contrast').map(v=>v.id),[],'restored company structural accessibility')
+      for(const control of await page.locator('button,a,summary').all())
+        if(await control.isVisible())assert.ok((await control.innerText()).trim(),'restored controls have visible words')
+      await page.keyboard.press('Tab')
+      assert.notEqual(await page.evaluate(()=>document.activeElement.tagName),'BODY')
+      assert.equal(await page.evaluate(()=>globalThis.syntheticEnvelope586),undefined,'restored hostile text never executes')
+      assert.equal(await page.locator('img[src^="https://ungranted.example"]').count(),0,'archive restore never turns retained text into a remote image')
       await page.screenshot({ path: join(proof, 'archive-adopted-history-' + width + '.png'), fullPage: true })
     }
     await session.close()

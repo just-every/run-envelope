@@ -128,7 +128,8 @@ export async function archiveJourney(context) {
       [cli, verb, '--cwd', directory, verb === 'export' ? '--output' : '--input', file,
         ...(verb === 'import' ? ['--yes'] : []), ...(journal ? ['--journal', journal] : []), '--json', '--non-interactive', '--no-queue'], directory, configuration)
     const oldArchive = join(source, 'exports', 'before-erasure.rer')
-    assert.equal((await rer(source, 'export', oldArchive)).code, 0, 'a real earlier archive retains the soon-erased unused worker')
+    const earlierExport = await rer(source, 'export', oldArchive)
+    assert.equal(earlierExport.code, 0, 'a real earlier archive retains the soon-erased unused worker: ' + earlierExport.output)
     await context.withRestoredWorker(state(source), () => archiveErasure(context, fixture))
     before = await snapshot(state(source))
     assert.ok(!before.env_people.some(row => row.id === fixture.unusedId), 'only the unused worker was erased before the current archive')
