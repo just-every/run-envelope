@@ -69,6 +69,23 @@ export async function claimsJourney(context){
  const wagePreview=portalViewResponse(wageRow);await data(wageDoor+'/portal-review',{version:wageRow.version,responseDigest:wageRow.data.responseDigest,portalResponseArtifactId:wagePreview.id,matchesReviewedResponse:true,artifacts:[wagePreview]});wageRow=await data(wageDoor)
  await data(wageDoor+'/handoff',{version:wageRow.version,responseDigest:wageRow.data.responseDigest});wageRow=await data(wageDoor)
  await data(wageDoor+'/confirmation',f.confirmation(wageRow,true,edge.submit(wageRow)));assert.equal((await data(wageDoor)).data.confirmations[0].responseAccepted,true)
+ const retained=await get(),historicalPacket=door+'/versions/'+retained.data.previousResponses[0].version+'/packet'
+ const packetPaths=[door+'/packet',historicalPacket,door+'/artifacts/'+f.files.request.id]
+ const foreign=await data('/api/envelope/companies',{name:'Synthetic packet custody',ein:'00-0000578'},201)
+ await data('/auth/invite',{email:'synthetic-envelope-578@example.com',displayName:'Synthetic packet reader',role:'member'},202)
+ const invitation=new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&'))
+ const admitted=await call('/auth/confirm',{token:invitation.searchParams.get('token')},'')
+ assert.equal(admitted.status,303)
+ const ungranted=admitted.headers.get('set-cookie').split(';')[0]
+ for(const path of packetPaths) {
+  const response=await call(path);assert.equal(response.status,200)
+  assert.equal(response.headers.get('cache-control'),'no-store')
+  assert.equal(response.headers.get('x-content-type-options'),'nosniff')
+  assert.match(response.headers.get('content-disposition'),/^attachment;/)
+  assert.equal((await call(path,undefined,'')).status,401)
+  assert.equal((await call(path,undefined,ungranted)).status,403)
+  assert.equal((await call(path.replace(f.base,'/api/envelope/companies/'+foreign.id))).status,404)
+ }
  const pending=await create({requestId:'synthetic-envelope-authority-change'}),pendingDoor=f.claims+'/'+pending.id
  await data(pendingDoor+'/evidence',f.evidence(pending.version));let pendingRow=await data(pendingDoor)
  await data(pendingDoor+'/prepare',f.prepare(pendingRow.version));const pendingReview=await data(pendingDoor+'/review')
@@ -81,7 +98,7 @@ export async function claimsJourney(context){
  assert.equal((await call('/auth/signout',{})).status,204)
  assert.equal((await call(door+'/packet')).status,401)
  assert.equal((await call(door+'/artifacts/'+f.files.request.id)).status,401)
- assert.equal((await call(door+'/versions/1/packet')).status,401)
+ assert.equal((await call(historicalPacket)).status,401)
  assert.equal((await call(pendingDoor+'/handoff',{version:pendingRow.version,responseDigest:pendingRow.data.responseDigest})).status,401)
  console.log('Claims journey passed; screenshots: '+proof)
 }

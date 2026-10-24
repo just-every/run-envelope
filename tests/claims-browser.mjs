@@ -94,6 +94,10 @@ export async function safeInputsBrowser({context,f}) {
    assert.deepEqual(audit.violations.map(v=>v.id),[],label+' automated WCAG checks')
    audits.push({label,url:new URL(page.url()).pathname,violations:audit.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),incomplete:audit.incomplete.map(v=>v.id)})
    await writeFile(join(proof,label+'.aria.txt'),await page.locator('body').ariaSnapshot())
+   for(const control of await page.locator('button,a,summary').all())
+    if(await control.isVisible())assert.ok((await control.innerText()).trim(),label+' has visible control labels')
+   await page.keyboard.press('Tab')
+   assert.ok(await page.evaluate(()=>document.activeElement!==document.body),label+' keyboard focus enters document')
    await page.screenshot({path:join(proof,label+'.png'),fullPage:true})
   }
   for(const width of [1440,390]) {
@@ -184,9 +188,95 @@ export async function safeInputsBrowser({context,f}) {
   await f.data('/auth/invite',{email:'synthetic-envelope-574@example.com',displayName:'Synthetic ungranted member',role:'member'},202)
   const invitation=context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&')
   const member=await browser.newContext({ignoreHTTPSErrors:true})
+  const invitationPage=await member.newPage(),memberRequests=[]
+  member.on('request',r=>memberRequests.push(r.url()))
+  for(const width of [1440,390]) {
+   await invitationPage.setViewportSize({width,height:1000})
+   const response=await invitationPage.goto(invitation)
+   assert.equal(response.status(),200)
+   assert.equal(response.headers()['set-cookie'],undefined)
+   assert.deepEqual(await member.cookies(),[],'preview does not admit the invited identity')
+   for(const value of [f.company.name,f.person.name,f.company.ein,'900-69-0001'])assert.ok(!(await invitationPage.content()).includes(value))
+   await invitationPage.evaluate(axe.source)
+   const audit=await invitationPage.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+   assert.deepEqual(audit.violations,[],'valid invitation automated WCAG checks')
+   audits.push({label:'valid-invitation-'+width,violations:[],incomplete:audit.incomplete.map(v=>v.id)})
+   await invitationPage.getByRole('button',{name:/Confirm/}).focus()
+   assert.equal(await invitationPage.getByRole('button',{name:/Confirm/}).evaluate(n=>n===document.activeElement),true)
+   assert.notEqual(await invitationPage.getByRole('button',{name:/Confirm/}).evaluate(n=>getComputedStyle(n).outlineStyle),'none')
+   await invitationPage.screenshot({path:join(proof,'valid-invitation-'+width+'.png'),fullPage:true})
+  }
+  assert.ok(memberRequests.every(url=>new URL(url).origin===context.origin),'invitation makes no third-party request')
   const admitted=await member.request.post(context.origin+'/auth/confirm',{headers:{origin:context.origin},data:{token:new URL(invitation).searchParams.get('token')},maxRedirects:0})
   assert.equal(admitted.status(),303)
   for(const path of [door+'/artifacts/'+hostile.id,door+'/artifacts/'+pdf.id])assert.equal((await member.request.get(context.origin+path)).status(),403,'a signed-in member without a company grant cannot download')
+  const personDoor=f.base+'/people/'+f.person.id,privatePaths=[]
+  await f.data('/auth/magic-link',{email:f.operator.email,returnTo:'/app/envelope'},202)
+  const ownerLink=new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&'))
+  for(const width of [1440,390]) {
+   await page.setViewportSize({width,height:1000})
+   const response=await page.goto(ownerLink.href)
+   assert.equal(response.status(),200)
+   assert.equal(response.headers()['set-cookie'],undefined)
+   assert.deepEqual(await visitor.cookies(),[])
+   for(const value of [f.company.name,f.person.name,f.company.ein,'900-69-0001'])assert.ok(!(await page.content()).includes(value))
+   await capture('valid-signin-confirmation-'+width)
+  }
+  const ownerAdmission=await f.call('/auth/confirm',{token:ownerLink.searchParams.get('token')},'')
+  assert.equal(ownerAdmission.status,303)
+  const privateCookie=ownerAdmission.headers.get('set-cookie').split(';')[0]
+  await owner.addCookies([{name:privateCookie.split('=')[0],value:privateCookie.split('=')[1],url:context.origin}])
+  for(const kind of ['tax','bank']) {
+   const saved=await f.data(personDoor+'/private',{kind,version:0,value:payload},201,privateCookie)
+   assert.equal(saved.version,1)
+   const path=personDoor+'/private/'+kind;privatePaths.push(path)
+   const response=await owner.request.get(context.origin+path)
+   assert.equal(response.status(),200)
+   assert.match(response.headers()['content-disposition'],/^attachment;/)
+   assert.equal(response.headers()['x-content-type-options'],'nosniff')
+   assert.equal(response.headers()['content-type'],['text','plain; charset=utf-8'].join('/'))
+   assert.equal(await response.text(),payload)
+   assert.equal((await visitor.request.get(context.origin+path)).status(),401)
+   assert.equal((await member.request.get(context.origin+path)).status(),403)
+   assert.equal((await owner.request.get(context.origin+path.replace(f.base,'/api/envelope/companies/'+foreignCompany.id))).status(),404)
+   await f.data(personDoor+'/private',{kind,version:1,value:'synthetic-envelope-575'},201,privateCookie)
+   await f.data(personDoor+'/private',{kind,version:1,value:payload},409,privateCookie)
+   assert.equal(await (await owner.request.get(context.origin+path)).text(),'synthetic-envelope-575','stale versions cannot replace a private document')
+  }
+  const notice=await f.data(f.base+'/notices',{locationId:f.location.id,reference:'synthetic-envelope-576',body:payload},201)
+  const noticePath=f.base+'/notices/'+notice.id
+  for(const width of [1440,390]) {
+   await owned.setViewportSize({width,height:1000});await owned.goto(context.origin+noticePath.replace('/api/','/app/'))
+   assert.ok((await owned.locator('main').innerText()).includes(payload))
+   for(const control of await owned.locator('button,a,summary').all())
+    if(await control.isVisible())assert.ok((await control.innerText()).trim(),'notice controls have visible words')
+   await owned.keyboard.press('Tab')
+   assert.notEqual(await owned.evaluate(()=>document.activeElement.tagName),'BODY')
+   await owned.evaluate(axe.source)
+   const noticeAudit=await owned.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+   audits.push({label:'hostile-notice-'+width,violations:noticeAudit.violations.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary}))})),incomplete:noticeAudit.incomplete.map(v=>v.id)})
+   await writeFile(join(proof,'hostile-notice-'+width+'.aria.txt'),await owned.locator('body').ariaSnapshot())
+   assert.equal(await owned.evaluate(()=>globalThis.syntheticEnvelope570),undefined)
+   assert.equal(await owned.locator('img[src^="https://ungranted.example"]').count(),0)
+   await owned.screenshot({path:join(proof,'hostile-notice-'+width+'.png'),fullPage:true})
+  }
+  assert.deepEqual(outbound,[],'notice text never executes or loads remote images')
+  assert.equal((await member.request.get(context.origin+noticePath)).status(),403)
+  assert.equal((await visitor.request.get(context.origin+noticePath)).status(),401)
+  // The real import and document boundaries share the bounded JSON reader.
+  const snapshot=()=>context.sql('SELECT (SELECT COUNT(*) FROM env_private_records) AS privateRecords,(SELECT COUNT(*) FROM env_notices) AS notices,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit')
+  for(const path of [personDoor+'/private',f.base+'/notices',f.base+'/hris-hires',personDoor+'/hris',personDoor+'/earnings-sources',personDoor+'/industry/classification',f.base+'/industry-returns']) {
+   const before=await snapshot()
+   for(const [body,type,status] of [['{',['application','json'].join('/'),400],[Buffer.from([255,254]),['application','json'].join('/'),400],[' '.repeat(64001),['application','json'].join('/'),413],['<html>hostile</html>',['text','html'].join('/'),415]]) {
+    const response=await owner.request.post(context.origin+path,{headers:{origin:context.origin,'content-type':type},data:body})
+    assert.equal(response.status(),status,path+' rejects malformed or oversized input')
+   }
+   assert.deepEqual(await snapshot(),before,'rejected input writes no private version or audit')
+  }
+  await f.data(personDoor+'/private',{kind:'tax',version:2,value:'x'.repeat(16001)},400)
+  await f.data(f.base+'/notices',{locationId:f.location.id,reference:'synthetic-envelope-577',body:'x'.repeat(12001)},400)
+  assert.equal((await f.call('/auth/signout',{},privateCookie)).status,204)
+  for(const path of privatePaths)assert.equal((await owner.request.get(context.origin+path)).status(),401,'sign-out revokes document downloads')
   await member.close()
   const before=await f.data(door)
   await f.data(door+'/evidence',{version:before.version,artifacts:[{...hostile,contentBase64:Buffer.from('replacement').toString('base64'),sha256:undefined}]},409)

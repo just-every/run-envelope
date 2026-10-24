@@ -1,4 +1,4 @@
-# Private claim originals
+# Private inputs and retained originals
 
 Claim imports retain original bytes in encrypted, company-scoped private records.
 Every retrieval checks the current native session and company owner grant, including
@@ -34,3 +34,27 @@ business-chip contrast failures; an accessibility tree is not screen-reader proo
 ENV-057 remains partial until its complete privacy and WCAG 2.2 AA journey passes.
 Future document doors under ENV-022, ENV-024, ENV-025, ENV-030, ENV-045, ENV-051,
 ENV-053 and ENV-054 inherit the existing boundary and current-authority obligations.
+
+## Other native document boundaries
+
+Private tax and documentary bank records download as plain text attachments with
+MIME sniffing disabled and no storage in shared browser caches. Their values are
+limited to 16,000 characters. A replacement must name the current version; an old
+version cannot overwrite the new value. Reads require the current native session
+and company grant. Native sign-out revokes subsequent downloads. Documentary bank
+custody does not verify an account or authorize a payment.
+
+Tax notice bodies are limited to 12,000 characters and rendered as escaped text,
+including any script tags or remote image references. The ordinary native JSON
+request boundary rejects invalid UTF-8, malformed objects, unsupported content
+types and requests exceeding 64,000 bytes before any business write. Claim inputs
+retain the distinct limits above. These limits do not certify a valid HRIS or
+earning import; each door still validates its own business schema and authority.
+
+Invitation and email-confirmation previews do not establish a session. An explicit
+confirmation action consumes the token; a preview alone grants no company access.
+Linked identity-provider verification starts without granting a native session.
+Verified callbacks redirect to the requested native document; callback responses
+are non-cacheable and do not contain private payroll text. Human screen-reader
+review remains a separate obligation. Keyboard focus and automated accessibility checks cover
+specific interactions, not the full WCAG 2.2 AA target.

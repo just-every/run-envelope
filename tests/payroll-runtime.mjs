@@ -3440,17 +3440,45 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
       const authorization=new URL(r.headers.get('location'))
       assert.equal(authorization.origin,edge.issuer)
       assert.equal(authorization.searchParams.get('code_challenge_method'),'S256')
+      assert.equal(r.headers.get('cache-control'),'no-store')
+      assert.ok(!r.headers.get('set-cookie').includes('__Host-operator_session='),'initiating identity verification grants no native session')
+      assert.equal((await r.text()).includes('synthetic-envelope-601'),false,'identity redirects expose no private record')
       const code='synthetic-envelope-'+(edge.codes.size+610)
       edge.codes.set(code,{nonce:authorization.searchParams.get('nonce'),challenge:authorization.searchParams.get('code_challenge'),email,...claims})
       return {path:'/auth/oidc/auth/callback?'+new URLSearchParams({state:authorization.searchParams.get('state'),code,iss:edge.issuer}),cookie:r.headers.get('set-cookie').split(';')[0]}
     }
-    const finish=async transaction=>call(transaction.path,undefined,transaction.cookie)
+    const finish=async transaction=>{
+      const response=await call(transaction.path,undefined,transaction.cookie)
+      assert.equal(response.headers.get('cache-control'),'no-store')
+      assert.ok(!(await response.clone().text()).includes('synthetic-envelope-601'),'verified and refused callbacks expose no private payroll text')
+      if(response.status===303)assert.equal(response.headers.get('location'),privateScreen,'verified callback redirects only to the requested native document')
+      return response
+    }
     const assertDenied=async transaction=>{
       const before=await sessionCount(), r=await finish(transaction)
       assert.ok(r.status>=400,await r.clone().text())
       assert.equal(await sessionCount(),before,'refused OIDC creates no session')
       assert.equal((await call(download,undefined,transaction.cookie)).status,401)
     }
+    const visitor=await browser.newContext({ignoreHTTPSErrors:true}),publicPage=await visitor.newPage(),requests=[]
+    visitor.on('request',request=>requests.push(request.url()))
+    const {default:axe}=await import('axe-core')
+    for(const width of [1440,390]) {
+      await publicPage.setViewportSize({width,height:1000})
+      const response=await publicPage.goto(origin+'/signin')
+      assert.equal(response.headers()['set-cookie'],undefined)
+      assert.deepEqual(await visitor.cookies(),[])
+      assert.deepEqual(await publicPage.evaluate(()=>[localStorage.length,sessionStorage.length]),[0,0])
+      for(const value of [company.name,person.name,'synthetic-envelope-601'])assert.ok(!(await publicPage.content()).includes(value))
+      await publicPage.evaluate(axe.source)
+      const audit=await publicPage.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
+      assert.deepEqual(audit.violations,[])
+      await publicPage.keyboard.press('Tab')
+      assert.notEqual(await publicPage.evaluate(()=>document.activeElement.tagName),'BODY')
+      await publicPage.screenshot({path:join(folder,'linked-public-signin-'+width+'.png'),fullPage:true})
+    }
+    assert.ok(requests.every(url=>new URL(url).origin===origin),'linked sign-in loads no external recipient before interaction')
+    await visitor.close()
     await capture('payroll-linked-signin','/signin')
     await assertDenied(await begin({email:'synthetic-envelope-620@example.com'}))
     await assertDenied(await begin({email_verified:false}))
