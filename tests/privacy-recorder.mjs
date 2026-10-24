@@ -41,6 +41,7 @@ export async function startRecordedWorker(options) {
   const mailProvider = binding('MAIL_PROVIDER')
   const mailUrl = mailProvider === 'sendgrid' ? 'https://api.sendgrid.com/v3/mail/send'
     : mailProvider === 'cloudflare' ? `https://api.cloudflare.com/client/v4/accounts/${binding('MAIL_ACCOUNT_ID')}/email/sending/send`
+    : mailProvider === 'rer' ? binding('MAIL_RELAY_URL')
     : mailProvider === 'resend' ? 'https://api.resend.com/emails' : null
   if (binding('MAIL_API_KEY')) privateValue(binding('MAIL_API_KEY'))
   const server = options.dev.server

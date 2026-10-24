@@ -241,7 +241,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "290613285bc997bccb79d90f88505d708c7de5990862fae59f4a0c06e867b206",
+      "sha256": "672ee96631f33599ac3798e011f7971aa6074eb752b9f3df328d96f257fbdccb",
       "executable": false
     },
     "deploy-demo.json": {
@@ -477,7 +477,7 @@
       "executable": false
     },
     "packaging.json": {
-      "sha256": "6a9baba5e64180b2cd48751b2c321f3638efe528b1eaa2e5b1713ee8a3c91a03",
+      "sha256": "43b16be10ad9d88a4821cf3f329033ec9bf53fb4a319a4bf09321a929ddaa40d",
       "executable": false
     },
     "pnpm-lock.yaml": {
@@ -861,7 +861,7 @@
       "executable": false
     },
     "scripts/delivery/base/packaging.json": {
-      "sha256": "6a9baba5e64180b2cd48751b2c321f3638efe528b1eaa2e5b1713ee8a3c91a03",
+      "sha256": "43b16be10ad9d88a4821cf3f329033ec9bf53fb4a319a4bf09321a929ddaa40d",
       "executable": false
     },
     "scripts/delivery/base/paths.mjs": {
@@ -2709,7 +2709,7 @@
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
-      "sha256": "ed6620dfb964b73b07855632b214627909624798553a4a7d5fa02490578726af",
+      "sha256": "972201d7c122b94fe042ab2e97ccad376d6352423016466fff9595ba235be50c",
       "executable": false
     },
     "tests/runtime.mjs": {
@@ -2737,7 +2737,7 @@
       "executable": false
     },
     "wrangler.jsonc": {
-      "sha256": "f265e797e9d8a483da87411210bd3e3787cc381fa75cd91537bc8c63f122b76b",
+      "sha256": "03aa20aee3a550688e366b66dc1c1d9b43769797e799f68df60e3742bab18854",
       "executable": false
     }
   }

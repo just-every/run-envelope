@@ -21,6 +21,7 @@
     "MAIL_FROM": "",
     "MAIL_RELAY_URL": "",
     "MAIL_ACCOUNT_ID": "",
-    "IDENTITY_PROVIDER": ""
+    "IDENTITY_PROVIDER": "",
+    "OWNER_EMAIL": ""
   }
 }

@@ -57,10 +57,10 @@
         "MAIL_FROM",
         "MAIL_RELAY_URL",
         "MAIL_ACCOUNT_ID",
-        "IDENTITY_PROVIDER"
+        "IDENTITY_PROVIDER",
+        "OWNER_EMAIL"
       ],
       "secretNames": [
-        "OWNER_EMAIL",
         "SESSION_SECRET",
         "SETUP_TOKEN",
         "ENVELOPE_RECORD_KEY",
@@ -68,7 +68,6 @@
       ],
       "optionalSecretNames": [
         "MAIL_API_KEY",
-        "RER_OWNER_CLAIM_PUBLIC_KEYS",
         "INSTALLATION_KEY_PREVIOUS"
       ],
       "recovery": "Follow OPERATIONS.md: pause writes and retain the exact source, private settings and original ENVELOPE_RECORD_KEY. Export with rer export, restore into fresh empty resources with rer import and the original record key, re-export and compare supported records before routing traffic. Establish the native owner after restore and preserve every applied migration name and byte.",
@@ -83,8 +82,7 @@
           "originVariable": "AUTH_ORIGIN",
           "signIn": {
             "path": "/signin",
-            "loginHint": false,
-            "ownerSignIn": "/auth/owner-signin"
+            "loginHint": false
           }
         }
       },
