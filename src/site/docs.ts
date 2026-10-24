@@ -1,5 +1,6 @@
 import { keep } from './landing/parts'
 import guide from '../../RUN-LOCALLY.md?raw'
+import start from '../../docs/getting-started.md?raw'
 import './styles/docs.css'
 import { escape, siteDocument, siteHeader, siteFooter, type SiteLinks } from './shell/frame'
 
@@ -71,7 +72,9 @@ export function docsPages(links: SiteLinks, styles: string[]): { path: string; h
   `<li><a href="/docs/run-locally#${headingId(title)}">${escape(title)}</a></li>`).join('')
  return [
   { path: '/docs', html: page('Documentation · Envelope', 'Install, run and maintain Envelope.',
-   `<section class="docs-intro"><p class="eyebrow">Envelope docs</p><h1>Run it your way.</h1><p>Install, run and maintain your own copy of Envelope.</p></section><section class="docs-index" aria-labelledby="guide-title"><h2 id="guide-title"><a href="/docs/run-locally">Run it locally</a></h2><p>The repository’s guide to launch, setup, backups and deployment.</p><ul>${sections}</ul></section>`) },
+   `<section class="docs-intro"><p class="eyebrow">Envelope docs</p><h1>Run it your way.</h1><p>Install, run and maintain your own copy of Envelope.</p></section><section class="docs-index" aria-labelledby="start-title"><h2 id="start-title"><a href="/docs/getting-started">Getting started</a></h2><p>Start Envelope on your computer with one line.</p></section><section class="docs-index" aria-labelledby="guide-title"><h2 id="guide-title"><a href="/docs/run-locally">Run it locally</a></h2><p>The repository’s guide to launch, setup, backups and deployment.</p><ul>${sections}</ul></section>`) },
+  { path: '/docs/getting-started', html: page('Getting started · Envelope docs', 'Start Envelope on your computer with one line.',
+   `<nav class="docs-breadcrumb" aria-label="Breadcrumb"><a href="/docs">Documentation</a><span aria-hidden="true">/</span><span>Getting started</span></nav><article class="docs-guide">${guideHtml(start)}</article>`) },
   { path: '/docs/run-locally', html: page('Run it locally · Envelope docs', 'The repository guide to running, backing up and deploying your installation.',
    `<nav class="docs-breadcrumb" aria-label="Breadcrumb"><a href="/docs">Documentation</a><span aria-hidden="true">/</span><span>Run it locally</span></nav><article class="docs-guide">${guideHtml(guide)}</article>`) },
  ]

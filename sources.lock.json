@@ -192,6 +192,10 @@
       "sha256": "cdb6aa715bedb827d19d0d4d409309add7bbb8ef2097b7e4045fbbae5ea0390e",
       "executable": false
     },
+    "docs/getting-started.md": {
+      "sha256": "ae0c4ca04ad928ea15d4f03a30173f691440fcfb6ef6b83e7854c1c6ee7fb37b",
+      "executable": false
+    },
     "docs/industry-forms.md": {
       "sha256": "289277f589aaa90a81a58600dbeadbd0a84f713da3b884b385474bcf57cb24f0",
       "executable": false
@@ -2141,7 +2145,7 @@
       "executable": false
     },
     "src/site/docs.ts": {
-      "sha256": "139f53787d52f2ad0cd6ecb8644cdf28a40f4e1bed0d16fc9b5d9001b58d0dd1",
+      "sha256": "5a973c018db324ff9c8353186c0a9c8265c0b44c5811466a235ff45ed3c8e59c",
       "executable": false
     },
     "src/site/landing/hero.ts": {
@@ -2193,7 +2197,7 @@
       "executable": false
     },
     "src/site/landing/switching.ts": {
-      "sha256": "7b544747d1a6769cac5e2a491a34f7ab3db9e77d66086719369ccae113229f97",
+      "sha256": "b7a675b86d038a795eb2dd7e2d77dca7ef92b7706e809244feb856fd3d08eba3",
       "executable": false
     },
     "src/site/landing/week.ts": {
@@ -2229,7 +2233,7 @@
       "executable": false
     },
     "src/site/styles/returns.css": {
-      "sha256": "150243a8570768df3a8f7b0832062a7ceb82b190eb76433fd3540d6498fd60fd",
+      "sha256": "588c12e17c2010d58bb61c4a7db6ba81c56f37b0d1fbc9e459fcfe384b6fb428",
       "executable": false
     },
     "src/site/styles/site.css": {
