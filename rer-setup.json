@@ -204,7 +204,7 @@
         }
       ],
       "group": "mail",
-      "help": "Use the selected provider\u2019s sending credential. Managed hosting supplies the RER credential."
+      "help": "Use the selected provider’s sending credential. Managed hosting supplies the RER credential."
     },
     {
       "name": "MAIL_ACCOUNT_ID",

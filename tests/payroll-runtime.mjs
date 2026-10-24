@@ -3401,7 +3401,7 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     edge.mailMode='normal'
     // Exercise real native sign-in with each configured transport, including
     // uncertain delivery and missing credentials. No alternate transport runs.
-    for (const [index, provider] of ['sendgrid', 'cloudflare'].entries()) {
+    for (const [index, provider] of ['sendgrid', 'cloudflare', 'rer'].entries()) {
       await restartMail('resend')
       const transportEmail = `synthetic-envelope-${608 + index}@example.com`
       await data('/auth/invite', {email:transportEmail, displayName:'Synthetic transport accountant', role:'member'}, cookie, 202)

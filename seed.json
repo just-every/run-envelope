@@ -80,6 +80,19 @@
       "name": "SendGrid native mail"
     },
     {
+      "id": "rer-mail",
+      "name": "Run Edit Run managed mail",
+      "required": false,
+      "availability": "optional",
+      "why": "Configured managed sign-in, invitation and sensitive-change mail. The assigned relay receives only the intended recipient, subject and message. Its sender and installation identity are assigned by Run Edit Run; the private installation credential stays in owner Worker bindings. Company notice correspondence uses its separately approved provider.",
+      "data": [
+        "authentication recipient",
+        "approved subject",
+        "single-use authentication or invitation link"
+      ],
+      "adapters": []
+    },
+    {
       "id": "identity-provider",
       "required": false,
       "why": "Optional owner-linked identity issuer, selected and reviewed in native sign-in settings. Discovery, token, key and link endpoints stay on the approved issuer origin. Installation signing keys stay in owner D1; only signed client assertions leave. Identity processing follows the selected issuer terms.",
@@ -255,5 +268,6 @@
       "operator-auth",
       "owner-claim"
     ]
-  }
+  },
+  "replaces": []
 }

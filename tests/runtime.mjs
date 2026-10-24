@@ -325,7 +325,7 @@ try {
       edge.mailProvider = mailProvider
       identityWorker=await unstable_startWorker({
         config:resolve('dist/server/wrangler.json'),
-        bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:mailProvider,MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:apiKey,MAIL_ACCOUNT_ID:'00000000000000000000000000000600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
+        bindings:Object.fromEntries(Object.entries({...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:identityOrigin,MAIL_PROVIDER:mailProvider,MAIL_RELAY_URL:'https://mail.example.com/relay',MAIL_FROM:'Envelope <signin@example.com>',MAIL_API_KEY:apiKey,MAIL_ACCOUNT_ID:'00000000000000000000000000000600'}).map(([key,value])=>[key,{type:'plain_text',value}])),
         dev:{server:{hostname:'127.0.0.1',port,secure:true},origin:{hostname:new URL(identityOrigin).host,secure:true},inspector:false,remote:false,watch:false,persist,logLevel:'error',
           outboundService:async request=>{
             if(request.url==='https://api.resend.com/emails' && request.method==='POST') {
@@ -335,6 +335,18 @@ try {
               if(edge.mailMode==='rejected') return Response.json({name:'validation_error',message:'Synthetic rejection'},{status:422})
               if(edge.mailMode==='unknown') return Response.json({name:'application_error',message:'Synthetic unknown'},{status:500})
               return Response.json({id:'00000000-0000-4000-8000-000000000600'})
+            }
+            if (request.url === 'https://mail.example.com/relay') {
+              assert.equal(request.method, 'POST')
+              assert.equal(request.headers.get('Authorization'), 'Bearer synthetic-envelope-607')
+              const body = await request.json()
+              assert.equal(body.to, edge.mailRecipient)
+              assert.equal(body.from, undefined)
+              assert.equal(body.installationId, undefined)
+              assert.deepEqual(Object.keys(body).sort(), ['messageKey', 'subject', 'text', 'to'])
+              edge.mails.push(body)
+              if (edge.mailMode !== 'normal') return new Response(null, {status:edge.mailMode === 'rejected' ? 422 : 500})
+              return Response.json({messageId:'<synthetic-envelope-610@example.com>'}, {status:202})
             }
             if (request.url === 'https://api.sendgrid.com/v3/mail/send' || request.url === 'https://api.cloudflare.com/client/v4/accounts/00000000000000000000000000000600/email/sending/send') {
               assert.equal(request.method, 'POST')

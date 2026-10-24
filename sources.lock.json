@@ -192,6 +192,10 @@
     }
   ],
   "files": {
+    ".github/workflows/rer-managed.yml": {
+      "sha256": "c2854bae7369a88bc749ad0e40f76beff7cff28d76339945773dd2d6fd415a0e",
+      "executable": false
+    },
     ".github/workflows/run-demo.yml": {
       "sha256": "41365ec7c002e9451166313b085f9e64ed2e3ea002c27f3d5ead845bc9c302b2",
       "executable": false
@@ -342,6 +346,10 @@
     },
     "LICENSE": {
       "sha256": "2f5076ef027045b9e0e72df8aa61ca8551e54b1877d531656d6e7985b2c32324",
+      "executable": false
+    },
+    "management/integration/deployment-spec.json": {
+      "sha256": "31b79bb42c208591915b056a1ce89aac95b673a071834a4addf10ac4bb863d7b",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -780,8 +788,12 @@
       "sha256": "c82159f86e0e1535174b6af2cc54af7a3967aa45065242274e5ba207176a82d8",
       "executable": false
     },
+    "rer-project.json": {
+      "sha256": "7eea8e066da026348b6c6cc979835b822f8e0ad2f918035b7dae6263c580df91",
+      "executable": false
+    },
     "rer-setup.json": {
-      "sha256": "eeefa887037e3b72c7e8105a0b3e1bba159a7933d9503b40bdcaed82a4d2b937",
+      "sha256": "11407bb6e407b2374e87572158e960dda0b4cfdd623e17f965ffb0b1613ff70e",
       "executable": false
     },
     "RUN-LOCALLY.md": {
@@ -1001,7 +1013,7 @@
       "executable": false
     },
     "seed.json": {
-      "sha256": "af9bd0051ba11a2355ebeb66c020ab4f9ced1b80b284daf29eeba4ff0b694a9c",
+      "sha256": "d92d71854a1bfeced7ab980780a85a468b88fe362ff8e8fb306843aff8cab2e7",
       "executable": false
     },
     "src/auth.server.ts": {
@@ -1293,7 +1305,7 @@
       "executable": false
     },
     "src/envelope/installation-data.tsx": {
-      "sha256": "cdc29d4416131cbe50e95acc0576ec23e75f09882dee226513c656c791c437b7",
+      "sha256": "27815f1ee2b49be5cddfa0ab3beab556b6200d903c52e932ca431328bf1facf0",
       "executable": false
     },
     "src/envelope/intake/pages.tsx": {
@@ -2693,7 +2705,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "ff7034b29360fcbaf36045e4882ae4b7aad1c5a990edf81b9ed9563b30105af1",
+      "sha256": "7d7aa675fef00f832c9a9adabbaababd7f2f77b4f0de15ff7662c235a39ed645",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
@@ -2701,7 +2713,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "85b43d28dab7ccdf82398308083f3a99a07236c4542f3c95810b0776b4c78b29",
+      "sha256": "891a382b6c41191e96ff178a992f3bf6f6e112b87fa20b70af1f023fd78d211b",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

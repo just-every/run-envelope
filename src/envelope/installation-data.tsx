@@ -19,6 +19,7 @@ export async function installationDataResponse(response: Response, env: Bindings
       <p>{recipient.why}</p>
       <p>Permitted fields: {recipient.data.join(', ')}.</p>
       <p>Destination: {recipient.availability === 'unavailable' ? 'None authorized; no request is made'
+        : recipient.id === 'rer-mail' ? env.MAIL_PROVIDER === 'rer' ? env.MAIL_RELAY_URL ?? 'No managed mail relay configured' : 'Managed mail is not selected'
         : recipient.id === 'identity-provider' ? linked?.issuer ?? 'No identity issuer linked'
         : recipient.adapters.join(', ') || 'Owner-controlled hosting and storage'}.</p>
     </details>)}

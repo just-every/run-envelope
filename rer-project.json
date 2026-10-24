@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "projectId": "just-every/envelope",
+  "name": "Envelope",
+  "sourceRepository": "https://github.com/just-every/run-envelope",
+  "license": "MIT",
+  "deployment": {
+    "target": "cloudflare-workers",
+    "artifactFile": "rer-worker-artifact.json"
+  },
+  "operations": {
+    "setup": "pnpm install --frozen-lockfile",
+    "build": "pnpm run build",
+    "verify": "pnpm run check:deployment-spec && pnpm run verify",
+    "artifact": "pnpm run delivery:artifact",
+    "recovery": "Follow OPERATIONS.md: pause writes and retain the exact source, private settings and original ENVELOPE_RECORD_KEY. Export with rer export, restore into fresh empty resources with rer import and the original record key, re-export and compare supported records before routing traffic. Establish the native owner after restore and preserve every applied migration name and byte."
+  },
+  "verification": {
+    "migrationDirectories": [
+      "migrations/core"
+    ],
+    "guidanceFiles": [
+      "AGENTS.md",
+      "CONTRACT.md",
+      "OPERATIONS.md"
+    ],
+    "testPatterns": [
+      "tests/*.mjs"
+    ]
+  },
+  "verifyWorkflow": "verify.yml",
+  "setup": {
+    "path": "rer-setup.json",
+    "sha256": "11407bb6e407b2374e87572158e960dda0b4cfdd623e17f965ffb0b1613ff70e"
+  }
+}
