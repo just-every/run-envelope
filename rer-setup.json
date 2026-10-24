@@ -94,8 +94,12 @@
       "label": "Mail provider",
       "kind": "select",
       "required": true,
-      "default": "resend",
+      "default": "none",
       "options": [
+        {
+          "value": "none",
+          "label": "Set up mail later"
+        },
         {
           "value": "resend",
           "label": "Resend"

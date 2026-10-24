@@ -183,10 +183,10 @@
     "MAIL_FROM": "",
     "MAIL_RELAY_URL": "",
     "MAIL_ACCOUNT_ID": "",
-    "IDENTITY_PROVIDER": ""
+    "IDENTITY_PROVIDER": "",
+    "OWNER_EMAIL": ""
   },
   "secretNames": [
-    "OWNER_EMAIL",
     "SESSION_SECRET",
     "SETUP_TOKEN",
     "ENVELOPE_RECORD_KEY",
@@ -194,7 +194,6 @@
   ],
   "optionalSecretNames": [
     "MAIL_API_KEY",
-    "RER_OWNER_CLAIM_PUBLIC_KEYS",
     "INSTALLATION_KEY_PREVIOUS"
   ],
   "schedules": [],
@@ -211,8 +210,7 @@
       "originVariable": "AUTH_ORIGIN",
       "signIn": {
         "path": "/signin",
-        "loginHint": false,
-        "ownerSignIn": "/auth/owner-signin"
+        "loginHint": false
       }
     }
   },
