@@ -3452,11 +3452,24 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     assert.equal((await call(download,undefined,renewedCookie)).status,401)
     await data('/auth/operator/status',{operatorId:invited.id,status:'active'})
     assert.equal((await call(download,undefined,renewedCookie)).status,401,'reactivation never restores a session')
-    // Rate limits are durable and apply before provider effects.
-    const beforeLimit=edge.mails.length
-    const limited=await call('/auth/magic-link',{email},'')
-    assert.equal(limited.status,429)
-    assert.equal(edge.mails.length,beforeLimit)
+    // Reach the refusal through public requests. Earlier requests may belong to
+    // the preceding fixed window when this journey crosses a quarter hour.
+    let limited=false
+    for(let attempt=0;attempt<64;attempt++) {
+      const beforeLimit=edge.mails.length
+      const response=await call('/auth/magic-link',{email},'')
+      if(response.status===429) {
+        assert.equal((await response.json()).error,'rate_limited')
+        assert.equal(edge.mails.length,beforeLimit,'rate refusal precedes mail')
+        const retry=await call('/auth/magic-link',{email},'')
+        assert.equal(retry.status,429)
+        assert.equal(edge.mails.length,beforeLimit,'a refused retry cannot send mail')
+        limited=true
+        break
+      }
+      assert.equal(response.status,202)
+    }
+    assert.equal(limited,true,'repeated native sign-in attempts must be limited')
     console.log('PAYROLL-SIGNIN passed: real mailed invitation/admission, unknown/expired/replayed/refused links, independent current payroll grants, seven-day fixed expiry, signed OIDC/PKCE/nonce/admission failures, unavailable Auth/mail, session-bound app-local step-up and direct-document revocation; 1440/390. Linked MFA policy, passkeys and former-worker forms remain unproved.')
   } finally {
     edge.mailMode='normal';edge.authMode='normal'
