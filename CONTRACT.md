@@ -390,7 +390,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 | 11 | An IRS failure-to-deposit notice matched to the deposit, reply drafted, signed by the owner and closed with $0.00 owed | ENV-025, ENV-062, ENV-014 | contract, not yet in code |  |
 | 12 | A mid-quarter switch from Paychex Flex: year-to-date import and its last payroll rerun line by line to the cent | ENV-026, ENV-064 | contract, not yet in code |  |
 | 12 | The reporting-agent authorization (Form 8655) signed by the owner | ENV-037, ENV-014 | contract, not yet in code |  |
-| 12 | Also moves in from Gusto and ADP RUN | ENV-026 | contract, not yet in code |  |
+| 12 | Planned Gusto and ADP RUN data migration | ENV-026 | contract, not yet in code |  |
 | 13 | Fri Nov 13: four runs, 60 people paid, the new client's first run | ENV-005, ENV-011, ENV-026 | contract, not yet in code |  |
 | 01 Hero, 13 | 100% free, open source alternative to Gusto, ADP RUN and Paychex Flex | ENV-026 | code (licence); move-in: contract, not yet in code | `LICENSE` (MIT), `src/site/run.json` |
 | 12, 01 Run Envelope | One line starts Envelope on your computer (`npx -y @runeditrun/rer dev just-every/run-envelope`) | ENV-050 | partly | `src/site/run.json`, `/run` (Base's foundation starts; payroll is not built) |
