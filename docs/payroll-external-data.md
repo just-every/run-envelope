@@ -24,9 +24,12 @@ remain owed.
 Local and demo authentication suppress real mail. Library mail transports that
 need relay or messaging configuration are unavailable through the current native
 mail adapter, which does not supply that configuration. No author relay or
-telemetry service is required. Payroll rails, agency submissions, recordkeepers,
-carriers and further connected systems remain future ENV-073 inventory work;
-metadata is not an authorization or a connected-state claim for those services.
+telemetry service is required. The installation inventory also names every contracted recipient family, including
+rails, agencies, recordkeepers, carriers, sources, ledgers, signatures and messaging.
+Each unavailable family states its proposed minimum data, authority and custody
+requirements, has no endpoint, and sends nothing. Exact authorized destinations
+and operational custody remain obligations of each future connector; metadata
+does not grant authority or establish a connected state.
 
 ## Native authentication mail
 
@@ -51,3 +54,17 @@ handoff do not create a live connector. Future implementations must declare each
 exact destination, minimum fields, credential custody and data retention before
 the first request, under ENV-073 and their own connector clauses. No provider
 agreement, live payroll settlement or complete deterministic payroll is claimed.
+
+
+## Payroll controls with AI removed
+
+Removing a company's stored OpenAI credential does not remove its reviewed
+inputs, deterministic federal regular-wage calculation, human check and run
+approvals, prepared Form 941 fields, source invalidation or linked correction
+history. A reviewed BambooHR hourly-rate export still invalidates the prior run
+and recalculates from the new rate without duplicate intake or live-delivery
+claims. The native controls continue in that same company after a Worker
+restart. These federal preparation controls do not establish complete payroll:
+state and local coverage, worker portal, actual filing, reconciliation and funded
+pay remain unfinished under ENV-073 and their own clauses. Release remains
+unavailable and creates neither a payment instruction nor a receipt.

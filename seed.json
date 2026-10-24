@@ -30,7 +30,9 @@
       ],
       "adapters": [
         "https://api.cloudflare.com/client/v4/accounts/{owner-account-id}/email/sending/send"
-      ]
+      ],
+      "availability": "hosting",
+      "name": "Cloudflare hosting and native mail"
     },
     {
       "id": "openai",
@@ -41,7 +43,9 @@
       ],
       "adapters": [
         "https://api.openai.com/v1/responses"
-      ]
+      ],
+      "availability": "optional",
+      "name": "OpenAI notice proposals"
     },
     {
       "id": "resend",
@@ -57,7 +61,9 @@
       ],
       "adapters": [
         "https://api.resend.com/emails"
-      ]
+      ],
+      "availability": "optional",
+      "name": "Resend mail"
     },
     {
       "id": "sendgrid",
@@ -69,7 +75,9 @@
       ],
       "adapters": [
         "https://api.sendgrid.com/v3/mail/send"
-      ]
+      ],
+      "availability": "optional",
+      "name": "SendGrid native mail"
     },
     {
       "id": "identity-provider",
@@ -82,7 +90,119 @@
         "PKCE verifier",
         "requested identity scopes and nonce"
       ],
-      "adapters": []
+      "adapters": [],
+      "availability": "optional",
+      "name": "Linked identity provider"
+    },
+    {
+      "id": "payroll-rails",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Banking, verification and payroll rails: Check or Gusto Embedded; an owner-selected bank verification service; separately authorized international payout, payroll card, instant pay and earned wage access partners. Intended purpose and minimum fields are prospective obligations under ENV-004, ENV-011, ENV-013, ENV-035, ENV-036 and ENV-065; this declaration enables no request. Owner-signed operator and rail agreements, employer mandates, authorized tenant and separately scoped bank credentials. No partner is selected or credential accepted by the current payroll controls.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Exact approved employer and worker payment instructions, verified destinations, amounts, dates, idempotency identities and reconciliation receipts."
+      ],
+      "adapters": [],
+      "name": "Banking, verification and payroll rails"
+    },
+    {
+      "id": "tax-identity-agencies",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Tax and identity agencies: IRS, EFTPS, SSA wage reporting and SSNVS, IRIS, all applicable state, DC and local agencies, NASWA SIDES and authorized state portals. Intended purpose and minimum fields are prospective obligations under ENV-002, ENV-014, ENV-015, ENV-016, ENV-017, ENV-037, ENV-069 and ENV-071; this declaration enables no request. Employer-specific enrollment, signed agency authority and scoped submitter credentials are required. Current prepared forms and manual SIDES handoff are not an automated agency connection.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Only employer and worker identifiers, approved wage and tax fields, period, signed authority and the exact agency request or response."
+      ],
+      "adapters": [],
+      "name": "Tax and identity agencies"
+    },
+    {
+      "id": "recordkeepers",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Retirement and benefits recordkeepers: Guideline, Human Interest, Vestwell, Betterment at Work, Ubiquity, CalSavers, OregonSaves, Illinois Secure Choice and other applicable mandated programs. Intended purpose and minimum fields are prospective obligations under ENV-019, ENV-043 and ENV-042; this declaration enables no request. Owner-authorized plan connections and least-privilege recordkeeper credentials remain unimplemented; no credential or contribution is sent.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Approved participant identity, plan and election, payroll period, contribution, match, correction and acceptance reference."
+      ],
+      "adapters": [],
+      "name": "Retirement and benefits recordkeepers"
+    },
+    {
+      "id": "carriers",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Carriers, state funds and benefit administrators: NEXT, AP Intego, Pie, The Hartford, Washington L&I, Ohio BWC, North Dakota WSI, Wyoming DWS, Oregon combined payroll, NYSIF, authorized HI and NY plan carriers, Employee Navigator and the owner-contracted ACA administrator or AIR partner. Intended purpose and minimum fields are prospective obligations under ENV-019, ENV-021, ENV-043 and ENV-042; this declaration enables no request. An actual employer policy, fund enrollment, plan authority or contracted filing account is required. Underwriting and coverage remain with the insurer; no live carrier or AIR credentials are accepted.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Approved employer and worker identity, work state, risk class, exposure hours, wages, plan elections, capped contributions and required reporting period."
+      ],
+      "adapters": [],
+      "name": "Carriers, state funds and benefit administrators"
+    },
+    {
+      "id": "hris",
+      "required": false,
+      "availability": "unavailable",
+      "why": "HR and employment sources: Willow, BambooHR, Rippling HRIS and HiBob. Intended purpose and minimum fields are prospective obligations under ENV-040 and ENV-042; this declaration enables no request. Source owners keep employment and policy custody. Current reviewed uploads are inbound records only; future live sync requires owner-authorized source credentials and exact destination review.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Payroll-required worker identity, reviewed effective compensation, work location, leave, benefit and termination versions; restricted payroll acknowledgements."
+      ],
+      "adapters": [],
+      "name": "HR and employment sources"
+    },
+    {
+      "id": "time-pos",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Time and point of sale sources: Lanyard, Deputy, Homebase, When I Work, 7shifts, QuickBooks Time, Clockify, Toast, Square and Clover. Intended purpose and minimum fields are prospective obligations under ENV-008 and ENV-042; this declaration enables no request. Current reviewed files do not grant live source access. Each future adapter needs owner-authorized credentials, source mappings and exact destination review.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Approved source identity and version, worker, workweek, jurisdiction, hours, earning codes, typed tips and correction references."
+      ],
+      "adapters": [],
+      "name": "Time and point of sale sources"
+    },
+    {
+      "id": "ledgers",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Accounting ledgers: Pantry, QuickBooks Online, Xero, NetSuite and Sage Intacct. Intended purpose and minimum fields are prospective obligations under ENV-023 and ENV-042; this declaration enables no request. The owner controls each ledger and its least-privilege posting credential. No ledger credential or outbound posting is implemented.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Reviewed balanced payroll journals, liability and clearing accounts, restricted dimensions, run version, posting identity and accepted correction references."
+      ],
+      "adapters": [],
+      "name": "Accounting ledgers"
+    },
+    {
+      "id": "signatures",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Inkwell signatures: Inkwell. Intended purpose and minimum fields are prospective obligations under ENV-044 and ENV-065; this declaration enables no request. A named employer mandate and authorized Inkwell connection are required. No signing credential, automatic signature or outbound document exchange is implemented.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Only the exact reviewed reporting-agent or debit mandate, document version, signer identity, signature status and revocation reference."
+      ],
+      "adapters": [],
+      "name": "Inkwell signatures"
+    },
+    {
+      "id": "messaging",
+      "required": false,
+      "availability": "unavailable",
+      "why": "SMS, chat and push: An owner-selected SMS service, Slack, Microsoft Teams, Apple push and Google push. Intended purpose and minimum fields are prospective obligations under ENV-022, ENV-044, ENV-045 and ENV-065; this declaration enables no request. Each channel requires explicit owner authorization and scoped service or organization signing credentials held in owner-controlled storage. No SMS, chat or push credential or transport is implemented.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Minimal intended recipient, private installation link, publication status and accountable deadline contact; no salary, SSN, bank value or tax attachment in channel previews."
+      ],
+      "adapters": [],
+      "name": "SMS, chat and push"
+    },
+    {
+      "id": "sibling-handoffs",
+      "required": false,
+      "availability": "unavailable",
+      "why": "Job earnings and practice handoffs: Gauge, Plinth, Glove, Mallet, Strap, Orbit, Easel, Coaster, Expensify, Blotter and Crank. Intended purpose and minimum fields are prospective obligations under ENV-029, ENV-036, ENV-041, ENV-042 and ENV-044; this declaration enables no request. Reviewed source files and downloaded firm handoffs remain under human control. Future outbound exchange needs current field grants, owner-authorized destination and scoped credentials; no live sibling transport is implemented.",
+      "data": [
+        "No data is sent by this unavailable connection. Planned minimum: Approved unpaid earning identity and version, permitted reconciled labor actuals, reimbursement payment ownership, scoped client deadline links and preparation status."
+      ],
+      "adapters": [],
+      "name": "Job earnings and practice handoffs"
     }
   ],
   "env": [],

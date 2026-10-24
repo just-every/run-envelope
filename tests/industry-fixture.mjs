@@ -6,8 +6,8 @@ export function industryFixture({origin,cookie,worker}) {
  const call=(path,body,who=cookie)=>transport(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':['application','json'].join('/')},...(body===undefined?{}:{body:JSON.stringify(body)})})
  const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,path+' '+await r.clone().text());return r.json()}
  let sequence=0
- const company=async(name,names,year=2026)=>{
-  const n=++sequence,c=await data('/api/envelope/companies',{name,ein:'00-'+String(3100+n).padStart(7,'0')},201),base='/api/envelope/companies/'+c.id
+ const company=async(name,names,year=2026,existingCompany)=>{
+  const n=++sequence,c=existingCompany??await data('/api/envelope/companies',{name,ein:'00-'+String(3100+n).padStart(7,'0')},201),base='/api/envelope/companies/'+c.id
   const location=await data(base+'/locations',{name:'Texas workplace',state:'TX'},201),people=[]
   for(const name of names)people.push(await data(base+'/people',{name,locationId:location.id},201))
   const approve=async(kind,id)=>{const r=await data(base+'/pay-settings/review/'+kind+'/'+id);await data(base+'/pay-settings/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}

@@ -68,3 +68,73 @@ export async function industryJourney(context) {
  }finally{await browser.close()}
  console.log('Industry journey: reviewed farm, office, H-2A, charity, clergy, shareholder, resident, student and family federal checks; original and corrected official forms; current authority passed.')
 }
+
+
+/** Continue actual deterministic payroll controls in the company whose AI key was removed. */
+export async function payrollWithoutAiJourney(context, companyId, capture) {
+ const f=industryFixture(context),{data,call,company,path,classify,preview,approve}=f
+ const c=await company('Unused name',['Synthetic deterministic worker'],2026,{id:companyId})
+ const p=c.people[0],api=path(c,p),ui=api.replace('/api/','/app/')
+ await classify(c,p,ordinaryFacts)
+ const check=await preview(c,p)
+ assert.deepEqual(check.data.result.employeeTaxes,{incomeTaxCents:7808,socialSecurityCents:6200,medicareCents:1450,additionalMedicareCents:0})
+ assert.equal(check.data.result.netCashCents,84542)
+ assert.equal(check.data.result.totalEmployerTaxCents,13650)
+ await capture(ui,'payroll-without-ai-calculated')
+ await approve(c,p,'industry-check',check.id)
+ const runDoor=c.base+'/pay-settings/earnings-run/'+c.run.id
+ const review=await data(runDoor+'/review')
+ await data(runDoor+'/approve',{version:review.version,reviewToken:review.reviewToken})
+ const before=await context.sql('SELECT * FROM env_run_approvals; SELECT * FROM env_audit')
+ const release=await call(runDoor+'/release',{version:review.version})
+ assert.equal(release.status,409);assert.deepEqual(await release.json(),{error:'run_not_payable'})
+ assert.deepEqual(await context.sql('SELECT * FROM env_run_approvals; SELECT * FROM env_audit'),before,'Unavailable payment has no write or invented receipt')
+ const forms=c.base+'/industry-returns'
+ const form=await data(forms,{id:'synthetic-envelope-without-ai-return',version:0,form:'941',taxYear:2026,quarter:4,
+  checks:[{personId:p.id,id:check.id,version:check.version}],address:{street:'100 Main Street',city:'Austin',state:'TX',postalCode:'78701'},
+  employeeCount:0,depositsCents:0,basis:'Reviewed regular cash wages and opening register; prepared federal fields only.'},201)
+ assert.equal((await call(forms+'/'+form.id+'/download')).status,409)
+ const exact=await data(forms+'/'+form.id+'/review')
+ assert.equal(exact.data.export.filingStatus,'prepared-not-submitted')
+ assert.equal(exact.data.totals.incomeTaxWithheldCents,7808)
+ assert.equal(exact.data.totals.socialSecurityTaxCents,12400)
+ assert.equal(exact.data.totals.medicareTaxCents,2900)
+ await data(forms+'/'+form.id+'/decision',{version:exact.version,reviewToken:exact.reviewToken})
+ const document=await call(forms+'/'+form.id+'/download');assert.equal(document.status,200)
+ const xml=await document.text()
+ assert.ok(xml.includes('<field name="f1_15[0]"><value>78</value></field>'))
+ assert.ok(xml.includes('<field name="f1_16[0]"><value>08</value></field>'))
+ await capture(forms.replace('/api/','/app/'),'payroll-without-ai-prepared-return')
+ const classification=await data(api+'/classification',f.proposal(c,ordinaryFacts,{version:1,w4:{...check.data.input.w4,step4cExtraWithholdingCents:1000}}),201)
+ await approve(c,p,'industry-classification',classification.id)
+ assert.equal((await call(forms+'/'+form.id+'/download')).status,409,'Changed withholding invalidates the prepared return without AI')
+ const corrected=await preview(c,p,{corrects:check.id,correctionReason:'Human reviewed an additional ten dollars of federal withholding.'})
+ assert.equal(corrected.data.result.netCashCents,83542)
+ assert.equal(corrected.data.amendment.netCashDifferenceCents,-1000)
+ assert.equal(corrected.data.amendment.employeeTaxes.incomeTaxCents,1000)
+ assert.equal((await data(api)).checks.find(row=>row.id===check.id).data.result.netCashCents,84542,'Original check survives a deterministic correction')
+ await capture(ui,'payroll-without-ai-correction')
+ const hr=c.base+'/people/'+p.id+'/hris'
+ const source={provider:'bamboohr',type:'rate',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-without-ai-worker',
+  sourceEvidence:'Synthetic reviewed BambooHR salary export',sourceApprovedBy:'Synthetic HR reviewer',
+  export:{id:'synthetic-envelope-without-ai-rate',payType:'Hourly',payPer:'Hour',payRate:'150.00',payRateEffectiveDate:'2026-10-19'}}
+ const imported=await data(hr,source,201)
+ const stale=await call(runDoor+'/release',{version:review.version})
+ assert.equal(stale.status,409);assert.deepEqual(await stale.json(),{error:'run_sources_changed'})
+ await capture(hr.replace('/api/','/app/'),'payroll-without-ai-source-review')
+ const sourceReview=await data(hr+'/'+imported.id+'/review')
+ await data(hr+'/'+imported.id+'/approve',{version:sourceReview.version,reviewToken:sourceReview.reviewToken})
+ await data(hr,source,409)
+ assert.equal((await data(hr)).filter(row=>row.id===imported.id).length,1,'Source replay does not duplicate the rate')
+ const next=await data(c.base+'/pay-settings/earnings-run',{id:c.run.id,version:c.run.version,
+  groupId:c.run.preview.groupId,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',frequency:'weekly'},201)
+ assert.equal(next.preview.grossCashCents,120000,'Reviewed source rate replaces base earnings')
+ c.run=next
+ const recalculated=await preview(c,p)
+ assert.deepEqual(recalculated.data.result.employeeTaxes,{incomeTaxCents:11208,socialSecurityCents:7440,medicareCents:1740,additionalMedicareCents:0})
+ assert.equal(recalculated.data.result.netCashCents,99612)
+ assert.equal((await data(hr)).find(row=>row.id===imported.id).delivered,false,'Reviewed upload never claims live delivery')
+ await capture(ui,'payroll-without-ai-source-recalculation')
+ assert.equal((await context.sql(`SELECT secret_cipher FROM env_external_providers WHERE company_id='${companyId}' AND id='openai'`))[0].secret_cipher,'')
+ console.log('PAYROLL-WITHOUT-AI passed: same-company calculation, exact human approvals, prepared 941 fields, changed-source refusal, linked correction and replay-safe reviewed BambooHR rate recalculation; unavailable release has no effects; 1440 and 390.')
+}

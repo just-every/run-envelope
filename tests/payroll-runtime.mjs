@@ -7,6 +7,7 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
 import { privateValue } from './privacy-recorder.mjs'
+import { payrollWithoutAiJourney } from './industry-runtime.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 
@@ -3274,6 +3275,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.deepEqual((await data(api+'/notices/'+noticeId)).analyses,analysesWithoutKey,'Missing AI never fabricates an analysis')
     await approveReply(await freshReply('synthetic-envelope-528'))
     assert.equal((await call(api+'/locations',cookie,{name:'Deterministic Oregon office',state:'OR'})).status,201)
+    await payrollWithoutAiJourney({origin,cookie,sql},company,capture)
     await capture(ui+'/providers','notice-provider-disabled')
     const audit=await data(api+'/audit')
     for(const action of ['provider.declared','agent.issued','agent.policy','notice.recorded','notice.reply.recorded','notice.reply.approved','notice.reply.withdrawn']) assert.ok(audit.some(a=>a.action===action),action+' attributed')
