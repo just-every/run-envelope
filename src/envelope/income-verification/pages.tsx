@@ -197,6 +197,7 @@ export function verificationPage(
         <Card title={t("Authorize one verification request")}>
           <form className="field" method="post" action={base + '/consents'}>
             <Hidden name="lang" value={language} />
+            <Field name="requestId" label={language === 'es' ? 'ID de solicitud única' : 'One verification request ID'} />
             <Field name="requesterId" label={t("Verified requester identity ID")} />
             <Select
               name="purpose"

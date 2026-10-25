@@ -11,6 +11,7 @@ export function privacyPage(session:Session,companies:Company[],actor:Actor,stat
  const selection=()=>[...new Set(state?.retained.map(record=>record.table))].map(table=><details key={table}><summary>{table}: {state?.retained.filter(record=>record.table===table).length} records</summary>{state?.retained.filter(record=>record.table===table).map(record=><label className="field" key={record.id}><span><input type="checkbox" name="records" value={record.id}/> {JSON.stringify(record.key)}</span><span>Fields: {record.fields.join(', ')}. {record.legalBasis}. Custodian: {record.custodian}. Earliest release UTC: {record.earliestReleaseAt??'Unclassified; release refused'}. {record.released?'Explicitly released':'Held'}.</span></label>)}</details>)
  return page(session,'Privacy and retention',companies,actor.company,<div className="evidence-text">
   <p>Downloaded copies and already-filed agency records are outside local recall. External provider deletion requires a separate authorized request; this screen sends none.</p>
+  <p>Custody clock source: server Date.now(), rendered in UTC. Earliest release instants are UTC.</p>
   <p>Fresh native email confirmation is required for each sensitive action. No timer releases a hold or deletes data.</p>
   <a className="btn" href={base+'/privacy-requests'}>Request history</a>
   {state&&<>

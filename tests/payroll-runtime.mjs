@@ -3910,7 +3910,7 @@ export async function incomeVerificationJourney(runtime) {
   const hostileEvidence='<script>globalThis.syntheticEnvelope585=true</script><img src="https://ungranted.example/pixel">'
   const source={id:'synthetic-envelope-1020',version:0,from:'2026-06-01',through:'2026-06-30',grossCents:345678,sourceRef:hostileEvidence,evidence:hostileEvidence}
   const now=Date.now(),dateAfter=days=>new Date(now+days*86400000).toISOString().slice(0,10)
-  const consent={requesterId:identities.requester.id,purpose:'mortgage',from:source.from,through:source.through,fields:['hireDate','grossWages'],expiresOn:dateAfter(3),retentionUntil:dateAfter(30)}
+  const consent={requestId:'synthetic-envelope-1030',requesterId:identities.requester.id,purpose:'mortgage',from:source.from,through:source.through,fields:['hireDate','grossWages'],expiresOn:dateAfter(3),retentionUntil:dateAfter(30)}
   const snapshot=()=>sql("SELECT (SELECT COUNT(*) FROM env_verification_consents) AS consents,(SELECT COUNT(*) FROM env_verification_releases) AS releases,(SELECT COUNT(*) FROM env_workspace_versions WHERE kind='disclosure') AS disclosures,(SELECT COUNT(*) FROM env_audit) AS audit")
   const noWrite=async(fn)=>{const before=await snapshot();await fn();assert.deepEqual(await snapshot(),before,'Denied requests cannot create a disclosure, receipt or false audit')}
   let archiveCleanup = async()=>{}
@@ -3919,7 +3919,7 @@ export async function incomeVerificationJourney(runtime) {
     const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
     const workerContext=await browser.newContext(),workerParts=identities.worker.cookie.split('=');await workerContext.addCookies([{name:workerParts[0],value:workerParts[1],url:origin}]);const workerPage=await workerContext.newPage()
     const requesterContext=await browser.newContext(),requesterParts=identities.requester.cookie.split('=');await requesterContext.addCookies([{name:requesterParts[0],value:requesterParts[1],url:origin}]);const requesterPage=await requesterContext.newPage()
-    const capture=async(target,path,label,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope',{recursive:true});for(const width of [1440,390]){await target.setViewportSize({width,height:1000});const r=await target.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),status);if(path.includes('lang=es'))assert.equal(await target.locator('html').getAttribute('lang'),'es');await target.evaluate(()=>document.fonts.ready);assert.equal(await target.evaluate(()=>globalThis.syntheticEnvelope585),undefined);assert.equal(await target.locator('img[src^="https://ungranted.example"]').count(),0);assert.equal(await target.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await target.keyboard.press('Tab');assert.equal(await target.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await target.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Verification controls have visible words');if(label==='verification-wage-source-review') {
+    const capture=async(target,path,label,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope',{recursive:true});for(const width of [1440,390]){await target.setViewportSize({width,height:1000});const r=await target.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),status);if(label==='verification-custody-utc-clock')await target.locator('details').first().evaluate(el=>el.open=true);if(path.includes('lang=es'))assert.equal(await target.locator('html').getAttribute('lang'),'es');await target.evaluate(()=>document.fonts.ready);assert.equal(await target.evaluate(()=>globalThis.syntheticEnvelope585),undefined);assert.equal(await target.locator('img[src^="https://ungranted.example"]').count(),0);assert.equal(await target.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await target.keyboard.press('Tab');assert.equal(await target.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await target.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Verification controls have visible words');if(label==='verification-wage-source-review') {
       const {default:axe}=await import('axe-core')
       await target.evaluate(axe.source)
       const audit=await target.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}))
@@ -3947,13 +3947,17 @@ export async function incomeVerificationJourney(runtime) {
     assert.ok((await workerPage.locator('main').innerText()).includes('No hay solicitudes autorizadas por el trabajador.'))
     await capture(requesterPage,'/app/envelope/protected-response?lang=es','verification-requester-empty-spanish')
     await capture(workerPage,door,'verification-worker-consent-empty')
-    for(const [label,value] of [['Verified requester identity ID',identities.requester.id],['Selected period starts',consent.from],['Selected period ends',consent.through],['Consent expires (within 30 days)',consent.expiresOn],['Restricted history retention date (within 90 days)',consent.retentionUntil]])await workerPage.getByLabel(label,{exact:true}).fill(value)
+    for(const [label,value] of [['One verification request ID',consent.requestId],['Verified requester identity ID',identities.requester.id],['Selected period starts',consent.from],['Selected period ends',consent.through],['Consent expires (within 30 days)',consent.expiresOn],['Restricted history retention date (within 90 days)',consent.retentionUntil]])await workerPage.getByLabel(label,{exact:true}).fill(value)
     await workerPage.getByLabel('Hire date',{exact:true}).check();await workerPage.getByLabel('Gross wages in the selected period',{exact:true}).check()
     await workerPage.getByRole('button',{name:'Consent to these exact fields and period',exact:true}).click();await workerPage.waitForURL(origin+door.replace('/api/','/app/'))
     const signed=(await data(door,undefined,200,identities.worker.cookie)).history.consents[0]
     assert.deepEqual(signed.fields,['hireDate','grossWages'])
     await data(door+'/consents',{...consent,from:'2025-01-01',through:'2026-01-01'},201,identities.worker.cookie)
     const prepare=async(id,consentId=signed.id,extra={})=>data(door+'/disclosures',{id,version:0,consentId,...extra},201)
+    await noWrite(async()=>{
+      await data(door+'/disclosures',{id:'synthetic-envelope-1880',version:0,consentId:signed.id},403)
+      await data(door+'/disclosures',{id:consent.requestId,version:0,consentId:signed.id,fields:['grossWages']},403)
+    })
     const response=await prepare('synthetic-envelope-1030')
     await capture(page,door+'/disclosure/'+response.id+'/review','verification-minimal-response-review')
     await noWrite(async()=>{await data(door+'/disclosure/'+response.id+'/release',{version:1},409);await data(door+'/disclosure/'+response.id+'/approve',{version:1,approved:true},403,identities.worker.cookie)})
@@ -3988,11 +3992,13 @@ export async function incomeVerificationJourney(runtime) {
       await data(door+'/disclosures',{id:'synthetic-envelope-1799',version:0,consentId:'synthetic-envelope-no-consent',...legalAuthority},403)
       await data(door+'/disclosures',{id:'synthetic-envelope-1799',version:0,consentId:signed.id,...legalAuthority},403,identities.requester.cookie)
     })
+    const legalConsents={}
     for(const [width,id] of [[1440,'synthetic-envelope-1797'],[390,'synthetic-envelope-1796']]) {
+      legalConsents[id]=await data(door+'/consents',{...consent,requestId:id},201,identities.worker.cookie)
       await page.setViewportSize({width,height:1000})
       await page.goto(origin+door.replace('/api/','/app/')+'?lang=es')
       const form=page.locator('form[action$="/disclosures"]')
-      for(const [field,value] of Object.entries({id,consentId:signed.id,sourceAuthority:legalAuthority.sourceAuthority,requesterEvidence:legalAuthority.requesterEvidence})) await form.locator('[name="'+field+'"]').fill(value)
+      for(const [field,value] of Object.entries({id,consentId:legalConsents[id].id,sourceAuthority:legalAuthority.sourceAuthority,requesterEvidence:legalAuthority.requesterEvidence})) await form.locator('[name="'+field+'"]').fill(value)
       await form.locator('[name="basis"]').selectOption('legal-authority')
       await form.getByRole('button',{name:'Preparar los datos seleccionados para revisión exacta',exact:true}).focus()
       await Promise.all([page.waitForNavigation(),page.keyboard.press('Enter')])
@@ -4019,15 +4025,23 @@ export async function incomeVerificationJourney(runtime) {
     const corrected=await prepare('synthetic-envelope-1032',signed.id,{corrects:response.id});await approve('disclosure',corrected.id)
     const correctedRelease=await data(door+'/disclosure/'+corrected.id+'/release',{version:1},201);facts=await get(correctedRelease);assert.equal(facts.response.grossWagesCents,345600);assert.equal(facts.corrects,response.id)
     await noWrite(async()=>{await get(legalRelease,identities.requester.cookie,403)})
-    const legalCorrection=await prepare('synthetic-envelope-1798',signed.id,{...legalAuthority,corrects:legal.id})
+    const legalCorrection=await prepare('synthetic-envelope-1798',legalConsents[legal.id].id,{...legalAuthority,corrects:legal.id})
     await approve('disclosure',legalCorrection.id)
     const legalCorrectedRelease=await data(door+'/disclosure/'+legalCorrection.id+'/release',{version:1},201)
     assert.equal((await get(legalCorrectedRelease)).corrects,legal.id)
     assert.equal((await get(legalCorrectedRelease)).response.grossWagesCents,345600)
 
+    const withdrawnConsent=await data(door+'/consents',{...consent,requestId:'synthetic-envelope-1881'},201,identities.worker.cookie)
+    const withdrawnResponse=await prepare(withdrawnConsent.requestId,withdrawnConsent.id);await approve('disclosure',withdrawnResponse.id)
+    await data(door+'/consents/'+withdrawnConsent.id+'/revoke',{},200,identities.worker.cookie)
+    const releasesBefore=await sql('SELECT COUNT(*) AS n FROM env_verification_releases')
+    await data(door+'/disclosure/'+withdrawnResponse.id+'/release',{version:1},403)
+    assert.deepEqual(await sql('SELECT COUNT(*) AS n FROM env_verification_releases'),releasesBefore)
+    assert.ok((await data(api+'/audit')).some(e=>e.action==='verification.release-refused-withdrawn' && e.targetId===withdrawnResponse.id))
+    await data(door+'/consents/'+legalConsents[legal.id].id+'/revoke',{},200,identities.worker.cookie)
     await data(door+'/consents/'+signed.id+'/revoke',{},200,identities.worker.cookie)
     await noWrite(async()=>{await get(legalCorrectedRelease,identities.requester.cookie,403);await get(correctedRelease,identities.requester.cookie,403);await data(door+'/disclosures',{id:'synthetic-envelope-1033',version:0,consentId:signed.id},403)})
-    const expiring=await data(door+'/consents',{...consent,expiresAt:new Date(Date.now()+3500).toISOString(),retentionUntil:new Date(Date.now()+4500).toISOString()},201,identities.worker.cookie)
+    const expiring=await data(door+'/consents',{...consent,requestId:'synthetic-envelope-1034',expiresAt:new Date(Date.now()+3500).toISOString(),retentionUntil:new Date(Date.now()+4500).toISOString()},201,identities.worker.cookie)
     const expiringResponse=await prepare('synthetic-envelope-1034',expiring.id);await approve('disclosure',expiringResponse.id)
     const expiringRelease=await data(door+'/disclosure/'+expiringResponse.id+'/release',{version:1},201)
     await get(expiringRelease)
@@ -4068,7 +4082,7 @@ export async function incomeVerificationJourney(runtime) {
     await data(door,undefined,403,identities.coworker.cookie)
     await workerContext.clearCookies();const returnedParts=identities.worker.cookie.split('=');await workerContext.addCookies([{name:returnedParts[0],value:returnedParts[1],url:origin}])
     await capture(workerPage,door,'verification-former-worker-history')
-    const finalConsent=await data(door+'/consents',{...consent,fields:[...consent.fields,'employmentStatus']},201,identities.worker.cookie)
+    const finalConsent=await data(door+'/consents',{...consent,requestId:'synthetic-envelope-1035',fields:[...consent.fields,'employmentStatus']},201,identities.worker.cookie)
     const finalResponse=await prepare('synthetic-envelope-1035',finalConsent.id);await approve('disclosure',finalResponse.id)
     let finalRelease=await data(door+'/disclosure/'+finalResponse.id+'/release',{version:1},201)
     const formerFacts=await get(finalRelease)
@@ -4133,14 +4147,15 @@ export async function incomeVerificationJourney(runtime) {
       identities[name].cookie=reply.headers.get('set-cookie').split(';')[0]
     }
     const freshResponse=async(id)=>{
-      const currentConsent=await data(door+'/consents',{...consent,fields:['hireDate','employmentStatus','grossWages']},201,identities.worker.cookie)
+      const currentConsent=await data(door+'/consents',{...consent,requestId:id,fields:['hireDate','employmentStatus','grossWages']},201,identities.worker.cookie)
       const currentResponse=await prepare(id,currentConsent.id);await approve('disclosure',currentResponse.id)
       finalRelease=await data(door+'/disclosure/'+currentResponse.id+'/release',{version:1},201)
       assert.equal((await get(finalRelease)).response.employmentStatus,'terminated')
       return {response:currentResponse,consent:currentConsent}
     }
     // A new native session for the same requester ID cannot revive consent to an older identity version.
-    const queuedResponse=await prepare('synthetic-envelope-1642',finalConsent.id);await approve('disclosure',queuedResponse.id)
+    const queuedConsent=await data(door+'/consents',{...consent,requestId:'synthetic-envelope-1642'},201,identities.worker.cookie)
+    const queuedResponse=await prepare('synthetic-envelope-1642',queuedConsent.id);await approve('disclosure',queuedResponse.id)
     await data('/auth/operator/status',{operatorId:identities.requester.id,status:'inactive'})
     await data('/auth/operator/status',{operatorId:identities.requester.id,status:'active'})
     await refreshNative('requester')
@@ -4177,7 +4192,8 @@ export async function incomeVerificationJourney(runtime) {
     await noWrite(async()=>{await get(finalRelease,identities.requester.cookie,403)})
     await data(door+'/income',{...source,version:3,grossCents:345500},201);await approve('income-source',source.id)
     const custodyResponse=await freshResponse('synthetic-envelope-1651')
-    const pendingCustody=await prepare('synthetic-envelope-1800',custodyResponse.consent.id)
+    const pendingConsent=await data(door+'/consents',{...consent,requestId:'synthetic-envelope-1800'},201,identities.worker.cookie)
+    const pendingCustody=await prepare('synthetic-envelope-1800',pendingConsent.id)
     const previousHistory=(await data(door,undefined,200,identities.worker.cookie)).history
     assert.ok(previousHistory.releases.some(r=>r.id===correctedRelease.id && r.corrects===response.id),'identity changes preserve restricted correction provenance')
     const ownerSessionHash=await hashToken(settings.SESSION_SECRET,'session',cookie.slice(cookie.indexOf('=')+1))
@@ -4239,6 +4255,9 @@ export async function incomeVerificationJourney(runtime) {
     await data(privacy+'/release',selected,409)
     const utcGate=new Date(Date.now()+5000).toISOString()
     await data(privacy+'/retain',{...selected,earliestReleaseAt:utcGate})
+    await capture(page,privacy,'verification-custody-utc-clock')
+    assert.match(await page.locator('main').innerText(),/Custody clock source: server Date.now\(\), rendered in UTC/ )
+    assert.ok((await page.locator('main').innerText()).includes(utcGate))
     await data(privacy+'/release',selected,409)
     await data(privacy+'/retain',selected)
     const stillHeld=await data(privacy)

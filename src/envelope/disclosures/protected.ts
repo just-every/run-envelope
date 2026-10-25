@@ -34,6 +34,14 @@ export class ProtectedResponses {
       await new VerificationRequests(this.store).consents(actor, personId)
     ).find((c) => c.id === row.data.consentId)
     if (!consent) throw new PayrollError('current_worker_consent_required', 403)
+    if (consent.revokedAt) {
+      const denied = crypto.randomUUID(), current = fence(actor)
+      await this.store.records.env.DB.batch([auditStatement(
+        this.store.records.env, actor, denied, 'verification.release-refused-withdrawn',
+        row.id, row.version, current.sql, current.args,
+      )])
+      throw new PayrollError('current_worker_consent_required', 403)
+    }
     boundedPeriod({from:consent.from,through:consent.through})
     const token = crypto.randomUUID() + crypto.randomUUID(),
       hash = await digest(token),

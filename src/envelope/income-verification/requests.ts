@@ -34,6 +34,7 @@ export interface IncomeSource {
   evidence: string
 }
 export interface ConsentData {
+  requestId: string
   purpose: string
   from: string
   through: string
@@ -209,6 +210,7 @@ export class VerificationRequests {
     )
       throw new PayrollError('invalid_verification_expiry')
     const payload: ConsentData = {
+      requestId: objectId(input.requestId),
       ...boundedPeriod(input),
       requesterId,
       fields: fields.map(String),
@@ -485,6 +487,10 @@ export class VerificationRequests {
       if (prior.data.requesterId !== consent.requesterId)
         throw new PayrollError('correction_recipient_changed', 403)
     }
+    if ((!corrects && input.id !== consent.requestId) || (corrects && (await this.store.find<ProtectedDisclosure>(actor, 'disclosure', corrects, personId, true)).data.consentId !== consent.id))
+      throw new PayrollError('fresh_request_consent_required', 403)
+    if (input.fields !== undefined && JSON.stringify(input.fields) !== JSON.stringify(consent.fields))
+      throw new PayrollError('fresh_field_consent_required', 403)
     const data: ProtectedDisclosure = {
       ...(authority ? { authority } : {}),
       consentId: consent.id,
