@@ -1,4 +1,4 @@
-import type { Actor } from '../access'
+import { fence, auditStatement, requireAction, type Actor } from '../access'
 import type { Input } from '../records'
 import { PayrollError, text, integer } from '../security'
 import {
@@ -8,6 +8,7 @@ import {
   choice,
   type Kind,
   type Revision,
+  currentSources,
 } from '../workspace/store'
 import {
   hrisFacts,
@@ -47,7 +48,13 @@ export class SourceIntake {
       true,
       false,
     )
+    const f=fence(actor)
+    const applications=await this.store.records.statement(
+      `SELECT target_id AS id,version FROM env_audit WHERE company_id=? AND action='hris.location-applied' AND ${f.sql}`,
+      [actor.company,...f.args],
+    ).all<{id:string;version:number}>()
     return rows.map((row) => ({
+      appliedVersion: applications.results.some(a=>a.id===row.id && a.version===row.version)?row.version:null,
       ...row,
       acknowledgement: row.withdrawnBy
         ? 'withdrawn'
@@ -130,6 +137,7 @@ export class SourceIntake {
       const locations = await this.store.records.locations(actor)
       if (!locations.some((l) => l.id === normalized.values.locationId))
         throw new PayrollError('unknown_payroll_location')
+      normalized.values.personVersion = (await this.store.records.person(actor, personId)).version
     }
     const data: SourceEvent = {
       provider,
@@ -155,6 +163,42 @@ export class SourceIntake {
       personId,
       true,
     )
+  }
+  async location(actor: Actor, personId: string, id: string, input: Input) {
+    const source = await this.store.find<SourceEvent>(actor, 'hris-event', id, personId, true)
+    if (source.data.type !== 'location' || source.data.provider !== 'willow')
+      throw new PayrollError('reviewed_willow_location_required', 409)
+    if (integer(input.version) !== source.version)
+      throw new PayrollError('source_version_conflict', 409)
+    const person = await this.store.authority(actor, 'records:write', personId, true)
+    const locationId = text(source.data.values.locationId)
+    requireAction(actor, 'records:write', locationId, 'compensation')
+    const f = fence(actor), event = crypto.randomUUID()
+    const applied = () => this.store.records.statement(
+      `SELECT 1 FROM env_audit WHERE company_id=? AND action='hris.location-applied' AND target_id=? AND version=? AND ${f.sql}`,
+      [actor.company, id, source.version, ...f.args],
+    ).first()
+    if (await applied()) return {id, version:source.version, applied:true, delivered:false}
+    approved(source)
+    if (source.data.effectiveDate > new Date().toISOString().slice(0,10))
+      throw new PayrollError('location_not_effective', 409)
+    const result = await this.store.records.env.DB.batch([
+      this.store.records.statement(
+        `UPDATE env_people SET location_id=?,version=version+1,change_id=? WHERE company_id=? AND id=? AND version=? AND ${f.sql}
+         AND EXISTS(SELECT 1 FROM env_locations WHERE company_id=? AND id=?)
+         AND NOT EXISTS(SELECT 1 FROM env_audit WHERE company_id=? AND action='hris.location-applied' AND target_id=? AND version=?)
+         AND EXISTS(SELECT 1 FROM env_workspace_versions v WHERE v.company_id=? AND v.kind='hris-event' AND v.object_id=? AND v.version=? AND v.person_id=env_people.id
+          AND v.version=(SELECT MAX(version) FROM env_workspace_versions nv WHERE nv.company_id=v.company_id AND nv.kind=v.kind AND nv.object_id=v.object_id)
+          AND ${currentSources('v')}
+          AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved')
+          AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn')) RETURNING id`,
+        [locationId,event,actor.company,person!.id,integer(source.data.values.personVersion),...f.args,actor.company,locationId,actor.company,id,source.version,actor.company,id,source.version],
+      ),
+      auditStatement(this.store.records.env,actor,event,'hris.location-applied',id,source.version,
+        'EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND change_id=?)', [actor.company,personId,event]),
+    ])
+    if (!result[0].results.length && !(await applied())) throw new PayrollError('source_or_person_changed',409)
+    return {id, version:source.version, applied:true, delivered:false}
   }
   async leave(actor: Actor, personId: string, id: string, input: Input) {
     const event = await this.store.find<SourceEvent>(

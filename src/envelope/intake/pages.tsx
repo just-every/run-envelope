@@ -111,7 +111,7 @@ export function sourcePage(
                 Owning product
               </a>{' '}
               · {r.data.sourceId} v{r.data.sourceVersion} · {r.acknowledgement}.
-              Source delivery: pending.
+              Source delivery: pending. {r.appliedVersion && <>Local location revision {r.appliedVersion} applied.</>}
             </p>
             <dl className="evidence-text">
               {Object.entries(r.data.values).map(([k, v]) => (
@@ -147,6 +147,13 @@ export function sourcePage(
               <a className="btn" href={base + '/' + r.id + '/review'}>
                 Review exact source mapping
               </a>
+            )}
+            {kind === 'hris-event' && r.data.provider === 'willow' && r.data.type === 'location' && r.approvedBy && !r.withdrawnBy && (
+              <form className="field" method="post" action={base+'/'+r.id+'/location-handoff'}>
+                <Hidden name="version" value={r.version}/>
+                <p>Apply only once the effective date arrives. This changes the current payroll profile; historical work allocations stay intact. No remote acknowledgement is claimed.</p>
+                <Submit>Apply reviewed location change</Submit>
+              </form>
             )}
             {kind === 'hris-event' &&
               r.data.provider === 'willow' &&

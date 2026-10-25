@@ -49,7 +49,7 @@ same person without another write. The hire page shows the applied source revisi
 and offers the reviewed correction action.
 
 This corrects the payroll-required hire profile, including a mistaken hire
-location. It does not apply a later effective-dated relocation event or rewrite
+location. It does not itself apply a later effective-dated relocation event or rewrite
 historical work allocations. Existing retained previews become stale and need
 fresh source and person review. No policy, benefit enrollment, payment or remote
 acknowledgement is created.
@@ -120,3 +120,7 @@ payroll tax calculation, actual payroll/leave-result return, live connection
 lifecycle, all named external event types and reconciled labor actuals remain
 unfinished. ENV-028/034/042/051/053/054/055 inherit these source doors, encrypted
 workspace kinds, the source-to-person mapping table and approval dependencies when their full workflows are built.
+
+## Explicit effective location handoff
+
+A reviewed Willow location event captures the current payroll person version. POST its `/:id/location-handoff` with the exact source `version` to apply the current payroll profile location once the effective UTC date has arrived. The native source history also offers this explicit action. Both the old and destination locations require current compensation and record-write authority. A future, unreviewed, withdrawn, replaced or person-stale source refuses without a profile change or application acknowledgement. Replays retain one local applied-revision acknowledgement; concurrent applications cannot increment the person twice. Source and person revisions remain retained, and previous person-bound previews require fresh review. Historical actual-work allocations remain unchanged. This is a local profile handoff, not remote delivery or a payroll result receipt. Other HRIS location adapters, benefits, final pay and the shared connection lifecycle remain unfinished.
