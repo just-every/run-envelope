@@ -75,7 +75,7 @@ export const ownerOnly = (actor: Actor) => {
 }
 export const bindingFence = (
   alias: string,
-) => `EXISTS(SELECT 1 FROM oa_operators wo JOIN env_grants wg ON wg.operator_id=wo.id AND wg.company_id=${alias}.company_id
+) => `EXISTS(SELECT 1 FROM oa_operators requester WHERE requester.id=${alias}.requester_id AND requester.version=${alias}.requester_version AND requester.status='active') AND EXISTS(SELECT 1 FROM oa_operators wo JOIN env_grants wg ON wg.operator_id=wo.id AND wg.company_id=${alias}.company_id
  WHERE wo.id=${alias}.worker_id AND wo.version=${alias}.worker_version AND wo.status='active' AND wg.version=${alias}.worker_grant_version AND wg.revoked_at IS NULL) AND EXISTS(SELECT 1 FROM env_workspace_versions b
  WHERE b.company_id=${alias}.company_id AND b.kind='verification-worker' AND b.object_id=${alias}.binding_id AND b.version=${alias}.binding_version
  AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
@@ -160,10 +160,10 @@ export class VerificationRequests {
     const requesterId = text(input.requesterId),
       requester = await this.store.records
         .statement(
-          "SELECT id FROM oa_operators WHERE id=? AND status='active'",
+          "SELECT id,version FROM oa_operators WHERE id=? AND status='active'",
           [requesterId],
         )
-        .first()
+        .first<{id: string; version: number}>()
     if (!requester || requesterId === actor.session.operator.id)
       throw new PayrollError('verified_requester_required', 403)
     const fields = Array.isArray(input.fields)
@@ -224,8 +224,8 @@ export class VerificationRequests {
       )
     const result = await this.store.records.env.DB.batch([
       this.store.records.statement(
-        `INSERT INTO env_verification_consents(company_id,id,person_id,worker_id,worker_version,worker_grant_version,requester_id,binding_id,binding_version,cipher,created_session,created_at,expires_at,change_id)
-      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
+        `INSERT INTO env_verification_consents(company_id,id,person_id,worker_id,worker_version,worker_grant_version,requester_id,requester_version,binding_id,binding_version,cipher,created_session,created_at,expires_at,change_id)
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND version=? AND status='active') AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
       AND EXISTS(SELECT 1 FROM env_workspace_versions b WHERE b.company_id=? AND b.kind='verification-worker' AND b.object_id=? AND b.version=? AND ${currentSources('b')}
        AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
        AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='approved')
@@ -238,6 +238,7 @@ export class VerificationRequests {
           actor.session.operator.version,
           actor.grant.version,
           requesterId,
+          requester.version,
           binding.id,
           binding.version,
           cipher,
@@ -246,6 +247,8 @@ export class VerificationRequests {
           expiresAt,
           event,
           ...f.args,
+          requesterId,
+          requester.version,
           actor.company,
           personId,
           person.version,
@@ -277,8 +280,8 @@ export class VerificationRequests {
     const f = await this.scope(actor, personId, self),
       rows = await this.store.records
         .statement(
-          `SELECT id,person_id AS personId,worker_id AS workerId,binding_id AS bindingId,binding_version AS bindingVersion,expires_at AS expiresAt,revoked_at AS revokedAt,cipher FROM env_verification_consents WHERE company_id=? AND person_id=? AND ${f.sql} ORDER BY created_at DESC`,
-          [actor.company, personId, ...f.args],
+          `SELECT id,person_id AS personId,worker_id AS workerId,binding_id AS bindingId,binding_version AS bindingVersion,expires_at AS expiresAt,revoked_at AS revokedAt,cipher FROM env_verification_consents WHERE company_id=? AND person_id=? ${self ? 'AND worker_id=?' : ''} AND ${f.sql} ORDER BY created_at DESC`,
+          [actor.company, personId, ...(self ? [actor.session.operator.id] : []), ...f.args],
         )
         .all<{
           id: string
@@ -562,13 +565,13 @@ export class VerificationRequests {
         `SELECT r.id,r.consent_id AS consentId,r.disclosure_id AS disclosureId,r.disclosure_version AS disclosureVersion,r.requester_id AS requesterId,r.issued_at AS issuedAt,r.expires_at AS expiresAt,r.opened_at AS openedAt,r.acknowledged_at AS acknowledgedAt,v.cipher
         FROM env_verification_releases r JOIN env_verification_consents c ON c.company_id=r.company_id AND c.id=r.consent_id
         JOIN env_workspace_versions v ON v.company_id=r.company_id AND v.kind='disclosure' AND v.object_id=r.disclosure_id AND v.version=r.disclosure_version
-        WHERE c.company_id=? AND c.person_id=? AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
-        [actor.company, personId, ...f.args, event],
+        WHERE c.company_id=? AND c.person_id=? ${self ? 'AND c.worker_id=?' : ''} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
+        [actor.company, personId, ...(self ? [actor.session.operator.id] : []), ...f.args, event],
       ),
       this.store.records.statement(
         `SELECT id,consent_id AS consentId,worker_id AS workerId,cipher,created_at AS createdAt FROM env_verification_corrections
-        WHERE company_id=? AND consent_id IN(SELECT id FROM env_verification_consents WHERE company_id=? AND person_id=?) AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
-        [actor.company, actor.company, personId, ...f.args, event],
+        WHERE company_id=? AND consent_id IN(SELECT id FROM env_verification_consents WHERE company_id=? AND person_id=? ${self ? 'AND worker_id=?' : ''}) AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
+        [actor.company, actor.company, personId, ...(self ? [actor.session.operator.id] : []), ...f.args, event],
       ),
     ])
     if (!results[0].meta.changes)

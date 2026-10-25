@@ -16,9 +16,9 @@ a response. Consent lasts at most 30 days; the worker selects a restricted
 history retention date within 90 days. Retrieval ends at consent expiry or
 revocation, a changed worker/issuer identity or grant, a changed worker link,
 a withdrawn approval, or changed source evidence. Retained evidence is private;
-full statutory retention/erasure custody remains unfinished under ENV-054.
+verification custody uses the explicit statutory-hold and lawful-release doors under ENV-054.
 ct approved these protected-response defaults with riders on 23 October 2026.
-The incomplete custody, legal-authority and former-worker journeys keep the
+The remaining custody, legal-authority and interaction-state journeys keep the
 clause partial. Approval confers no legal-authority override.
 
 ## Public doors
@@ -45,7 +45,8 @@ clause partial. Approval confers no legal-authority override.
   wages from reviewed original register references for the complete exact period. Requesters receive only opaque source IDs and versions; the owner review retains original document references.
 - Owner GET `/:kind/:id/review` and POST `/:kind/:id/approve` with its `version`
   and same-session `reviewToken`. Kinds: verification-worker, income-source,
-  disclosure. Tokens expire in ten minutes; no client approval flag works.
+  disclosure. POST to the same record ending in `/withdraw` withdraws an existing
+  approval and immediately invalidates dependent retrieval. Tokens expire in ten minutes; no client approval flag works.
 - Owner POST `/disclosure/:id/release` with `version`. It atomically rechecks
   consent, worker binding, exact reviewed payload, current issuer identity and
   sources. It returns one release ID and private random token, shown once in the
@@ -85,3 +86,34 @@ unchanged hire date and corrected gross wages with all original source versions.
 The worker and requester screens are captured at 1440 and 390. Unrelated workers
 remain refused. Complete former-worker language and authority coverage, full
 statutory custody and legal-authority handling remain open.
+
+## Current requester identity and former workers
+
+Consent pins the requester identity version as well as the worker identity and
+current grant. Deactivating and reactivating either identity, changing a worker
+grant or reviewing a different worker link cannot revive an earlier response.
+A different linked identity cannot inherit the original worker's consent,
+disclosure or correction history. A fresh native sign-in preserves the same worker and authorized history, but a
+new request needs current explicit consent and exact owner review. Existing
+consents migrated without a requester version are unavailable for release or
+retrieval; workers must give fresh consent.
+
+Worker and requester documents accept `?lang=en` or `?lang=es`. Native forms
+retain that language through consent, revocation, correction and receipt.
+Fields, periods, identifiers and source values keep the same meaning and
+permissions in either language; language never grants access.
+
+The native privacy door inventories each verification consent, released version,
+receipt and correction with exact keys and fields, legal basis, custodian and a
+UTC release gate. Unclassified records remain statutory. Held ordinary reads
+and protected retrieval refuse; owner retained reads are audited. Release needs
+an exact current selection, elapsed gate and fresh native proof, then erasure
+is a separate explicit action. The verification journey proves changed-source
+selection refusal, no shortened gate, stale-proof refusal and removal of local
+verification derivatives with anonymized worker attribution. An old release
+cannot be opened or acknowledged after erasure. Downloaded copies and filed
+agency records remain outside local recall. No external deletion is sent.
+
+The legal-authority request path, verification-specific older-archive replay and
+remaining custody transports still need proof, as do Spanish empty, held and
+failed interaction states. Those gaps keep ENV-068 partial.

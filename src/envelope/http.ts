@@ -318,7 +318,8 @@ export async function payrollResponse(
     const records = new Records(env, session),
       post = request.method === 'POST',
       value = post ? await input(request) : {},
-      companies = ui ? await records.companies() : []
+      companies = ui ? await records.companies() : [],
+      verificationLanguage = (url.searchParams.get('lang') ?? value.lang ?? (request.headers.get('accept-language')?.startsWith('es') ? 'es' : 'en')) === 'es' ? 'es' : 'en'
     const claim = await claimsResponse({ ui, post, parts, value, records, session, companies })
     if (claim) return claim
     const industry = await industryResponse({ ui, post, parts, value, records, session, companies })
@@ -329,10 +330,10 @@ export async function payrollResponse(
     if (ui && parts.join('/') === 'workspace' && !post)
       return workspacePage(session, companies)
     if (parts[0] === 'protected-response') {
-      if (ui && !post && parts.length===1) return protectedResponsePage(session)
+      if (ui && !post && parts.length===1) return protectedResponsePage(session,undefined,undefined,verificationLanguage)
       if (post && parts.length===2 && ['read','ack'].includes(parts[1])) {
         const result=await new ProtectedResponses(new WorkspaceStore(records)).retrieve(String(value.id),value,parts[1]==='ack')
-        return ui?protectedResponsePage(session,result,{id:String(value.id),token:String(value.token)}):json(result)
+        return ui?protectedResponsePage(session,result,{id:String(value.id),token:String(value.token)},verificationLanguage):json(result)
       }
       throw new PayrollError('not_found',404)
     }
@@ -637,7 +638,7 @@ export async function payrollResponse(
         const person = await records.createPerson(actor, value)
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
       } else if (tail[0]==='people' && tail[2]==='verification') {
-        const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'
+        const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'+(verificationLanguage==='es'?'?lang=es':'')
         const view=async()=>{
           const history=await verification.history(actor,personId,self)
           const disclosures=self?[]:await store.list<import('./income-verification/requests').ProtectedDisclosure>(actor,'disclosure',personId,true)
@@ -648,7 +649,7 @@ export async function payrollResponse(
         }
         if(!post && tail.length===3){
           const result=await view()
-          response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),result,self):json(result)
+          response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),result,self,undefined,undefined,verificationLanguage):json(result)
         } else if(post && tail.length===4 && ['worker','income','consents','disclosures'].includes(tail[3])){
           const result=tail[3]==='worker'?await verification.bind(actor,personId,value):tail[3]==='income'?await verification.income(actor,personId,value):tail[3]==='consents'?await verification.consent(actor,personId,value):await verification.propose(actor,personId,value)
           response=ui?redirect(back):json(result,201)
@@ -660,13 +661,13 @@ export async function payrollResponse(
           const kind=tail[3] as 'verification-worker'|'income-source'|'disclosure'
           if(!post && tail[5]==='review'){
             const result=await store.review(actor,kind,tail[4],personId)
-            response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),await view(),false,result):json(result)
-          } else if(post && tail[5]==='approve'){
-            const result=await store.decide(actor,kind,tail[4],value,personId)
+            response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),await view(),false,result,undefined,verificationLanguage):json(result)
+          } else if(post && ['approve','withdraw'].includes(tail[5])){
+            const result=await store.decide(actor,kind,tail[4],value,personId,tail[5]==='withdraw')
             response=ui?redirect(back):json(result)
           } else if(post && kind==='disclosure' && tail[5]==='release'){
             const result=await new ProtectedResponses(store).release(actor,personId,tail[4],value)
-            response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),await view(),false,undefined,result):json(result,201)
+            response=ui?verificationPage(session,companies,actor,await records.person(actor,personId),await view(),false,undefined,result,verificationLanguage):json(result,201)
           } else throw new PayrollError('not_found',404)
         } else throw new PayrollError('not_found',404)
       } else if (tail.join('/') === 'labor-actuals' && !post) {

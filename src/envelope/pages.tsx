@@ -602,18 +602,20 @@ export const Select = ({
   label,
   choices,
   value,
+  labels,
 }: {
   name: string
   label: string
   choices: readonly string[]
+  labels?: readonly string[]
   value?: string
 }) => (
   <label className="field">
     <span>{label}</span>
     <select name={name} defaultValue={value} aria-label={label}>
-      {choices.map((c) => (
+      {choices.map((c, i) => (
         <option key={c} value={c}>
-          {c || 'Not yet recorded'}
+          {labels?.[i] ?? (c || 'Not yet recorded')}
         </option>
       ))}
     </select>
