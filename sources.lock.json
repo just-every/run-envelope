@@ -2734,7 +2734,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "d3b7982021d004e2f9fbc18f83d16eb0e33a4100b6812f0bdfc73015fa3ec0f9",
+      "sha256": "d2d84bfb77d60cbda3f27e3f3aec35fa1141908cf4497da6d8938d96873a5d4a",
       "executable": false
     },
     "tests/archive-worker.mjs": {

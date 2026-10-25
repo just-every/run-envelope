@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createHash } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
-import { cp, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { cp, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileRecords } from '@runeditrun/rer/modules/portability/files'
@@ -332,8 +332,11 @@ export async function verificationArchiveCheckpoint(context, companyId, personId
       verb === 'export' ? '--output' : '--input',file,...(verb === 'import' ? ['--yes'] : []),
       ...(journal ? ['--journal',journal] : []),'--json','--non-interactive','--no-queue'],directory,env)
     await mkdir(dirname(state(source)),{recursive:true})
-    await symlink(persist,state(source),'dir')
-    const exportCurrent = file => quiesce(()=>invoke(source,'export',file))
+    const exportCurrent = file => quiesce(async()=>{
+      await rename(persist,state(source))
+      try { return await invoke(source,'export',file) }
+      finally { await rename(state(source),persist) }
+    })
     const original = await quiesce(()=>snapshot(persist))
     const oldArchive = join(source,'exports','verification-before-erasure.rer')
     const old = await exportCurrent(oldArchive)
