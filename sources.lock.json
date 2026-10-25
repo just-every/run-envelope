@@ -2710,7 +2710,7 @@
       "executable": false
     },
     "tests/archive-authority.mjs": {
-      "sha256": "c2e2c69ff8f944a17b92000f088dc39feee06ec246909f81395c6af98b5500bb",
+      "sha256": "4114b824f9a0a0a1caf0478f4e7f8755fed27c54707222d9ab41c2feaf1b8573",
       "executable": false
     },
     "tests/archive-editions.mjs": {

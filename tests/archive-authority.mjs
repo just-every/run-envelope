@@ -33,7 +33,8 @@ export async function archiveAuthority(context, company, notice) {
   const confirmed = await call('/auth/confirm', { token })
   assert.equal(confirmed.status, 303, 'the current native session must complete its own proof')
 
-  const providerSecret = 'synthetic-envelope-5301'
+  // One controlled Resend account, with separately consented company storage.
+  const providerSecret = context.settings.MAIL_API_KEY
   const providers = await data(company.base + '/providers')
   assert.ok(Array.isArray(providers), 'the provider door must return declared providers')
   const resend = providers.find(provider => provider.id === 'resend')
