@@ -52,6 +52,7 @@ export async function archiveAdoption(context, fixture) {
     [company + '/providers', { id: 'resend', version: 0, enabled: true, consent: true, secret: 'synthetic-envelope-8802', sender: 'payroll@example.com' }],
     [company + '/pay-settings/earnings-run/' + fixture.years[0].monthlyChecks[0].data.runId + '/release', { version: 1 }],
   ]) assert.equal((await call(path, body, cookie)).status, 403, 'history adoption never permits mutation or outbound authority')
+  assert.equal((await call(company + '/people/' + fixture.retainedPersonId + '/privacy', undefined, cookie)).status, 403, 'a restored history viewer cannot inspect the owner-only retained set')
   assert.equal((await call(company + '/export', undefined, cookie)).status, 403, 'history access does not confer independent export rights')
   const replay = await call('/api/envelope/recovery', { companyId: fixture.companies[0], consent: true }, cookie)
   assert.equal(replay.status, 409, 'adoption cannot replay or replace a current company grant')

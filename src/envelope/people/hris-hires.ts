@@ -43,6 +43,8 @@ export class HrisHires {
       normalized = hrisFacts('willow', 'hire', raw),
       values = object(raw.values),
       sourcePersonId = text(input.sourcePersonId)
+    if (await this.store.records.statement('SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?',
+      [actor.company, await digest(JSON.stringify(['willow', sourcePersonId]))]).first()) throw new PayrollError('erased_source', 409)
     const locationId = text(values.locationId),
       name = text(values.name)
     if (
@@ -135,6 +137,7 @@ export class HrisHires {
           AND ${currentSources('v')}
           AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved')
           AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn'))
+        AND NOT EXISTS(SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?)
         AND NOT EXISTS(SELECT 1 FROM env_hris_people WHERE company_id=? AND source_key=?) RETURNING person_id`,
         [
           actor.company,
@@ -148,6 +151,7 @@ export class HrisHires {
           actor.company,
           id,
           source.version,
+          actor.company, sourceKey,
           actor.company,
           sourceKey,
         ],

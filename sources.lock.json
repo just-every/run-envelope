@@ -221,7 +221,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "67d5ff248f6afdb216662b4f780526326a7bfa24617568ebbc57ac5a0426a27c",
+      "sha256": "52d3bcf789a8f74305ecd8660de9df89f5f96d91d4806f0ee3860d44764c5445",
       "executable": false
     },
     "AGENTS.md": {
@@ -241,7 +241,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "7dcea4e41bcb2da09eb1580c09d8a70f992c894d20694a12082e380602123b26",
+      "sha256": "a43ad89b67d70121b45a7d04610908b59e9ce0b6d46e2b8fb6f18f7d4e23c905",
       "executable": false
     },
     "deploy-demo.json": {
@@ -257,7 +257,7 @@
       "executable": false
     },
     "docs/archive-recovery.md": {
-      "sha256": "17870fa92e1719a62200372473284b6faab44e4836c088a87c5c591b474a028b",
+      "sha256": "7b0fafac782cf43e423307df2b62e1f668721168d5a82f4f2a505a14dfcfee02",
       "executable": false
     },
     "docs/claims-follow-up.md": {
@@ -306,6 +306,10 @@
     },
     "docs/payroll-pay-items.md": {
       "sha256": "0b9f3be132688aee8de45d1611ed292b018296b022e98debe40de0b2dd711cd9",
+      "executable": false
+    },
+    "docs/payroll-privacy.md": {
+      "sha256": "02b433af46c5e35403bd90d48ab7b194ffa8abcc1f43228aecd097c98839c927",
       "executable": false
     },
     "docs/payroll-records.md": {
@@ -462,6 +466,10 @@
     },
     "migrations/core/0027_dependency_key_custody.sql": {
       "sha256": "9c8fa5f94c48a230f326cd4d666cbc2bd1e7d5a18327b89e65b339ac6a533d9a",
+      "executable": false
+    },
+    "migrations/core/0028_worker_privacy.sql": {
+      "sha256": "fd231717f478c88045f6a9b173ac6737320b7d8fd3eb6120755397f710501a71",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1209,7 +1217,7 @@
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
-      "sha256": "eed03c58b723ddaefc45553e975dc65a5f5746982ae3b358d34983969ed89269",
+      "sha256": "1ec4e0b22e3995ca3b3bd146f9a2c6ba3355a9980189f463f0c6b31adaf109a5",
       "executable": false
     },
     "src/envelope/firm/batch.ts": {
@@ -1245,7 +1253,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "cd00bdc9070094aab2d7e4adcecc0973383c2c8c3b8de555ecaea43878ccd5f7",
+      "sha256": "82d0622ba89a43b942f570cac13bea223fc59d0731a532388024323740a36d23",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -1341,7 +1349,7 @@
       "executable": false
     },
     "src/envelope/people/hris-hires.ts": {
-      "sha256": "ff7e50fbc21eba7d2b704b4403b5af7f40bba6952341adbc16b37efdaf2f5b23",
+      "sha256": "c3bf8fe01816c7966b2192e2236a72e9a68a939f71293bdad4797589e901a250",
       "executable": false
     },
     "src/envelope/providers.ts": {
@@ -1362,6 +1370,10 @@
     },
     "src/envelope/step-up.ts": {
       "sha256": "31fe4d950c8853bd1971a83d87097566f70e6af7ddef9ee1dac1b73b62d87a02",
+      "executable": false
+    },
+    "src/envelope/worker-privacy.ts": {
+      "sha256": "20d4e475b528da2cd10c666b41287380a7b0fb5cd0acbce3f021f12ab4ed479b",
       "executable": false
     },
     "src/envelope/workspace/allocation-tax.ts": {
@@ -1453,7 +1465,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "49ceb158fe94b755095da918ae435c39e38f619424278b7e9a75c5cd86f032fe",
+      "sha256": "631fd9186c8b3bb971195195045bc894f43701ee38d157558e6b51cfc1e8ff40",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2517,7 +2529,7 @@
       "executable": false
     },
     "tests/archive-adoption.mjs": {
-      "sha256": "6e02eb3993be79ce6aa021672f8a86f93d8c8a3d2841a9ae6787a43cbd26874d",
+      "sha256": "ec08a858f5e41719c2957d1dbe48c036dc7e4e3e95c0954c449f09fc399d4586",
       "executable": false
     },
     "tests/archive-authority.mjs": {
@@ -2529,11 +2541,11 @@
       "executable": false
     },
     "tests/archive-erasure.mjs": {
-      "sha256": "8c8666aa34eabab15f148cb8555cde0688453ba82e4996ed35d774b53f0da411",
+      "sha256": "686478a0f5374fb5fb709a3136daccb1d6f1ea31c1dd2cab1d837ed7a16ee2d6",
       "executable": false
     },
     "tests/archive-fixture.mjs": {
-      "sha256": "85276c15219e092ac659e1ab0e8af11617353bf5753c1e267013b2122c9e5dd3",
+      "sha256": "8b78fadf7c61775233bbe6cc91b83c968c5951f534770aac60c240b7bcdce2cc",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
@@ -2545,7 +2557,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "96211026b5d80c5aef8edbbca6388f68ceef350374bfa804970a873798728446",
+      "sha256": "cbe2fcad66c12b168211e1f6b0209203adff227b407174a69196822a34352ceb",
       "executable": false
     },
     "tests/archive-worker.mjs": {

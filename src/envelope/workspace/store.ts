@@ -209,6 +209,9 @@ export class WorkspaceStore {
       actor.company,
     ]
 
+    const erasedSource = await digest(JSON.stringify([kind, id]))
+    if (await this.records.statement('SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?', [actor.company, erasedSource]).first())
+      throw new PayrollError('erased_source', 409)
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const cipher = await seal(
       key,
@@ -221,7 +224,7 @@ export class WorkspaceStore {
         SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
         AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?),0)=?
         ${person ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
-        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) ${sourceSql} AND ${reviewInputs.sql} RETURNING version`,
+        AND NOT EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=? AND person_id IS NOT ?) ${sourceSql} AND ${reviewInputs.sql} AND NOT EXISTS(SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?) RETURNING version`,
         [
           actor.company,
           kind,
@@ -245,6 +248,7 @@ export class WorkspaceStore {
           person?.id ?? null,
           ...sourceArgs,
           ...reviewInputs.args,
+          actor.company, erasedSource,
         ],
       ),
       this.records.statement(

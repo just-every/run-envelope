@@ -40,6 +40,13 @@ export async function archiveFixture(context) {
   }, 201)
   const authority = await archiveAuthority(context, company, notice)
   const unused = await payroll.data(company.base + '/people', { name: 'Synthetic unused archive worker', locationId: company.location.id }, 201)
+  const privacyPerson = await payroll.data(company.base + '/people', { name: 'Synthetic local custody worker', locationId: company.location.id }, 201)
+  for (const kind of ['ssn', 'bank', 'tax']) await payroll.data(company.base + '/people/' + privacyPerson.id + '/private',
+    {kind, version: 0, value: 'synthetic-envelope-5401'}, 201)
+  const privacyWork = await payroll.data(company.base + '/people/' + privacyPerson.id + '/allocations/work', {
+    id: 'synthetic-envelope-privacy-work', version: 0, day: '2026-10-19', state: 'TX', locality: 'Austin', minutes: 480,
+    earnedCents: 100000, officeState: 'TX', nyReason: 'not-applicable', sourceRef: 'Synthetic approved local-custody time'
+  }, 201)
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }

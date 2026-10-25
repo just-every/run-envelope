@@ -92,14 +92,15 @@ source withdrawal does not erase valid historical attribution. A transport-valid
 authenticated correction pointing to a missing original refuses before business
 publication.
 
-The current privacy prerequisite removes only an unused worker row. The original
-configured native owner supplies fresh proof and POSTs the worker's `/erase` door
-with literal JSON `consent: true` and its current `version`. Any existing company
-and person dependency holds the request for retention review. Nothing cascades
-through payroll evidence, and this door cannot release a legal hold. The guarded
-transaction deletes the unused identity, invalidates in-flight exports and records
-Base's erasure tombstone plus an anonymous action target. This conservative
-privacy default awaits ct approval; full retention and cascade work stays ENV-054.
+The native privacy door now supports explicit record-specific retention review,
+UTC earliest-release gates and fresh-proof-confirmed release before a separate
+worker erasure request. The demonstrated cascade removes private documentary
+records and a work allocation with its source pin, invalidates export snapshots,
+anonymizes action targets and retains Base's erasure journal. Unknown retention
+stays statutory and unreleasable. A timer never releases or deletes records.
+See [worker privacy](./payroll-privacy.md) for the exact API and remaining ENV-054
+custody and state-coverage gaps. The conservative defaults were approved by ct
+on 23 October; the remaining engineering is not an approval hold.
 
 Keep the latest trusted erasure journal with recovery custody. For an older
 archive, place a private copy of the later archive inside the target checkout and
