@@ -4247,7 +4247,12 @@ export async function incomeVerificationJourney(runtime) {
     assert.equal((await data(privacy)).status,'eligible')
     await data(person+'/erase',{version:p.version,...selected})
     await finishArchive()
-    for(const path of heldDoors) {await data(path,undefined,404);await data(path.replace('/api/','/app/')+'?lang=es',undefined,404)}
+    for(const path of heldDoors) {
+      await data(path,undefined,404)
+      const erasedHtml=await call(path.replace('/api/','/app/')+'?lang=es')
+      assert.equal(erasedHtml.status,404)
+      assert.ok(!(await erasedHtml.text()).includes('345600'),'erased HTML transports expose no wage facts')
+    }
     await get(finalRelease,identities.requester.cookie,403)
     await data(door,undefined,404)
     await data('/api/envelope/protected-response/ack',{id:finalRelease.id,token:finalRelease.token},403,identities.requester.cookie)
