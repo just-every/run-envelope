@@ -31,7 +31,29 @@
       "source": {
         "kind": "local",
         "paths": [
-          "src/base"
+          "src/base/actor.ts",
+          "src/base/command-receipts.sql",
+          "src/base/command-receipts.ts",
+          "src/base/contract-filter.ts",
+          "src/base/contract-page.ts",
+          "src/base/deployment-health.ts",
+          "src/base/dispatch.ts",
+          "src/base/font-head.ts",
+          "src/base/font-response.ts",
+          "src/base/hydration",
+          "src/base/icon-head.ts",
+          "src/base/identity.ts",
+          "src/base/lobby.ts",
+          "src/base/page-style.ts",
+          "src/base/rejected-response.ts",
+          "src/base/run-site.ts",
+          "src/base/seed-contract.d.mts",
+          "src/base/seed-contract.mjs",
+          "src/base/select-style.ts",
+          "src/base/setup-state.ts",
+          "src/base/setup.ts",
+          "src/base/static-assets.ts",
+          "src/base/theme-frame.ts"
         ],
         "origin": {
           "repository": "https://github.com/runeditrun/base.git",
@@ -78,7 +100,14 @@
       "source": {
         "kind": "local",
         "paths": [
-          "src/modules/mail"
+          "src/modules/mail/.gitignore",
+          "src/modules/mail/LICENSE",
+          "src/modules/mail/doctor.mjs",
+          "src/modules/mail/index.mjs",
+          "src/modules/mail/live-proof",
+          "src/modules/mail/package.json",
+          "src/modules/mail/pnpm-lock.yaml",
+          "src/modules/mail/src"
         ]
       }
     },
@@ -108,7 +137,18 @@
       "source": {
         "kind": "local",
         "paths": [
-          "scripts/edition-authoring"
+          "scripts/edition-authoring/base-acknowledgements.mjs",
+          "scripts/edition-authoring/base-copies.mjs",
+          "scripts/edition-authoring/cli.mjs",
+          "scripts/edition-authoring/copy-checkout.mjs",
+          "scripts/edition-authoring/files.mjs",
+          "scripts/edition-authoring/manifest.mjs",
+          "scripts/edition-authoring/offline-git.mjs",
+          "scripts/edition-authoring/parent-comparison.mjs",
+          "scripts/edition-authoring/projection-lock.mjs",
+          "scripts/edition-authoring/release.mjs",
+          "scripts/edition-authoring/sources.mjs",
+          "scripts/edition-authoring/updates.mjs"
         ]
       }
     },
@@ -172,6 +212,59 @@
           {
             "path": "scripts/delivery/base/setup-manifest.mjs",
             "originPath": "modules/delivery-producer/setup-manifest.mjs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "just-every/envelope-publication-wording",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "VERIFY-WORKFLOW.md",
+          "scripts/edition-authoring/adopt.mjs",
+          "scripts/edition-authoring/lock.mjs",
+          "scripts/verify-ci.mjs",
+          "src/modules/mail/README.md",
+          "src/base/contract-style.ts"
+        ],
+        "origin": {
+          "repository": "https://github.com/runeditrun/base.git",
+          "revision": "11f94fec479228d71ba6d7dd6ea7796c0d42c544",
+          "paths": [
+            "export/VERIFY-WORKFLOW.md",
+            "default-seed/scripts/base-cli/edition-authoring/adopt.mjs",
+            "default-seed/scripts/base-cli/edition-authoring/lock.mjs",
+            "default-seed/scripts/verify-ci.mjs",
+            "modules/mail/README.md",
+            "foundation/runtime/contract-style.ts"
+          ]
+        },
+        "mappings": [
+          {
+            "path": "VERIFY-WORKFLOW.md",
+            "originPath": "export/VERIFY-WORKFLOW.md"
+          },
+          {
+            "path": "scripts/edition-authoring/adopt.mjs",
+            "originPath": "default-seed/scripts/base-cli/edition-authoring/adopt.mjs"
+          },
+          {
+            "path": "scripts/edition-authoring/lock.mjs",
+            "originPath": "default-seed/scripts/base-cli/edition-authoring/lock.mjs"
+          },
+          {
+            "path": "scripts/verify-ci.mjs",
+            "originPath": "default-seed/scripts/verify-ci.mjs"
+          },
+          {
+            "path": "src/modules/mail/README.md",
+            "originPath": "modules/mail/README.md"
+          },
+          {
+            "path": "src/base/contract-style.ts",
+            "originPath": "foundation/runtime/contract-style.ts"
           }
         ]
       }

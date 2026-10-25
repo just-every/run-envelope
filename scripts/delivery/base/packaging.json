@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "project": {
+    "schema": 1,
+    "projectId": "just-every/envelope",
+    "name": "Envelope",
+    "sourceRepository": "https://github.com/just-every/run-envelope",
+    "license": "MIT",
+    "verifyWorkflow": "verify.yml",
+    "deployment": {
+      "target": "cloudflare-workers",
+      "artifactFile": "rer-worker-artifact.json"
+    },
+    "operations": {
+      "setup": "pnpm install --frozen-lockfile",
+      "build": "pnpm run build",
+      "verify": "pnpm run check:deployment-spec && pnpm run verify",
+      "artifact": "pnpm run delivery:artifact",
+      "recovery": "Follow OPERATIONS.md: pause writes and retain the exact source, private settings and original ENVELOPE_RECORD_KEY. Export with rer export, restore into fresh empty resources with rer import and the original record key, re-export and compare supported records before routing traffic. Establish the native owner after restore and preserve every applied migration name and byte."
+    },
+    "verification": {
+      "migrationDirectories": [
+        "migrations/core"
+      ],
+      "guidanceFiles": [
+        "AGENTS.md",
+        "CONTRACT.md",
+        "OPERATIONS.md"
+      ],
+      "testPatterns": [
+        "tests/*.mjs"
+      ]
+    }
+  },
+  "managed": {
+    "workflowRef": "runeditrun/delivery/.github/workflows/trusted-build.yml@34cf6c23b5cb86eff0068049bc39feeb38c8ffa9",
+    "artifactFile": "rer-worker-artifact.json",
+    "buildProfile": "project",
+    "pnpmVersion": "10.12.4",
+    "verificationProfiles": [
+      "full"
+    ]
+  },
+  "setup": {
+    "manifestFile": "rer-setup.json"
+  },
+  "edition": {
+    "manifestFile": "edition.json",
+    "componentId": "just-every/envelope"
+  },
+  "artifact": {
+    "specInputs": {
+      "publicVariableNames": [
+        "AUTH_ORIGIN",
+        "AUTH_LOCAL",
+        "MAIL_PROVIDER",
+        "MAIL_FROM",
+        "MAIL_RELAY_URL",
+        "MAIL_ACCOUNT_ID",
+        "IDENTITY_PROVIDER",
+        "OWNER_EMAIL"
+      ],
+      "secretNames": [
+        "SESSION_SECRET",
+        "SETUP_TOKEN",
+        "ENVELOPE_RECORD_KEY",
+        "INSTALLATION_KEY"
+      ],
+      "optionalSecretNames": [
+        "MAIL_API_KEY",
+        "INSTALLATION_KEY_PREVIOUS"
+      ],
+      "recovery": "Follow OPERATIONS.md: pause writes and retain the exact source, private settings and original ENVELOPE_RECORD_KEY. Export with rer export, restore into fresh empty resources with rer import and the original record key, re-export and compare supported records before routing traffic. Establish the native owner after restore and preserve every applied migration name and byte.",
+      "healthPath": "/health",
+      "providerEffects": [
+        "outbound-mail",
+        "ai"
+      ],
+      "surfaces": {
+        "app": {
+          "path": "/",
+          "originVariable": "AUTH_ORIGIN",
+          "signIn": {
+            "path": "/signin",
+            "loginHint": false
+          }
+        }
+      },
+      "mail": {
+        "providers": [
+          "rer",
+          "resend",
+          "sendgrid",
+          "cloudflare"
+        ]
+      }
+    }
+  }
+}
