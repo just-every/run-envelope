@@ -56,7 +56,7 @@ export class SourceIntake {
     return rows.map((row) => ({
       appliedVersion: applications.results.some(a=>a.id===row.id && a.version===row.version)?row.version:null,
       ...row,
-      acknowledgement: row.withdrawnBy
+      acknowledgement: applications.results.some(a=>a.id===row.id && a.version===row.version) ? 'applied-to-payroll-profile' : row.withdrawnBy
         ? 'withdrawn'
         : !row.sourcesCurrent
           ? 'source-changed'
@@ -180,6 +180,7 @@ export class SourceIntake {
     ).first()
     if (await applied()) return {id, version:source.version, applied:true, delivered:false}
     approved(source)
+    if (source.data.values.personVersion === undefined) throw new PayrollError('location_requires_fresh_source',409)
     if (source.data.effectiveDate > new Date().toISOString().slice(0,10))
       throw new PayrollError('location_not_effective', 409)
     const result = await this.store.records.env.DB.batch([

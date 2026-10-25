@@ -3795,7 +3795,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     const mover=await data(api+'/people',{name:'Synthetic effective location worker',locationId:loc.id},201)
     const moveDoor=api+'/people/'+mover.id+'/hris'
     const moveLocation=await data(api+'/locations',{name:'Synthetic later payroll location',state:'PA'},201)
-    const moving=envelope('location','synthetic-envelope-1901','2000-01-01',{locationId:moveLocation.id})
+    const moving={...envelope('location','synthetic-envelope-1901','2000-01-01',{locationId:moveLocation.id}),sourcePersonId:'synthetic-envelope-1900'}
     const movement=await data(moveDoor,moving,201)
     const appliedCount=()=>sql(`SELECT COUNT(*) AS n FROM env_audit WHERE company_id='${company.id}' AND action='hris.location-applied'`)
     const originalMovePerson=await data(api+'/people/'+mover.id)
@@ -3812,7 +3812,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual(await appliedCount(),onceApplied,'location replay creates no second application acknowledgement')
     assert.deepEqual(await data(api+'/people/'+mover.id),moved)
     await capture(moveDoor,'hris-location-applied')
-    const futureMove=await data(moveDoor,envelope('location','synthetic-envelope-1902','2999-01-01',{locationId:loc.id}),201);await approve(moveDoor,futureMove)
+    const futureMove=await data(moveDoor,{...envelope('location','synthetic-envelope-1902','2999-01-01',{locationId:loc.id}),sourcePersonId:'synthetic-envelope-1900'},201);await approve(moveDoor,futureMove)
     await data(moveDoor+'/'+futureMove.id+'/location-handoff',{version:1},409)
     assert.deepEqual(await data(api+'/people/'+mover.id),moved,'future location cannot apply early')
     const changedMove=await data(moveDoor,{...moving,version:1,sourceVersion:2,export:{...moving.export,values:{locationId:loc.id}}},201)
@@ -3824,6 +3824,13 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual(await data(api+'/people/'+mover.id),concurrentPerson,'stale reviewed location cannot overwrite an intervening person version')
     assert.deepEqual(await appliedCount(),onceApplied)
     await capture(moveDoor,'hris-location-stale')
+    const refreshedMove=await data(moveDoor,{...moving,version:2,sourceVersion:3,export:{...moving.export,values:{locationId:loc.id}}},201);await approve(moveDoor,refreshedMove)
+    const beforeMoveRace=await data(api+'/people/'+mover.id)
+    await Promise.all([data(moveDoor+'/'+movement.id+'/location-handoff',{version:3}),data(moveDoor+'/'+movement.id+'/location-handoff',{version:3})])
+    assert.equal((await data(api+'/people/'+mover.id)).version,beforeMoveRace.version+1,'concurrent first application changes the profile once')
+    assert.equal((await appliedCount())[0].n,onceApplied[0].n+1,'concurrent first application produces one acknowledgement')
+    assert.equal((await data(moveDoor)).find(r=>r.id===movement.id).acknowledgement,'applied-to-payroll-profile')
+
     await capture(hr,'hris-empty')
     const hire=envelope('hire','synthetic-envelope-907','2026-10-01')
     // Import using the actual native source form; employment policy and I-9 fields are discarded.
