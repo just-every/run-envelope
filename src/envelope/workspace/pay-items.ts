@@ -601,9 +601,11 @@ export class PayItems {
         holds.push({personId: member.id, code: 'hris-final-pay-conflict', reason: 'Conflicting HRIS termination sources require exact employment and final-pay reconciliation.'})
       } else if (endings.length === 1 && effective(endings[0], periodEnd)) {
         const ending = endings[0]
-        const final = finalPayCheck({state: assigned.find(p => p.id === member.id)?.state ?? '',
+        const finalStates = [...new Set(work.filter(w => w.data.day === ending.data.effectiveDate).map(w => w.data.state))]
+        const final = finalPayCheck({state: finalStates.length === 1 ? finalStates[0] : 'unresolved actual-work state',
           separation: (ending.data.values.separation ?? 'none') as Separation,
           lastDay: ending.data.effectiveDate, periodStart, periodEnd, payDate})
+        details.push(`Final-pay work-state basis: ${finalStates.join(', ') || 'missing'} on ${ending.data.effectiveDate}; historical allocations are retained.`)
         details.push(`Willow final-pay source ${ending.data.sourceId} v${ending.data.sourceVersion}; no paid result or remote acknowledgement.`)
         details.push(...final.details)
         for (const hold of final.holds) holds.push({personId: member.id, ...hold})

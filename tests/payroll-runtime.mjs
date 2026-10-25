@@ -3912,7 +3912,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     await data(hr+'/'+collision.id+'/withdraw',{version:1})
     assert.equal((await preview()).afterTaxDeductionCents,0,'withdrawn competing source remains an unresolved conflict')
     await capture(hr,'hris-benefit-conflict')
-    const finalLocation=await data(api+'/locations',{name:'Synthetic California final-pay location',state:'CA'},201)
+    const finalLocation=await data(api+'/locations',{name:'Synthetic current payroll profile',state:'PA'},201)
     const finalWorker=await data(api+'/people',{name:'Synthetic HRIS final-pay worker',locationId:finalLocation.id},201)
     const finalHr=api+'/people/'+finalWorker.id+'/hris', finalGroup='synthetic-envelope-2020'
     await setup('group',finalGroup,{name:'Reviewed final-pay source group',people:[finalWorker.id]})
@@ -3941,6 +3941,11 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     assert.ok(finalResult.people[0].details.some(d=>d.includes('2026-10-03') && d.includes('§202')))
     assert.equal(finalResult.holds.some(h=>h.code==='final-pay-deadline'),false)
     await capture(finalHr,'hris-final-pay-corrected')
+    await data(api+'/people/'+finalWorker.id+'/allocations/work',{...work,id:'synthetic-envelope-2022',version:1,day:'2026-10-01',state:'NY',officeState:'NY',locality:'Albany',minutes:60},201)
+    finalResult=await finalPreview()
+    assert.ok(finalResult.holds.some(h=>h.code==='final-pay-deadline-review' && h.reason.includes('NY')),'an unsupported actual-work state stays held instead of borrowing the profile deadline')
+    assert.equal(finalResult.paymentReady,false)
+
     const ending=await data(hr,envelope('termination','synthetic-envelope-913','2026-11-02'),201);await approve(hr,ending)
     for(const type of ['location','leave','benefit']) {
       const values=type==='location'?{locationId:loc.id}:type==='leave'?{minutes:60,rateCents:1200,code:'sick'}:{amountCents:500,code:'synthetic-envelope-914'}

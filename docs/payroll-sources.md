@@ -150,7 +150,10 @@ external location adapters and restricted actual-result return remain open.
 A Willow termination statement may include `values.separation` as `discharge`,
 `quit-with-notice` or `quit-without-notice`. Its effective date remains the last
 employment day. Exact local review is required before the held payroll preview
-uses the reason and date in the existing final-pay deadline calculation.
+uses the reason and date in the existing final-pay deadline calculation. The
+work-state basis comes from retained actual-work allocations on that date,
+independently of the current payroll profile. Missing or multiple actual-work
+states stay held; no historical allocation is rewritten.
 California discharge and timely-notice cases retain the last-day deadline;
 the existing conservative date-only quit rule retains its 72-hour boundary.
 A missing reason, conflicting termination sources or an unsupported work-state
@@ -159,6 +162,8 @@ leave payout determination or remote result.
 
 `tests/payroll-runtime.mjs` — `sourceIntakeJourney` proves unreviewed refusal,
 a source-linked California immediate deadline, timely versus late preview,
-retained-run invalidation and a reviewed corrected separation reason, with
+retained-run invalidation, a reviewed corrected separation reason and historical
+California work under a different current payroll profile. A source correction
+to unsupported New York work retains a named deadline-review hold, with
 native source screens at 1440 and 390. Complete final-pay handoff and actual
 payment remain open.
