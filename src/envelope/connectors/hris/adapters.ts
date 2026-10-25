@@ -1,6 +1,7 @@
 import type { Input } from '../../records'
 import { date, text, integer, PayrollError } from '../../security'
 import { choice } from '../../workspace/store'
+import { separations } from '../../workspace/final-pay'
 
 export const hrisProviders = [
   'willow',
@@ -100,6 +101,16 @@ export function hrisFacts(
   } else if (type === 'benefit') {
     values.amountCents = integer(data.amountCents)
     values.code = text(data.code)
+    if (data.taxTreatment !== undefined || data.periodStart !== undefined || data.periodEnd !== undefined) {
+      values.taxTreatment = choice(data.taxTreatment, ['after-tax'])
+      const periodStart = date(data.periodStart), periodEnd = date(data.periodEnd)
+      values.periodStart = periodStart
+      values.periodEnd = periodEnd
+      if (periodStart > periodEnd || effectiveDate > periodEnd)
+        throw new PayrollError('invalid_benefit_period')
+    }
+  } else if (type === 'termination' && data.separation !== undefined) {
+    values.separation = choice(data.separation, separations.filter(s => s !== 'none'))
   } else if (!['hire', 'termination'].includes(type))
     throw new PayrollError('unsupported_hris_event')
   return {

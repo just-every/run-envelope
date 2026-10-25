@@ -83,6 +83,11 @@ export function leavePage(
             {review.data.policy.hireDate}; cap {review.data.policy.capMinutes};
             carryover {review.data.policy.carryoverMinutes} minutes.
           </p>
+          {review.data.policy.statutory && <p className="evidence-text">
+            California accrual method: one hour per 30 worked hours; normal day {review.data.policy.statutory.dayMinutes} minutes.
+            Unused balance carries forward. <a href={review.data.policy.statutory.source}>California sick leave source</a>.
+            Local ordinances and the lawful pay rate still need separate review.
+          </p>}
           {review.data.policy.tiers.map((t) => (
             <p className="evidence-text" key={t.years}>
               After {t.years} years: {t.earnedMinutes} minutes per{' '}
@@ -153,6 +158,8 @@ export function leavePage(
                 }
               />
             </label>
+            <Select name="statutoryProfile" label="Accrual policy method" choices={['reviewed-custom', 'ca-sick-accrual-2024']} />
+            <Field name="dayMinutes" label="Normal workday minutes for California accrual" type="number" required={false} />
             <Field
               name="policyEvidence"
               label="Reviewed policy and lawful rate evidence"

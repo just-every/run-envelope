@@ -574,9 +574,40 @@ export class PayItems {
       if (tips.length)
         holds.push({ personId: member.id,
           reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-009).' })
+      // A reviewed source can describe one exact period's after-tax deduction.
+      // No enrollment, pretax treatment, remittance or paid result is inferred.
+      const benefits = latest(hr).filter(r => r.data.type === 'benefit'
+        && r.data.effectiveDate <= periodEnd
+        && r.data.values.periodStart === periodStart && r.data.values.periodEnd === periodEnd)
+      for (const benefit of benefits) {
+        const peers = benefits.filter(r => r.data.values.code === benefit.data.values.code)
+        if (peers.length !== 1) {
+          if (!holds.some(h => h.personId === member.id && h.code === 'hris-benefit-conflict'))
+            holds.push({personId: member.id, code: 'hris-benefit-conflict', reason: 'Conflicting HRIS benefit deductions require source reconciliation; no conflicting amount is applied.'})
+          continue
+        }
+        if (!effective(benefit, periodEnd) || benefit.data.values.taxTreatment !== 'after-tax') continue
+        deductions += Number(benefit.data.values.amountCents)
+        objects.push({kind: 'hris-event', id: benefit.id, version: benefit.version, approved: true})
+        details.push(`Willow after-tax benefit ${benefit.data.values.code}: ${benefit.data.values.amountCents} cents for ${periodStart} through ${periodEnd}; source ${benefit.data.sourceId} v${benefit.data.sourceVersion}. Preview only; no contribution receipt.`)
+      }
       for (const c of used.values()) {
         objects.push({ kind: 'pay-change', id: c.id, version: c.version, approved: true })
         details.push(`${c.data.name} v${c.version}, effective ${c.data.effectiveDate}`)
+      }
+      const endings = latest(hr).filter(r => r.data.type === 'termination'
+        && r.data.effectiveDate >= periodStart && r.data.effectiveDate <= periodEnd)
+      if (endings.length > 1) {
+        holds.push({personId: member.id, code: 'hris-final-pay-conflict', reason: 'Conflicting HRIS termination sources require exact employment and final-pay reconciliation.'})
+      } else if (endings.length === 1 && effective(endings[0], periodEnd)) {
+        const ending = endings[0]
+        const final = finalPayCheck({state: assigned.find(p => p.id === member.id)?.state ?? '',
+          separation: (ending.data.values.separation ?? 'none') as Separation,
+          lastDay: ending.data.effectiveDate, periodStart, periodEnd, payDate})
+        details.push(`Willow final-pay source ${ending.data.sourceId} v${ending.data.sourceVersion}; no paid result or remote acknowledgement.`)
+        details.push(...final.details)
+        for (const hold of final.holds) holds.push({personId: member.id, ...hold})
+        objects.push({kind: 'hris-event', id: ending.id, version: ending.version, approved: true})
       }
       // Employment ending inside the period is final pay with its own work-state deadline.
       const last = [...used.values()].sort((x, y) => y.data.effectiveDate.localeCompare(x.data.effectiveDate))[0]

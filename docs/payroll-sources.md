@@ -124,3 +124,23 @@ workspace kinds, the source-to-person mapping table and approval dependencies wh
 ## Explicit effective location handoff
 
 A reviewed Willow location event captures the current payroll person version. POST its `/:id/location-handoff` with the exact source `version` to apply the current payroll profile location once the effective UTC date has arrived. The native source history also offers this explicit action. Both the old and destination locations require current compensation and record-write authority. A future, unreviewed, withdrawn, replaced or person-stale source refuses without a profile change or application acknowledgement. Replays retain one local applied-revision acknowledgement; concurrent applications cannot increment the person twice. Source and person revisions remain retained, and previous person-bound previews require fresh review. Historical actual-work allocations remain unchanged. This is a local profile handoff, not remote delivery or a payroll result receipt. Other HRIS location adapters, benefits, final pay and the shared connection lifecycle remain unfinished.
+
+## Exact-period benefit deduction preview
+
+A Willow benefit statement can additionally supply `taxTreatment: after-tax`,
+`periodStart` and `periodEnd` inside `values`. All three are required together;
+the effective date cannot follow the period end. The exact human-reviewed
+source amount feeds only the matching period's held earnings preview, once.
+It appears in the after-tax deduction total with its code, original source and
+revision. A pending or withdrawn revision contributes no amount. Corrections
+replace the previous amount and invalidate retained previews. Two source
+identities for the same benefit code and period contribute neither amount and
+retain a named reconciliation hold, including when one was withdrawn.
+
+This bounded preview neither changes enrollment nor establishes lawful
+deduction limits, pretax treatment, contribution delivery or a payroll result.
+It does not consume an election across runs or claim a remote acknowledgement.
+`tests/payroll-runtime.mjs` — `sourceIntakeJourney` proves review gating, replay,
+replacement correction, retained-preview invalidation, same-code conflict and
+native source screens at 1440 and 390. Complete benefit application, final pay,
+external location adapters and restricted actual-result return remain open.

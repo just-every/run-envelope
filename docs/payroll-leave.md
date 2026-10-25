@@ -77,3 +77,29 @@ refusals, replay and cross-bank source refusal, legacy exclusion, anniversary
 accrual, isolated carryover and owner transfer, plus exact held earnings and
 source invalidation. The same journey captures review and completed bank screens
 at 1440 and 390, with keyboard checks and visible control labels.
+
+## Selected California accrual method
+
+Opening a separate sick bank may select `statutoryProfile: ca-sick-accrual-2024`
+and supply the worker's reviewed `dayMinutes`. This bounded accrual method
+requires a California payroll location, an opening on or after January 1, 2024,
+and tiers exactly equivalent to one earned minute per 30 worked minutes.
+The balance cap must be at least the greater of 80 hours and ten normal workdays;
+the carryover cap must equal the balance cap so unused accrued leave is retained.
+The source is https://www.dir.ca.gov/dlse/paid_sick_leave.htm.
+
+Worked-minute fractions accumulate across source records: 29 minutes followed
+by one minute earns one minute, rather than losing both fractions. Exact work
+corrections change the cumulative earned amount by its difference, with all
+used work revisions pinned for review. A correction after capped accrual or a
+closed carryover year needs explicit reconciliation. The method never changes
+Willow policy or creates payment authority. Existing custom policies remain
+explicitly reviewed inputs without this statutory validation.
+
+This is accrual and balance-floor coverage only. Local ordinances, alternate
+accrual and frontload methods, eligibility and use rules, lawful sick-pay rates,
+other state policies, paid runs, stubs and settled corrections remain unproved.
+`tests/payroll-runtime.mjs` — `leaveJourney` proves policy-floor refusals without
+ledger writes, long-day balance protection, fractional accrual, sourced
+correction and replay, year-boundary preservation and the native opening,
+review and completed screens at 1440 and 390.

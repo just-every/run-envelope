@@ -18,6 +18,7 @@ export interface LeavePolicy {
   carryoverMinutes: number
   tiers: { years: number; earnedMinutes: number; workedMinutes: number }[]
   evidence: string
+  statutory?: { profile: 'ca-sick-accrual-2024'; dayMinutes: number; source: string }
 }
 export interface LeaveEntry {
   sourceId: string
@@ -33,6 +34,8 @@ export interface LeaveEntry {
   code: string
   evidence: string
   corrects: number | null
+  accrualCapped?: boolean
+  workedMinutes?: number
   handoff?: { kind: 'hris-event'; id: string; version: number; approved: true }
 }
 export const leaveBucket = (value: unknown) => choice(value ?? 'combined', ['combined', 'sick', 'pto', 'holiday'])
@@ -98,6 +101,22 @@ export class LeaveLedger {
       carryoverMinutes: zero(input.carryoverMinutes),
       tiers,
       evidence: text(input.policyEvidence, 500),
+    }
+    if (input.statutoryProfile && input.statutoryProfile !== 'reviewed-custom') {
+      if (input.statutoryProfile !== 'ca-sick-accrual-2024')
+        throw new PayrollError('unsupported_leave_statutory_profile', 409)
+      const person = await this.store.records.person(actor, personId)
+      const location = (await this.store.records.locations(actor)).find(l => l.id === person.locationId)
+      const dayMinutes = integer(input.dayMinutes)
+      // This bounded method is the California one-hour-per-30-hours accrual path.
+      // Longer normal days retain the greater ten-day balance floor.
+      if (bucket !== 'sick' || location?.state !== 'CA' || dayMinutes > 1440 || date(input.effectiveDate) < '2024-01-01'
+        || policy.capMinutes < Math.max(4800, dayMinutes * 10)
+        || policy.carryoverMinutes !== policy.capMinutes
+        || tiers.some(t => t.earnedMinutes * 30 !== t.workedMinutes))
+        throw new PayrollError('ca_sick_accrual_policy_requires_correction', 409)
+      policy.statutory = { profile: 'ca-sick-accrual-2024', dayMinutes,
+        source: 'https://www.dir.ca.gov/dlse/paid_sick_leave.htm' }
     }
     const balanceMinutes = zero(input.openingMinutes),
       effectiveDate = date(input.effectiveDate)
@@ -189,6 +208,8 @@ export class LeaveLedger {
       delta = 0,
       rateCents = 0,
       amountCents = 0
+    let accrualCapped: boolean | undefined
+    let workedMinutes: number | undefined
     let nextOwner = owner
     const deps: NonNullable<Sources['objects']> = []
     if (prior?.handoff && !handoff)
@@ -258,6 +279,23 @@ export class LeaveLedger {
       delta =
         Math.min(minutes, p.capMinutes - row.data.balanceMinutes + credited) -
         credited
+      if (p.statutory) {
+        const accruals = row.data.entries.filter((e, i, a) => e.operation === 'accrual'
+          && !a.slice(i + 1).some(n => n.sourceId === e.sourceId))
+        if (prior && row.data.entries.some(e => e.accrualCapped))
+          throw new PayrollError('leave_capped_or_closed_year_reconciliation_required', 409)
+        if (accruals.some(e => e.workedMinutes === undefined))
+          throw new PayrollError('leave_statutory_history_reconciliation_required', 409)
+        const totalBefore = accruals.reduce((n, e) => n + e.workedMinutes!, 0)
+        const totalAfter = totalBefore - (prior?.workedMinutes ?? 0) + work.data.minutes
+        const earnedDifference = Math.floor(totalAfter / 30) - Math.floor(totalBefore / 30)
+        // Fractional earned minutes survive short work records. Capped or closed
+        // history still requires the explicit reconciliation above.
+        delta = Math.min(earnedDifference, p.capMinutes - row.data.balanceMinutes)
+        accrualCapped = delta < earnedDifference
+        minutes = credited + delta
+        workedMinutes = work.data.minutes
+      }
       deps.push({ kind: 'work', id: work.id, version: work.version })
     } else if (operation === 'use') {
       if (!minutes || choice(input.owner, ['willow', 'payroll']) !== owner)
@@ -293,6 +331,7 @@ export class LeaveLedger {
       code: operation === 'use' ? String(input.code) : '',
       evidence,
       corrects: prior?.sourceVersion ?? null,
+      ...(workedMinutes === undefined ? {} : { workedMinutes, accrualCapped }),
       ...(handoff ? { handoff } : {}),
     }
     const workRows = await this.store.list<WorkDay>(
