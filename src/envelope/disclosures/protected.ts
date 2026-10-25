@@ -33,7 +33,7 @@ export class ProtectedResponses {
     const consent = (
       await new VerificationRequests(this.store).consents(actor, personId)
     ).find((c) => c.id === row.data.consentId)
-    if (!consent) throw new PayrollError('current_worker_consent_required', 403)
+    if (!consent || !consent.requestId) throw new PayrollError('current_worker_consent_required', 403)
     if (consent.revokedAt) {
       const denied = crypto.randomUUID(), current = fence(actor)
       await this.store.records.env.DB.batch([auditStatement(
@@ -93,8 +93,22 @@ export class ProtectedResponses {
         [actor.company, releaseId],
       ),
     ])
-    if (!result[0].results.length)
+    if (!result[0].results.length) {
+      // Withdrawal can win after the preliminary read. The refused release is
+      // still audited, without weakening the atomic consent fence above.
+      const withdrawn = await this.store.records.statement(
+        'SELECT 1 FROM env_verification_consents WHERE company_id=? AND id=? AND revoked_at IS NOT NULL',
+        [actor.company, consent.id],
+      ).first()
+      if (withdrawn) {
+        const current = fence(actor)
+        await this.store.records.env.DB.batch([auditStatement(
+          this.store.records.env, actor, crypto.randomUUID(), 'verification.release-refused-withdrawn',
+          row.id, row.version, current.sql, current.args,
+        )])
+      }
       throw new PayrollError('disclosure_or_consent_changed', 409)
+    }
     return {
       id: releaseId,
       disclosureId: row.id,
@@ -126,7 +140,8 @@ export class ProtectedResponses {
     const selected = JSON.parse(await unseal(
       await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY),
       JSON.stringify([preview.company,'verification-consent',preview.id]), preview.cipher,
-    )) as {from:string;through:string}
+    )) as {from:string;through:string;requestId?:string}
+    if (!selected.requestId) throw new PayrollError('protected_response_unavailable',403)
     try { boundedPeriod({from:selected.from,through:selected.through}) }
     catch { throw new PayrollError('protected_response_unavailable',403) }
     // Authorization, audit, receipt and encrypted response selection share one D1 batch.

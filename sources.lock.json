@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "de7abc091b7d6111d4e7bb63d66afa15d437d49fba54fe33f1890864d9d5056d",
+      "sha256": "12c1154aad5927f2e4edeb5ea774a4703af2448950c1d560de1508eb0540cd6d",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "74f84f28354041c6ff4c63aac18e3861a9ee9256a73fee54a576ce0da381d8aa",
+      "sha256": "c145c74740154624036f9eb7b8ca83f839c2b5a8b7c3fc4dd6dfedad36bfd15e",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1354,7 +1354,7 @@
       "executable": false
     },
     "src/envelope/disclosures/protected.ts": {
-      "sha256": "635859aca18b156c28ae3b88c661854b814dfca35a30b68b87559c7b0279e966",
+      "sha256": "14a46cbead8d8ae6adfdcc6d02d9ebdcb34adbf4c6525f5b19e132d03bfd841c",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -1398,11 +1398,11 @@
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
-      "sha256": "17ce54d2fce6e97c0d396f080436aa10895483e43e8f7963058fc165f0b325de",
+      "sha256": "8722eebc8d41526a890e09ad3578aef7f4fe3dbb32d5f85e57118f10f704c927",
       "executable": false
     },
     "src/envelope/income-verification/requests.ts": {
-      "sha256": "f6fcdd6095a4b7d6dc28b0aa53040f5a4ad3dccf336c875d6083afdc769c6c8c",
+      "sha256": "954d1dc89b77fb21bb65c36d23b055f96b8efa23aca4fef8c4fbf64d9d8eeb66",
       "executable": false
     },
     "src/envelope/income-verification/text.ts": {
@@ -1498,7 +1498,7 @@
       "executable": false
     },
     "src/envelope/privacy-pages.tsx": {
-      "sha256": "89ee49a755a50f183368d3043f4e3b54d0f3039309c279f6783fe6359496f559",
+      "sha256": "c547d593be70d998be117064ced0c99d2964d932f5b357460bc8bfaa7333e7c9",
       "executable": false
     },
     "src/envelope/providers.ts": {
@@ -2894,7 +2894,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "3b639277007d47380e336d78d7d823b230bd52cf8957860a24b7e7f384b3fb3b",
+      "sha256": "5fe799f6a00162cd80085d80f70c2a3a033e413a8b3cf0f9a7a0b49a5829ba1c",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {

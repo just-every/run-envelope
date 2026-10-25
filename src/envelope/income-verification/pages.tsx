@@ -247,7 +247,7 @@ export function verificationPage(
             </h3>
             <p>
               {t('Request')} {c.id}. {t('Requester')} {c.requesterId}. {t('Fields')}:{' '}
-              {c.fields.map(t).join(', ')}.{' '}
+              {language === 'es' ? 'Solicitud autorizada' : 'Authorized request'}: {c.requestId ?? '—'}. {c.fields.map(t).join(', ')}.{' '}
               {c.revokedAt
                 ? t('Revoked')
                 : c.expiresAt <= Date.now()

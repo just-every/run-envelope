@@ -4256,7 +4256,7 @@ export async function incomeVerificationJourney(runtime) {
     const utcGate=new Date(Date.now()+30000).toISOString()
     await data(privacy+'/retain',{...selected,earliestReleaseAt:utcGate})
     await capture(page,privacy,'verification-custody-utc-clock')
-    assert.match(await page.locator('main').innerText(),/Custody clock source: server Date.now\(\), rendered in UTC/ )
+    assert.match(await page.locator('main').innerText(),/Custody clock source: server system clock/ )
     assert.ok((await page.locator('main').innerText()).includes(utcGate))
     await data(privacy+'/release',selected,409)
     await data(privacy+'/retain',selected)

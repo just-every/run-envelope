@@ -347,7 +347,7 @@ export class VerificationRequests {
     const consent = (await this.consents(actor, personId)).find(
       (c) => c.id === input.consentId,
     )
-    if (!consent || consent.revokedAt || consent.expiresAt <= Date.now())
+    if (!consent || !consent.requestId || consent.revokedAt || consent.expiresAt <= Date.now())
       throw new PayrollError('current_worker_consent_required', 403)
     boundedPeriod({from:consent.from,through:consent.through})
     const basis = choice(input.basis ?? 'worker-consent', ['worker-consent', 'legal-authority'])
