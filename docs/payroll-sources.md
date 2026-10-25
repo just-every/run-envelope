@@ -144,3 +144,21 @@ It does not consume an election across runs or claim a remote acknowledgement.
 replacement correction, retained-preview invalidation, same-code conflict and
 native source screens at 1440 and 390. Complete benefit application, final pay,
 external location adapters and restricted actual-result return remain open.
+
+## Reviewed termination deadline handoff
+
+A Willow termination statement may include `values.separation` as `discharge`,
+`quit-with-notice` or `quit-without-notice`. Its effective date remains the last
+employment day. Exact local review is required before the held payroll preview
+uses the reason and date in the existing final-pay deadline calculation.
+California discharge and timely-notice cases retain the last-day deadline;
+the existing conservative date-only quit rule retains its 72-hour boundary.
+A missing reason, conflicting termination sources or an unsupported work-state
+deadline remains held for review. No earnings preview is a paid final check,
+leave payout determination or remote result.
+
+`tests/payroll-runtime.mjs` — `sourceIntakeJourney` proves unreviewed refusal,
+a source-linked California immediate deadline, timely versus late preview,
+retained-run invalidation and a reviewed corrected separation reason, with
+native source screens at 1440 and 390. Complete final-pay handoff and actual
+payment remain open.

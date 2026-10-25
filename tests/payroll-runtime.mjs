@@ -3929,7 +3929,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
     assert.equal(finalResult.people[0].earningsCents,2500)
     assert.equal(finalResult.paymentReady,false)
     assert.ok(finalResult.people[0].details.some(d=>d.includes('synthetic-envelope-2023 v1')))
-    const timelyFinal=await data(pay+'/preview',{...finalInput,payDate:'2026-10-01'})
+    const timelyFinal=await data(pay+'/preview',{...finalInput,periodEnd:'2026-10-01',payDate:'2026-10-01'})
     assert.equal(timelyFinal.holds.some(h=>h.code==='final-pay-deadline'),false)
     assert.equal(timelyFinal.paymentReady,false,'a timely preview cannot claim paid final wages')
     await capture(finalHr,'hris-final-pay-reviewed')
