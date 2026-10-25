@@ -38,8 +38,21 @@ people-write and compensation authority as well as exact source approval. A
 single D1 transaction binds the source worker to one payroll person and records
 the acknowledgement. Replaying apply returns that same person without a second
 record or audit. An unreviewed or stale hire creates nothing. Corrected source
-versions retain their original person link; they never duplicate or silently
-rename/move the payroll record.
+versions retain their original person link. Import and approval alone never
+rename or move the payroll record. An explicit `/:id/apply` on the newly reviewed
+revision corrects the existing payroll name and company location, increments the
+person version and records one attributed acknowledgement. The review displays
+the server-captured person version; any intervening person change refuses the
+application. Source replacement, withdrawal, loss of current authority and an
+unknown company location also refuse. Replaying an applied revision returns the
+same person without another write. The hire page shows the applied source revision
+and offers the reviewed correction action.
+
+This corrects the payroll-required hire profile, including a mistaken hire
+location. It does not apply a later effective-dated relocation event or rewrite
+historical work allocations. Existing retained previews become stale and need
+fresh source and person review. No policy, benefit enrollment, payment or remote
+acknowledgement is created.
 
 Payroll previews bind the source hire version. Work before the reviewed hire
 date becomes an explicit employment/date conflict; the source cannot authorize

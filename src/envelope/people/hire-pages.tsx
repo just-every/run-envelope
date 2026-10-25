@@ -23,7 +23,8 @@ export function hirePage(
         <p>
           A named human reviews the source worker, payroll name, local work
           location and effective hire date. Applying a reviewed hire creates one
-          payroll-required person. Replay links back to that same person.
+          payroll-required person. A reviewed correction updates that same person;
+          replay makes no additional change.
         </p>
         <p>
           <a href="https://github.com/just-every/run-willow">
@@ -44,6 +45,7 @@ export function hirePage(
             {String(review.data.values.locationId)}. Source approver{' '}
             {review.data.sourceApprovedBy}; evidence{' '}
             {review.data.sourceEvidence}.
+            {review.data.values.personVersion ? ` Corrects payroll person version ${review.data.values.personVersion}.` : null}
           </p>
           <form method="post" action={base + '/' + review.id + '/approve'}>
             <Hidden name="version" value={review.version} />
@@ -62,25 +64,35 @@ export function hirePage(
             <p>
               {r.data.sourcePersonId}; source {r.data.sourceId} v
               {r.data.sourceVersion}.{' '}
-              {r.withdrawnBy
+              {rows.some((newer) => newer.id === r.id && newer.version > r.version)
+                ? 'Superseded'
+                : r.withdrawnBy
                 ? 'Withdrawn'
                 : r.approvedBy
                   ? 'Reviewed'
                   : 'Awaiting human review'}
               .
             </p>
-            {!r.approvedBy && !r.withdrawnBy && (
+            {!rows.some((newer) => newer.id === r.id && newer.version > r.version) && !r.approvedBy && !r.withdrawnBy && (
               <a className="btn" href={base + '/' + r.id + '/review'}>
                 Review exact hire mapping
               </a>
             )}
             {r.personId ? (
+              <>
               <p>
                 <a href={companyPath(actor.company) + '/people/' + r.personId}>
                   Open the linked payroll person
                 </a>
-                . Employment and source corrections remain owned by Willow.
+                . Employment remains owned by Willow. Applied source revision {r.appliedVersion ?? 'unknown'}.
               </p>
+                {!rows.some((newer) => newer.id === r.id && newer.version > r.version) && r.version > (r.appliedVersion ?? 0) && r.approvedBy && !r.withdrawnBy && (
+                  <form method="post" action={base + '/' + r.id + '/apply'}>
+                    <Hidden name="version" value={r.version} />
+                    <Submit>Apply reviewed hire correction</Submit>
+                  </form>
+                )}
+              </>
             ) : r.approvedBy && !r.withdrawnBy ? (
               <form method="post" action={base + '/' + r.id + '/apply'}>
                 <Hidden name="version" value={r.version} />
