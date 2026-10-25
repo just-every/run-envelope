@@ -303,3 +303,67 @@ export async function archiveJourney(context) {
     console.log('Archive custody journey passed: native annual corrections, source editions, unused-worker erasure fence, inactive authority, restricted audited adoption and atomic CLI refusals.')
   } finally { await rm(temporary, { recursive: true, force: true }) }
 }
+
+/** The verification journey supplies its real native state before and after erasure. */
+export async function verificationArchiveCheckpoint(context, companyId, personId) {
+  const {root, persist, quiesce, settings} = context
+  const temporary = await mkdtemp(join(tmpdir(), 'envelope-verification-archive-'))
+  const source = join(temporary, 'source'), target = join(temporary, 'target'), spare = join(temporary, 'spare')
+  const state = directory => join(directory, '.wrangler', 'state')
+  try {
+    await Promise.all([source, target, spare].map(directory => checkout(root, directory)))
+    const env = {...process.env, WRANGLER_SEND_METRICS:'false', WRANGLER_LOG:'warn'}
+    delete env.ENVELOPE_RECORD_KEY
+    const keys = await archiveKeyCustody({source,target,corruptTarget:spare,temporary,run,env,key:settings.ENVELOPE_RECORD_KEY})
+    await keys.original()
+    const cli = join(root,'node_modules','@runeditrun','rer','global','rer.mjs')
+    const invoke = (directory, verb, file, journal) => run(process.execPath,[cli,verb,'--cwd',directory,
+      verb === 'export' ? '--output' : '--input',file,...(verb === 'import' ? ['--yes'] : []),
+      ...(journal ? ['--journal',journal] : []),'--json','--non-interactive','--no-queue'],directory,env)
+    const copyState = async () => quiesce(async () => {
+      await rm(state(source), {recursive:true,force:true})
+      await mkdir(dirname(state(source)), {recursive:true})
+      await cp(persist,state(source), {recursive:true})
+    })
+    await copyState()
+    const original = await snapshot(state(source))
+    const oldArchive = join(source,'exports','verification-before-erasure.rer')
+    const old = await invoke(source,'export',oldArchive)
+    assert.equal(old.code,0,'verification archive export: ' + old.output)
+    const records = []
+    for await (const record of fileRecords(oldArchive)) records.push(record)
+    const rows = records.flatMap(record => record.items ?? []).filter(item => item.kind === 'row')
+    for (const table of ['env_verification_consents','env_verification_releases','env_verification_corrections']) {
+      const exported = rows.filter(item => item.table === table && item.row.company_id === companyId).map(item => item.row)
+      const expected = original[table].filter(row => row.company_id === companyId).map(row =>
+        table === 'env_verification_corrections' ? row : {...row,expires_at:0})
+      assert.ok(expected.length,'verification archive contains genuine history for ' + table)
+      assert.equal(digest(ordered(exported)),digest(ordered(expected)),'verification evidence is exact and authority inactive')
+    }
+    assert.ok(rows.some(item => item.table === 'env_workspace_versions' && item.row.company_id === companyId && item.row.kind === 'disclosure'))
+    const migrated = await run(process.execPath,[join(root,'node_modules','wrangler','bin','wrangler.js'),
+      'd1','migrations','apply','foundation','--local','--persist-to','.wrangler/state','--config','wrangler.jsonc'],target,env)
+    assert.equal(migrated.code,0,'verification target migrations: ' + migrated.output)
+    const empty = await snapshot(state(target))
+    return async () => {
+      try {
+        await copyState()
+        const journal = join(source,'exports','verification-erasure-journal.rer')
+        const current = await invoke(source,'export',journal)
+        assert.equal(current.code,0,'post-erasure verification export: ' + current.output)
+        const after = []
+        for await (const record of fileRecords(journal)) for (const item of record.items ?? []) if(item.kind === 'row') after.push(item)
+        for (const table of ['env_verification_consents','env_verification_releases','env_verification_corrections'])
+          assert.ok(!after.some(item => item.table === table && item.row.company_id === companyId),'erased verification rows cannot leave through archives')
+        assert.ok(!after.some(item => item.row.person_id === personId || (item.table === 'env_people' && item.row.id === personId)))
+        await mkdir(join(target,'exports'),{recursive:true})
+        await copyFile(journal,join(target,'exports','verification-erasure-journal.rer'))
+        const refused = await invoke(target,'import',oldArchive,'exports/verification-erasure-journal.rer')
+        assert.notEqual(refused.code,0,'older verification archive cannot resurrect erased source facts or history')
+        assert.match(refused.output,/erased_row|erasure_epoch/,'restore identifies the erasure fence')
+        assert.equal(digest(populated(await snapshot(state(target)))),digest(populated(empty)),'refused verification restore publishes nothing')
+        console.log('VERIFICATION-ARCHIVE passed: exact encrypted history and inactive consent authority; erased derivatives absent; actual older archive refused with later journal and no publication.')
+      } finally { await rm(temporary,{recursive:true,force:true}) }
+    }
+  } catch(error) { await rm(temporary,{recursive:true,force:true}); throw error }
+}

@@ -83,25 +83,23 @@ export function verificationPage(
             person through your approved private channel.
           </p>
           <p>
-            Token (shown once):{' '}
+            {t('Token (shown once):')}{' '}
             <code className="evidence-text" data-release-token="true">
               {issued.token}
             </code>
           </p>
           <p>
             <a href="/app/envelope/protected-response">{t("Requester opens a protected response")}</a>
-            . Expiry: {new Date(issued.expiresAt).toISOString()}. No delivery or
-            acknowledgement is claimed.
+            . {t("Expiry:")} {new Date(issued.expiresAt).toISOString()}. {t("No delivery or acknowledgement is claimed.")}
           </p>
         </Card>
       )}
       {review && (
         <Card title={t("Review exact protected record")}>
           <p>
-            {review.kind} · version {review.version}. Review the worker,
-            requester, selected fields, period and provenance before deciding.
+            {t(review.kind)} · {t("Version")} {review.version}. {t("Review the worker, requester, selected fields, period and provenance before deciding.")}
           </p>
-          <Details value={review.data} />
+          <Details value={review.data} language={language} />
           <form
             method="post"
             action={base + '/' + review.kind + '/' + review.id + '/approve'}
@@ -118,11 +116,11 @@ export function verificationPage(
           <Card title={t("Verified worker link")}>
             {current && (
               <p>
-                Native worker identity: {current.data.workerId}. Version{' '}
+                {t("Native worker identity:")} {current.data.workerId}. {t("Version")}{' '}
                 {current.version};{' '}
                 {current.approvedBy && !current.withdrawnBy
-                  ? 'reviewed'
-                  : 'review required'}
+                  ? t('reviewed')
+                  : t('review required')}
                 .
               </p>
             )}
@@ -158,8 +156,8 @@ export function verificationPage(
                 <p className="evidence-text">
                   {r.data.sourceRef} v{r.version};{' '}
                   {r.approvedBy && !r.withdrawnBy
-                    ? 'reviewed'
-                    : 'review required'}
+                    ? t('reviewed')
+                    : t('review required')}
                   .
                 </p>
                 {!r.approvedBy && (
@@ -168,6 +166,7 @@ export function verificationPage(
               </article>
             ))}
             <form className="field" method="post" action={base + '/income'}>
+              <Hidden name="lang" value={language} />
               <Field name="id" label={t("Register source ID")} />
               <Field
                 name="version"
@@ -323,6 +322,10 @@ export function verificationPage(
                 name="consentId"
                 label={t("Current worker consent request ID")}
               />
+              <Select name="basis" label={t("Request basis")} choices={["worker-consent", "legal-authority"]} labels={[t("Worker consent"), t("Legal authority with worker consent")]} />
+              <Field name="sourceAuthority" label={t("Legal authority source and scope (required for legal authority)")} required={false} maxLength={1000} />
+              <Field name="requesterEvidence" label={t("Requester identity and authority evidence (required for legal authority)")} required={false} maxLength={500} />
+              <p>{t("Legal authority never replaces worker consent or permits additional fields. Review the source, requester, purpose, period and selected facts before approval.")}</p>
               <Field
                 name="corrects"
                 label={t("Earlier response ID being corrected (optional)")}
@@ -337,7 +340,7 @@ export function verificationPage(
                 <h3>
                   {r.id} v{r.version}
                 </h3>
-                <Details value={r.data} />
+                <Details value={r.data} language={language} />
                 {!r.approvedBy ? (
                   <a
                     className="btn"
@@ -406,4 +409,15 @@ export function protectedResponsePage(
       <p lang={language}>{t("This response is bound to the named requester. A token alone gives no access; revocation, expiry or changed sources refuse retrieval.")}</p>
     </Card></div>,
   )
+}
+
+export function verificationErrorPage(session: Session, code: string, language: VerificationLanguage) {
+  const t = verificationText(language)
+  const held = code === 'retained_data_owner_required'
+  return page(session, t(held ? 'Verification history held' : 'Verification unavailable'), [], undefined,
+    <div lang={language}><Card title={t('No action completed')}>
+      <p role="alert">{t(held ? 'Retained history is restricted to audited owner review. No facts were released.' : 'The request could not be completed. Check current consent, identity, permissions and sources with the owner. No facts were released.')}</p>
+      <p>{t('Reference:')} <code>{code}</code></p>
+      <a className="btn" href={'/app/envelope/protected-response?lang=' + language}>{t('Open your protected response')}</a>
+    </Card></div>)
 }

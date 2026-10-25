@@ -12,7 +12,7 @@ import { HrisHires } from './people/hris-hires'
 import { hirePage } from './people/hire-pages'
 import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
 import { ProtectedResponses } from './disclosures/protected'
-import { verificationPage, protectedResponsePage } from './income-verification/pages'
+import { verificationPage, protectedResponsePage, verificationErrorPage } from './income-verification/pages'
 import { SourceIntake } from './intake/sources'
 import { sourcePage } from './intake/pages'
 import { LeaveLedger, leaveBucket, leaveId } from './leave/ledger'
@@ -130,6 +130,7 @@ export async function payrollResponse(
     api = url.pathname.startsWith('/api/envelope/')
   if (!ui && !api) return null
   let session
+  let verificationLanguage: 'en' | 'es' = (url.searchParams.get('lang') ?? (request.headers.get('accept-language')?.startsWith('es') ? 'es' : 'en')) === 'es' ? 'es' : 'en'
   let rpcId: string | number | null = null
   try {
     if (
@@ -318,8 +319,8 @@ export async function payrollResponse(
     const records = new Records(env, session),
       post = request.method === 'POST',
       value = post ? await input(request) : {},
-      companies = ui ? await records.companies() : [],
-      verificationLanguage = (url.searchParams.get('lang') ?? value.lang ?? (request.headers.get('accept-language')?.startsWith('es') ? 'es' : 'en')) === 'es' ? 'es' : 'en'
+      companies = ui ? await records.companies() : []
+    verificationLanguage = (url.searchParams.get('lang') ?? value.lang ?? (request.headers.get('accept-language')?.startsWith('es') ? 'es' : 'en')) === 'es' ? 'es' : 'en'
     const claim = await claimsResponse({ ui, post, parts, value, records, session, companies })
     if (claim) return claim
     const industry = await industryResponse({ ui, post, parts, value, records, session, companies })
@@ -847,7 +848,8 @@ export async function payrollResponse(
         status,
       )
     if (ui && session) {
-      const response = errorPage(session, code)
+      const verificationDoor = url.pathname.includes('/verification') || url.pathname.includes('/protected-response')
+      const response = verificationDoor ? verificationErrorPage(session, code, verificationLanguage) : errorPage(session, code)
       return new Response(request.method === 'HEAD' ? null : response.body, {
         status,
         headers: response.headers,

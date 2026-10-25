@@ -51,6 +51,7 @@ export interface Consent extends ConsentData {
   bindingVersion: number
 }
 export interface ProtectedDisclosure {
+  authority?: { basis: string; sourceAuthority: string; requesterEvidence: string; purpose: string }
   consentId: string
   requesterId: string
   corrects: string
@@ -346,6 +347,11 @@ export class VerificationRequests {
     )
     if (!consent || consent.revokedAt || consent.expiresAt <= Date.now())
       throw new PayrollError('current_worker_consent_required', 403)
+    const basis = choice(input.basis ?? 'worker-consent', ['worker-consent', 'legal-authority'])
+    const authority = basis === 'legal-authority' ? {
+      basis, sourceAuthority: text(input.sourceAuthority, 1000),
+      requesterEvidence: text(input.requesterEvidence, 500), purpose: consent.purpose,
+    } : undefined
     const binding = await this.binding(actor, personId)
     if (
       binding.id !== consent.bindingId ||
@@ -479,6 +485,7 @@ export class VerificationRequests {
         throw new PayrollError('correction_recipient_changed', 403)
     }
     const data: ProtectedDisclosure = {
+      ...(authority ? { authority } : {}),
       consentId: consent.id,
       requesterId: consent.requesterId,
       corrects,
