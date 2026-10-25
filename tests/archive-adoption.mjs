@@ -68,12 +68,24 @@ export async function archiveAdoption(context, fixture) {
     .filter(event => event.action === 'archive.history.adopted')
   assert.equal(adoptionAudit.length, 1, 'one explicit adoption records one durable attributed event')
   assert.equal(adoptionAudit[0].actorId, nativeIdentity.operator.id)
+  assert.equal(receipts[0].actorId, nativeIdentity.operator.id)
   assert.equal(adoptionAudit[0].targetId, fixture.companies[0])
   assert.equal(receipts[0].eventId.length, 36)
   assert.equal((await call(company, undefined, cookie)).status, 200)
   const nativeCompany = await (await call(company, undefined, cookie)).json()
   const person = nativeCompany.people[0]
   assert.ok(person, 'restricted history includes retained native payroll people')
+  const history = await (await call(company + '/people/' + fixture.retainedPersonId + '/industry', undefined, cookie)).json()
+  for (const check of fixture.years[0].monthlyChecks)
+    assert.deepEqual(history.checks.find(row => row.id === check.id).data, check.data,
+      'adopted historical compensation remains the exact archived annual calculation')
+  assert.ok(history.checks.some(row => row.id === fixture.years[0].correctionId && row.data.corrects),
+    'adopted history preserves linked corrections without replaying wages')
+  const taxHistory = await (await call(company + '/industry-returns', undefined, cookie)).json()
+  for (const id of [fixture.years[0].originalReturnId, fixture.years[0].correctedReturnId])
+    assert.ok(taxHistory.some(row => row.id === id), 'adopted tax history retains both prepared return editions')
+  assert.equal((await call(company + '/industry-returns/' + fixture.years[0].originalReturnId + '/download', undefined, cookie)).status, 403,
+    'historical tax reads confer no independent form export')
   for (const [path, body] of [
     [company + '/people', { name: 'Refused restored write', locationId: person.locationId }],
     [company + '/people/' + person.id + '/private', { kind: 'bank', version: 0, value: 'synthetic-envelope-8801' }],

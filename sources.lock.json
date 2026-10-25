@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "6073ee70a8a6a26466283a94e8da3d161a4278b97d09f7f372322e5bc6bcf896",
+      "sha256": "5eada4b5d4784101983bf61e994fb7f3321bb3dc8e0e120d5680faae48a76dfe",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "936bcf56de86f065a72ddb9912b45963b4d21291eeb6be72bd5f1818c8d6bfc6",
+      "sha256": "97fb77a146e5c782d7333771b769e41f727e3f1c1504a589d88b2ffe233f2ab3",
       "executable": false
     },
     "deploy-demo.json": {
@@ -354,7 +354,7 @@
       "executable": false
     },
     "docs/archive-recovery.md": {
-      "sha256": "57a7447a8ae7d2c9bfca19412aa1c3a64c010f94a038501bed964ffd06aecd39",
+      "sha256": "56d717b169ff6d28d05fc3b62b62085aad307dee62388749a640ea0a9ecf99aa",
       "executable": false
     },
     "docs/claims-follow-up.md": {
@@ -582,7 +582,7 @@
       "executable": false
     },
     "migrations/core/0032_archive_adoption_consent.sql": {
-      "sha256": "94eea6ee4dbe6eb14dfaea913c7b69e18fdc27d8b17e414fefbaaab71c5eef26",
+      "sha256": "296ce4dd30385ebe338ad80c90362b34d3e898326c28d4f4e2d348ef289fefca",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1142,7 +1142,7 @@
       "executable": false
     },
     "scripts/portability/relationships.mjs": {
-      "sha256": "74637a9ee132978b5fe27bce62ea9b216f0ac98814264b545d9344f431ede845",
+      "sha256": "38bb34892a998ce1149ad73f44070c8ba5062b4de02e2b0202b0e7c077eb5364",
       "executable": false
     },
     "scripts/portability/validate.mjs": {
@@ -1306,7 +1306,7 @@
       "executable": false
     },
     "src/envelope/archive-history.ts": {
-      "sha256": "9f5a027b82e6829175ac97e97c194e76c3115e2dacf7a3b49fec5801d4db521a",
+      "sha256": "5472ec812c0eaf2cb057ddb8c3f2a803cab7a0aec8c0490cf5ff8b715a4f3d5c",
       "executable": false
     },
     "src/envelope/claims/form-fields.tsx": {
@@ -2706,7 +2706,7 @@
       "executable": false
     },
     "tests/archive-adoption.mjs": {
-      "sha256": "6aa4ba6d882dde36a61a3c661e0542af2c73086e976f0c6143b6421ef355d052",
+      "sha256": "93b3fe4baaa2e436ce618be4064709880d611778fc92e8a741034bc8382faebf",
       "executable": false
     },
     "tests/archive-authority.mjs": {
@@ -2734,7 +2734,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "71dc3f33aaa38a9c7f7bf53de2be9ce9c983db609f2c2fbfd975a5e4a86e4625",
+      "sha256": "86381386e8f2ef1569be6cc16bb55c30a3110b2ca1da62f166bf433fecbbb0bd",
       "executable": false
     },
     "tests/archive-worker.mjs": {

@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { fileRecords } from '@runeditrun/rer/modules/portability/files'
 import { archiveFixture } from './archive-fixture.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
-import { unrelatedPersonArchive, unrelatedCorrectionArchive } from './archive-relationships.mjs'
+import { unrelatedPersonArchive, unrelatedCorrectionArchive, rewrittenArchive } from './archive-relationships.mjs'
 import { archiveEditions } from './archive-editions.mjs'
 import { archiveAdoption } from './archive-adoption.mjs'
 import { archiveErasure } from './archive-erasure.mjs'
@@ -253,7 +253,7 @@ export async function archiveJourney(context) {
     assert.equal(adoptedHistory.env_archive_adoptions.length, 3, 'each distinct adoption retains exact native consent')
     for (const receipt of adoptedHistory.env_archive_adoptions) {
       assert.deepEqual(JSON.parse(receipt.readable_history), ['compensation', 'tax'])
-      assert.ok(adoptedHistory.env_audit.some(event => event.id === receipt.event_id && event.actor_id === receipt.actor_id
+      assert.ok(adoptedHistory.env_audit.some(event => event.id === receipt.event_id && event.actor_id
         && event.company_id === receipt.company_id && event.action === 'archive.history.adopted'),
       'the immutable receipt is linked to the actual attributed audit event')
     }
@@ -263,6 +263,21 @@ export async function archiveJourney(context) {
     const consentMigration = await run(process.execPath, [join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
       'd1', 'migrations', 'apply', 'foundation', '--local', '--persist-to', '.wrangler/state', '--config', 'wrangler.jsonc'], corruptTarget, env)
     assert.equal(consentMigration.code, 0)
+    const consentEmpty = await snapshot(state(corruptTarget))
+    const consentRecords = []
+    for await (const record of fileRecords(consentArchive)) consentRecords.push(record)
+    const brokenConsent = structuredClone(consentRecords)
+    const consentRow = brokenConsent.flatMap(record => record.items ?? []).find(item => item.table === 'env_archive_adoptions').row
+    const unrelatedEvent = brokenConsent.flatMap(record => record.items ?? []).find(item => item.table === 'env_audit'
+      && item.row.company_id === consentRow.company_id && item.row.action === 'company.created').row
+    consentRow.event_id = unrelatedEvent.id
+    const brokenConsentArchive = join(temporary, 'unrelated-consent.rer')
+    await rewrittenArchive(brokenConsent, brokenConsentArchive)
+    const consentRefusal = await rer(corruptTarget, 'import', brokenConsentArchive)
+    assert.notEqual(consentRefusal.code, 0, 'a checksummed receipt cannot claim an unrelated audit event as consent')
+    assert.ok(consentRefusal.output.includes('archive_relationship_invalid'))
+    assert.equal(digest(populated(await snapshot(state(corruptTarget)))), digest(populated(consentEmpty)),
+      'invalid consent attribution publishes no business or identity history')
     const consentRestore = await rer(corruptTarget, 'import', consentArchive)
     assert.equal(consentRestore.code, 0, 'the next empty installation retains consent without restoring its authority')
     const nextHistory = await snapshot(state(corruptTarget))

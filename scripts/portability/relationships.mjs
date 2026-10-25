@@ -39,6 +39,9 @@ export async function validateRelationships({ db, tables, manifest }) {
   }
   for (const table of ['env_notice_approvals', 'env_notice_dispatches']) if (tables[table]) await absent(table,
     `NOT EXISTS(SELECT 1 FROM ${staged('env_notice_replies')} p WHERE p.company_id=c.company_id AND p.id=c.reply_id AND p.version=c.version AND p.digest=c.digest)`);
+  if (tables.env_archive_adoptions) await absent('env_archive_adoptions',
+    `NOT EXISTS(SELECT 1 FROM ${staged('env_audit')} p WHERE p.id=c.event_id
+      AND p.company_id=c.company_id AND p.action='archive.history.adopted' AND p.target_id=c.company_id)`);
   if (tables.env_firm_work) {
     const sources = [
       `c.source_kind='notice' AND EXISTS(SELECT 1 FROM ${staged('env_notices')} p WHERE p.company_id=c.company_id AND p.id=c.source_id AND c.source_version=1)`,

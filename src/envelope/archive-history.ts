@@ -49,15 +49,17 @@ export class ArchiveHistory {
     const native = this.nativeFence()
     const rows = (await this.records.statement(
       `SELECT consent.event_id AS eventId,consent.company_id AS companyId,consent.company_name AS companyName,
-        consent.readable_history AS readableHistory,consent.actions,consent.occurred_at AS occurredAt
-       FROM env_archive_adoptions consent JOIN env_grants g ON g.company_id=consent.company_id
-       AND g.operator_id=consent.actor_id WHERE consent.actor_id=? AND g.revoked_at IS NULL
+        consent.readable_history AS readableHistory,consent.actions,event.actor_id AS actorId,event.occurred_at AS occurredAt
+       FROM env_archive_adoptions consent JOIN env_audit event ON event.id=consent.event_id
+       AND event.company_id=consent.company_id AND event.action='archive.history.adopted'
+       JOIN env_grants g ON g.company_id=consent.company_id
+       AND g.operator_id=event.actor_id WHERE event.actor_id=? AND g.revoked_at IS NULL
        AND (g.role='owner' OR EXISTS(SELECT 1 FROM json_each(g.actions) WHERE value='audit:read'))
        AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=consent.company_id AND pr.status='held')
-       AND ${native.sql} ORDER BY consent.occurred_at,consent.event_id`,
+       AND ${native.sql} ORDER BY event.occurred_at,consent.event_id`,
       [this.records.session.operator.id, ...native.args],
     ).all<{ eventId: string; companyId: string; companyName: string; readableHistory: string;
-      actions: string; occurredAt: number }>()).results
+      actions: string; actorId: string; occurredAt: number }>()).results
     return rows.map(row => ({ ...row, readableHistory: JSON.parse(row.readableHistory),
       actions: JSON.parse(row.actions), operations: 'paused', providerLookup: false }))
   }
@@ -86,17 +88,16 @@ export class ArchiveHistory {
           JSON.stringify(grant.actions), event, companyId, companyName, ...available.args, ...proof.args],
       ),
       this.records.statement(
-        `INSERT INTO env_archive_adoptions(event_id,company_id,company_name,actor_id,readable_history,actions,occurred_at)
-         SELECT ?,c.id,c.name,?,?,?,? FROM env_companies c
-         WHERE c.id=? AND EXISTS(SELECT 1 FROM env_grants WHERE company_id=c.id AND operator_id=? AND change_id=?)`,
-        [event, session.operator.id, JSON.stringify(historyFields), JSON.stringify(grant.actions), Date.now(),
-          companyId, session.operator.id, event],
-      ),
-      this.records.statement(
         `INSERT INTO env_audit(id,company_id,actor_id,action,target_id,version,occurred_at)
          SELECT ?,?,?,'archive.history.adopted',?,1,?
          WHERE EXISTS(SELECT 1 FROM env_grants WHERE company_id=? AND operator_id=? AND change_id=?)`,
         [event, companyId, session.operator.id, companyId, Date.now(), companyId, session.operator.id, event],
+      ),
+      this.records.statement(
+        `INSERT INTO env_archive_adoptions(event_id,company_id,company_name,readable_history,actions)
+         SELECT event.id,c.id,c.name,?,? FROM env_companies c JOIN env_audit event ON event.company_id=c.id
+         WHERE c.id=? AND event.id=? AND event.actor_id=? AND event.action='archive.history.adopted'`,
+        [JSON.stringify(historyFields), JSON.stringify(grant.actions), companyId, event, session.operator.id],
       ),
     ])
     if (!result[0].results.length) throw unavailable()

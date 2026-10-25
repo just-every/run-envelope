@@ -76,13 +76,14 @@ can sign in through fresh native email proof and finish setup. GET
 readable history, paused operations and absence of provider lookup. POST that
 route with the selected `companyId`, exact `companyName`, literal JSON
 `consent: true` and `readableHistory: ["compensation", "tax"]`. A generic consent,
-a different company name, missing fields or extra fields refuses without a grant
+a different company name, missing fields or extra history fields refuses without a grant
 or consent receipt. Current identity, eligibility, company name and fresh proof
 are repeated inside the atomic grant write.
 
 Adoption records `archive.history.adopted` and an immutable receipt naming the
 company, native actor, compensation and tax history, exact read actions and UTC
-time. GET `/api/envelope/recovery/consents` returns the caller's own receipts only
+time through its linked audit event. It stores no duplicate actor identity, so
+lawful audit anonymization also removes that attribution from receipt reads. GET `/api/envelope/recovery/consents` returns the caller's own receipts only
 while a current grant permits audit reads. Held company receipts stay hidden.
 Imported receipts are historical evidence and cannot recreate a grant.
 
