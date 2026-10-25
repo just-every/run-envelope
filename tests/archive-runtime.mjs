@@ -250,6 +250,25 @@ export async function archiveJourney(context) {
       await archiveAdoption(context, fixture)
     })
     const adoptedHistory = await snapshot(state(target))
+    assert.equal(adoptedHistory.env_archive_adoptions.length, 3, 'each distinct adoption retains exact native consent')
+    for (const receipt of adoptedHistory.env_archive_adoptions) {
+      assert.deepEqual(JSON.parse(receipt.readable_history), ['compensation', 'tax'])
+      assert.ok(adoptedHistory.env_audit.some(event => event.id === receipt.event_id && event.actor_id === receipt.actor_id
+        && event.company_id === receipt.company_id && event.action === 'archive.history.adopted'),
+      'the immutable receipt is linked to the actual attributed audit event')
+    }
+    const consentArchive = join(target, 'exports', 'adopted-history.rer')
+    const consentExport = await rer(target, 'export', consentArchive)
+    assert.equal(consentExport.code, 0, 'adopted history and its exact consent remain portable evidence')
+    const consentMigration = await run(process.execPath, [join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
+      'd1', 'migrations', 'apply', 'foundation', '--local', '--persist-to', '.wrangler/state', '--config', 'wrangler.jsonc'], corruptTarget, env)
+    assert.equal(consentMigration.code, 0)
+    const consentRestore = await rer(corruptTarget, 'import', consentArchive)
+    assert.equal(consentRestore.code, 0, 'the next empty installation retains consent without restoring its authority')
+    const nextHistory = await snapshot(state(corruptTarget))
+    assert.deepEqual(nextHistory.env_archive_adoptions, adoptedHistory.env_archive_adoptions)
+    assert.equal(nextHistory.env_grants.length, 0, 'historical consent cannot recreate a restored grant')
+    assert.equal(nextHistory.oa_sessions.length, 0, 'historical consent cannot recreate a native session')
     const occupied = await rer(target, 'import', archive)
     assert.notEqual(occupied.code, 0, 'an already populated target refuses a second import')
     assert.ok(occupied.output.includes('target_not_empty'), 'the refusal is specifically the nonempty target')
