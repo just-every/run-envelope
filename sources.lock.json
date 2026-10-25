@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "ebbaec0d117c5c1898be115eac88a0a2656c864f12eda3583d7b295eba710aaa",
+      "sha256": "b5a77ea2acce2905bd9a41c30fba9b5f5289a4e7649b2408e34a4625608dc43d",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "da4a53e7b396ee374ac92e3cfe1cd6e4e98bb81da5d508f9128f0cbe4785c53f",
+      "sha256": "ac8b72c76f9cd7b994a7b4f3785e9ce532fb36962b4205e257da0e98d396d649",
       "executable": false
     },
     "deploy-demo.json": {
@@ -406,7 +406,7 @@
       "executable": false
     },
     "docs/payroll-privacy.md": {
-      "sha256": "94db22444f4e75a6d277b6fc7db56fdb123d675bfe48c665bd5bbd170b3e5c7e",
+      "sha256": "4ca335ff60ecbba9b5e2932f16a1bc08ab8d4198301d7ecb9331fc26574bbd8e",
       "executable": false
     },
     "docs/payroll-records.md": {
@@ -434,7 +434,7 @@
       "executable": false
     },
     "docs/private-inputs.md": {
-      "sha256": "9c2845a041e58ecdec0265014ef9f4f2f87ca06930665aed55da00fe75397d01",
+      "sha256": "38e2340a10e38b3271eea0eac1a98996f9900a64fc0821894b971ca9e0b0979f",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -1462,7 +1462,7 @@
       "executable": false
     },
     "src/envelope/intake/pages.tsx": {
-      "sha256": "1eac47429f2fdedfb3bd45aae9470c0daf5416a5be0f84fa0625e16faaba0958",
+      "sha256": "4fc2e2fc1b74642e46e8b1f05dd1fcb5776ab95071527f3aa4baecfd12c3450e",
       "executable": false
     },
     "src/envelope/intake/sources.ts": {
@@ -2718,11 +2718,11 @@
       "executable": false
     },
     "tests/archive-erasure.mjs": {
-      "sha256": "5e008b5ad0ac7c976fde90cdf83b62e498ed260f18f4ac326ea4ec7f6ecaba4e",
+      "sha256": "b5a66bcab28231353f564a58d703f354f3e0dd209575dca04d81445550961b83",
       "executable": false
     },
     "tests/archive-fixture.mjs": {
-      "sha256": "02b213d1dcb3e48a03ba53d2264b96266c955a1427d6102f8329dac7ae503a81",
+      "sha256": "be27c37bdf5730ff2dfb182f879f8605a484bb1f81e447b7733638d13dc9f25d",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
@@ -2734,7 +2734,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "fcd0b5566cd2ff838345487a6e412ea05fe1dda19d38543f00b74d1a7c1ccc26",
+      "sha256": "ab0e7d094ca44f238a4047a71a3351610d399d1b3a67ad53faa640a9e162368f",
       "executable": false
     },
     "tests/archive-worker.mjs": {

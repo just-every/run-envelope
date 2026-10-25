@@ -19,3 +19,29 @@ The local inventory follows company-scoped person references, SQL relationships,
 There is no automatic payroll erasure, hold release or external destructive request. Downloaded copies and already-filed agency records are outside local recall. External provider deletion is a separate authorized obligation and this API sends no request.
 
 ENV-054 remains partial. Native archive proof now includes mixed prepared payroll, claim originals and versions, documentary records, work allocations, rates, agent drafts and firm history; held native accountant and agent reads; and loaded, empty, held, failed and completed request screens at both required widths. The protected-response journey covers held and erased disclosure retrieval plus anonymized worker audit attribution. Exhaustive graph and restriction proof for every remaining notice, leave, intake and private-custody family remains owed. A separately tracked external-provider deletion-request lifecycle also remains to be built and proven. The wider custody obligation remains with ENV-028, ENV-051, ENV-053, ENV-054 and ENV-068 as their transports use these records.
+
+## Bounded custody coverage
+
+The native archive journey now seeds separate sick, PTO and holiday accounts,
+with an opening review and later adjustment in each bank. It also seeds two
+revisions each of a Willow benefit input and a Gauge earning input. The inventory
+must name both encrypted revisions of all five objects. The same worker holds
+SSN, bank and tax attachments and a work allocation.
+
+`tests/archive-erasure.mjs` (`archiveErasure`) checks ordinary reads before the
+request, refusal on every corresponding leaf transport while held, explicit
+classification and release, absence after erasure, and refused intake replay
+under a new worker. `tests/archive-runtime.mjs` (`archiveJourney`) inspects the
+actual exported revisions and derivative rows and supplies the older-archive
+resurrection probe. The existing legal-basis, UTC-gate, stale-fingerprint and
+anonymous-audit assertions apply to this mixed retained set.
+
+This is bounded proof, not exhaustive custody certification. Remaining work
+includes mapping worker-bearing notice bodies and their analysis, reply, review,
+approval and dispatch records; mapped hire sources and every supported HRIS event
+and earning adapter; connected leave handoffs and their shared run derivatives;
+and the full private-document transport inventory. Notices currently have no
+explicit worker association, so a company notice must not be assumed to belong
+to an erasure scope merely because the worker belongs to that company. Separate
+external-provider deletion requests and their evidence remain unimplemented;
+local completion never claims external deletion.

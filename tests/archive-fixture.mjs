@@ -55,6 +55,40 @@ export async function archiveFixture(context) {
   const privacyPerson = await payroll.data(company.base + '/people', { name: 'Synthetic local custody worker', locationId: company.location.id }, 201)
   for (const kind of ['ssn', 'bank', 'tax']) await payroll.data(company.base + '/people/' + privacyPerson.id + '/private',
     {kind, version: 0, value: 'synthetic-envelope-5401'}, 201)
+  const custodyBase = company.base + '/people/' + privacyPerson.id
+  const hostileCustody = '<img src="https://ungranted.example/custody" onerror="globalThis.syntheticEnvelope794=true">'
+  const custodyObjects = []
+  for (const bucket of ['sick', 'pto', 'holiday']) {
+    const account = await payroll.data(custodyBase + '/leave', {
+      bucket, owner:'payroll', hireDate:'2026-01-01', effectiveDate:'2026-01-01',
+      capMinutes:4800, carryoverMinutes:2400, openingMinutes:480,
+      tiers:[{years:0,earnedMinutes:1,workedMinutes:30}], policyEvidence:hostileCustody,
+    }, 201)
+    custodyObjects.push(account.id)
+    const review = await payroll.data(custodyBase + '/leave/review?bucket=' + bucket)
+    await payroll.data(custodyBase + '/leave/approve', {bucket, version:review.version, reviewToken:review.reviewToken})
+    await payroll.data(custodyBase + '/leave/entries', {
+      bucket, version:1, sourceId:'synthetic-envelope-custody-' + bucket, sourceVersion:1,
+      day:'2026-10-19', operation:'adjustment', direction:'credit', minutes:60, evidence:hostileCustody,
+    }, 201)
+  }
+  const custodyInputs = [
+    {door:'hris', body:{provider:'willow',type:'benefit',sourcePersonId:'synthetic-envelope-794-worker',
+      sourceEvidence:hostileCustody,sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,
+      export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-794-benefit',effectiveDate:'2026-10-19',values:{amountCents:500,code:hostileCustody}}}},
+    {door:'earnings-sources', body:{provider:'gauge',sourcePersonId:'synthetic-envelope-794-worker',
+      sourceEvidence:hostileCustody,sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,
+      export:{schema:'envelope-job-earning@1',status:'approved',currency:'USD',paymentState:'unpaid',
+        sourceId:'synthetic-envelope-794-earning',effectiveDate:'2026-10-19',amountCents:500,
+        jobId:hostileCustody,approvedBy:'Synthetic reviewer',earningType:'job'}}},
+  ]
+  for (const input of custodyInputs) {
+    const source = await payroll.data(custodyBase + '/' + input.door, input.body, 201)
+    input.id = source.id
+    custodyObjects.push(source.id)
+    await payroll.data(custodyBase + '/' + input.door, {...input.body, version:1, sourceVersion:2}, 201)
+    await payroll.data(custodyBase + '/' + input.door + '/' + source.id + '/review')
+  }
   const privacyWork = await payroll.data(company.base + '/people/' + privacyPerson.id + '/allocations/work', {
     id: 'synthetic-envelope-privacy-work', version: 0, day: '2026-10-19', state: 'TX', locality: 'Austin', minutes: 480,
     earnedCents: 100000, officeState: 'TX', nyReason: 'not-applicable', sourceRef: 'Synthetic approved local-custody time'
@@ -91,5 +125,5 @@ export async function archiveFixture(context) {
     {companyId:privacyClaims.company.id,personId:privacyClaims.person.id,objects:[privacyClaim.id],kind:'claim',
      claimId:privacyClaim.id,request:privacyClaims.validRequest(),artifactIds:privacyClaimRow.data.artifacts.map(a=>a.id)}]
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, custodyObjects, custodyInputs, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }

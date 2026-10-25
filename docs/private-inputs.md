@@ -85,3 +85,10 @@ The archive journey carries hostile person text through a real CLI export and
 restore and verifies that native rendering remains inert under restricted
 current authority. These checks extend the exercised cases; exhaustive input
 and interaction coverage remains open in ENV-057.
+
+The native archive journey also exercises malformed structured exports on the
+HRIS and earning routes, comparing the retained revisions before and after each
+refusal. Its leave, Willow benefit and Gauge earning review screens retain
+hostile evidence as literal text at 1440 and 390, with no injected image, script
+effect or remote request. This bounded proof does not certify every interaction
+state, contrast or the full WCAG 2.2 AA target.

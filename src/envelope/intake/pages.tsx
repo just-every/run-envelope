@@ -38,13 +38,13 @@ export function sourcePage(
             : 'Approved source earnings'
         }
       >
-        <p>
+        <p className="evidence-text">
           Source exports are proposals until a named human reviews the exact
           identity mapping, dates and amount. Acknowledgement means accepted for
           payroll preview. No payment, policy update or source delivery is
           implied.
         </p>
-        <p>
+        <p className="evidence-text">
           <a href={companyPath(actor.company) + '/people/' + person.id}>
             Person and rates
           </a>{' '}
@@ -54,14 +54,14 @@ export function sourcePage(
           </a>
         </p>
         {kind === 'hris-event' ? (
-          <p>
+          <p className="evidence-text">
             Willow owns employment, policy, I-9, documents, enrollment and
             offboarding. Lodge hires must come through Willow. BambooHR,
             Rippling and HiBob hourly-rate exports are supported. Other external
             event types and live connections remain unavailable.
           </p>
         ) : (
-          <p>
+          <p className="evidence-text">
             <a href="https://github.com/just-every/run-easel">Easel</a> plans
             headcount;{' '}
             <a href="https://github.com/just-every/run-coaster">Coaster</a> owns
@@ -74,13 +74,13 @@ export function sourcePage(
       </Card>
       {review && (
         <Card title="Review exact source revision">
-          <p>
+          <p className="evidence-text">
             {review.data.provider} · {review.data.type} · source person{' '}
             {review.data.sourcePersonId} → {person.name}. Source{' '}
             {review.data.sourceId} v{review.data.sourceVersion}, effective{' '}
             {review.data.effectiveDate}.
           </p>
-          <dl>
+          <dl className="evidence-text">
             {Object.entries(review.data.values).map(([k, v]) => (
               <div key={k}>
                 <dt>{k}</dt>
@@ -88,7 +88,7 @@ export function sourcePage(
               </div>
             ))}
           </dl>
-          <p>
+          <p className="evidence-text">
             Source approver: {review.data.sourceApprovedBy}. Evidence:{' '}
             {review.data.sourceEvidence}. Schema: {review.data.schema}.
           </p>
@@ -100,20 +100,20 @@ export function sourcePage(
         </Card>
       )}
       <Card title="Source history and acknowledgements">
-        {!rows.length && <p>No source changes recorded.</p>}
+        {!rows.length && <p className="evidence-text">No source changes recorded.</p>}
         {rows.map((r) => (
-          <article key={r.id + ':' + r.version}>
+          <article className="evidence-text" key={r.id + ':' + r.version}>
             <h3>
               {r.data.provider} · {r.data.type} · {r.data.effectiveDate}
             </h3>
-            <p>
+            <p className="evidence-text">
               <a href={r.data.ownerUrl} rel="noreferrer">
                 Owning product
               </a>{' '}
               · {r.data.sourceId} v{r.data.sourceVersion} · {r.acknowledgement}.
               Source delivery: pending.
             </p>
-            <dl>
+            <dl className="evidence-text">
               {Object.entries(r.data.values).map(([k, v]) => (
                 <div key={k}>
                   <dt>{k}</dt>
@@ -121,12 +121,12 @@ export function sourcePage(
                 </div>
               ))}
             </dl>
-            <p>
+            <p className="evidence-text">
               Source person {r.data.sourcePersonId}; source approver{' '}
               {r.data.sourceApprovedBy}; local reviewer{' '}
               {r.approvedBy ?? 'pending'}. {r.data.sourceEvidence}
             </p>
-            <p>
+            <p className="evidence-text">
               Affected retained runs:{' '}
               {r.affectedRuns
                 .map(

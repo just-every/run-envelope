@@ -154,6 +154,11 @@ export async function archiveJourney(context) {
       assert.ok(!rows.env_people.some(row=>row.id===graph.personId))
       assert.ok(!rows.env_workspace_versions.some(row=>row.company_id===graph.companyId && graph.objects.includes(row.object_id)),'actual archive contains no erased payroll or claim file derivative')
     }
+    for (const id of fixture.custodyObjects) {
+      assert.ok(!rows.env_workspace_versions.some(row => row.object_id === id), 'export contains no erased leave or intake revision')
+      for (const table of ['env_workspace_people','env_workspace_dependencies','env_workspace_decisions','env_workspace_review_inputs'])
+        assert.ok(!rows[table].some(row => row.object_id === id), 'export contains no erased leave or intake derivative')
+    }
     const damagedEditions = join(temporary, 'damaged-editions.rer')
     const editions = await archiveEditions(records, source, damagedEditions)
     const text = await readFile(archive, 'utf8')
