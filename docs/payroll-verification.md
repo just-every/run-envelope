@@ -161,3 +161,7 @@ The period bound is also checked before proposing or releasing a retained consen
 and before protected retrieval or acknowledgement writes a receipt. Older requests
 cannot bypass the current bound. Statutory retained metadata remains subject to
 the same restricted history and explicit custody review.
+
+## Request-specific consent
+
+Worker consent names `requestId`, the exact initial disclosure identifier, and one selected field set. A second request or changed fields requires fresh worker consent. A linked correction retains the same consent and request lineage; it cannot use another request’s consent. The worker may revoke before release. A release attempted after withdrawal is refused and attributed as `verification.release-refused-withdrawn`, with no response token, release row or outbound submission. Custody screens name the server clock and render release gates in UTC.

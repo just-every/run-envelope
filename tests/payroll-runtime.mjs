@@ -4253,7 +4253,7 @@ export async function incomeVerificationJourney(runtime) {
     await noWrite(async()=>{await get(finalRelease,identities.requester.cookie,403)})
     const selected={consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(r=>r.id),legalBasis:'Synthetic reviewed lawful retention release',custodian:'Native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
     await data(privacy+'/release',selected,409)
-    const utcGate=new Date(Date.now()+5000).toISOString()
+    const utcGate=new Date(Date.now()+30000).toISOString()
     await data(privacy+'/retain',{...selected,earliestReleaseAt:utcGate})
     await capture(page,privacy,'verification-custody-utc-clock')
     assert.match(await page.locator('main').innerText(),/Custody clock source: server Date.now\(\), rendered in UTC/ )
