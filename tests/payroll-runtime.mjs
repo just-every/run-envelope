@@ -3983,6 +3983,9 @@ export async function incomeVerificationJourney(runtime) {
     let history=(await data(door,undefined,200,identities.worker.cookie)).history
     assert.ok(history.releases[0].openedAt);assert.ok(history.releases[0].acknowledgedAt);assert.equal(history.releases[0].response.grossWagesCents,345678,'the worker sees the facts actually disclosed')
     await capture(workerPage,door,'verification-worker-disclosure-history')
+    await capture(page,door+'?lang=es','verification-owner-custody-spanish')
+    assert.match(await page.locator('main').innerText(),/Fuente del reloj de custodia: reloj del sistema del servidor/)
+    assert.ok((await page.locator('main').innerText()).includes(consent.retentionUntil+'T23:59:59.999Z UTC'))
     await capture(requesterPage,'/app/envelope/protected-response','verification-requester-empty')
     await requesterPage.getByLabel('Protected release ID',{exact:true}).fill(released.id);await requesterPage.getByLabel('Private response token',{exact:true}).fill(released.token);await requesterPage.getByRole('button',{name:'Open selected reviewed facts',exact:true}).click();await requesterPage.waitForURL(origin+'/app/envelope/protected-response/read')
     for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope','verification-protected-facts-'+width+'.png'),fullPage:true})}

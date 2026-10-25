@@ -18,6 +18,7 @@ import type {
   ProtectedDisclosure,
   VerificationRequests,
 } from './requests'
+import { retentionDeadline } from './requests'
 import type { ProtectedResponses } from '../disclosures/protected'
 export interface VerificationView {
   history: Awaited<ReturnType<VerificationRequests['history']>>
@@ -68,6 +69,7 @@ export function verificationPage(
     <div lang={language}>
       <p><a href="?lang=en" lang="en">English</a> · <a href="?lang=es" lang="es">Español</a></p>
       <Card title={t("Selected facts, explicit worker consent")}>
+        <p>{t("Custody clock source: server system clock. Expiry times are UTC.")}</p>
         <p>{t("A named requester receives only the selected period and fields after exact owner review. Every retrieval rechecks consent, expiry, worker identity and source versions. There is no automatic external enrollment or outbound submission.")}</p>
         <p>
           <a href={companyPath(actor.company) + '/people/' + person.id}>{t("Person and rates")}</a>{' '}
@@ -253,7 +255,7 @@ export function verificationPage(
                 : c.expiresAt <= Date.now()
                   ? t('Expired')
                   : t('Consent active')}
-              . {t('Restricted retention until')} {c.retentionUntil}.
+              . {t('Restricted retention until')} {new Date(retentionDeadline(c.retentionUntil)).toISOString()} UTC.
             </p>
             {self && !c.revokedAt && (
               <form

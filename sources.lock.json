@@ -1398,7 +1398,7 @@
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
-      "sha256": "8722eebc8d41526a890e09ad3578aef7f4fe3dbb32d5f85e57118f10f704c927",
+      "sha256": "d8fa920bda13fffb7ae43684a61cf22f7980bfec1d743e9e3e33bdf574436293",
       "executable": false
     },
     "src/envelope/income-verification/requests.ts": {
@@ -1406,7 +1406,7 @@
       "executable": false
     },
     "src/envelope/income-verification/text.ts": {
-      "sha256": "31d7932fe6b94733b5ba2b6cd978a1f2ca371d9139540baa5827efb4bcb8d2d5",
+      "sha256": "340575bcbac075649db5156d917a7c10b35de94ea2c137c7d6123426db82862d",
       "executable": false
     },
     "src/envelope/industry/agency-form-map.ts": {
@@ -2894,7 +2894,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "5fe799f6a00162cd80085d80f70c2a3a033e413a8b3cf0f9a7a0b49a5829ba1c",
+      "sha256": "6cb6a11536c79429b94d993ac58b10143d15030adc8665abc8fd03770fb3b409",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {

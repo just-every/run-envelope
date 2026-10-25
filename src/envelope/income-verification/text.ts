@@ -1,5 +1,6 @@
 export type VerificationLanguage = 'en' | 'es'
 const spanish: Record<string,string> = {
+  'Custody clock source: server system clock. Expiry times are UTC.': 'Fuente del reloj de custodia: reloj del sistema del servidor. Los vencimientos se muestran en UTC.',
   'Verification': 'Verificación',
   'Selected facts, explicit worker consent': 'Datos seleccionados, consentimiento explícito',
   'A named requester receives only the selected period and fields after exact owner review. Every retrieval rechecks consent, expiry, worker identity and source versions. There is no automatic external enrollment or outbound submission.': 'El solicitante identificado recibe únicamente los campos y el período seleccionados tras la revisión exacta del propietario. Cada consulta comprueba el consentimiento, su vencimiento, la identidad y las versiones de las fuentes. No se inscribe ni se envía información automáticamente a servicios externos.',
