@@ -11,6 +11,9 @@ import { payrollWithoutAiJourney } from './industry-runtime.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 
+// UUID references are public identifiers, not private numeric pay values.
+const withoutUuidReferences = text => text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, '')
+
 export async function payrollJourney({ origin, cookie, settings, sql }) {
   const base = '/api/envelope/companies',
     call = (path, who = cookie, body) =>
@@ -630,9 +633,10 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     )
     const exportText = await (await call(company + '/export')).text()
     assert.match(exportText, /María Flores/)
+    assert.equal(exportText.split(/\r?\n/, 1)[0], 'record_id,name,location_id,version', 'restricted register has no compensation column')
     assert.doesNotMatch(
-      exportText,
-      /2500|synthetic-envelope-[123]/,
+      withoutUuidReferences(exportText),
+      /2500|25\.00|synthetic-envelope-[123]/,
       'initial register export includes no compensation/private text',
     )
     const next = await data(
@@ -1302,8 +1306,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       assert.ok(event.occurredAt > 0)
     }
     assert.doesNotMatch(
-      JSON.stringify(audit),
-      /synthetic-envelope-[123](?:"|\b)|00-0000001|2500/,
+      withoutUuidReferences(JSON.stringify(audit)),
+      /synthetic-envelope-[123](?:"|\b)|00-0000001|2500|25\.00/,
       'audit contains references, versions and actors, never private values or pay amounts',
     )
     assert.equal(outputLeaks(audit), false)

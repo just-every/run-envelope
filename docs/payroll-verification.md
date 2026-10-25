@@ -5,7 +5,7 @@ the same `/api/` path returns JSON. This is the contract's protected-response
 option. It has no external partner enrollment, outbound request or automatic
 payroll-history export. Native identity alone grants no company payroll access.
 
-## Approved protected-response policy
+## Protected-response policy
 
 Only a linked worker can give explicit consent for a known native requester,
 one lawful purpose (mortgage, rental or employment), an exact inclusive period of at most
@@ -18,8 +18,11 @@ revocation, a changed worker/issuer identity or grant, a changed worker link,
 a withdrawn approval, or changed source evidence. Retained evidence is private;
 verification custody uses the explicit statutory-hold and lawful-release doors under ENV-054.
 ct approved these protected-response defaults with riders on 23 October 2026.
-Approval confers no legal-authority override. A reviewed legal-authority request
-still requires the linked worker’s current explicit consent.
+The legal-authority handling default is adopted pending ct approval: deny by
+default, require the linked worker’s current explicit consent and owner-only
+exact source review and audited release. It grants no override or new exposure,
+and enables no automatic destructive action or outbound submission. ENV-068
+remains PARTIAL until ct approves this default.
 
 ## Public doors
 
