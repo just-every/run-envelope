@@ -3568,7 +3568,7 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
   const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   try {
     const context=await browser.newContext(), [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
-    const capture=async(label,path=screen,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path);assert.equal(r.status(),status);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Every control uses a visible text label; no icon-only control needs a tooltip');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
+    const capture=async(label,path=screen,status=200)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path);assert.equal(r.status(),status);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label+' '+JSON.stringify(await page.evaluate(()=>Array.from(document.querySelectorAll('*')).filter(e=>e.getBoundingClientRect().right>innerWidth).map(e=>({tag:e.tagName,style:e.className,right:e.getBoundingClientRect().right})).slice(-12))));await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'Every control uses a visible text label; no icon-only control needs a tooltip');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}
     await capture('leave-empty')
     await page.getByLabel('Balance owner',{exact:true}).selectOption('willow')
     for(const [label,value] of [['Opening effective date','2026-01-01'],['Reconciled opening minutes','480'],['Hire date for anniversary tiers','2025-12-31'],['Balance cap in minutes','960'],['January carryover cap in minutes','600'],['Reviewed policy and lawful rate evidence','synthetic-envelope-803']]) await page.getByLabel(label,{exact:true}).fill(value)
@@ -3638,7 +3638,65 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
     assert.equal((await fetch(origin+door,{headers:{authorization:'Bearer synthetic-envelope-814'}})).status,403)
     const foreign=await data('/api/envelope/companies',{name:'Synthetic other leave employer',ein:'00-0000815'},201)
     await data('/api/envelope/companies/'+foreign.id+'/people/'+person.id+'/leave',undefined,404)
-    console.log('LEAVE-LEDGER passed: native exact reviews, Willow use, reconciled owner switch, replay and old-owner refusal, work-version correction, anniversary accrual, January carryover, termination amount, encrypted history and real held earnings preview; 1440/390. Payment, stub, statutory coverage and settled correction remain unproved.')
+    // Separate banks retain independent owners, policies, exact reviews and source corrections.
+    const bankPerson=await data(api+'/people',{name:'Avery, independent leave banks',locationId:loc.id},201), bankDoor=api+'/people/'+bankPerson.id+'/leave', bankHr=api+'/people/'+bankPerson.id+'/hris'
+    const bankRows=()=>data(bankDoor), bankRow=async bucket=>(await bankRows()).find(r=>r.data.bucket===bucket)
+    const bankReview=async bucket=>{const r=await data(bankDoor+'/review?bucket='+bucket);await data(bankDoor+'/approve',{bucket,version:r.version,reviewToken:r.reviewToken})}
+    const bankEntry=async(bucket,body,status=201)=>data(bankDoor+'/entries',{bucket,version:(await bankRow(bucket)).version,sourceId:'synthetic-envelope-1600',sourceVersion:1,day:'2026-12-30',evidence:'synthetic-envelope-1601',...body},status)
+    const bankPolicy={owner:'payroll',effectiveDate:'2026-01-01',openingMinutes:240,hireDate:'2025-12-31',capMinutes:960,carryoverMinutes:120,policyEvidence:'synthetic-envelope-1602',tiers:[{years:0,earnedMinutes:1,workedMinutes:60},{years:1,earnedMinutes:1,workedMinutes:30}]}
+    for(const bucket of ['sick','pto','holiday']) {
+      await data(bankDoor,{...bankPolicy,bucket,owner:bucket==='sick'?'willow':'payroll'},201)
+      await bankReview(bucket)
+    }
+    await data(bankDoor,bankPolicy,409)
+    await data(bankDoor,{...bankPolicy,bucket:'sick'},409)
+    const racingPerson=await data(api+'/people',{name:'Synthetic concurrent bank opening',locationId:loc.id},201), racingDoor=api+'/people/'+racingPerson.id+'/leave'
+    const racing=await Promise.all([call(racingDoor,bankPolicy),call(racingDoor,{...bankPolicy,bucket:'sick'})])
+    assert.deepEqual(racing.map(r=>r.status).sort(),[201,409],'concurrent legacy and separate banks cannot both open')
+    assert.equal((await data(racingDoor)).length,1)
+
+    await data(door,{...bankPolicy,bucket:'sick'},409)
+    await bankEntry('sick',{operation:'use',owner:'willow',code:'pto',minutes:60,rateCents:2501},409)
+    await bankEntry('sick',{operation:'use',owner:'payroll',code:'sick',minutes:60,rateCents:2501},409)
+    const sickSource={provider:'willow',type:'leave',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-1603',sourceEvidence:'synthetic-envelope-1604',sourceApprovedBy:'Synthetic leave reviewer',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-1605',effectiveDate:'2026-12-30',values:{minutes:60,rateCents:2501,code:'sick'}}}
+    const bankSource=await data(bankHr,sickSource,201)
+    const approveSource=async()=>{const r=await data(bankHr+'/'+bankSource.id+'/review');await data(bankHr+'/'+bankSource.id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+    await approveSource()
+    await data(bankHr+'/'+bankSource.id+'/leave-handoff',{ledgerVersion:1},201)
+    await capture('leave-sick-bank-review',bankDoor.replace('/api/','/app/')+'/review?bucket=sick')
+    await page.getByRole('button',{name:'Approve this exact leave ledger',exact:true}).click();await page.waitForURL(origin+bankDoor.replace('/api/','/app/')+'?bucket=sick')
+    assert.equal((await bankRow('sick')).data.balanceMinutes,180);assert.equal((await bankRow('pto')).data.balanceMinutes,240)
+    await data(bankHr+'/'+bankSource.id+'/leave-handoff',{ledgerVersion:2},409)
+    await bankEntry('pto',{sourceId:bankSource.id,operation:'use',owner:'payroll',code:'pto',minutes:60,rateCents:2501},409)
+    await bankEntry('pto',{operation:'use',owner:'payroll',code:'pto',minutes:30,rateCents:2501});await bankReview('pto')
+    assert.equal((await bankRow('pto')).data.balanceMinutes,210);assert.equal((await bankRow('holiday')).data.balanceMinutes,240)
+    const bankGroup='synthetic-envelope-1606'
+    await data(pay+'/group',{id:bankGroup,version:0,name:'Independent leave review',people:[bankPerson.id]},201);await decide('group',bankGroup)
+    await data(pay+'/pay-change',{id:'synthetic-envelope-1607',version:0,name:'Reviewed leave setup',groupId:bankGroup,effectiveDate:'2026-01-01',items:[{personId:bankPerson.id,personVersion:bankPerson.version,rateCents:2501,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2027-12-31',unpaidDates:[]}]},201);await decide('pay-change','synthetic-envelope-1607')
+    const bankInput={groupId:bankGroup,periodStart:'2026-12-30',periodEnd:'2026-12-30',payDate:'2026-12-31',frequency:'weekly'}
+    const bankRun=await data(pay+'/earnings-run',{...bankInput,id:'synthetic-envelope-1608',version:0},201)
+    assert.equal(bankRun.preview.taxableCashCents,3752);assert.equal(bankRun.preview.paymentReady,false)
+    assert.ok(bankRun.preview.people[0].details.some(d=>d.includes('bank sick')));assert.ok(bankRun.preview.people[0].details.some(d=>d.includes('bank pto')))
+    await data(bankHr,{...sickSource,version:1,sourceVersion:2,export:{...sickSource.export,values:{...sickSource.export.values,minutes:90}}},201);await approveSource()
+    assert.equal((await data(pay)).runs.find(r=>r.id===bankRun.id).sourceStatus,'changed-repreview-required')
+    await data(pay+'/preview',bankInput,409)
+    await data(bankHr+'/'+bankSource.id+'/leave-handoff',{ledgerVersion:2},201);await bankReview('sick')
+    assert.equal((await bankRow('sick')).data.balanceMinutes,150);assert.equal((await bankRow('pto')).data.balanceMinutes,210)
+    assert.equal((await data(pay+'/preview',bankInput)).taxableCashCents,5003,'only the additional sick minutes change earnings')
+    await capture('leave-sick-bank-completed',bankDoor.replace('/api/','/app/')+'?bucket=sick')
+    await capture('leave-pto-bank-completed',bankDoor.replace('/api/','/app/')+'?bucket=pto')
+    await capture('leave-holiday-bank',bankDoor.replace('/api/','/app/')+'?bucket=holiday')
+    const bankWork={...work, id:'synthetic-envelope-1609',version:0,day:'2026-12-31',state:'CA',locality:'Oakland',minutes:480,earnedCents:20008,officeState:'CA',nyReason:'not-applicable',sourceRef:'synthetic-envelope-1610',owner:'Synthetic reviewer'}
+    await data(api+'/people/'+bankPerson.id+'/allocations/work',bankWork,201)
+    await bankEntry('pto',{sourceId:bankWork.id,day:bankWork.day,operation:'accrual'});await bankReview('pto')
+    assert.equal((await bankRow('pto')).data.balanceMinutes,226);assert.equal((await bankRow('sick')).data.balanceMinutes,150)
+    await bankEntry('pto',{sourceId:'synthetic-envelope-1611',day:'2027-01-01',operation:'carryover'});await bankReview('pto')
+    assert.equal((await bankRow('pto')).data.balanceMinutes,120);assert.equal((await bankRow('holiday')).data.balanceMinutes,240)
+    await bankEntry('holiday',{sourceId:'synthetic-envelope-1612',day:'2027-01-01',operation:'transfer',owner:'willow',reconciledMinutes:240});await bankReview('holiday')
+    await bankEntry('holiday',{sourceId:'synthetic-envelope-1613',day:'2027-01-02',operation:'use',owner:'payroll',code:'holiday',minutes:60,rateCents:2501},409)
+    assert.equal((await bankRow('holiday')).data.owner,'willow');assert.equal((await bankRow('pto')).data.owner,'payroll')
+    await capture('leave-holiday-bank-transferred',bankDoor.replace('/api/','/app/')+'?bucket=holiday')
+    console.log('LEAVE-LEDGER passed: independent sick, PTO and holiday banks and matched Willow handoff, native exact reviews, Willow use, reconciled owner switch, replay and old-owner refusal, work-version correction, anniversary accrual, January carryover, termination amount, encrypted history and real held earnings preview; 1440/390. Payment, stub, statutory coverage and settled correction remain unproved.')
   } finally {await browser.close()}
 }
 
@@ -3902,10 +3960,37 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     const ownerView=await data(door)
     assert.deepEqual(ownerView.disclosures.find(r=>r.id===expiringResponse.id).data.response,{retention:'restricted-after-selected-date'})
     await capture(page,door,'verification-corrected-revoked-history');await capture(workerPage,door,'verification-worker-revoked-history')
-    const finalConsent=await data(door+'/consents',consent,201,identities.worker.cookie)
+    // Former-worker identity survives a reviewed employment termination, not an identity re-creation.
+    const terminationDoor=person+'/hris',termination=await data(terminationDoor,{provider:'willow',type:'termination',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-1023',sourceEvidence:'synthetic-envelope-1620',sourceApprovedBy:'Synthetic termination reviewer',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-1621',effectiveDate:'2026-06-15',values:{}}},201)
+    const terminationReview=await data(terminationDoor+'/'+termination.id+'/review');await data(terminationDoor+'/'+termination.id+'/approve',{version:terminationReview.version,reviewToken:terminationReview.reviewToken})
+    const formerHistory=(await data(door,undefined,200,identities.worker.cookie)).history
+    const oldWorkerCookie=identities.worker.cookie
+    assert.equal((await call('/auth/signout',{},oldWorkerCookie)).status,204)
+    await data(door,undefined,401,oldWorkerCookie)
+    const returnLink=randomBytes(32).toString('base64url'),returnHash=await hashToken(settings.SESSION_SECRET,'link',returnLink)
+    await sql(`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at) VALUES ('synthetic-envelope-1622','${returnHash}','magic','${identities.worker.id}',1,'/app',${Date.now()},${Date.now()+600000})`)
+    const returned=await call('/auth/confirm',{token:returnLink},'')
+    assert.equal(returned.status,303,await returned.clone().text())
+    identities.worker.cookie=returned.headers.get('set-cookie').split(';')[0]
+    assert.equal((await data('/auth/session',undefined,200,identities.worker.cookie)).operator.id,identities.worker.id)
+    assert.equal((await call('/auth/confirm',{token:returnLink},'')).status,400,'native return link remains single use')
+    const returnedHistory=(await data(door,undefined,200,identities.worker.cookie)).history
+    assert.deepEqual(returnedHistory,formerHistory,'signing back in retains exactly the same consents, disclosures, receipts and correction history')
+    assert.ok(returnedHistory.releases.some(r=>r.id===correctedRelease.id && r.corrects===response.id))
+    await data(api+'/people/'+foreign.id+'/verification',undefined,403,identities.worker.cookie)
+    await data(door,undefined,403,identities.coworker.cookie)
+    await workerContext.clearCookies();const returnedParts=identities.worker.cookie.split('=');await workerContext.addCookies([{name:returnedParts[0],value:returnedParts[1],url:origin}])
+    await capture(workerPage,door,'verification-former-worker-history')
+    const finalConsent=await data(door+'/consents',{...consent,fields:[...consent.fields,'employmentStatus']},201,identities.worker.cookie)
     const finalResponse=await prepare('synthetic-envelope-1035',finalConsent.id);await approve('disclosure',finalResponse.id)
     const finalRelease=await data(door+'/disclosure/'+finalResponse.id+'/release',{version:1},201)
-    await get(finalRelease)
+    const formerFacts=await get(finalRelease)
+    assert.equal(formerFacts.response.employmentStatus,'terminated');assert.equal(formerFacts.response.hireDate,'2025-09-15');assert.equal(formerFacts.response.grossWagesCents,345600)
+    assert.ok(formerFacts.provenance.some(r=>r.id===termination.id));assert.ok(formerFacts.provenance.some(r=>r.id===hire.id));assert.ok(formerFacts.provenance.some(r=>r.id===source.id))
+    await requesterPage.goto(origin+'/app/envelope/protected-response');await requesterPage.getByLabel('Protected release ID',{exact:true}).fill(finalRelease.id);await requesterPage.getByLabel('Private response token',{exact:true}).fill(finalRelease.token)
+    await requesterPage.getByRole('button',{name:'Open selected reviewed facts',exact:true}).click();await requesterPage.waitForURL(origin+'/app/envelope/protected-response/read')
+    assert.ok((await requesterPage.locator('main').innerText()).includes('terminated'))
+    for(const width of [1440,390]){await requesterPage.setViewportSize({width,height:1000});assert.equal(await requesterPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await requesterPage.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope','verification-former-worker-facts-'+width+'.png'),fullPage:true})}
     const ownerSessionHash=await hashToken(settings.SESSION_SECRET,'session',cookie.slice(cookie.indexOf('=')+1))
     const proofId='synthetic-envelope-privacy-proof'
     await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) SELECT '${proofId}','${proofId}',id,operator_id,operator_version,'credentials:mint','/app',${Date.now()},${Date.now()+600000},${Date.now()} FROM oa_sessions WHERE token_hash='${ownerSessionHash}'`)
@@ -3926,6 +4011,6 @@ export async function incomeVerificationJourney({ origin, cookie, sql, settings 
     assert.equal((await data('/auth/session',undefined,200,identities.requester.cookie)).operator.id,identities.requester.id,'erasure does not alter an independent requester identity')
     const privateRows=JSON.stringify(await sql("SELECT cipher FROM env_verification_consents UNION ALL SELECT cipher FROM env_verification_corrections UNION ALL SELECT cipher FROM env_workspace_versions WHERE kind IN ('income-source','disclosure')"))
     assert.equal(privateRows.includes(source.sourceRef),false);assert.equal(privateRows.includes('345678'),false)
-    console.log('INCOME-VERIFICATION passed: native worker/requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction/history, linked source correction, revocation, actual expiry and selected retention boundary; native screens 1440/390. Interim policy approval, legal-authority route and full retained-data lifecycle remain unproved.')
+    console.log('INCOME-VERIFICATION passed: former-worker native return with retained history and termination provenance, native worker and requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction/history, linked source correction, revocation, actual expiry and selected retention boundary; native screens 1440/390. Full former-worker authority and language coverage, legal-authority route and full retained-data lifecycle remain unproved.')
   }finally{await browser.close()}
 }

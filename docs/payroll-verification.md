@@ -5,7 +5,7 @@ the same `/api/` path returns JSON. This is the contract's protected-response
 option. It has no external partner enrollment, outbound request or automatic
 payroll-history export. Native identity alone grants no company payroll access.
 
-## Interim policy awaiting ct approval
+## Approved protected-response policy
 
 Only a linked worker can give explicit consent for a known native requester,
 one lawful purpose (mortgage, rental or employment), an exact period of at most
@@ -17,8 +17,9 @@ history retention date within 90 days. Retrieval ends at consent expiry or
 revocation, a changed worker/issuer identity or grant, a changed worker link,
 a withdrawn approval, or changed source evidence. Retained evidence is private;
 full statutory retention/erasure custody remains unfinished under ENV-054.
-These defaults are deliberately partial until ct rules on the verification
-identity, consent and retention policy. They add no acceptance requirement.
+ct approved these protected-response defaults with riders on 23 October 2026.
+The incomplete custody, legal-authority and former-worker journeys keep the
+clause partial. Approval confers no legal-authority override.
 
 ## Public doors
 
@@ -69,10 +70,18 @@ are introduced. Browser proof masks the one-time handover token.
 ## Remaining obligations
 
 The protected route is not Work Number enrollment or a provider submission.
-No live partner receipt is claimed. ct policy approval, legally authorized
-non-consensual requests, the full retained-data/erasure lifecycle and former-worker
-identity continuity remain unproved. Imported historical wage provenance needs
+No live partner receipt is claimed. Full legal-authority handling, the full retained-data/erasure lifecycle and complete former-worker authority and language coverage remain unproved. Imported historical wage provenance needs
 its original reviewed documents; an earnings-only preview cannot stand for it.
 ENV-028/051/053/054/055 inherit the protected-response transport, workspace kinds
 verification-worker/income-source/disclosure and the three verification tables
 when their complete access, archive, erasure and external-flow journeys are built.
+
+`tests/payroll-runtime.mjs` — `incomeVerificationJourney` now records a reviewed
+Willow termination, signs the same worker out, confirms a single-use native
+return link, and compares their complete restricted verification history before
+and after sign-in. The link is a synthetic identity-edge fixture, not a live
+mail receipt. A new consent and exact owner review return terminated status,
+unchanged hire date and corrected gross wages with all original source versions.
+The worker and requester screens are captured at 1440 and 390. Unrelated workers
+remain refused. Complete former-worker language and authority coverage, full
+statutory custody and legal-authority handling remain open.

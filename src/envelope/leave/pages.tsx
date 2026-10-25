@@ -20,22 +20,28 @@ export function leavePage(
   person: Person,
   rows: Revision<LeaveAccount>[],
   review?: Revision<LeaveAccount> & { reviewToken: string },
+  bucket = 'combined',
 ) {
   const base = companyPath(actor.company) + '/people/' + person.id + '/leave',
-    row = rows[0]
+    selected = rows.filter(r => (r.data.bucket ?? 'combined') === bucket),
+    row = selected[0]
   return page(
     session,
     person.name + ' · Leave ledger',
     companies,
     actor.company,
     <>
-      <Card title="One balance owner">
-        <p>
+      <Card title="One owner per leave bank">
+        <p className="evidence-text">Selected bank: {bucket}.</p>
+        <nav className="choices" aria-label="Leave banks">
+          {['combined', 'sick', 'pto', 'holiday'].map(b => <a key={b} className="btn" href={base + '?bucket=' + b} aria-current={b === bucket ? 'page' : undefined}>{b === 'combined' ? 'Combined legacy bank' : b === 'pto' ? 'PTO bank' : b === 'sick' ? 'Sick bank' : 'Holiday bank'}</a>)}
+        </nav>
+        <p className="evidence-text">
           Willow owns connected leave policy and balances. Standalone payroll
           accruals use a reviewed policy. Entries reserve leave for payroll
           preview; no payment or pay stub is created here.
         </p>
-        <p>
+        <p className="evidence-text">
           <a href={companyPath(actor.company) + '/people/' + person.id}>
             Person and rates
           </a>{' '}
@@ -46,7 +52,7 @@ export function leavePage(
         </p>
         {row ? (
           <>
-            <p>
+            <p className="evidence-text">
               Owner: {row.data.owner}. Balance: {row.data.balanceMinutes}{' '}
               minutes. Version {row.version}:{' '}
               {row.withdrawnBy
@@ -57,34 +63,34 @@ export function leavePage(
               .
             </p>
             {!row.approvedBy && !row.withdrawnBy && (
-              <a className="btn" href={base + '/review'}>
+              <a className="btn" href={base + '/review?bucket=' + bucket}>
                 Review exact leave ledger
               </a>
             )}
           </>
         ) : (
-          <p>No leave balance recorded.</p>
+          <p className="evidence-text">No leave balance recorded.</p>
         )}
       </Card>
       {review && (
         <Card title="Review this exact leave revision">
-          <p>
+          <p className="evidence-text">
             Version {review.version}; owner {review.data.owner}; balance{' '}
             {review.data.balanceMinutes} minutes. This approves the ledger only.
           </p>
-          <p>
+          <p className="evidence-text">
             Policy evidence: {review.data.policy.evidence}. Hire date{' '}
             {review.data.policy.hireDate}; cap {review.data.policy.capMinutes};
             carryover {review.data.policy.carryoverMinutes} minutes.
           </p>
           {review.data.policy.tiers.map((t) => (
-            <p key={t.years}>
+            <p className="evidence-text" key={t.years}>
               After {t.years} years: {t.earnedMinutes} minutes per{' '}
               {t.workedMinutes} worked minutes.
             </p>
           ))}
           {review.data.entries.map((e) => (
-            <p key={e.sourceId + ':' + e.sourceVersion}>
+            <p className="evidence-text" key={e.sourceId + ':' + e.sourceVersion}>
               {e.day} · {e.operation} · {e.sourceId} v{e.sourceVersion} ·{' '}
               {e.deltaMinutes} minutes · balance {e.balanceMinutes} · {e.code} ·
               ${(e.amountCents / 100).toFixed(2)} preview · evidence{' '}
@@ -92,6 +98,7 @@ export function leavePage(
             </p>
           ))}
           <form method="post" action={base + '/approve'}>
+            <Hidden name="bucket" value={bucket} />
             <Hidden name="version" value={review.version} />
             <Hidden name="reviewToken" value={review.reviewToken} />
             <Submit primary>Approve this exact leave ledger</Submit>
@@ -101,6 +108,7 @@ export function leavePage(
       {!row && (
         <Card title="Open payroll leave balance">
           <form className="field" method="post" action={base}>
+            <Hidden name="bucket" value={bucket} />
             <Select
               name="owner"
               label="Balance owner"
@@ -157,9 +165,10 @@ export function leavePage(
       {row &&
         !row.withdrawnBy &&
         (row.approvedBy ||
-          rows.some((r) => r.approvedBy && !r.withdrawnBy)) && (
+          selected.some((r) => r.approvedBy && !r.withdrawnBy)) && (
           <Card title="Propose a sourced leave entry">
             <form className="field" method="post" action={base + '/entries'}>
+              <Hidden name="bucket" value={bucket} />
               <Hidden name="version" value={row.version} />
               {!row.approvedBy && (
                 <label className="field">
@@ -212,7 +221,7 @@ export function leavePage(
               <Select
                 name="code"
                 label="Leave pay code"
-                choices={['sick', 'pto', 'holiday', 'unpaid', 'termination']}
+                choices={bucket === 'combined' ? ['sick', 'pto', 'holiday', 'unpaid', 'termination'] : [bucket, 'unpaid', 'termination']}
               />
               <Field
                 name="rateCents"
@@ -241,17 +250,17 @@ export function leavePage(
           </Card>
         )}
       <Card title="Retained ledger revisions">
-        {rows.map((r) => (
+        {selected.map((r) => (
           <article key={r.version}>
             <h3>
               Version {r.version} · {r.data.owner} · {r.data.balanceMinutes}{' '}
               minutes
             </h3>
-            <p>
+            <p className="evidence-text">
               Recorded by {r.createdBy}; approved by {r.approvedBy ?? 'nobody'}.
             </p>
             {r.data.entries.map((e) => (
-              <p key={e.sourceId + ':' + e.sourceVersion}>
+              <p className="evidence-text" key={e.sourceId + ':' + e.sourceVersion}>
                 {e.day} · {e.operation} · {e.sourceId} v{e.sourceVersion} ·{' '}
                 {e.deltaMinutes} minutes · ${(e.amountCents / 100).toFixed(2)}{' '}
                 preview · {e.evidence}

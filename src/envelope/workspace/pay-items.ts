@@ -565,10 +565,10 @@ export class PayItems {
       }
       const leave = await new LeaveLedger(this.store).preview(actor, member.id, periodStart, periodEnd)
       taxable += leave.amountCents
-      if (leave.row) {
-        objects.push({ kind: 'leave-account', id: leave.row.id, version: leave.row.version, approved: true })
+      for (const row of leave.rows) objects.push({ kind: 'leave-account', id: row.id, version: row.version, approved: true })
+      if (leave.rows.length) {
         for (const line of leave.lines)
-          details.push(`Leave ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${line.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
+          details.push(`Leave bank ${line.bucket}: ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${line.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
       }
       taxable += tipped.paycheck
       if (tips.length)

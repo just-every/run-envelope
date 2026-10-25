@@ -39,6 +39,41 @@ Pay-settings previews include the reviewed leave amounts and original owner and
 source references. Persisted earnings versions bind the leave revision and the
 person's collection, so new leave invalidates an old approval. They remain held
 until full gross-to-net calculation and an authorized rail exist. Statutory
-rate/policy validation, multiple independent leave buckets, automatic year jobs,
+rate/policy validation, automatic year jobs,
 actual pay/stubs, consumption delivery and settlement correction are unfinished.
 No Willow policy, employment document or enrollment is overwritten.
+
+## Independent leave banks
+
+The existing leave door accepts `bucket: sick`, `bucket: pto` or
+`bucket: holiday` on opening, entries and decisions. Select the same bank with
+`?bucket=sick` (or its other name) for exact review and the native page. The
+leave page links each bank using the existing controls. Each bank has its own
+opening balance, policy tiers, cap, carryover, owner, review and revision.
+An entry may use its bank's pay code, unpaid absence or termination; another
+paid code is refused. Termination is still a reviewed earnings reservation,
+not a determination that a jurisdiction requires that bank's payout.
+
+Omitting the bank preserves the existing `combined` ledger and its API.
+A combined bank cannot coexist with separate banks, including concurrent
+open attempts; existing combined history requires an explicit future reviewed
+reconciliation rather than copying its balance into new banks. No migration
+splits balances or creates leave authority automatically.
+
+Willow leave handoff selects the matching code bank when present and otherwise
+uses the legacy combined bank. An explicit `bucket` may select the destination,
+but the same code and balance-owner checks apply. Source corrections advance
+only that bank by the minute difference. A use source already recorded in
+another bank requires reconciliation instead of a second reservation. Other
+banks retain their independent balances and owners. Exact earnings previews
+bind every current bank revision and identify each bank's source lines; an
+unreviewed, changed or withdrawn bank prevents a preview. Pending bank proposals
+also recheck the other banks before adoption. Actual paid consumption, remote
+acknowledgements and settlement adjustments remain unavailable.
+
+`tests/payroll-runtime.mjs` — `leaveJourney` proves independent sick, PTO and
+holiday balances, matched Willow handoff and correction, code and owner
+refusals, replay and cross-bank source refusal, legacy exclusion, anniversary
+accrual, isolated carryover and owner transfer, plus exact held earnings and
+source invalidation. The same journey captures review and completed bank screens
+at 1440 and 390, with keyboard checks and visible control labels.

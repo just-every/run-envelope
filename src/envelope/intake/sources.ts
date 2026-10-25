@@ -16,7 +16,7 @@ import {
   object,
 } from '../connectors/hris/adapters'
 import { earningFacts, earningProviders } from '../connectors/siblings/earnings'
-import { latest, approved, LeaveLedger } from '../leave/ledger'
+import { latest, approved, LeaveLedger, leaveBucket } from '../leave/ledger'
 import type { EarningsRun } from '../workspace/pay-items'
 
 export interface SourceEvent {
@@ -168,13 +168,16 @@ export class SourceIntake {
     if (event.data.provider !== 'willow' || event.data.type !== 'leave')
       throw new PayrollError('willow_leave_source_required', 409)
     const ledger = new LeaveLedger(this.store),
-      account = (await ledger.read(actor, personId, false))[0]
+      accounts = latest(await ledger.read(actor, personId, false)),
+      bucket = leaveBucket(input.bucket ?? (accounts.some(r => r.data.bucket === event.data.values.code) ? event.data.values.code : 'combined')),
+      account = accounts.find(r => (r.data.bucket ?? 'combined') === bucket)
     if (!account || account.data.owner !== 'willow')
       throw new PayrollError('willow_owns_leave_balance', 409)
     return ledger.record(
       actor,
       personId,
       {
+        bucket,
         version: integer(input.ledgerVersion),
         revisePending: input.revisePending,
         sourceId: event.id,

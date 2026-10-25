@@ -9,6 +9,7 @@ import {
   type Sources,
 } from '../workspace/store'
 import type { WorkDay } from '../workspace/allocations'
+import { collectionPins } from '../workspace/review-inputs'
 
 export const zero = (v: unknown) => (v === 0 || v === '0' ? 0 : integer(v))
 export interface LeavePolicy {
@@ -34,7 +35,10 @@ export interface LeaveEntry {
   corrects: number | null
   handoff?: { kind: 'hris-event'; id: string; version: number; approved: true }
 }
+export const leaveBucket = (value: unknown) => choice(value ?? 'combined', ['combined', 'sick', 'pto', 'holiday'])
+export const leaveId = (personId: string, bucket: string) => 'leave-' + personId + (bucket === 'combined' ? '' : '-' + bucket)
 export interface LeaveAccount {
+  bucket?: string
   personId: string
   owner: 'willow' | 'payroll'
   effectiveDate: string
@@ -48,7 +52,7 @@ export function approved(row: Revision<unknown>) {
   if (!row.approvedBy || row.withdrawnBy || !row.sourcesCurrent)
     throw new PayrollError('current_human_review_required', 409)
 }
-/** One reviewed, encrypted ledger per worker. Proposals never mutate the adopted balance. */
+/** Each leave bank has its own reviewed, encrypted ledger and balance owner. */
 export class LeaveLedger {
   constructor(public store: WorkspaceStore) {}
   async read(actor: Actor, personId: string, audited = true) {
@@ -62,8 +66,11 @@ export class LeaveLedger {
   }
   async open(actor: Actor, personId: string, input: Input) {
     await this.store.authority(actor, 'rates:propose', personId, true)
-    if ((await this.read(actor, personId, false)).length)
+    const bucket = leaveBucket(input.bucket), existing = latest(await this.read(actor, personId, false))
+    if (existing.some(r => (r.data.bucket ?? 'combined') === bucket))
       throw new PayrollError('leave_account_exists', 409)
+    if (existing.some(r => bucket === 'combined' || (r.data.bucket ?? 'combined') === 'combined'))
+      throw new PayrollError('leave_combined_bank_reconciliation_required', 409)
     let raw = input.tiers
     if (typeof raw === 'string') {
       try {
@@ -101,6 +108,7 @@ export class LeaveLedger {
     )
       throw new PayrollError('invalid_leave_balance')
     const data: LeaveAccount = {
+      bucket,
       personId,
       owner: choice(input.owner, [
         'willow',
@@ -114,7 +122,7 @@ export class LeaveLedger {
     return this.store.append(
       actor,
       'leave-account',
-      'leave-' + personId,
+      leaveId(personId, bucket),
       0,
       data,
       personId,
@@ -128,11 +136,16 @@ export class LeaveLedger {
     handoff?: LeaveEntry['handoff'],
   ) {
     await this.store.authority(actor, 'rates:propose', personId, true)
-    const history = await this.read(actor, personId, false),
+    const bucket = leaveBucket(input.bucket)
+    const reviewSets = await collectionPins(this.store, actor, [{ kind: 'leave-account', personId, exceptId: leaveId(personId, bucket) }])
+    const accounts = await this.read(actor, personId, false)
+    const history = accounts.filter(r => (r.data.bucket ?? 'combined') === bucket),
       row = history[0]
     if (!row) throw new PayrollError('leave_account_required', 409)
     const sourceId = text(input.sourceId, 120),
       sourceVersion = integer(input.sourceVersion)
+    if (input.operation === 'use' && latest(accounts).some(r => r.id !== row.id && r.data.entries.some(e => e.operation === 'use' && e.sourceId === sourceId)))
+      throw new PayrollError('leave_source_bank_reconciliation_required', 409)
     const same = row.data.entries.find(
       (e) => e.sourceId === sourceId && e.sourceVersion === sourceVersion,
     )
@@ -250,6 +263,8 @@ export class LeaveLedger {
       if (!minutes || choice(input.owner, ['willow', 'payroll']) !== owner)
         throw new PayrollError('leave_balance_owner_changed', 409)
       choice(input.code, ['pto', 'holiday', 'sick', 'unpaid', 'termination'])
+      if (bucket !== 'combined' && ![bucket, 'unpaid', 'termination'].includes(String(input.code)))
+        throw new PayrollError('leave_code_bank_conflict', 409)
       rateCents = input.code === 'unpaid' ? 0 : integer(input.rateCents)
       amountCents = Number((BigInt(minutes) * BigInt(rateCents) + 30n) / 60n)
       const debitMinutes = input.code === 'unpaid' ? 0 : minutes
@@ -319,31 +334,23 @@ export class LeaveLedger {
       true,
       {
         objects: deps,
+        reviewSets,
       },
     )
   }
   async preview(actor: Actor, personId: string, from: string, through: string) {
-    const row = (await this.read(actor, personId))[0]
-    if (!row)
-      return {
-        row: undefined,
-        minutes: 0,
-        amountCents: 0,
-        lines: [] as LeaveEntry[],
-      }
-    approved(row)
-    const uses = row.data.entries.filter((e) => e.operation === 'use')
-    const lines = uses
-      .filter(
-        (e) =>
-          !uses.some(
-            (n) =>
-              n.sourceId === e.sourceId && n.sourceVersion > e.sourceVersion,
-          ),
-      )
-      .filter((e) => e.day >= from && e.day <= through)
+    const rows = latest(await this.read(actor, personId))
+    const lines: (LeaveEntry & { bucket: string })[] = []
+    for (const row of rows) {
+      approved(row)
+      const uses = row.data.entries.filter(e => e.operation === 'use')
+      lines.push(...uses.filter(e =>
+        !uses.some(n => n.sourceId === e.sourceId && n.sourceVersion > e.sourceVersion)
+        && e.day >= from && e.day <= through,
+      ).map(e => ({ ...e, bucket: row.data.bucket ?? 'combined' })))
+    }
     return {
-      row,
+      rows,
       minutes: lines.reduce((s, e) => s + e.minutes, 0),
       amountCents: lines.reduce((s, e) => s + e.amountCents, 0),
       lines,

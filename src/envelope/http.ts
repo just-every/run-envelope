@@ -15,7 +15,7 @@ import { ProtectedResponses } from './disclosures/protected'
 import { verificationPage, protectedResponsePage } from './income-verification/pages'
 import { SourceIntake } from './intake/sources'
 import { sourcePage } from './intake/pages'
-import { LeaveLedger } from './leave/ledger'
+import { LeaveLedger, leaveBucket, leaveId } from './leave/ledger'
 import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
 import { Providers } from './providers'
@@ -692,11 +692,11 @@ export async function payrollResponse(
           response=ui?redirect(back):json(result)
         } else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'people' && tail[2] === 'leave') {
-        const store = new WorkspaceStore(records), ledger = new LeaveLedger(store), personId = tail[1], id = 'leave-' + personId
-        const back = base + '/people/' + personId + '/leave'
+        const store = new WorkspaceStore(records), ledger = new LeaveLedger(store), personId = tail[1], bucket = leaveBucket(post ? value.bucket : url.searchParams.get('bucket') ?? undefined), id = leaveId(personId, bucket)
+        const back = base + '/people/' + personId + '/leave' + (bucket === 'combined' ? '' : '?bucket=' + bucket)
         if (!post && tail.length === 3) {
           const rows = await ledger.read(actor, personId)
-          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), rows) : json(rows)
+          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), rows, undefined, bucket) : json(rows)
         } else if (post && tail.length === 3) {
           const result = await ledger.open(actor, personId, value)
           response = ui ? redirect(back) : json(result, 201)
@@ -705,7 +705,7 @@ export async function payrollResponse(
           response = ui ? redirect(back) : json(result, 201)
         } else if (!post && tail.length === 4 && tail[3] === 'review') {
           const result = await store.review(actor, 'leave-account', id, personId)
-          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), await ledger.read(actor, personId), result as unknown as import('./workspace/store').Revision<import('./leave/ledger').LeaveAccount> & {reviewToken: string}) : json(result)
+          response = ui ? leavePage(session, companies, actor, await records.person(actor, personId), await ledger.read(actor, personId), result as unknown as import('./workspace/store').Revision<import('./leave/ledger').LeaveAccount> & {reviewToken: string}, bucket) : json(result)
         } else if (post && tail.length === 4 && ['approve','withdraw'].includes(tail[3])) {
           const result = await store.decide(actor, 'leave-account', id, value, personId, tail[3] === 'withdraw')
           response = ui ? redirect(back) : json(result)

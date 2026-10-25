@@ -79,7 +79,7 @@ and deduction implementation; this door never changes HR policy or enrollment.
 
 For reviewed Willow leave only, POST `/:id/leave-handoff` with the current
 `ledgerVersion` to propose the source leave in an existing Willow-owned leave
-ledger. That ledger needs its own exact review. Source versions are pinned in
+ledger. The matching sick, PTO or holiday bank is selected when present; otherwise the legacy combined ledger is used. An explicit `bucket` remains subject to the same code and owner checks. That ledger needs its own exact review. Source versions are pinned in
 the ledger and retained payroll preview; a correction reserves only the minutes
 difference. Replay cannot reserve it twice. This is a reservation, not a returned
 paid-consumption receipt.
