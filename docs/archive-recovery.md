@@ -70,20 +70,31 @@ third company with retained claim originals. All business records use native HTT
 doors. This annual prepared history does not establish wage settlement, accepted
 filings, open unknown payments or completed operational recovery.
 
-After import, the configured original owner can sign in through fresh native
-email proof and finish setup. The private recovery API lists that owner's
-unadopted companies with GET `/api/envelope/recovery`. POST the same route with
-`companyId` and literal JSON `consent: true` after reviewing the named company.
-Adoption repeats current identity and fresh proof inside the atomic grant write,
-then records `archive.history.adopted` in the company audit. It cannot replay or
-replace any existing company grant.
+After import, the original company creator or the configured current native owner
+can sign in through fresh native email proof and finish setup. GET
+`/api/envelope/recovery` lists only eligible, unadopted companies and declares the
+readable history, paused operations and absence of provider lookup. POST that
+route with the selected `companyId`, exact `companyName`, literal JSON
+`consent: true` and `readableHistory: ["compensation", "tax"]`. A generic consent,
+a different company name, missing fields or extra fields refuses without a grant
+or consent receipt. Current identity, eligibility, company name and fresh proof
+are repeated inside the atomic grant write.
+
+Adoption records `archive.history.adopted` and an immutable receipt naming the
+company, native actor, compensation and tax history, exact read actions and UTC
+time. GET `/api/envelope/recovery/consents` returns the caller's own receipts only
+while a current grant permits audit reads. Held company receipts stay hidden.
+Imported receipts are historical evidence and cannot recreate a grant.
 
 The adopted grant is a viewer with compensation and tax history reads. It cannot
 export independently, change records or banks, connect providers, approve or
-release payroll, or dispatch notices. Each employer requires its own explicit
-adoption. The configured owner must also be that company's original creator;
-other restored people receive no access. This conservative identity and custody
-default awaits ct approval. It does not activate operations after recovery.
+release payroll, or dispatch notices. Each employer needs separate explicit
+consent. The original creator retains only this bounded adoption eligibility;
+an unrelated native identity gains no recovery access. A current native owner
+must match the installation's configured owner identity. These ct-approved
+23 October defaults keep history inactive, mutations paused and provider lookup
+subject to separate consent. No operational recovery or provider lookup is
+implemented by this door.
 
 The importer also validates references inside encrypted federal calculations and
 prepared returns: company, worker, exact source versions, historical approval,

@@ -337,6 +337,8 @@ export async function payrollResponse(
       }
       throw new PayrollError('not_found',404)
     }
+    if (!ui && parts.length === 2 && parts[0] === 'recovery' && parts[1] === 'consents' && !post)
+      return json(await new ArchiveHistory(records).consents())
     if (!ui && parts.length === 1 && parts[0] === 'recovery') {
       const history = new ArchiveHistory(records)
       return json(post ? await history.adopt(value) : await history.list(), post ? 201 : 200)

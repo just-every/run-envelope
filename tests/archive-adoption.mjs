@@ -28,20 +28,48 @@ export async function archiveAdoption(context, fixture) {
   assert.equal((await call(company, undefined, cookie)).status, 403, 'new native sign-in alone grants no restored payroll access')
   const eligible = await call('/api/envelope/recovery', undefined, cookie)
   assert.equal(eligible.status, 200)
-  assert.ok((await eligible.json()).some(row => row.id === fixture.companies[0]))
+  const available = await eligible.json()
+  const selected = available.find(row => row.id === fixture.companies[0])
+  assert.ok(selected)
+  assert.deepEqual(selected.readableHistory, ['compensation', 'tax'])
+  assert.equal(selected.operations, 'paused')
+  assert.equal(selected.providerLookup, false)
+  const consent = { companyId: selected.id, companyName: selected.name,
+    readableHistory: selected.readableHistory, consent: true }
+  for (const body of [
+    { companyId: selected.id, consent: true },
+    { ...consent, readableHistory: ['compensation', 'bank'] },
+    { ...consent, readableHistory: ['compensation', 'tax', 'ssn'] },
+    { ...consent, readableHistory: ['compensation', 'compensation'] },
+  ]) assert.equal((await call('/api/envelope/recovery', body, cookie)).status, 400,
+    'a generic or wider consent cannot make restored private history readable')
+  assert.equal((await call('/api/envelope/recovery', { ...consent, companyName: 'Different employer' }, cookie)).status, 409,
+    'consent names the actual employer at the atomic grant write')
+  assert.deepEqual(await (await call('/api/envelope/recovery/consents', undefined, cookie)).json(), [],
+    'refused consent creates no receipt')
   const consentMissing = await call('/api/envelope/recovery', { companyId: fixture.companies[0] }, cookie)
   assert.equal(consentMissing.status, 400)
   assert.equal((await call(company, undefined, cookie)).status, 403, 'adoption requires an explicit owner gesture')
-  const adopted = await call('/api/envelope/recovery', { companyId: fixture.companies[0], consent: true }, cookie)
+  const adopted = await call('/api/envelope/recovery', consent, cookie)
   assert.equal(adopted.status, 201, await adopted.clone().text())
   const grant = await adopted.json()
   assert.equal(grant.role, 'viewer')
+  const receipts = await (await call('/api/envelope/recovery/consents', undefined, cookie)).json()
+  assert.equal(receipts.length, 1)
+  assert.equal(receipts[0].companyId, selected.id)
+  assert.equal(receipts[0].companyName, selected.name)
+  assert.deepEqual(receipts[0].readableHistory, consent.readableHistory)
+  assert.deepEqual(receipts[0].actions, ['records:read', 'private:read', 'audit:read'])
+  assert.equal(receipts[0].eventId, grant.consent.eventId)
+  assert.equal(receipts[0].operations, 'paused')
+  assert.equal(receipts[0].providerLookup, false)
   const nativeIdentity = await (await call('/auth/session', undefined, cookie)).json()
   const adoptionAudit = (await (await call(company + '/audit', undefined, cookie)).json())
     .filter(event => event.action === 'archive.history.adopted')
   assert.equal(adoptionAudit.length, 1, 'one explicit adoption records one durable attributed event')
   assert.equal(adoptionAudit[0].actorId, nativeIdentity.operator.id)
   assert.equal(adoptionAudit[0].targetId, fixture.companies[0])
+  assert.equal(receipts[0].eventId.length, 36)
   assert.equal((await call(company, undefined, cookie)).status, 200)
   const nativeCompany = await (await call(company, undefined, cookie)).json()
   const person = nativeCompany.people[0]
@@ -54,12 +82,44 @@ export async function archiveAdoption(context, fixture) {
   ]) assert.equal((await call(path, body, cookie)).status, 403, 'history adoption never permits mutation or outbound authority')
   assert.equal((await call(company + '/people/' + fixture.retainedPersonId + '/privacy', undefined, cookie)).status, 403, 'a restored history viewer cannot inspect the owner-only retained set')
   assert.equal((await call(company + '/export', undefined, cookie)).status, 403, 'history access does not confer independent export rights')
-  const replay = await call('/api/envelope/recovery', { companyId: fixture.companies[0], consent: true }, cookie)
+  const replay = await call('/api/envelope/recovery', consent, cookie)
   assert.equal(replay.status, 409, 'adoption cannot replay or replace a current company grant')
   assert.deepEqual((await (await call(company + '/audit', undefined, cookie)).json()).filter(event => event.action === 'archive.history.adopted'), adoptionAudit,
     'refused replay and denied mutations never create another adoption or rewrite its attribution')
+  assert.deepEqual(await (await call('/api/envelope/recovery/consents', undefined, cookie)).json(), receipts,
+    'replay and refused mutations preserve the exact consent receipt')
   assert.equal((await call('/api/envelope/companies/' + fixture.companies[1], undefined, cookie)).status, 403,
     'adopting one employer grants no access to another restored employer')
+
+  // The configured current native owner may adopt a different creator's company.
+  const successor = fixture.creatorCompanies[1]
+  const successorConsent = { companyId: successor.id, companyName: successor.name,
+    readableHistory: ['compensation', 'tax'], consent: true }
+  assert.equal((await call('/api/envelope/recovery', successorConsent, cookie)).status, 201)
+  assert.equal((await call('/api/envelope/companies/' + successor.id, undefined, cookie)).status, 200)
+  // Original creation remains independently attributable after loss of owner role.
+  await call('/auth/magic-link', { email: fixture.formerEmail, returnTo: '/app/envelope' })
+  const creatorMail = new URL(edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;', '&'))
+  const creatorConfirmed = await call('/auth/confirm', { token: creatorMail.searchParams.get('token') })
+  assert.equal(creatorConfirmed.status, 303)
+  const creatorCookie = creatorConfirmed.headers.get('set-cookie').split(';')[0]
+  const creatorIdentity = await (await call('/auth/session', undefined, creatorCookie)).json()
+  assert.equal(creatorIdentity.operator.id, fixture.creatorId)
+  assert.equal(creatorIdentity.operator.role, 'member')
+  const creatorEligible = await (await call('/api/envelope/recovery', undefined, creatorCookie)).json()
+  assert.deepEqual(creatorEligible.map(row => row.id), [fixture.creatorCompanies[0].id],
+    'an original creator sees only their own unadopted company, not unrelated employers')
+  const unrelated = available.find(row => row.id === fixture.companies[1])
+  assert.equal((await call('/api/envelope/recovery', { companyId: unrelated.id, companyName: unrelated.name,
+    readableHistory: unrelated.readableHistory, consent: true }, creatorCookie)).status, 409)
+  assert.deepEqual(await (await call('/api/envelope/recovery/consents', undefined, creatorCookie)).json(), [],
+    'another identity cannot read the current owner consent receipts')
+  const original = fixture.creatorCompanies[0]
+  assert.equal((await call('/api/envelope/recovery', { companyId: original.id, companyName: original.name,
+    readableHistory: ['compensation', 'tax'], consent: true }, creatorCookie)).status, 201)
+  assert.equal((await call('/api/envelope/companies/' + original.id, undefined, creatorCookie)).status, 200)
+  assert.equal((await call('/api/envelope/companies/' + original.id + '/people',
+    { name: 'Refused restored creation', locationId: 'synthetic-envelope-5309' }, creatorCookie)).status, 403)
 
   const {default:axe}=await import('axe-core')
   const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] })
@@ -90,5 +150,5 @@ export async function archiveAdoption(context, fixture) {
     }
     await session.close()
   } finally { await browser.close() }
-  assert.equal(edge.mails.length, previousMail + 1, 'all restored-history refusals and reads cause no outbound work beyond the fresh sign-in proof')
+  assert.equal(edge.mails.length, previousMail + 2, 'all restored-history refusals and reads cause no outbound work beyond the fresh sign-in proof')
 }

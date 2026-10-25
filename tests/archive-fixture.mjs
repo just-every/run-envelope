@@ -39,6 +39,18 @@ export async function archiveFixture(context) {
     body: 'Synthetic retained agency notice. Payroll officer must investigate the assessed period.',
   }, 201)
   const authority = await archiveAuthority(context, company, notice)
+  const formerEmail = 'synthetic-creator@example.com'
+  await payroll.data('/auth/invite', { email: formerEmail, displayName: 'Synthetic prior company creator', role: 'owner' }, 202)
+  const invite = new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;', '&'))
+  const joined = await payroll.call('/auth/confirm', { token: invite.searchParams.get('token') })
+  assert.equal(joined.status, 303)
+  const creatorCookie = joined.headers.get('set-cookie').split(';')[0]
+  const creatorCompanies = []
+  for (const [index, name] of ['Synthetic creator recovery company', 'Synthetic successor recovery company'].entries())
+    creatorCompanies.push(await payroll.data('/api/envelope/companies', { name, ein: '00-00053' + String(index).padStart(2, '0') }, 201, creatorCookie))
+  const creator = await payroll.data('/auth/session', undefined, 200, creatorCookie)
+  await payroll.data('/auth/operator/role', { operatorId: creator.operator.id, role: 'member' })
+
   const unused = await payroll.data(company.base + '/people', { name: 'Synthetic unused archive worker', locationId: company.location.id }, 201)
   const privacyPerson = await payroll.data(company.base + '/people', { name: 'Synthetic local custody worker', locationId: company.location.id }, 201)
   for (const kind of ['ssn', 'bank', 'tax']) await payroll.data(company.base + '/people/' + privacyPerson.id + '/private',
@@ -79,5 +91,5 @@ export async function archiveFixture(context) {
     {companyId:privacyClaims.company.id,personId:privacyClaims.person.id,objects:[privacyClaim.id],kind:'claim',
      claimId:privacyClaim.id,request:privacyClaims.validRequest(),artifactIds:privacyClaimRow.data.artifacts.map(a=>a.id)}]
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    privacyGraphs, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }
