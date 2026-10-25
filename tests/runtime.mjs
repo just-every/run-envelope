@@ -27,7 +27,7 @@ import {
   rulesJourney,
 } from './payroll-runtime.mjs'
 import { approvalJourney } from './payroll-approvals.mjs'
-import { archiveJourney } from './archive-runtime.mjs'
+import { archiveJourney, inspectNativeSql } from './archive-runtime.mjs'
 import { withArchiveWorker } from './archive-worker.mjs'
 import { claimsJourney } from './claims-runtime.mjs'
 import { industryJourney } from './industry-runtime.mjs'
@@ -249,7 +249,7 @@ try {
   }
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
-  if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql, settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })
+  if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })
   if (!selected || selected.includes('source-intake')) await sourceIntakeJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('leave')) await leaveJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('allocations'))

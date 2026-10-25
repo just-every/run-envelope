@@ -8,7 +8,7 @@ payroll-history export. Native identity alone grants no company payroll access.
 ## Approved protected-response policy
 
 Only a linked worker can give explicit consent for a known native requester,
-one lawful purpose (mortgage, rental or employment), an exact period of at most
+one lawful purpose (mortgage, rental or employment), an exact inclusive period of at most
 366 days and selected hire date, employment status or period gross wages.
 There is no legal-authority override, model approval or owner-created worker
 consent. Only the company owner may link identities, review sources or release
@@ -18,8 +18,8 @@ revocation, a changed worker/issuer identity or grant, a changed worker link,
 a withdrawn approval, or changed source evidence. Retained evidence is private;
 verification custody uses the explicit statutory-hold and lawful-release doors under ENV-054.
 ct approved these protected-response defaults with riders on 23 October 2026.
-The remaining custody, legal-authority and interaction-state journeys keep the
-clause partial. Approval confers no legal-authority override.
+Approval confers no legal-authority override. A reviewed legal-authority request
+still requires the linked worker’s current explicit consent.
 
 ## Public doors
 
@@ -32,7 +32,7 @@ clause partial. Approval confers no legal-authority override.
   Each version needs exact review; overlapping or incomplete periods refuse a
   precise gross-wage response.
 - Linked worker POST `/consents`: `requesterId`, `purpose`, `from`, `through`,
-  `fields` (hireDate/employmentStatus/grossWages), `expiresOn`, `retentionUntil`.
+  `fields` (hireDate, employmentStatus and grossWages), `expiresOn`, `retentionUntil`.
   API callers may supply an exact canonical UTC `expiresAt` instead of the date; `retentionUntil` also accepts a canonical UTC timestamp.
   The actual native worker session signs the immutable consent; a client actor,
   another worker or bearer cannot stand for it. Worker company access may be
@@ -40,7 +40,12 @@ clause partial. Approval confers no legal-authority override.
 - Worker POST `/consents/:id/revoke`; POST `/consents/:id/corrections` with a
   `reason` records an owner source-review task and changes no wages.
 - Owner POST `/disclosures`: `id`, previous `version`, `consentId`, optional
-  earlier disclosure `corrects`. The response contains only selected facts;
+  earlier disclosure `corrects`. Optional `basis` is `worker-consent` (default)
+  or `legal-authority`. Legal authority requires a documented `sourceAuthority`
+  (source reference and scope) and `requesterEvidence` (identity and authority
+  evidence). These encrypted fields join the exact owner review with the consent’s
+  purpose, requester, period and fields. They confer no override and never reach
+  the requester. The response contains only selected facts;
   employment comes from the real reviewed Willow hire-to-person link or reviewed Willow hire/termination source versions and
   wages from reviewed original register references for the complete exact period. Requesters receive only opaque source IDs and versions; the owner review retains original document references.
 - Owner GET `/:kind/:id/review` and POST `/:kind/:id/approve` with its `version`
@@ -56,26 +61,26 @@ clause partial. Approval confers no legal-authority override.
 The requester uses `/app/envelope/protected-response` while signed in as that
 exact identity. API POST `/api/envelope/protected-response/read` takes `id` and
 `token` in the body, never a URL. The token alone authorizes nothing. Retrieval,
-current permission/source checks, an audit event and opened receipt share one D1
+current permission and source checks, an audit event and opened receipt share one D1
 batch. POST `/api/envelope/protected-response/ack` records a separate explicit
 acknowledgement. An old source response becomes unavailable after correction;
 a fresh exact reviewed response links back to it without replacing its history.
 
 The worker's verification screen shows scoped requests, requester identity,
-selected periods/fields, the facts actually disclosed, linked corrections, releases, opened/acknowledged receipts and correction
+selected periods and fields, the facts actually disclosed, linked corrections, releases, opened and acknowledged receipts and correction
 tasks. Once the selected retention deadline passes, worker and ordinary owner disclosure views retain metadata and restrict response bodies and correction text; source payroll records retain their separate custody obligations. Every release and receipt is attributed; correction reasons, consents,
 wage facts and response bodies are encrypted at rest. The token hash alone is
 stored. All native controls have visible text labels; no icon-only controls
 are introduced. Browser proof masks the one-time handover token.
 
-## Remaining obligations
+## Boundaries and inherited custody
 
 The protected route is not Work Number enrollment or a provider submission.
-No live partner receipt is claimed. Full legal-authority handling, the full retained-data/erasure lifecycle and complete former-worker authority and language coverage remain unproved. Imported historical wage provenance needs
+No live partner receipt is claimed. Imported historical wage provenance needs
 its original reviewed documents; an earnings-only preview cannot stand for it.
-ENV-028/051/053/054/055 inherit the protected-response transport, workspace kinds
-verification-worker/income-source/disclosure and the three verification tables
-when their complete access, archive, erasure and external-flow journeys are built.
+ENV-028, ENV-051, ENV-053, ENV-054 and ENV-055 inherit the protected-response
+transport, the verification-worker, income-source and disclosure workspace kinds,
+and the three verification tables on their later journeys.
 
 `tests/payroll-runtime.mjs` — `incomeVerificationJourney` now records a reviewed
 Willow termination, signs the same worker out, confirms a single-use native
@@ -84,8 +89,8 @@ and after sign-in. The link is a synthetic identity-edge fixture, not a live
 mail receipt. A new consent and exact owner review return terminated status,
 unchanged hire date and corrected gross wages with all original source versions.
 The worker and requester screens are captured at 1440 and 390. Unrelated workers
-remain refused. Complete former-worker language and authority coverage, full
-statutory custody and legal-authority handling remain open.
+remain refused. This existing continuity proof is preserved by the later authority
+and custody additions.
 
 ## Current requester identity and former workers
 
@@ -114,6 +119,42 @@ verification derivatives with anonymized worker attribution. An old release
 cannot be opened or acknowledged after erasure. Downloaded copies and filed
 agency records remain outside local recall. No external deletion is sent.
 
-The legal-authority request path, verification-specific older-archive replay and
-remaining custody transports still need proof, as do Spanish empty, held and
-failed interaction states. Those gaps keep ENV-068 partial.
+## Verification transport proof
+
+The existing `incomeVerificationJourney` in `tests/payroll-runtime.mjs` exercises
+the legal-authority request through the same real disclosure door: no consent,
+missing authority evidence and requester self-release refuse; the exact owner
+review releases only the consented facts. The worker sees the request basis and
+receipt. A corrected wage source invalidates the old response and a new exact
+review produces a linked correction. Consent revocation also invalidates that
+legal-authority response. No additional authority is enabled.
+
+Custody covers the verification history JSON and native HTML, owner reviews of
+worker links, wage sources and disclosure versions, protected retrieval and
+receipt acknowledgement, and the native archive CLI. While held, all ordinary
+worker and requester transports refuse, owner retained reads remain audited,
+and protected responses remain unavailable. After explicit eligible erasure,
+old history and review doors, source replay, response tokens and acknowledgements
+refuse. The exact retained inventory includes every consent, response, receipt,
+correction and source revision with its fields, legal basis, custodian and UTC
+gate. Existing early-release and stale-proof refusals remain required.
+
+`verificationArchiveCheckpoint` in `tests/archive-runtime.mjs`, called inside
+that same native journey, exports the actual pre-erasure verification records
+and inspects exact encrypted rows with inactive authorization. After erasure,
+the real current export contains no erased verification rows. Importing the old
+archive with the later erasure journal refuses at the erasure fence and publishes
+no business or identity rows in a separately migrated target. Recovery keys in
+this test belong only to the disposable synthetic installation.
+
+English and Spanish owner, worker and requester documents retain the same
+permissions and language through native forms. The journey asserts Spanish
+empty history, loaded facts, held history, failed retrieval and acknowledged
+completion with keyboard actions and screenshots at 1440 and 390. Controls on
+these screens have visible words; none is icon-only. The local-recall boundary
+and separate explicit release and erasure remain unchanged.
+
+The period bound is also checked before proposing or releasing a retained consent
+and before protected retrieval or acknowledgement writes a receipt. Older requests
+cannot bypass the current bound. Statutory retained metadata remains subject to
+the same restricted history and explicit custody review.

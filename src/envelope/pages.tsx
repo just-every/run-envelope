@@ -86,19 +86,20 @@ export function page(
   companies: Company[],
   selected: string | undefined,
   children: ReactNode,
+  language: 'en' | 'es' = 'en',
 ) {
   const response = appDocument(
     `${title} · Envelope`,
     <>
       <div className="app-wrap">
-        <AppBar viewer={session.operator} />
+        <AppBar viewer={session.operator} language={language} />
       </div>
       <main className="app-wrap">
         {companies.length > 0 && (
           <ClientChips
             clients={companies.map((c, i) => ({
               name: c.name,
-              status: 'Company records',
+              status: language === 'es' ? 'Registros de la empresa' : 'Company records',
               colour: (['goldenrod', 'forest', 'teal', 'slate', 'violet'] as const)[i % 5],
               href: companyPath(c.id),
               open: c.id === selected,
@@ -108,13 +109,14 @@ export function page(
         <div className="payrun-head">
           <Heading
             lead={title}
-            then="Current payroll access."
-            meta={<>{selected && <span>{companies.find(c => c.id === selected)?.name} · </span>}<a href="/app/envelope">Companies and payroll settings</a></>}
+            then={language === 'es' ? 'Acceso actual a la nómina.' : 'Current payroll access.'}
+            meta={<>{selected && <span>{companies.find(c => c.id === selected)?.name} · </span>}<a href="/app/envelope">{language === 'es' ? 'Empresas y configuración de nómina' : 'Companies and payroll settings'}</a></>}
           />
         </div>
         <div className="field">{children}</div>
       </main>
     </>,
+    language,
   )
   // Native forms need an Origin header. No secret values enter URLs/referrers.
   response.headers.set('referrer-policy', 'strict-origin')

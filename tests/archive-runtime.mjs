@@ -86,6 +86,17 @@ async function snapshot(state, inventory) {
   assert.ok(found.length <= 1, 'one native foundation database supplies the archive')
   return found[0] ?? {}
 }
+/** Inspect the same native D1 SQLite store without starting another CLI process. */
+export async function inspectNativeSql(state, command) {
+  for (const file of await databases(join(state, 'v3', 'd1'))) {
+    const db = new DatabaseSync(file, {readOnly:true})
+    try {
+      if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='env_companies'").get()) continue
+      return JSON.parse(JSON.stringify(db.prepare(command).all()))
+    } finally { db.close() }
+  }
+  throw new Error('Native payroll database is absent')
+}
 const populated = tables => Object.fromEntries(Object.entries(tables).filter(([, rows]) => rows.length))
 function ciphers(tables) {
   return ordered(Object.entries(tables).flatMap(([table, rows]) => rows.flatMap(row =>
@@ -308,30 +319,28 @@ export async function archiveJourney(context) {
 export async function verificationArchiveCheckpoint(context, companyId, personId) {
   const {root, persist, quiesce, settings} = context
   const temporary = await mkdtemp(join(tmpdir(), 'envelope-verification-archive-'))
-  const source = join(temporary, 'source'), target = join(temporary, 'target'), spare = join(temporary, 'spare')
+  const source = join(temporary, 'source'), target = join(temporary, 'target')
   const state = directory => join(directory, '.wrangler', 'state')
   try {
-    await Promise.all([source, target, spare].map(directory => checkout(root, directory)))
+    await Promise.all([source, target].map(directory => checkout(root, directory)))
     const env = {...process.env, WRANGLER_SEND_METRICS:'false', WRANGLER_LOG:'warn'}
     delete env.ENVELOPE_RECORD_KEY
-    const keys = await archiveKeyCustody({source,target,corruptTarget:spare,temporary,run,env,key:settings.ENVELOPE_RECORD_KEY})
-    await keys.original()
+    const {writePrivateFile}=await import('@runeditrun/rer/private-files')
+    for(const directory of [source,target]) await writePrivateFile(join(directory,'.dev.vars'),'ENVELOPE_RECORD_KEY='+settings.ENVELOPE_RECORD_KEY+'\n',true)
     const cli = join(root,'node_modules','@runeditrun','rer','global','rer.mjs')
     const invoke = (directory, verb, file, journal) => run(process.execPath,[cli,verb,'--cwd',directory,
       verb === 'export' ? '--output' : '--input',file,...(verb === 'import' ? ['--yes'] : []),
       ...(journal ? ['--journal',journal] : []),'--json','--non-interactive','--no-queue'],directory,env)
-    const copyState = async () => quiesce(async () => {
-      await rm(state(source), {recursive:true,force:true})
-      await mkdir(dirname(state(source)), {recursive:true})
-      await cp(persist,state(source), {recursive:true})
-    })
-    await copyState()
-    const original = await snapshot(state(source))
+    await mkdir(dirname(state(source)),{recursive:true})
+    await symlink(persist,state(source),'dir')
+    const exportCurrent = file => quiesce(()=>invoke(source,'export',file))
+    const original = await quiesce(()=>snapshot(persist))
     const oldArchive = join(source,'exports','verification-before-erasure.rer')
-    const old = await invoke(source,'export',oldArchive)
+    const old = await exportCurrent(oldArchive)
     assert.equal(old.code,0,'verification archive export: ' + old.output)
     const records = []
     for await (const record of fileRecords(oldArchive)) records.push(record)
+    const oldManifest=records.find(record=>record.kind==='manifest')
     const rows = records.flatMap(record => record.items ?? []).filter(item => item.kind === 'row')
     for (const table of ['env_verification_consents','env_verification_releases','env_verification_corrections']) {
       const exported = rows.filter(item => item.table === table && item.row.company_id === companyId).map(item => item.row)
@@ -345,14 +354,19 @@ export async function verificationArchiveCheckpoint(context, companyId, personId
       'd1','migrations','apply','foundation','--local','--persist-to','.wrangler/state','--config','wrangler.jsonc'],target,env)
     assert.equal(migrated.code,0,'verification target migrations: ' + migrated.output)
     const empty = await snapshot(state(target))
-    return async () => {
+    const finish = async () => {
       try {
-        await copyState()
         const journal = join(source,'exports','verification-erasure-journal.rer')
-        const current = await invoke(source,'export',journal)
+        const current = await exportCurrent(journal)
         assert.equal(current.code,0,'post-erasure verification export: ' + current.output)
         const after = []
-        for await (const record of fileRecords(journal)) for (const item of record.items ?? []) if(item.kind === 'row') after.push(item)
+        let laterManifest
+        for await (const record of fileRecords(journal)) {
+          if(record.kind==='manifest') laterManifest=record
+          for(const item of record.items ?? []) if(item.kind==='row') after.push(item)
+        }
+        assert.equal(laterManifest.sourceIdentity,oldManifest.sourceIdentity,'both exports belong to the same actual native installation')
+        assert.ok(laterManifest.epoch>oldManifest.epoch && laterManifest.journal.length>oldManifest.journal.length,'actual erasure advances the native journal')
         for (const table of ['env_verification_consents','env_verification_releases','env_verification_corrections'])
           assert.ok(!after.some(item => item.table === table && item.row.company_id === companyId),'erased verification rows cannot leave through archives')
         assert.ok(!after.some(item => item.row.person_id === personId || (item.table === 'env_people' && item.row.id === personId)))
@@ -365,5 +379,6 @@ export async function verificationArchiveCheckpoint(context, companyId, personId
         console.log('VERIFICATION-ARCHIVE passed: exact encrypted history and inactive consent authority; erased derivatives absent; actual older archive refused with later journal and no publication.')
       } finally { await rm(temporary,{recursive:true,force:true}) }
     }
+    return Object.assign(finish,{dispose:()=>rm(temporary,{recursive:true,force:true})})
   } catch(error) { await rm(temporary,{recursive:true,force:true}); throw error }
 }

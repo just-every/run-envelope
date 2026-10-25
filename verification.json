@@ -32,7 +32,16 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=allocations,schedules,pay-items,rules,leave,source-intake,income-verification pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=allocations,schedules,pay-items,rules,leave,source-intake pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "verification",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=income-verification pnpm run test:runtime"
       ]
     },
     {

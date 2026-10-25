@@ -78,9 +78,7 @@ export function verificationPage(
       </Card>
       {issued && (
         <Card title={t("Protected response prepared for handover")}>
-          <p>{t("Release ID:")}<code data-release-id="true">{issued.id}</code>. Named
-            requester: {issued.requesterId}. Give these details to that verified
-            person through your approved private channel.
+          <p>{t("Release ID:")}<code data-release-id="true">{issued.id}</code>. {t("Named requester:")} {issued.requesterId}. {t("Give these details to that verified person through your approved private channel.")}
           </p>
           <p>
             {t('Token (shown once):')}{' '}
@@ -89,7 +87,7 @@ export function verificationPage(
             </code>
           </p>
           <p>
-            <a href="/app/envelope/protected-response">{t("Requester opens a protected response")}</a>
+            <a href={"/app/envelope/protected-response?lang=" + language}>{t("Requester opens a protected response")}</a>
             . {t("Expiry:")} {new Date(issued.expiresAt).toISOString()}. {t("No delivery or acknowledgement is claimed.")}
           </p>
         </Card>
@@ -285,7 +283,7 @@ export function verificationPage(
         {result.history.releases.map((r, i) => (
           <article key={i}>
             <p>
-              {t('Response')} {String(r.disclosureId)} v{String(r.disclosureVersion)} ·
+              {r.basis && <>{t(r.basis === 'legal-authority' ? 'Legal authority with worker consent' : 'Worker consent')} · </>}{t('Response')} {String(r.disclosureId)} v{String(r.disclosureVersion)} ·
               {t('Requester')} {String(r.requesterId)} · {t('released')}{' '}
               {new Date(Number(r.issuedAt)).toISOString()} ·{' '}
               {r.openedAt ? t('opened') : t('not opened')} ·{' '}
@@ -362,6 +360,7 @@ export function verificationPage(
         </>
       )}
     </div>,
+    language,
   )
 }
 export function protectedResponsePage(
@@ -408,6 +407,7 @@ export function protectedResponsePage(
       <p><a href="/app/envelope/protected-response?lang=en" lang="en">English</a> · <a href="/app/envelope/protected-response?lang=es" lang="es">Español</a></p>
       <p lang={language}>{t("This response is bound to the named requester. A token alone gives no access; revocation, expiry or changed sources refuse retrieval.")}</p>
     </Card></div>,
+    language,
   )
 }
 
@@ -419,5 +419,5 @@ export function verificationErrorPage(session: Session, code: string, language: 
       <p role="alert">{t(held ? 'Retained history is restricted to audited owner review. No facts were released.' : 'The request could not be completed. Check current consent, identity, permissions and sources with the owner. No facts were released.')}</p>
       <p>{t('Reference:')} <code>{code}</code></p>
       <a className="btn" href={'/app/envelope/protected-response?lang=' + language}>{t('Open your protected response')}</a>
-    </Card></div>)
+    </Card></div>, language)
 }

@@ -6,6 +6,7 @@ import { WorkspaceStore, digest, currentSources } from '../workspace/store'
 import { currentReviewInputs } from '../workspace/review-inputs'
 import {
   bindingFence,
+  boundedPeriod,
   ownerOnly,
   VerificationRequests,
   type ProtectedDisclosure,
@@ -33,6 +34,7 @@ export class ProtectedResponses {
       await new VerificationRequests(this.store).consents(actor, personId)
     ).find((c) => c.id === row.data.consentId)
     if (!consent) throw new PayrollError('current_worker_consent_required', 403)
+    boundedPeriod({from:consent.from,through:consent.through})
     const token = crypto.randomUUID() + crypto.randomUUID(),
       hash = await digest(token),
       releaseId = crypto.randomUUID(),
@@ -104,6 +106,21 @@ export class ProtectedResponses {
     const where = `EXISTS(SELECT 1 FROM oa_operators issuer JOIN env_grants ig ON ig.operator_id=issuer.id AND ig.company_id=r.company_id WHERE issuer.id=r.issued_by AND issuer.version=r.issuer_version AND issuer.status='active' AND ig.version=r.issuer_grant_version AND ig.role='owner' AND ig.revoked_at IS NULL) AND r.id=? AND r.token_hash=? AND r.requester_id=? AND r.expires_at>? AND c.expires_at>? AND c.revoked_at IS NULL
       AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=v.company_id AND pr.status='held') AND ${bindingFence('c')} AND ${disclosureCurrent} AND ${s.sql}`
     const args = [id, hash, session.operator.id, now, now, ...s.args]
+    // Validate retained consent bounds before any receipt write. The consent cipher
+    // is immutable; the batch below rechecks all current authority and source fences.
+    const preview = await this.store.records.statement(
+      `SELECT c.company_id AS company,c.id,c.cipher FROM env_verification_releases r
+       JOIN env_verification_consents c ON c.company_id=r.company_id AND c.id=r.consent_id
+       JOIN env_workspace_versions v ON v.company_id=r.company_id AND v.kind='disclosure' AND v.object_id=r.disclosure_id AND v.version=r.disclosure_version
+       WHERE ${where}`, args,
+    ).first<{company:string;id:string;cipher:string}>()
+    if (!preview) throw new PayrollError('protected_response_unavailable',403)
+    const selected = JSON.parse(await unseal(
+      await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY),
+      JSON.stringify([preview.company,'verification-consent',preview.id]), preview.cipher,
+    )) as {from:string;through:string}
+    try { boundedPeriod({from:selected.from,through:selected.through}) }
+    catch { throw new PayrollError('protected_response_unavailable',403) }
     // Authorization, audit, receipt and encrypted response selection share one D1 batch.
     const result = await this.store.records.env.DB.batch<
       Record<string, unknown>

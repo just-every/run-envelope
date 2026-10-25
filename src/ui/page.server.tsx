@@ -23,9 +23,9 @@ const headers = {
 }
 
 /** A signed-in app document rendered once on the server: no script, styles only from the served theme and look. */
-export function appDocument(title: string, body: ReactElement): Response {
+export function appDocument(title: string, body: ReactElement, language: 'en' | 'es' = 'en'): Response {
   return new Response(
-    '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<!doctype html><html lang="' + language + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
       `<title>${escape(title)}</title>${iconHead}<link rel="stylesheet" href="/rer-theme.css">${fontHead}</head><body class="app">${renderToStaticMarkup(body)}</body></html>`,
     { headers },
   )

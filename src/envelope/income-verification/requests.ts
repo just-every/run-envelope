@@ -60,12 +60,12 @@ export interface ProtectedDisclosure {
 }
 export const retentionDeadline = (value: string) =>
   Date.parse(value.length === 10 ? value + 'T23:59:59.999Z' : value)
-const boundedPeriod = (input: Input) => {
+export const boundedPeriod = (input: Input) => {
   const from = date(input.from),
     through = date(input.through)
   if (
     from > through ||
-    (Date.parse(through) - Date.parse(from)) / 86400000 > 366
+    (Date.parse(through) - Date.parse(from)) / 86400000 + 1 > 366
   )
     throw new PayrollError('verification_period_too_broad')
   return { from, through }
@@ -347,6 +347,7 @@ export class VerificationRequests {
     )
     if (!consent || consent.revokedAt || consent.expiresAt <= Date.now())
       throw new PayrollError('current_worker_consent_required', 403)
+    boundedPeriod({from:consent.from,through:consent.through})
     const basis = choice(input.basis ?? 'worker-consent', ['worker-consent', 'legal-authority'])
     const authority = basis === 'legal-authority' ? {
       basis, sourceAuthority: text(input.sourceAuthority, 1000),
@@ -619,6 +620,7 @@ export class VerificationRequests {
             retentionStatus: retained
               ? 'visible-until-selected-date'
               : 'restricted-after-selected-date',
+            basis: disclosed ? disclosed.authority?.basis ?? 'worker-consent' : null,
             response: disclosed?.response ?? null,
             corrects: disclosed?.corrects ?? null,
           }
