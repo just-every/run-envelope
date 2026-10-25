@@ -7,7 +7,7 @@ import { startRecordedWorker as unstable_startWorker, recordPrivateInput } from 
 // network edge. Sign-in proof and all payroll mutations remain real HTTP flows.
 export async function withArchiveWorker(context, journey) {
   const origin = context.origin.replace('http:', 'https:'), port = Number(new URL(origin).port);
-  const edge = { mails: [] };
+  const edge = { mails: [], noticeEffects: [] };
   const settings = { ...context.settings, AUTH_LOCAL: 'false', AUTH_ORIGIN: origin,
     MAIL_PROVIDER: 'resend', MAIL_FROM: 'Envelope <signin@example.com>', MAIL_API_KEY: 'synthetic-envelope-5300' };
   const start = async storage => {
@@ -16,8 +16,14 @@ export async function withArchiveWorker(context, journey) {
       dev: { server: { hostname: '127.0.0.1', port, secure: true }, origin: { hostname: new URL(origin).host, secure: true },
         inspector: false, remote: false, watch: false, persist: storage, logLevel: 'error', outboundService: async request => {
           if (request.url === 'https://api.resend.com/emails' && request.method === 'POST') {
-            edge.mails.push(await request.json());
-            return Response.json({ id: '00000000-0000-4000-8000-000000005300' });
+            const payload = await request.json();
+            edge.mails.push(payload);
+            const id = '00000000-0000-4000-8000-' + String(5300 + edge.mails.length).padStart(12, '0');
+            if (payload.subject.startsWith('Archive retained notice')) {
+              edge.noticeEffects.push({ id, idempotencyKey: request.headers.get('Idempotency-Key'), subject: payload.subject });
+              if (payload.subject.endsWith('unknown')) return new Response('Provider response unavailable', { status: 503 });
+            }
+            return Response.json({ id });
           }
           throw new Error('Unexpected archive outbound request');
         } },

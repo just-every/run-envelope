@@ -89,5 +89,5 @@ export async function archiveYearFixture(payroll, company) {
   const returnHistory = await payroll.data(returns)
   assert.equal(returnHistory.find(row => row.id === correctedReturn.id).data.corrects, originalReturn.id)
   assert.ok(returnHistory.find(row => row.id === originalReturn.id).approvedBy, 'original return review remains retained')
-  return { monthlyChecks, originalReturnId: originalReturn.id, correctedReturnId: correctedReturn.id, correctionId: correction.id, originalId: original.id, correction: retainedCorrection }
+  return { monthlyChecks, returns: returnHistory, originalReturnId: originalReturn.id, correctedReturnId: correctedReturn.id, correctionId: correction.id, originalId: original.id, correction: retainedCorrection }
 }

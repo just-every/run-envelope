@@ -1,4 +1,6 @@
-import { sessionFence } from './access'
+import { requireAction, sessionFence } from './access'
+import { WorkspaceStore } from './workspace/store'
+import type { IndustryReturn } from './industry/returns'
 import type { Company, Input, Records } from './records'
 import { PayrollError, text } from './security'
 import { sessionProofFence } from './step-up'
@@ -62,6 +64,29 @@ export class ArchiveHistory {
       actions: string; actorId: string; occurredAt: number }>()).results
     return rows.map(row => ({ ...row, readableHistory: JSON.parse(row.readableHistory),
       actions: JSON.parse(row.actions), operations: 'paused', providerLookup: false }))
+  }
+
+  async taxHistory(companyId: string) {
+    const native = this.nativeFence()
+    const actor = await this.records.actor(companyId)
+    requireAction(actor, 'records:read', undefined, 'compensation')
+    requireAction(actor, 'private:read', undefined, 'tax')
+    if (!actor.grant.locations.includes('*')) throw new PayrollError('payroll_access_denied', 403)
+    const adopted = await this.records.statement(
+      `SELECT 1 FROM env_archive_adoptions consent JOIN env_audit event ON event.id=consent.event_id
+       AND event.company_id=consent.company_id AND event.action='archive.history.adopted'
+       WHERE consent.company_id=? AND event.actor_id=? AND ${native.sql}`,
+      [companyId, this.records.session.operator.id, ...native.args],
+    ).first()
+    if (!adopted) throw unavailable()
+    const rows = await new WorkspaceStore(this.records).list<IndustryReturn>(actor, 'industry-return', undefined, true)
+    // Forms contain the employer EIN and require independent export permission.
+    // Read-only recovery exposes only the exact retained totals and source links.
+    return rows.map(row => ({ id: row.id, version: row.version, approvedBy: row.approvedBy,
+      approvedAt: row.approvedAt, withdrawnBy: row.withdrawnBy, sourcesCurrent: row.sourcesCurrent,
+      data: { form: row.data.form, taxYear: row.data.taxYear, quarter: row.data.quarter,
+        totals: row.data.totals, employeeCount: row.data.employeeCount,
+        checks: row.data.checks, corrects: row.data.corrects } }))
   }
 
   async adopt(input: Input) {

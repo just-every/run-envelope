@@ -337,6 +337,8 @@ export async function payrollResponse(
       }
       throw new PayrollError('not_found',404)
     }
+    if (!ui && parts.length === 3 && parts[0] === 'recovery' && parts[2] === 'tax-history' && !post)
+      return json(await new ArchiveHistory(records).taxHistory(parts[1]))
     if (!ui && parts.length === 2 && parts[0] === 'recovery' && parts[1] === 'consents' && !post)
       return json(await new ArchiveHistory(records).consents())
     if (!ui && parts.length === 1 && parts[0] === 'recovery') {

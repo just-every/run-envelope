@@ -119,6 +119,12 @@ export async function archiveJourney(context) {
     assert.ok(before.env_agent_grants.some(row => row.id === fixture.authority.agentId && row.expires_at > Date.now()), 'a live sponsored agent grant exists before export')
     assert.ok(before.env_agent_credentials.some(row => row.id === fixture.authority.agentId), 'the source agent has a usable credential')
     assert.ok(before.env_external_providers.some(row => row.enabled === 1), 'the source has an explicitly enabled provider')
+    for (const effect of fixture.authority.effects) {
+      const retained = before.env_notice_dispatches.find(row => row.reply_id === effect.replyId)
+      assert.equal(retained.state, effect.state)
+      assert.equal(retained.provider_receipt, effect.providerReceipt)
+      assert.equal(retained.id, effect.executionId, 'accepted and unknown work retains the original provider execution identity')
+    }
     assert.ok(before.env_notice_approvals.some(row => row.reply_id === fixture.authority.replyId && row.expires_at > Date.now()), 'the source has a real exact human reply approval')
     const cli = join(root, 'node_modules', '@runeditrun', 'rer', 'global', 'rer.mjs')
     const env = { ...process.env, WRANGLER_SEND_METRICS: 'false', WRANGLER_LOG: 'warn' }

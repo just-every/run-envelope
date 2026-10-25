@@ -68,6 +68,39 @@ export async function archiveAuthority(context, company, notice) {
     version: review.version, digest: review.digest, reviewToken: review.reviewToken, minutes: 60,
   })
 
-  return { agentToken: agent.token, agentId: agent.id, replyId: reply.id,
+  const effects = []
+  for (const expected of ['accepted', 'unknown']) {
+    const item = await data(company.base + '/notices/' + notice.id + '/replies', {
+      version: 0, to: 'agency@example.com', subject: 'Archive retained notice ' + expected,
+      body: 'The employer reviewed this redacted notice response. No payroll or bank instruction is included.',
+    }, 201)
+    const exact = await data(company.base + '/notice-replies/' + item.id + '/review')
+    await data(company.base + '/notice-replies/' + item.id + '/approve', {
+      version: exact.version, digest: exact.digest, reviewToken: exact.reviewToken, minutes: 60,
+    })
+    const execute = () => worker.fetch(origin + '/api/envelope/mcp', { method: 'POST',
+      headers: { authorization: 'Bearer ' + agent.token, origin, 'content-type': mime },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 530, method: ['tools', 'call'].join('/'),
+        params: { name: 'reply.dispatch', arguments: { companyId: company.id, replyId: item.id,
+          version: item.version, digest: item.digest } } }) })
+    const dispatched = await execute()
+    assert.equal(dispatched.status, 200, await dispatched.clone().text())
+    const result = JSON.parse((await dispatched.json()).result.content[0].text)
+    assert.equal(result.state, expected)
+    assert.equal(result.delivered, 'unconfirmed')
+    const edgeEffect = edge.noticeEffects.at(-1)
+    assert.ok(edgeEffect.idempotencyKey, 'the actual native dispatch retains its original provider idempotency key')
+    assert.equal(result.providerReceipt, expected === 'accepted' ? edgeEffect.id : null,
+      'an unavailable provider response never fabricates an acknowledgement')
+    const count = edge.noticeEffects.length
+    const replay = await execute()
+    assert.equal(replay.status, 200)
+    assert.equal(JSON.parse((await replay.json()).result.content[0].text).replayed, true)
+    assert.equal(edge.noticeEffects.length, count, 'replaying accepted or unknown notice work sends no duplicate')
+    effects.push({ replyId: item.id, state: expected, providerReceipt: result.providerReceipt,
+      executionId: edgeEffect.idempotencyKey.slice('envelope-notice-'.length) })
+  }
+
+  return { effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
     replyVersion: reply.version, replyDigest: reply.digest, providerSecret }
 }

@@ -68,7 +68,12 @@ The archive journey creates twelve monthly prepared federal calculations for eac
 of two employers, their exact human decisions and linked W-4 corrections, plus a
 third company with retained claim originals. All business records use native HTTP
 doors. This annual prepared history does not establish wage settlement, accepted
-filings, open unknown payments or completed operational recovery.
+filings, open unknown payments or completed operational recovery. The native notice
+fixture additionally retains one acknowledged dispatch and one unknown dispatch
+whose provider response is unavailable. Their original execution IDs and the
+accepted acknowledgement survive custody; replay sends neither again. This
+network-edge proof covers notices, with no claim of an unknown payment, provider
+lookup or completed operational reconciliation.
 
 After import, the original company creator or the configured current native owner
 can sign in through fresh native email proof and finish setup. GET
@@ -85,7 +90,11 @@ company, native actor, compensation and tax history, exact read actions and UTC
 time through its linked audit event. It stores no duplicate actor identity, so
 lawful audit anonymization also removes that attribution from receipt reads. GET `/api/envelope/recovery/consents` returns the caller's own receipts only
 while a current grant permits audit reads. Held company receipts stay hidden.
-Imported receipts are historical evidence and cannot recreate a grant.
+Imported receipts are historical evidence and cannot recreate a grant. GET
+`/api/envelope/recovery/<companyId>/tax-history` returns the adopted company's
+retained prepared-return totals, check references and correction lineage after
+current native authority checks. It omits the employer EIN and form payloads;
+the full return and download doors still require independent export permission.
 
 The adopted grant is a viewer with compensation and tax history reads. It cannot
 export independently, change records or banks, connect providers, approve or

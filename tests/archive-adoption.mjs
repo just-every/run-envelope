@@ -81,9 +81,21 @@ export async function archiveAdoption(context, fixture) {
       'adopted historical compensation remains the exact archived annual calculation')
   assert.ok(history.checks.some(row => row.id === fixture.years[0].correctionId && row.data.corrects),
     'adopted history preserves linked corrections without replaying wages')
-  const taxHistory = await (await call(company + '/industry-returns', undefined, cookie)).json()
-  for (const id of [fixture.years[0].originalReturnId, fixture.years[0].correctedReturnId])
-    assert.ok(taxHistory.some(row => row.id === id), 'adopted tax history retains both prepared return editions')
+  const taxResponse = await call('/api/envelope/recovery/' + selected.id + '/tax-history', undefined, cookie)
+  assert.equal(taxResponse.status, 200, await taxResponse.clone().text())
+  const taxHistory = await taxResponse.json()
+  for (const id of [fixture.years[0].originalReturnId, fixture.years[0].correctedReturnId]) {
+    const retained = taxHistory.find(row => row.id === id)
+    assert.ok(retained, 'adopted tax history retains both prepared return editions')
+    const original = fixture.years[0].returns.find(row => row.id === id)
+    assert.deepEqual(retained.data.totals, original.data.totals)
+    assert.deepEqual(retained.data.checks, original.data.checks)
+    assert.equal(retained.data.corrects, original.data.corrects)
+    assert.equal('company' in retained.data, false, 'read-only recovery excludes the raw employer EIN')
+    assert.equal('export' in retained.data, false, 'read-only recovery excludes form payloads')
+  }
+  assert.equal((await call(company + '/industry-returns', undefined, cookie)).status, 403,
+    'the full tax form door still requires independent export rights')
   assert.equal((await call(company + '/industry-returns/' + fixture.years[0].originalReturnId + '/download', undefined, cookie)).status, 403,
     'historical tax reads confer no independent form export')
   for (const [path, body] of [
@@ -102,6 +114,7 @@ export async function archiveAdoption(context, fixture) {
     'replay and refused mutations preserve the exact consent receipt')
   assert.equal((await call('/api/envelope/companies/' + fixture.companies[1], undefined, cookie)).status, 403,
     'adopting one employer grants no access to another restored employer')
+  assert.equal((await call('/api/envelope/recovery/' + fixture.companies[1] + '/tax-history', undefined, cookie)).status, 403)
 
   // The configured current native owner may adopt a different creator's company.
   const successor = fixture.creatorCompanies[1]
@@ -118,6 +131,8 @@ export async function archiveAdoption(context, fixture) {
   const creatorIdentity = await (await call('/auth/session', undefined, creatorCookie)).json()
   assert.equal(creatorIdentity.operator.id, fixture.creatorId)
   assert.equal(creatorIdentity.operator.role, 'member')
+  assert.equal((await call('/api/envelope/recovery/' + selected.id + '/tax-history', undefined, creatorCookie)).status, 403,
+    'another original creator cannot read an unrelated adopted tax history')
   const creatorEligible = await (await call('/api/envelope/recovery', undefined, creatorCookie)).json()
   assert.deepEqual(creatorEligible.map(row => row.id), [fixture.creatorCompanies[0].id],
     'an original creator sees only their own unadopted company, not unrelated employers')
