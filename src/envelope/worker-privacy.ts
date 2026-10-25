@@ -33,7 +33,7 @@ export class WorkerPrivacy {
     if (!await this.records.statement(`SELECT 1 WHERE ${f.sql}`, f.args).first()) throw new PayrollError('authority_changed', 409)
     await this.records.person(actor, personId)
     const epoch = await this.epoch(actor.company)
-    const names = (await this.records.statement("SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'env_*' AND name NOT GLOB 'env_privacy_*' AND name!='env_audit' ORDER BY name").all<{name: string}>()).results
+    const names = (await this.records.statement("SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'env_*' AND name NOT GLOB 'env_privacy_*' AND name NOT IN ('env_audit','env_agent_access') ORDER BY name").all<{name: string}>()).results
     const tables: Table[] = []
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const payloads = new Map<Row, unknown>()
@@ -56,18 +56,27 @@ export class WorkerPrivacy {
       for (const table of tables) for (const row of table.rows) {
         if (selected.has(row)) continue
         const mappedSource = table.name === 'env_workspace_versions' && tables.find(t => t.name === 'env_hris_people')?.rows.some(link => selected.has(link) && link.source_id === row.object_id && row.kind === 'hris-hire')
+        const earlierVersion = table.name === 'env_workspace_versions' && ids.has(String(row.object_id))
         const direct = table.name === 'env_people' ? row.id === personId :
-          row.person_id === personId || row.source_person_id === personId || includes(payloads.get(row), ids)
+          row.person_id === personId || row.source_person_id === personId || ids.has(String(row.source_id)) || includes(payloads.get(row), ids)
         const child = table.parents.some(parent => tables.find(t => t.name === parent.table)?.rows.some(p =>
           selected.has(p) && parent.pairs.every(pair => row[pair.from] != null && row[pair.from] === p[pair.to])))
         // A dependency or people pin belongs to the version containing it, not
         // merely to its referenced source. Include that owning derivative too.
         const owner = table.name === 'env_workspace_versions' && tables.some(t => ['env_workspace_people','env_workspace_dependencies','env_workspace_review_inputs'].includes(t.name)
           && t.rows.some(pin => selected.has(pin) && pin.kind === row.kind && pin.object_id === row.object_id && pin.version === row.version))
-        if (direct || child || owner || mappedSource) {
+        if (direct || child || owner || mappedSource || earlierVersion) {
           selected.add(row); changed = true
           for (const column of ['id','object_id']) if (typeof row[column] === 'string') ids.add(String(row[column]))
         }
+      }
+    }
+    const workers = new Set<string>()
+    for (const table of tables) for (const row of table.rows) if(selected.has(row)) {
+      if(typeof row.worker_id==='string') workers.add(row.worker_id)
+      if(table.name==='env_workspace_versions' && row.kind==='verification-worker') {
+        const payload=payloads.get(row) as {workerId?:string}|undefined
+        if(payload?.workerId) workers.add(payload.workerId)
       }
     }
     const entries: Entry[] = []
@@ -79,7 +88,16 @@ export class WorkerPrivacy {
     }
     if (await this.epoch(actor.company) !== epoch) throw new PayrollError('privacy_scope_changed', 409)
     const fingerprint = await digest(JSON.stringify(entries.map(e => [e.id, e.fingerprint])))
-    return {entries, tables, epoch, fingerprint, ids}
+    return {entries, tables, epoch, fingerprint, ids, workers}
+  }
+  async requests(actor: Actor) {
+    const f = this.owner(actor)
+    const result = await this.records.env.DB.batch([
+      auditStatement(this.records.env, actor, crypto.randomUUID(), 'privacy.requests.read', actor.company, 1),
+      this.records.statement(`SELECT id,person_id AS personId,status,created_at AS createdAt,completed_at AS completedAt,records_deleted AS recordsDeleted FROM env_privacy_requests WHERE company_id=? AND ${f.sql} ORDER BY created_at,id`, [actor.company, ...f.args]),
+    ])
+    if (!result[0].meta.changes) throw new PayrollError('authority_changed',409)
+    return result[1].results as Row[]
   }
   async read(actor: Actor, personId: string) {
     const f = this.owner(actor), scope = await this.scope(actor, personId)
@@ -99,6 +117,18 @@ export class WorkerPrivacy {
     return {personId, fingerprint: scope.fingerprint, version: (await this.records.person(actor, personId)).version,
       status: retained.some(r => !r.released) ? 'held' : 'eligible', retained,
       boundary: 'Downloaded copies and already-filed agency records are outside local recall. External provider deletion requires a separate authorized request; this door sends none.'}
+  }
+  async request(actor: Actor, personId: string, input: Input) {
+    const f=this.owner(actor), proof=stepUpFence(actor), scope=await this.scope(actor,personId)
+    if (!explicit(input.consent)) throw new PayrollError('consent_required')
+    if (input.fingerprint!==scope.fingerprint) throw new PayrollError('privacy_scope_changed',409)
+    const id=crypto.randomUUID()
+    const result=await this.records.env.DB.batch([
+      this.records.statement(`INSERT INTO env_privacy_requests(company_id,id,person_id,status,created_at) SELECT ?,?,?,'held',? WHERE ${f.sql} AND ${proof.sql} AND COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0)=? ON CONFLICT(company_id,person_id) DO NOTHING`, [actor.company,id,personId,Date.now(),...f.args,...proof.args,actor.company,scope.epoch]),
+      auditStatement(this.records.env,actor,crypto.randomUUID(),'privacy.erasure.requested',personId,1, 'EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND id=?)',[actor.company,id]),
+    ])
+    if (!result[0].meta.changes && !await this.records.statement('SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=?',[actor.company,personId]).first()) throw new PayrollError('step_up_or_scope_changed',409)
+    return this.read(actor,personId)
   }
   async review(actor: Actor, personId: string, input: Input, release = false) {
     const f = this.owner(actor), proof = stepUpFence(actor), scope = await this.scope(actor, personId)
@@ -145,11 +175,17 @@ export class WorkerPrivacy {
     const retained = (await this.records.statement('SELECT record_id,fingerprint,released_at,release_at FROM env_privacy_holds WHERE company_id=?', [actor.company]).all<Row>()).results
     if (scope.entries.some(e => e.table !== 'env_people' && !retained.some(h => h.record_id === e.id && h.fingerprint === e.fingerprint && h.released_at && Date.parse(String(h.release_at)) <= Date.now())))
       throw new PayrollError('erasure_retention_review_required', 409)
+    if (scope.entries.length>1) {
+      const selected=Array.isArray(input.records)?input.records:typeof input.records==='string'?[input.records]:[]
+      const expectedIds=scope.entries.filter(e=>e.table!=='env_people').map(e=>e.id)
+      if (selected.length!==expectedIds.length || new Set(selected).size!==selected.length || expectedIds.some(id=>!selected.includes(id))) throw new PayrollError('record_selection_required')
+    }
     const anonymous = 'erased-' + crypto.randomUUID()
     const db = this.records.env.DB
     const statements: D1PreparedStatement[] = [this.records.statement(`INSERT INTO rer_erasure_guard(value) SELECT CASE WHEN (${f.sql} AND ${proof.sql}
       AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
       AND COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0)=?) THEN 1 ELSE 0 END`, [...f.args, ...proof.args, actor.company, personId, expected, actor.company, scope.epoch])]
+    statements.push(this.records.statement(`INSERT INTO env_privacy_requests(company_id,id,person_id,status,created_at) VALUES(?,?,?,'held',?) ON CONFLICT(company_id,person_id) DO NOTHING`,[actor.company,anonymous,personId,Date.now()]))
     // The batch is atomic; a failed trigger, changed grant or new dependency
     // rolls back journals, deletions, redaction and the anonymous receipt.
     statements.push(...await invalidateTransfersStatements(db))
@@ -157,7 +193,10 @@ export class WorkerPrivacy {
     for (const entry of scope.entries) statements.push(...await erasureStatements(db, entry.table, entry.key))
     statements.push(...await redactionStatements(db))
     for (const table of new Set(scope.entries.map(e => e.table))) statements.push(this.records.statement('INSERT INTO env_privacy_guard(company_id,table_name) VALUES(?,?)', [actor.company, table]))
+    for(const worker of scope.workers) statements.push(this.records.statement('INSERT INTO env_privacy_redactions(company_id,target_id,replacement) VALUES(?,?,?)',[actor.company,worker,anonymous]))
+    statements.push(this.records.statement(`UPDATE env_audit SET actor_id=NULL WHERE company_id=? AND actor_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`,[actor.company,actor.company]))
     for (const id of new Set([...scope.ids, ...scope.entries.map(e => e.id)])) statements.push(this.records.statement('INSERT INTO env_privacy_redactions(company_id,target_id,replacement) VALUES(?,?,?)', [actor.company, id, anonymous]))
+    statements.push(this.records.statement(`UPDATE env_agent_access SET target_id=? WHERE company_id=? AND target_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`, [anonymous, actor.company, actor.company]))
     statements.push(this.records.statement(`UPDATE env_audit SET target_id=? WHERE company_id=? AND target_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`, [anonymous, actor.company, actor.company]))
     for (const entry of scope.entries.filter(e => e.table === 'env_hris_people')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, entry.row.source_key]))
     for (const entry of scope.entries.filter(e => e.table === 'env_workspace_versions')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, await digest(JSON.stringify([entry.row.kind, entry.row.object_id]))]))
@@ -170,6 +209,7 @@ export class WorkerPrivacy {
     for (const table of ordered) for (const entry of scope.entries.filter(e => e.table === table.name))
       statements.push(this.records.statement(`DELETE FROM ${quote(table.name)} WHERE ${Object.keys(entry.key).map(c => quote(c) + ' IS ?').join(' AND ')}`, Object.values(entry.key)))
     for (const entry of scope.entries) statements.push(this.records.statement('DELETE FROM env_privacy_holds WHERE company_id=? AND record_id=?', [actor.company, entry.id]))
+    statements.push(this.records.statement(`UPDATE env_privacy_requests SET person_id=NULL,status='completed',completed_at=?,records_deleted=? WHERE company_id=? AND person_id=?`, [Date.now(),scope.entries.length,actor.company,personId]))
     statements.push(this.records.statement('DELETE FROM env_privacy_guard WHERE company_id=?', [actor.company]), this.records.statement('DELETE FROM env_privacy_redactions WHERE company_id=?', [actor.company]),
       auditStatement(this.records.env, actor, crypto.randomUUID(), 'privacy.worker.erased', anonymous, expected), this.records.statement('DELETE FROM rer_erasure_guard'))
     try { await db.batch(statements) } catch { throw new PayrollError('erasure_retention_review_required', 409) }

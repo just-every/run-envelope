@@ -282,6 +282,7 @@ export class AgentTools {
     return {
       sql: `EXISTS(SELECT 1 FROM env_agent_grants a JOIN env_agent_credentials c ON c.id=a.id JOIN env_grants s ON s.company_id=a.company_id AND s.operator_id=a.sponsor_id JOIN oa_operators o ON o.id=a.sponsor_id
     WHERE a.id=? AND a.company_id=? AND a.version=? AND a.revoked_at IS NULL AND a.expires_at>unixepoch('subsec')*1000
+    AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=a.company_id AND pr.status='held')
     AND c.token_hash=? AND c.secret_expires_at>unixepoch('subsec')*1000
     AND o.status='active' AND o.version=a.sponsor_operator_version AND s.version=a.sponsor_grant_version AND s.revoked_at IS NULL
     AND (s.role='owner' OR (NOT EXISTS(SELECT 1 FROM env_agent_policy pol WHERE pol.company_id=a.company_id AND pol.owner_only=1)

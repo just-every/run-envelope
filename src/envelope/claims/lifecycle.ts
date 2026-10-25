@@ -31,10 +31,13 @@ export class ClaimLifecycle {
   async history(actor: Actor, id?: string): Promise<ClaimRecord[]> {
     const f = this.scope(actor), key = await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY), event = crypto.randomUUID()
     const results = await this.store.records.env.DB.batch<Record<string, unknown>>([
-      auditStatement(this.store.records.env, actor, event, 'claim.evidence.read', id || actor.company, actor.grant.version),
+      auditStatement(this.store.records.env, actor, event, 'claim.evidence.read', id || actor.company, actor.grant.version, id?"EXISTS(SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind='ui-claim' AND object_id=?)":'1',id?[actor.company,id]:[]),
       this.store.records.statement(`SELECT v.object_id AS id,v.kind,v.version,v.created_by AS createdBy,v.created_at AS createdAt,v.cipher,(${currentSources('v')}) AS sourcesCurrent FROM env_workspace_versions v WHERE v.company_id=? AND v.kind='ui-claim' ${id ? 'AND v.object_id=?' : ''} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) ORDER BY v.object_id,v.version DESC`, [actor.company, ...(id ? [id] : []), ...f.args, event]),
     ])
-    if (!results[0].meta.changes) throw new PayrollError('claim_authority_changed', 409)
+    if (!results[0].meta.changes) {
+      if(id) return []
+      throw new PayrollError('claim_authority_changed', 409)
+    }
     return Promise.all(results[1].results.map(async ({ cipher, ...r }) => ({ ...r, personId: null, personVersion: null, approvedBy: null, approvedAt: null, withdrawnBy: null, data: JSON.parse(await unseal(key, JSON.stringify([actor.company, claimKind, r.id, r.version]), String(cipher))) } as unknown as ClaimRecord)))
   }
   async details(actor: Actor, id: string) {
@@ -50,6 +53,8 @@ export class ClaimLifecycle {
     return { ein: ein.replace(/\D/g, ''), legalName: row.name }
   }
   async append(actor: Actor, id: string, expected: number, data: ClaimData, action: string, extra = { sql: '1', args: [] as unknown[] }, staleEvidence = false) {
+    const retired = await digest(JSON.stringify([claimKind,id]))
+    if (await this.store.records.statement('SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?',[actor.company,retired]).first()) throw new PayrollError('erased_source',409)
     const f = this.scope(actor), version = expected + 1, event = crypto.randomUUID(), records = this.store.records
     const key = await recordKey(records.env.ENVELOPE_RECORD_KEY), cipher = await seal(key, JSON.stringify([actor.company, claimKind, id, version]), JSON.stringify(data))
     const objects: NonNullable<Sources['objects']> = data.payroll.map(p => ({ kind: p.kind, id: p.id, version: p.version, approved: true }))
@@ -61,7 +66,7 @@ export class ClaimLifecycle {
       records.statement(`INSERT INTO env_workspace_versions(company_id,kind,object_id,version,cipher,created_by,created_at,change_id)
         SELECT ?,'ui-claim',?,?,?,?,?,? WHERE ${f.sql}
         AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind='ui-claim' AND object_id=?),0)=?
-        AND ${deps} ${personSql} AND ${extra.sql} RETURNING version`, [actor.company, id, version, cipher, actor.session.operator.id, Date.now(), event, ...f.args, actor.company, id, expected, JSON.stringify(objects), actor.company, ...personArgs, ...extra.args]),
+        AND ${deps} ${personSql} AND ${extra.sql} AND NOT EXISTS(SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?) RETURNING version`, [actor.company, id, version, cipher, actor.session.operator.id, Date.now(), event, ...f.args, actor.company, id, expected, JSON.stringify(objects), actor.company, ...personArgs, ...extra.args, actor.company,retired]),
       records.statement(`INSERT INTO env_workspace_people(company_id,kind,object_id,version,person_id,person_version) SELECT ?,'ui-claim',?,?,json_extract(value,'$.id'),json_extract(value,'$.version') FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`, [actor.company, id, version, JSON.stringify(people), event]),
       records.statement(`INSERT INTO env_workspace_dependencies(company_id,kind,object_id,version,source_kind,source_id,source_version,needs_approval) SELECT ?,'ui-claim',?,?,json_extract(value,'$.kind'),json_extract(value,'$.id'),json_extract(value,'$.version'),1 FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`, [actor.company, id, version, JSON.stringify(objects), event]),
       auditStatement(records.env, actor, event, action, id, version, 'EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)', [event]),

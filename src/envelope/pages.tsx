@@ -444,6 +444,7 @@ export function personPage(
       <p><a className="btn" href={companyPath(actor.company) + '/people/' + person.id + '/leave'}>Leave ledger</a></p>
       <p><a className="btn" href={base + '/hris'}>HR changes and source history</a> <a className="btn" href={base + '/earnings-sources'}>Job and commission earnings</a> <a className="btn" href={base + '/verification'}>Employment and income verification</a></p>
       {can(actor,'private:read','tax') && can(actor,'records:read','compensation') && <p><a className="btn" href={base + '/industry'}>Industry payroll treatment</a></p>}
+      {actor.grant.role==='owner' && <p><a className="btn" href={base+'/privacy'}>Privacy and retention</a></p>}
       <Card title="Rate history">
         <p>
           Record version {person.version}. Approved hourly rates retain their effective date

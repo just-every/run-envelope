@@ -144,6 +144,10 @@ export async function archiveJourney(context) {
     assert.ok(!rows.env_private_records.some(row => row.person_id === fixture.privacyPersonId), 'the public archive contains no erased private record')
     assert.ok(!rows.env_workspace_versions.some(row => row.object_id === fixture.privacyWorkId), 'the public archive contains no erased work derivative')
     assert.ok(!rows.env_workspace_people.some(row => row.person_id === fixture.privacyPersonId), 'the public archive contains no erased source pin')
+    for(const graph of fixture.privacyGraphs) {
+      assert.ok(!rows.env_people.some(row=>row.id===graph.personId))
+      assert.ok(!rows.env_workspace_versions.some(row=>row.company_id===graph.companyId && graph.objects.includes(row.object_id)),'actual archive contains no erased payroll or claim file derivative')
+    }
     const damagedEditions = join(temporary, 'damaged-editions.rer')
     const editions = await archiveEditions(records, source, damagedEditions)
     const text = await readFile(archive, 'utf8')

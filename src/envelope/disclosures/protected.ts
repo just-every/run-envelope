@@ -44,7 +44,7 @@ export class ProtectedResponses {
       SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
       AND EXISTS(SELECT 1 FROM env_workspace_versions v JOIN env_verification_consents c ON c.company_id=v.company_id AND c.id=?
        WHERE v.company_id=? AND v.object_id=? AND v.version=? AND v.person_id=c.person_id AND c.person_id=? AND c.requester_id=?
-       AND c.revoked_at IS NULL AND c.expires_at>? AND ${bindingFence('c')} AND ${disclosureCurrent})
+       AND c.revoked_at IS NULL AND c.expires_at>? AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=v.company_id AND pr.status='held') AND ${bindingFence('c')} AND ${disclosureCurrent})
       AND NOT EXISTS(SELECT 1 FROM env_verification_releases WHERE company_id=? AND disclosure_id=? AND disclosure_version=?) RETURNING id`,
         [
           actor.company,
@@ -102,7 +102,7 @@ export class ProtectedResponses {
       event = crypto.randomUUID(),
       now = Date.now()
     const where = `EXISTS(SELECT 1 FROM oa_operators issuer JOIN env_grants ig ON ig.operator_id=issuer.id AND ig.company_id=r.company_id WHERE issuer.id=r.issued_by AND issuer.version=r.issuer_version AND issuer.status='active' AND ig.version=r.issuer_grant_version AND ig.role='owner' AND ig.revoked_at IS NULL) AND r.id=? AND r.token_hash=? AND r.requester_id=? AND r.expires_at>? AND c.expires_at>? AND c.revoked_at IS NULL
-      AND ${bindingFence('c')} AND ${disclosureCurrent} AND ${s.sql}`
+      AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=v.company_id AND pr.status='held') AND ${bindingFence('c')} AND ${disclosureCurrent} AND ${s.sql}`
     const args = [id, hash, session.operator.id, now, now, ...s.args]
     // Authorization, audit, receipt and encrypted response selection share one D1 batch.
     const result = await this.store.records.env.DB.batch<

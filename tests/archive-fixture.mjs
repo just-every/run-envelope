@@ -47,6 +47,37 @@ export async function archiveFixture(context) {
     id: 'synthetic-envelope-privacy-work', version: 0, day: '2026-10-19', state: 'TX', locality: 'Austin', minutes: 480,
     earnedCents: 100000, officeState: 'TX', nyReason: 'not-applicable', sourceRef: 'Synthetic approved local-custody time'
   }, 201)
+  const privacyPayroll = await payroll.company('Synthetic erasure payroll employer', ['Synthetic erasure payroll worker'])
+  await payroll.classify(privacyPayroll, privacyPayroll.people[0], ordinaryFacts)
+  const privacyCheck = await payroll.preview(privacyPayroll, privacyPayroll.people[0])
+  await payroll.approve(privacyPayroll, privacyPayroll.people[0], 'industry-check', privacyCheck.id)
+  const privacyReturn = await payroll.data(privacyPayroll.base+'/industry-returns', {
+    id:'synthetic-envelope-privacy-return',version:0,form:'941',taxYear:2026,quarter:4,
+    checks:[{personId:privacyPayroll.people[0].id,id:privacyCheck.id,version:privacyCheck.version}],
+    address:{street:'100 Main Street',city:'Austin',state:'TX',postalCode:'78701'},employeeCount:0,depositsCents:0,
+    basis:'Reviewed synthetic payroll for local erasure; no payment or filing.'
+  },201)
+  const privacyWorker=privacyPayroll.people[0],privacyBase=privacyPayroll.base
+  const rate=await payroll.data(privacyBase+'/people/'+privacyWorker.id+'/rates',{version:1,hourlyCents:2500,effectiveDate:'2026-01-01'},201)
+  const rateReview=await payroll.data(privacyBase+'/rates/'+rate.id)
+  await payroll.data(privacyBase+'/rates/'+rate.id+'/approve',{reviewToken:rateReview.reviewToken})
+  const owner=(await payroll.data('/auth/session')).operator.id
+  const work=await payroll.data(privacyBase+'/firm-work',{workKind:'run',sourceKind:'earnings-run',sourceId:privacyPayroll.run.id,sourceVersion:1,
+    title:'Review synthetic erased payroll',details:'Private payroll preparation derivative',dueDate:'2026-10-30',dueTime:'16:00',timeZone:'UTC',evidenceRef:'Synthetic current payroll source',assigneeId:owner},201)
+  const draftAgent=await payroll.data(privacyBase+'/agents',{name:'Synthetic local draft custody',hours:1,actions:['drafts:prepare','drafts:read','records:read'],fields:['compensation'],locations:['*'],providers:[],models:[]},201)
+  const rpc=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{origin:context.origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+draftAgent.token},body:JSON.stringify({jsonrpc:'2.0',id:540,method:['tools','call'].join('/'),params:{name:'draft.prepare',arguments:{companyId:privacyPayroll.id,personId:privacyWorker.id,minutes:480,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',sourceRef:'Synthetic reviewed input',requestKey:'synthetic-envelope-privacy-draft'}}})})
+  assert.equal(rpc.status,200,await rpc.clone().text())
+  const draft=JSON.parse((await rpc.json()).result.content[0].text)
+  const privacyClaims=await claimsFixture(context,{willow:capture})
+  const privacyClaim=await privacyClaims.data(privacyClaims.claims+'/import',privacyClaims.validRequest(),201)
+  await privacyClaims.data(privacyClaims.claims+'/'+privacyClaim.id+'/evidence',privacyClaims.evidence(privacyClaim.version))
+  let privacyClaimRow=await privacyClaims.data(privacyClaims.claims+'/'+privacyClaim.id)
+  await privacyClaims.data(privacyClaims.claims+'/'+privacyClaim.id+'/prepare',privacyClaims.prepare(privacyClaimRow.version))
+  privacyClaimRow=await privacyClaims.data(privacyClaims.claims+'/'+privacyClaim.id)
+  const privacyGraphs=[{companyId:privacyPayroll.id,personId:privacyPayroll.people[0].id,
+    objects:[privacyCheck.id,privacyReturn.id,privacyPayroll.run.id],kind:'payroll',workId:work.id,draftId:draft.id,agentId:draftAgent.id},
+    {companyId:privacyClaims.company.id,personId:privacyClaims.person.id,objects:[privacyClaim.id],kind:'claim',
+     claimId:privacyClaim.id,request:privacyClaims.validRequest(),artifactIds:privacyClaimRow.data.artifacts.map(a=>a.id)}]
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    privacyGraphs, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }

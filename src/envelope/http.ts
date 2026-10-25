@@ -2,6 +2,7 @@ import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { Records, type Input } from './records'
 import { ArchiveHistory } from './archive-history'
+import { privacyPage } from './privacy-pages'
 import { WorkerPrivacy } from './worker-privacy'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
@@ -99,7 +100,7 @@ async function input(request: Request): Promise<Input> {
       result: Input = {}
     for (const key of new Set(params.keys())) {
       const values = params.getAll(key)
-      result[key] = ['actions', 'fields', 'locations', 'people', 'providers', 'models', 'selections', 'claimKinds', 'checks', 'certifications'].includes(key)
+      result[key] = ['actions', 'fields', 'locations', 'people', 'providers', 'models', 'selections', 'claimKinds', 'checks', 'certifications', 'records'].includes(key)
         ? values
         : values.length === 1
           ? values[0]
@@ -745,13 +746,17 @@ export async function payrollResponse(
             ? redirect(base + '/people/' + personId + '/allocations')
             : json(saved, 201)
         } else throw new PayrollError('not_found', 404)
-      } else if (!ui && tail[0] === 'people' && tail[2] === 'privacy') {
+      } else if (tail[0] === 'privacy-requests' && tail.length===1 && !post) {
+        const rows=await new WorkerPrivacy(records).requests(actor)
+        response=ui?privacyPage(session,companies,actor,undefined,rows):json(rows)
+      } else if (tail[0] === 'people' && tail[2] === 'privacy') {
         const privacy = new WorkerPrivacy(records)
-        if (!post && tail.length === 3) response = json(await privacy.read(actor, tail[1]))
-        else if (post && tail.length === 4 && ['retain','release'].includes(tail[3])) response = json(await privacy.review(actor, tail[1], value, tail[3] === 'release'))
+        if (!post && tail.length === 3) {const state=await privacy.read(actor,tail[1]);response=ui?privacyPage(session,companies,actor,state,await privacy.requests(actor)):json(state)}
+        else if (post && tail.length === 4 && ['request','retain','release'].includes(tail[3])) {const state=tail[3]==='request'?await privacy.request(actor,tail[1],value):await privacy.review(actor,tail[1],value,tail[3]==='release');response=ui?redirect(base+'/people/'+tail[1]+'/privacy'):json(state)}
         else throw new PayrollError('not_found', 404)
-      } else if (!ui && tail[0] === 'people' && tail[2] === 'erase' && tail.length === 3 && post) {
-        response = json(await new WorkerPrivacy(records).erase(actor, tail[1], value))
+      } else if (tail[0] === 'people' && tail[2] === 'erase' && tail.length === 3 && post) {
+        const receipt=await new WorkerPrivacy(records).erase(actor,tail[1],value)
+        response=ui?redirect(base+'/privacy-requests'):json(receipt)
       } else if (tail[0] === 'people' && tail.length === 2 && !post) {
         const person = await records.details(actor, tail[1])
         response = ui ? personPage(session, companies, actor, person) : json(person)

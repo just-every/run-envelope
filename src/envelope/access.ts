@@ -69,8 +69,8 @@ export function sessionFence(session: Session) {
 export function fence(actor: Actor) {
   const session = sessionFence(actor.session)
   return {
-    sql: `${session.sql} AND EXISTS(SELECT 1 FROM env_grants g WHERE g.company_id=? AND g.operator_id=? AND g.version=? AND g.revoked_at IS NULL)`,
-    args: [...session.args, actor.company, actor.session.operator.id, actor.grant.version],
+    sql: `${session.sql} AND (NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=? AND pr.status='held') OR (?='native' AND ?='owner' AND ?='owner')) AND EXISTS(SELECT 1 FROM env_grants g WHERE g.company_id=? AND g.operator_id=? AND g.version=? AND g.revoked_at IS NULL)`,
+    args: [...session.args, actor.company, actor.session.kind, actor.session.operator.role, actor.grant.role, actor.company, actor.session.operator.id, actor.grant.version],
   }
 }
 export async function actorFor(env: Bindings, session: Session, company: string): Promise<Actor> {
@@ -81,7 +81,14 @@ export async function actorFor(env: Bindings, session: Session, company: string)
     .bind(company, session.operator.id, ...s.args)
     .first<Record<string, unknown>>()
   if (!row) throw new PayrollError('payroll_access_denied', 403)
-  return { session, company, grant: decodeGrant(row) }
+  const actor = { session, company, grant: decodeGrant(row) }
+  const held = await env.DB.prepare("SELECT 1 FROM env_privacy_requests WHERE company_id=? AND status='held'").bind(company).first()
+  if (held) {
+    if (session.kind!=='native' || session.operator.role!=='owner' || actor.grant.role!=='owner' || session.operator.email.trim().toLowerCase()!==env.OWNER_EMAIL.trim().toLowerCase()) throw new PayrollError('retained_data_owner_required',403)
+    const audit=await auditStatement(env,actor,crypto.randomUUID(),'privacy.retained-access',company,actor.grant.version).run()
+    if (!audit.meta.changes) throw new PayrollError('authority_changed',409)
+  }
+  return actor
 }
 export function requireAction(actor: Actor, action: string, location?: string, field?: string) {
   if (

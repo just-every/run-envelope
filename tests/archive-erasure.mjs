@@ -12,6 +12,101 @@ export async function archiveErasure(context, fixture) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
   const audit = async () => (await (await call(company + '/audit')).json()).filter(event => event.action === 'privacy.worker.erased')
+  const invited=await call('/auth/invite',{email:'synthetic-envelope-privacy-viewer@example.com',displayName:'Synthetic custody viewer',role:'member'})
+  assert.equal(invited.status,202)
+  const invitation=new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&'))
+  const confirmed=await call('/auth/confirm',{token:invitation.searchParams.get('token')},{cookie:''})
+  assert.equal(confirmed.status,303)
+  const viewerCookie=confirmed.headers.get('set-cookie').split(';')[0]
+  const viewer=(await (await call('/auth/session',undefined,{cookie:viewerCookie})).json()).operator
+  const graphReceipts=[]
+  for(const graph of fixture.privacyGraphs) {
+    const base='/api/envelope/companies/'+graph.companyId,privacy=base+'/people/'+graph.personId+'/privacy'
+    const inventory=await (await call(privacy)).json()
+    assert.equal(inventory.status,'held')
+    assert.equal((await call(base+'/grants',{operatorId:viewer.id,version:0,role:'accountant',locations:['*'],fields:['tax','compensation','ssn'],actions:['records:read','private:read','export']})).status,200)
+    assert.equal((await call(base+'/people/'+graph.personId,undefined,{cookie:viewerCookie})).status,200,'current ordinary grant reads worker before the request')
+    for(const id of graph.objects) assert.ok(inventory.retained.some(r=>r.table==='env_workspace_versions'&&r.key.object_id===id),'the complete payroll and claim derivative is retained')
+    if(graph.kind==='payroll') {
+      for(const table of ['env_rate_proposals','env_run_drafts','env_firm_work','env_firm_work_history']) assert.ok(inventory.retained.some(r=>r.table===table),'rate, agent draft and firm history share the dependency graph')
+    }
+    if(graph.kind==='claim') assert.ok(inventory.retained.filter(r=>r.table==='env_workspace_versions'&&r.key.object_id===graph.claimId).length>=3,'initial claim request and later artifact versions share one erasure scope')
+    assert.equal((await call(privacy+'/request',{consent:true,fingerprint:inventory.fingerprint})).status,200)
+    for(const path of [base,base+'/people/'+graph.personId,base+'/people/'+graph.personId+'/private/ssn',base+'/export',base+'/pay-settings',base+'/people/'+graph.personId+'/allocations',base+'/people/'+graph.personId+'/hris',base+'/people/'+graph.personId+'/earnings-sources',base+'/people/'+graph.personId+'/leave',base+'/people/'+graph.personId+'/verification',base+'/people/'+graph.personId+'/industry',base+'/industry-returns',base+'/claims',base+'/drafts',base+'/providers',base+'/notices',base+'/grants',base+'/audit',base+'/setup',base+'/privacy-requests']) assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'held data denies every ordinary viewer read door')
+    const requests=await (await call(base+'/privacy-requests')).json()
+    assert.equal(requests.length,1);assert.equal(requests[0].status,'held')
+    graphReceipts.push({base,id:requests[0].id,graph,privacy,inventory})
+  }
+  const browserProof=async(state,url,expected,fail=false) => {
+    const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+    try {
+      const session=await browser.newContext({ignoreHTTPSErrors:true})
+      const separator=cookie.indexOf('=')
+      await session.addCookies([{name:cookie.slice(0,separator),value:cookie.slice(separator+1),url:origin,secure:true}])
+      const page=await session.newPage(),proof=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
+      await mkdir(proof,{recursive:true})
+      for(const width of [1440,390]) {
+        await page.setViewportSize({width,height:1000})
+        await page.goto(origin+url)
+        assert.match(await page.locator('main').innerText(),expected)
+        const details=page.locator('details').first()
+        if(await details.count()) {
+          await details.locator('summary').focus();await page.keyboard.press('Enter')
+          assert.equal(await details.getAttribute('open'),'','keyboard opens the exact retained field set')
+          assert.match(await details.innerText(),/Earliest release UTC/)
+          await page.keyboard.press('Enter')
+        }
+        if(fail) {
+          const form=page.locator('form[action$="/release"]')
+          await form.locator('details').first().locator('summary').click()
+          await form.locator('input[name="records"]').first().check()
+          await form.getByLabel('Lawful release reason').fill('Synthetic attempted release before legal classification')
+          await form.locator('input[name="consent"]').check()
+          await Promise.all([page.waitForURL(url=>url.pathname.endsWith('/privacy/release')),form.getByRole('button',{name:'Release selected holds'}).click()])
+          assert.match(await page.locator('[role="alert"]').innerText(),/hold not releasable/)
+          assert.match(await page.locator('main').innerText(),/No action completed/)
+        }
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,state+' fits '+width)
+        for(const control of await page.locator('button,a,summary').all()) if(await control.isVisible())assert.ok((await control.innerText()).trim(),'privacy controls have visible labels')
+        await page.keyboard.press('Tab');assert.notEqual(await page.evaluate(()=>document.activeElement.tagName),'BODY')
+        await page.screenshot({path:join(proof,'privacy-'+state+'-'+width+'.png'),fullPage:true})
+      }
+    } finally {await browser.close()}
+  }
+  await browserProof('empty',company.replace('/api/','/app/')+'/privacy-requests',/No erasure requests/)
+  for(const receipt of graphReceipts) {
+    const {base,privacy,inventory,graph}=receipt
+    await browserProof(graph.kind+'-held',privacy.replace('/api/','/app/'),/Local inventory: held/)
+    await browserProof(graph.kind+'-failed',privacy.replace('/api/','/app/'),/Local inventory: held/,true)
+    const select={fingerprint:inventory.fingerprint,records:inventory.retained.map(r=>r.id),consent:true,
+      legalBasis:'Synthetic reviewed statutory release; no active legal hold remains.',custodian:'Native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
+    assert.equal((await call(privacy+'/release',select)).status,409,'unclassified mixed data cannot be released')
+    assert.equal((await call(privacy+'/retain',select)).status,200)
+    assert.equal((await call(privacy+'/release',select)).status,200)
+    const started=Date.now(),erased=await call(base+'/people/'+graph.personId+'/erase',{version:inventory.version,...select})
+    assert.equal(erased.status,200,await erased.clone().text())
+    assert.ok(Date.now()-started<300000)
+    for(const path of [base+'/people/'+graph.personId,base+'/people/'+graph.personId+'/industry',base+'/people/'+graph.personId+'/verification'])assert.equal((await call(path)).status,404,'erased worker reads refuse')
+    if(graph.kind==='claim') {
+      assert.equal((await call(base+'/claims/'+graph.claimId)).status,404)
+      for(const id of graph.artifactIds)assert.equal((await call(base+'/claims/'+graph.claimId+'/artifacts/'+id)).status,404,'claim original bytes are absent')
+      assert.equal((await call(base+'/claims/import',graph.request)).status,409,'a retired claim request cannot recreate its encrypted originals')
+    } else {
+      assert.ok(!(await (await call(base+'/firm-work')).json()).some(r=>r.id===graph.workId))
+      assert.ok(!(await (await call(base+'/drafts')).json()).some(r=>r.id===graph.draftId))
+      const agentAudit=await (await call(base+'/agents/access')).json()
+      assert.ok(!agentAudit.some(r=>r.targetId===graph.draftId||r.target_id===graph.draftId),'permanent agent actions anonymize erased draft targets')
+      const returns=await (await call(base+'/industry-returns')).json()
+      assert.ok(!returns.some(r=>graph.objects.includes(r.id)))
+      assert.equal((await call(base+'/industry-returns/'+graph.objects[1]+'/download')).status,404)
+    }
+    const completed=await (await call(base+'/privacy-requests')).json()
+    assert.equal(completed[0].id,receipt.id);assert.equal(completed[0].status,'completed');assert.equal(completed[0].personId,null)
+    assert.ok(completed[0].recordsDeleted>10)
+    await browserProof(graph.kind+'-completed',base.replace('/api/','/app/')+'/privacy-requests',/completed/)
+    const events=await (await call(base+'/audit')).json()
+    assert.ok(!events.some(e=>[graph.personId,...graph.objects].includes(e.targetId)),'all erased graph audit targets are anonymous')
+  }
   const initial = await audit()
   const door = company + '/people/' + fixture.unusedId + '/erase'
   assert.equal((await call(door, { version: 1 })).status, 400, 'unused-worker erasure requires explicit owner consent')
@@ -43,6 +138,10 @@ export async function archiveErasure(context, fixture) {
   assert.match(held.boundary, /Downloaded copies and already-filed agency records are outside local recall/)
   assert.equal((await call(privacyDoor, undefined, {authorization:'Bearer ' + fixture.authority.agentToken})).status, 403)
   assert.equal((await call('/api/envelope/companies/' + fixture.companies[1] + '/people/' + fixture.privacyPersonId + '/privacy')).status, 404)
+  assert.equal((await call(privacyDoor+'/request',{consent:true,fingerprint:held.fingerprint})).status,200)
+  const scopedRead=await worker.fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+fixture.authority.agentToken},body:JSON.stringify({jsonrpc:'2.0',id:54,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0],personId:fixture.privacyPersonId}}})})
+  assert.equal(scopedRead.status,403,'a previously usable sponsored bearer cannot read retained company data')
+  await browserProof('loaded',privacyDoor.replace('/api/','/app/'),/Local inventory: held/)
   const selection = {fingerprint: held.fingerprint, records: held.retained.map(r => r.id), consent: true,
     legalBasis: 'Synthetic reviewed statutory retention release; no active legal hold remains.', custodian: 'Native payroll owner'}
   assert.equal((await call(privacyDoor + '/release', selection)).status, 409, 'an unclassified statutory hold cannot be released')
@@ -97,7 +196,7 @@ export async function archiveErasure(context, fixture) {
       await page.screenshot({path:join(proof,'privacy-before-'+width+'.png'),fullPage:true})
     }
     const started = Date.now()
-    const cascade = await call(company + '/people/' + fixture.privacyPersonId + '/erase', {version:1,consent:true,fingerprint:held.fingerprint})
+    const cascade = await call(company + '/people/' + fixture.privacyPersonId + '/erase', {version:1,consent:true,fingerprint:held.fingerprint,records:selection.records})
     assert.equal(cascade.status, 200, await cascade.clone().text())
     assert.ok((await cascade.json()).recordsDeleted >= 6)
     assert.ok(Date.now()-started < 300000, 'the committed synchronous cascade finishes inside five minutes')
@@ -116,6 +215,7 @@ export async function archiveErasure(context, fixture) {
     await session.close()
   } finally {await browser.close()}
   assert.equal((await call(company + '/people/' + fixture.retainedPersonId)).status,200,'unreleased payroll remains intact')
+  await browserProof('completed',company.replace('/api/','/app/')+'/privacy-requests',/completed/)
   assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/allocations/work', {id:fixture.privacyWorkId,version:0,day:'2026-10-19'})).status,404,'a stale worker source cannot resurrect its erased identity')
   const currentCompany = await (await call(company)).json()
   const replacement = await call(company + '/people', {name:'Synthetic later worker', locationId:currentCompany.people[0].locationId})
