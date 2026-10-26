@@ -96,3 +96,99 @@ declarations, proposals, notices and dispatch evidence do not authorize restored
 outbound work. Full populated restore proof remains ENV-053 work. Full calculated
 payroll, official-schema forged-filing refusals and authorized rail/sandbox
 proof remain outstanding; no production payroll readiness is claimed.
+
+## Versioned preparation REST API and CLI
+
+The supported preparation API is `/api/envelope/v1`. Use the installation's
+HTTPS origin and a sponsored bearer in `Authorization`; never send a human
+cookie. Browser requests must be same-origin. The same 120 requests per minute
+per credential applies across REST and MCP together. Responses are private and
+`no-store`. All reads, including HEAD, repeat current grant, sponsor, field,
+location, expiry, secret and custody checks. Revocation takes effect on the next
+fenced database operation, including an already opened request. A draft can be
+read only by the credential that prepared it; the owner's native proposal view
+remains separately authorized. Rotating a secret retains its credential ID.
+
+| Method and path below `/api/envelope/v1` | Input | Result and permission |
+| --- | --- | --- |
+| `GET /companies/:company/records` | Optional `limit` (1–100, default 100), `after` (last returned person ID) | `{records:[{id,name,locationId,version}],limit,next}`; `records:read` |
+| `POST /companies/:company/drafts` | JSON `{personId,minutes,periodStart,periodEnd,payDate,sourceRef,requestKey}` | `{id,status,approval,dispatch}`; `drafts:prepare` and compensation field |
+| `GET /companies/:company/drafts/:id` | No body or query | `{id,personId,personName,personVersion,rateId,hourlyCents,minutes,periodStart,periodEnd,payDate,sourceRef,stale,status,approval,dispatch}`; `drafts:read` and compensation field |
+
+Record pages are ordered by ascending immutable person ID. Pass `next` as
+`after` until `next` is null. This is a live authorized listing, not a snapshot:
+concurrent inserts before the cursor require restarting the listing; revoked
+locations disappear immediately. MCP `records.list` accepts the same optional
+`limit` and `after` arguments. Unknown or repeated query parameters are refused.
+
+Draft dates are real `YYYY-MM-DD` dates, period start must not exceed period end,
+and payday must be on or after period end. Minutes are integral 1–44,640.
+References are nonempty bounded strings: source 240 characters and request key
+120. Unknown input fields, including human or approval flags, are refused.
+The worker must be within the current location scope and have a reviewed rate
+at period start. The immutable proposal ID binds the retained person version,
+rate ID, dates, minutes and source. It is an hourly input proposal with no tax
+or net-pay calculation; bonus preparation, payroll reports, payment status,
+filing status and lifecycle webhooks are still unimplemented ENV-030 work.
+A missing family is never reported as a completed effect.
+
+Idempotency is durable and shared across both transports. Reusing the same
+`requestKey` under the same company and credential with exactly the same inputs
+returns the original proposal. Changed inputs return 409. After an interrupted
+request, retry with the same key; a new key intentionally creates another input
+proposal. Preparation always returns 201, including a successful replay.
+Preparation never grants approval or dispatch authority.
+
+Errors are `{error:code}` with 400 for invalid input, 401 for missing or invalid
+bearer, 403 for denied or revoked authority, 409 for changed sources or conflicting
+idempotency, 413 for input over 64,000 bytes, 415 for a non-JSON POST, 429 for
+rate limiting and 503 for unavailable required configuration. Scope checks precede
+record lookup. No retry can renew an expired grant. Wait for the next minute
+before retrying a 429; use bounded backoff for an unavailable installation and
+retain the same preparation key. Other refusals require correction or human
+reissuance. No cookies, provider credentials or human approval tokens are returned.
+
+Run the CLI from an installed checkout with Node 22.20.0. Provision
+`ENVELOPE_ORIGIN` and `ENVELOPE_TOKEN` through your secret manager; the CLI accepts
+no credential argument and prints no request headers. Do not put the bearer in
+shell history. The installation origin must use HTTPS; HTTP is allowed only for
+loopback sandbox installations. Redirects are refused and requests time out after
+30 seconds. Output is JSON on stdout; failures have a nonzero exit code and a
+redacted diagnostic on stderr. Treat successful output as private payroll data.
+
+```sh
+node scripts/envelope-cli.mjs records COMPANY_ID
+node scripts/envelope-cli.mjs records COMPANY_ID LAST_PERSON_ID
+node scripts/envelope-cli.mjs prepare COMPANY_ID < draft.json
+node scripts/envelope-cli.mjs status COMPANY_ID DRAFT_ID
+```
+
+Example `draft.json`, using IDs returned by the installation's records endpoint:
+
+```json
+{
+  "personId": "PERSON_ID",
+  "minutes": 480,
+  "periodStart": "2026-12-01",
+  "periodEnd": "2026-12-07",
+  "payDate": "2026-12-11",
+  "sourceRef": "synthetic-envelope-820",
+  "requestKey": "synthetic-envelope-821"
+}
+```
+
+For a local sandbox, follow the documented Base setup, create synthetic company
+and person records, review the effective rate as a human, then issue a short-lived
+credential in Agent credentials after fresh native proof. Use that installation's
+loopback origin. No provider connection or funded account is needed for this
+hourly preparation journey; it performs no payment, filing or external delivery.
+Do not use a production worker's identifiers in sandbox fixtures.
+
+Within v1, new optional response fields may be added; clients must ignore them.
+Required input or meaning changes require another major REST path and documented
+migration. MCP pagination now orders records by ID rather than display name;
+clients must use the returned cursor rather than assuming alphabetical order.
+The scoped credential isolation applies immediately to all transports. Future
+report, lifecycle, callback, download and execution doors inherit ENV-028,
+ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055 obligations. Nothing in
+this preparation interface is a passkey or MFA payroll-approval ceremony.

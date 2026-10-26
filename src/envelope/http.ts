@@ -144,6 +144,46 @@ export async function payrollResponse(
         status: 405,
         headers: { ...headers, allow: 'GET, HEAD, POST' },
       })
+    if (url.pathname.startsWith('/api/envelope/v1/')) {
+      if (request.headers.has('cookie'))
+        throw new PayrollError('ambiguous_authentication', 403)
+      if (request.headers.get('sec-fetch-site') === 'cross-site' ||
+          (request.headers.has('origin') && request.headers.get('origin') !== env.AUTH_ORIGIN))
+        throw new PayrollError('invalid_origin', 403)
+      const bearer = request.headers.get('authorization')
+      if (!bearer?.startsWith('Bearer '))
+        throw new PayrollError('agent_authentication_required', 401)
+      const agent = await AgentTools.authenticate(env, bearer.slice(7))
+      const opened = await agent.log('transport.rest.v1', agent.grant.id).run()
+      if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked', 403)
+      const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
+      if (!route) throw new PayrollError('agent_tool_denied', 403)
+      const [, companyId, resource, draftId] = route
+      if (resource === 'records' && !draftId && request.method !== 'POST') {
+        if ([...url.searchParams.keys()].some(k => !['limit', 'after'].includes(k)) ||
+            [...url.searchParams.keys()].some(k => url.searchParams.getAll(k).length !== 1))
+          throw new PayrollError('invalid_record_query')
+        const result = await agent.records({companyId,
+          ...(url.searchParams.has('limit') ? {limit: url.searchParams.get('limit')} : {}),
+          ...(url.searchParams.has('after') ? {after: url.searchParams.get('after')} : {}),
+        })
+        return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
+      }
+      if (resource === 'drafts' && !draftId && request.method === 'POST') {
+        if (url.search) throw new PayrollError('invalid_draft_input')
+        if (request.headers.get('content-type')?.split(';')[0] !== 'application/json')
+          throw new PayrollError('unsupported_content_type', 415)
+        const value = await input(request)
+        if (Object.hasOwn(value, 'companyId')) throw new PayrollError('invalid_draft_input')
+        return json(await agent.prepare({...value, companyId}), 201)
+      }
+      if (resource === 'drafts' && draftId && request.method !== 'POST') {
+        if (url.search) throw new PayrollError('invalid_draft_input')
+        const result = await agent.readDraft({companyId, draftId})
+        return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
+      }
+      throw new PayrollError('agent_tool_denied', 403)
+    }
     if (url.pathname === '/api/envelope/mcp') {
       if (request.method !== 'POST')
         return new Response(null, { status: 405, headers: { ...headers, allow: 'POST' } })
@@ -203,8 +243,8 @@ export async function payrollResponse(
             {
               name: 'records.list',
               action: 'records:read',
-              description: 'Read up to 100 scoped person records; no private values.',
-              properties: { companyId: { type: 'string' } },
+              description: 'Read a stable ID-ordered page of scoped person records; no private values. Use next as after.',
+              properties: { companyId: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 100 }, after: { type: 'string' } },
               required: ['companyId'],
             },
             {

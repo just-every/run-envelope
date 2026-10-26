@@ -7,7 +7,9 @@ Small-business payroll.
 Company-scoped payroll records, private text custody and explicit payroll grants
 are the first partial foundation. Calculation, payments and filings are not built.
 See [payroll records and access](docs/payroll-records.md) for the current doors and
-limits. [CONTRACT.md](CONTRACT.md) and [ACCEPTANCE.md](ACCEPTANCE.md) describe the
+limits. The [scoped preparation API and CLI](docs/payroll-agents.md) document
+the supported hourly input proposals, current authority checks and remaining gaps.
+[CONTRACT.md](CONTRACT.md) and [ACCEPTANCE.md](ACCEPTANCE.md) describe the
 remaining target and the Status table records proved and open behavior. The shared Lobby is at `/`; the Run
 site renders the root contract at `/contract`.
 

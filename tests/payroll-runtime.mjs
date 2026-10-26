@@ -3,6 +3,7 @@
 // review, read and denial uses the actual HTTP application and migrated D1.
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
+import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
@@ -921,6 +922,84 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     assert.equal(draftRead.minutes, 480)
     assert.equal(draftRead.hourlyCents, 2600)
     assert.equal(draftRead.approval, 'not-approved')
+    // Versioned REST and the documented CLI use the same real sponsored service.
+    const rest = (path, body, token = agentToken, extra = {}) =>
+      fetch(origin + '/api/envelope/v1/companies/' + a + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: {authorization: 'Bearer ' + token, origin, 'content-type': 'application/json', ...extra},
+        ...(body === undefined ? {} : {body: JSON.stringify(body)}),
+      })
+    const cli = (args, body, token = agentToken) => new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, ['scripts/envelope-cli.mjs', ...args], {
+        env: {...process.env, ENVELOPE_ORIGIN: origin, ENVELOPE_TOKEN: token},
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      let stdout = '', stderr = ''
+      child.stdout.on('data', data => {stdout += data})
+      child.stderr.on('data', data => {stderr += data})
+      child.on('error', reject)
+      child.on('close', code => resolve({code, stdout, stderr}))
+      child.stdin.end(body === undefined ? undefined : JSON.stringify(body))
+    })
+    const allRecords = (await toolData('records.list', {companyId: a})).records
+    assert.ok(allRecords.length > 1)
+    const firstPage = await (await rest('/records?limit=1')).json()
+    assert.equal(firstPage.records.length, 1)
+    assert.equal(firstPage.next, firstPage.records[0].id)
+    const paginated = [...firstPage.records]
+    let recordCursor = firstPage.next
+    while (recordCursor) {
+      const following = await toolData('records.list', {companyId: a, limit: 1, after: recordCursor})
+      assert.ok(!paginated.some(p => p.id === following.records[0]?.id), 'cursor never repeats a person')
+      paginated.push(...following.records)
+      assert.ok(paginated.length <= allRecords.length)
+      recordCursor = following.next
+    }
+    assert.deepEqual(paginated, allRecords, 'REST and MCP cursors cover every current scoped person once')
+    const listed = await cli(['records', a])
+    assert.equal(listed.code, 0, listed.stderr)
+    assert.deepEqual(JSON.parse(listed.stdout).records, allRecords)
+    const {companyId: omittedCompany, ...restInput} = draftInput
+    const prepared = await cli(['prepare', a], {...restInput, requestKey: 'synthetic-envelope-822'})
+    assert.equal(prepared.code, 0, prepared.stderr)
+    const cliDraft = JSON.parse(prepared.stdout)
+    assert.equal(cliDraft.status, 'uncalculated-proposal')
+    const replayed = await (await rest('/drafts', {...restInput, requestKey: 'synthetic-envelope-822'})).json()
+    assert.equal(replayed.id, cliDraft.id, 'CLI and REST share durable idempotency')
+    const status = await cli(['status', a, cliDraft.id])
+    assert.equal(status.code, 0, status.stderr)
+    const retained = JSON.parse(status.stdout)
+    assert.equal(retained.personVersion, draftRead.personVersion)
+    assert.equal(retained.hourlyCents, 2600)
+    assert.equal(retained.minutes, 480)
+    assert.equal(retained.approval, 'not-approved')
+    assert.equal(retained.dispatch, 'unavailable')
+    assert.deepEqual(retained, await toolData('draft.read', {companyId: a, draftId: cliDraft.id}))
+    const foreignClient = await data(company + '/agents', {...credentialInput, name: 'synthetic-envelope-823'}, cookie, 201)
+    const readOnlyClient = await data(company + '/agents', {
+      name:'synthetic-envelope-824', hours:1, actions:['records:read'], fields:[], locations:[ca.id],
+    }, cookie, 201)
+    const beforeTransportDenials = await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts')
+    await noWrite(async () => {
+    assert.equal((await rest('/drafts/' + cliDraft.id, undefined, foreignClient.token)).status, 403)
+    assert.equal((await mcp('draft.read', {companyId: a, draftId: cliDraft.id}, foreignClient.token)).status, 403)
+    assert.equal((await rest('/records?limit=101')).status, 400)
+    assert.equal((await rest('/records?limit=1&limit=2')).status, 400)
+    assert.equal((await rest('/records?fields=ssn')).status, 400)
+    assert.equal((await rest('/records', undefined, agentToken, {cookie})).status, 403)
+    assert.equal((await rest('/records', undefined, agentToken, {origin: 'https://foreign.invalid'})).status, 403)
+    assert.equal((await rest('/drafts', {...restInput, requestKey: 'synthetic-envelope-822', minutes:481})).status, 409)
+    assert.equal((await rest('/drafts', {...restInput, approved:true})).status, 400)
+    assert.equal((await rest('/drafts', {...restInput, companyId:b})).status, 400)
+    assert.equal((await rest('/drafts/' + draft.id + '/approve', {human:true})).status, 403)
+    assert.equal((await rest('/drafts', restInput, readOnlyClient.token)).status, 403)
+    assert.equal((await cli(['prepare', a], restInput, readOnlyClient.token)).code, 1)
+    const foreignResponse = await fetch(origin + '/api/envelope/v1/companies/' + b + '/records', {
+      headers: {authorization:'Bearer ' + agentToken},
+    })
+    assert.equal(foreignResponse.status, 403)
+    })
+    assert.deepEqual(await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts'), beforeTransportDenials)
     const businessSnapshot = async () =>
       sql(
         'SELECT (SELECT COUNT(*) FROM env_run_drafts) AS drafts,(SELECT COUNT(*) FROM env_agent_grants) AS grants,(SELECT COUNT(*) FROM env_agent_credentials) AS credentials',
@@ -1056,6 +1135,11 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       .getByRole('button', { name: 'Revoke ' + credentialInput.name, exact: true })
       .click()
     await page.waitForURL(origin + screen + '/agents')
+    assert.equal((await rest('/drafts/' + cliDraft.id)).status, 403)
+    const revokedCli = await cli(['status', a, cliDraft.id])
+    assert.equal(revokedCli.code, 1)
+    assert.equal(revokedCli.stdout, '')
+    assert.ok(!revokedCli.stderr.includes(agentToken))
     await noWrite(async () => {
       assert.equal(
         (
@@ -1072,71 +1156,73 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       )
     })
     assert.deepEqual(await businessSnapshot(), initialBusiness)
-    const racing = await data(
-      company + '/agents',
-      { ...credentialInput, name: 'synthetic-envelope-19' },
-      cookie,
-      201,
-    )
-    let streamController
-    const complete = JSON.stringify({
-      jsonrpc: '2.0',
-      id: 2,
-      method: 'tools/call',
-      params: {
-        name: 'draft.prepare',
-        arguments: { ...draftInput, requestKey: 'synthetic-envelope-20' },
-      },
-    })
-    const streaming = new ReadableStream({
-      start(controller) {
-        streamController = controller
-        controller.enqueue(new TextEncoder().encode(complete.slice(0, -1)))
-      },
-    })
-    const pending = fetch(origin + '/api/envelope/mcp', {
-      method: 'POST',
-      duplex: 'half',
-      headers: {
-        authorization: 'Bearer ' + racing.token,
-        origin,
-        'content-type': 'application/json',
-      },
-      body: streaming,
-    })
-    try {
-      let started = false
-      for (let attempt = 0; attempt < 50; attempt++) {
-        const logs = (await data(company + '/agents')).access
-        if (
-          logs.some((a) => a.credentialId === racing.id && a.action === 'transport.open')
-        ) {
-          started = true
-          break
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-      assert.equal(
-        started,
-        true,
-        'public access log proves authentication before the suspended body completes',
+    for (const transport of ['mcp', 'rest']) {
+      const racing = await data(
+        company + '/agents',
+        { ...credentialInput, name: 'synthetic-envelope-19' },
+        cookie,
+        201,
       )
-      const beforeRace = await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts')
-      await data(company + '/agents/' + racing.id + '/revoke', { version: 1 })
-      streamController.enqueue(new TextEncoder().encode(complete.slice(-1)))
-      streamController.close()
-      const refused = await pending
-      assert.equal(refused.status, 409, await refused.clone().text())
-      assert.deepEqual(
-        await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts'),
-        beforeRace,
-        'revocation during an authenticated in-flight request prevents the draft write',
-      )
-    } finally {
+      let streamController
+      const complete = JSON.stringify(transport === 'rest' ? {...restInput, requestKey:'synthetic-envelope-20'} : {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: {
+          name: 'draft.prepare',
+          arguments: { ...draftInput, requestKey: 'synthetic-envelope-20' },
+        },
+      })
+      const streaming = new ReadableStream({
+        start(controller) {
+          streamController = controller
+          controller.enqueue(new TextEncoder().encode(complete.slice(0, -1)))
+        },
+      })
+      const pending = fetch(origin + (transport === 'rest' ? '/api/envelope/v1/companies/' + a + '/drafts' : '/api/envelope/mcp'), {
+        method: 'POST',
+        duplex: 'half',
+        headers: {
+          authorization: 'Bearer ' + racing.token,
+          origin,
+          'content-type': 'application/json',
+        },
+        body: streaming,
+      })
       try {
+        let started = false
+        for (let attempt = 0; attempt < 50; attempt++) {
+          const logs = (await data(company + '/agents')).access
+          if (
+            logs.some((a) => a.credentialId === racing.id && a.action === (transport === 'rest' ? 'transport.rest.v1' : 'transport.open'))
+          ) {
+            started = true
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        }
+        assert.equal(
+          started,
+          true,
+          'public access log proves authentication before the suspended body completes',
+        )
+        const beforeRace = await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts')
+        await data(company + '/agents/' + racing.id + '/revoke', { version: 1 })
+        streamController.enqueue(new TextEncoder().encode(complete.slice(-1)))
         streamController.close()
-      } catch {}
-      await pending.catch(() => {})
+        const refused = await pending
+        assert.equal(refused.status, 409, await refused.clone().text())
+        assert.deepEqual(
+          await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts'),
+          beforeRace,
+          'revocation during an authenticated in-flight request prevents the draft write',
+        )
+      } finally {
+        try {
+          streamController.close()
+        } catch {}
+        await pending.catch(() => {})
+      }
     }
     const temporary = await data(
       company + '/agents',
@@ -1145,6 +1231,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       201,
     )
     await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${temporary.id}'`)
+    assert.equal((await rest('/records', undefined, temporary.token)).status, 403)
     assert.equal(
       (await mcp('records.list', { companyId: a }, temporary.token)).status,
       403,
@@ -1285,7 +1372,7 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       'PAYROLL-IDENTITY passed: single-use native sign-in and session-bound proof, sign-out/download revocation, expired-proof/client-flag bank and credential refusals, unavailable-mail refusal; full OIDC/MFA/form/release journeys remain unproved',
     )
     console.log(
-      'AGENT-DRAFTS passed: settings issuance, current sponsor, hashed secret, actual bank-custody bearer refusal without writes, company and location and action and field and provider denials, persisted reviewed-rate MCP draft, replay consistency, access attribution and in-flight revocation, sponsor removal/reinstatement and expiry; payroll dispatch remains unavailable',
+      'AGENT-DRAFTS passed: versioned REST, documented preparation and status CLI, stable scoped pagination, exact retained proposal, cross-credential refusal, shared idempotency, settings issuance, current sponsor, hashed secret, actual bank-custody bearer refusal without writes, company and location and action and field and provider denials, persisted reviewed-rate MCP draft, replay consistency, access attribution and in-flight revocation, sponsor removal and reinstatement and expiry; payroll dispatch remains unavailable',
     )
     const audit = await data(company + '/audit')
     for (const action of [

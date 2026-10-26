@@ -331,10 +331,15 @@ export class AgentTools {
   }
   async records(input: Input) {
     this.allow('records:read', input.companyId)
+    if (Object.keys(input).some(k => !['companyId', 'limit', 'after'].includes(k)))
+      throw new PayrollError('invalid_record_query')
+    const limit = input.limit === undefined ? 100 : integer(input.limit)
+    if (limit > 100) throw new PayrollError('invalid_record_query')
+    const after = input.after === undefined ? '' : text(input.after, 80)
     const f = this.fence(),
       l = this.location('location_id'),
       event = uuid()
-    const result = await this.env.DB.batch([
+    const result = await this.env.DB.batch<Record<string, unknown>>([
       this.env.DB.prepare(
         `INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at) SELECT ?,?,?,?,'records:read',?,? WHERE ${f.sql}`,
       ).bind(
@@ -347,11 +352,12 @@ export class AgentTools {
         ...f.args,
       ),
       this.env.DB.prepare(
-        `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) ORDER BY name,id LIMIT 100`,
-      ).bind(this.grant.company_id, ...l.args, ...f.args, event),
+        `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) AND id>? ORDER BY id LIMIT ?`,
+      ).bind(this.grant.company_id, ...l.args, ...f.args, event, after, limit + 1),
     ])
     if (!result[0].meta.changes) throw new PayrollError('agent_authority_revoked', 403)
-    return { records: result[1].results, limit: 100 }
+    const records = result[1].results.slice(0, limit)
+    return { records, limit, next: result[1].results.length > limit ? records.at(-1)?.id : null }
   }
   async prepare(input: Input) {
     this.allow('drafts:prepare', input.companyId)
@@ -433,6 +439,8 @@ export class AgentTools {
   }
   async readDraft(input: Input) {
     this.allow('drafts:read', input.companyId)
+    if (Object.keys(input).some(k => !['companyId', 'draftId'].includes(k)))
+      throw new PayrollError('invalid_draft_input')
     if (!JSON.parse(this.grant.fields).includes('compensation'))
       throw new PayrollError('agent_scope_denied', 403)
     const id = text(input.draftId),
@@ -442,14 +450,14 @@ export class AgentTools {
       this.log(
         'drafts:read',
         id,
-        `EXISTS(SELECT 1 FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.id=? AND ${l.sql})`,
-        [this.grant.company_id, id, ...l.args],
+        `EXISTS(SELECT 1 FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.id=? AND d.credential_id=? AND ${l.sql})`,
+        [this.grant.company_id, id, this.grant.id, ...l.args],
       ),
       this.env.DB.prepare(
         `SELECT d.id,d.person_id AS personId,p.name AS personName,d.person_version AS personVersion,d.rate_id AS rateId,r.hourly_cents AS hourlyCents,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,d.source_ref AS sourceRef,(p.version!=d.person_version) AS stale
     FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id JOIN env_rate_proposals r ON r.company_id=d.company_id AND r.id=d.rate_id
-    WHERE d.company_id=? AND d.id=? AND ${l.sql} AND ${f.sql}`,
-      ).bind(this.grant.company_id, id, ...l.args, ...f.args),
+    WHERE d.company_id=? AND d.id=? AND d.credential_id=? AND ${l.sql} AND ${f.sql}`,
+      ).bind(this.grant.company_id, id, this.grant.id, ...l.args, ...f.args),
     ])
     if (!result[0].meta.changes || !result[1].results[0])
       throw new PayrollError('draft_or_authority_unavailable', 403)
