@@ -124,7 +124,8 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       await refused(door+'/passkeys/register',{id,response},'human_challenge_stale',humans[who]?.cookie??cookie)
     }
     const ownerNow=Date.now()
-    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) SELECT '${randomBytes(8).toString('hex')}','${randomBytes(16).toString('hex')}',s.id,s.operator_id,s.operator_version,'payroll:sensitive','/app',${ownerNow},${ownerNow+600000},${ownerNow} FROM oa_sessions s WHERE s.operator_id='${owner}' AND s.revoked_at IS NULL`)
+    const ownerSessionHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1])
+    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) SELECT '${randomBytes(8).toString('hex')}','${randomBytes(16).toString('hex')}',s.id,s.operator_id,s.operator_version,'payroll:sensitive','/app',${ownerNow},${ownerNow+600000},${ownerNow} FROM oa_sessions s WHERE s.operator_id='${owner}' AND s.token_hash='${ownerSessionHash}' AND s.revoked_at IS NULL`)
     for(const who of ['owner','approver-a']) await enroll(who)
     const proof=async(r,who)=>({gesture:'approve-exact-run',humanChallenge:r.humanProof.id,
       assertion:await credentialResponse(pages[who],r.humanProof.options)})
