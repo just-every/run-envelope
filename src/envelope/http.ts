@@ -10,6 +10,8 @@ import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
 import { claimsResponse } from './claims/http'
 import { claimsMultipartInput } from './claims/form-input'
+import { NewHireReporting, coverage as newHireCoverage } from './people/new-hire-reporting'
+import { newHirePage, coveragePage, electionContent } from './people/new-hire-pages'
 import { HrisHires } from './people/hris-hires'
 import { hirePage } from './people/hire-pages'
 import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
@@ -423,7 +425,28 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!ui && tail.length === 1 && tail[0] === 'operations' && !post) {
+      if (tail.join('/') === 'new-hire-coverage' && !post) {
+        const reporting=new NewHireReporting(new WorkspaceStore(records));reporting.owner(actor)
+        const result=newHireCoverage()
+        response=ui?coveragePage(session,companies,actor,result):json(result)
+      } else if (tail[0]==='new-hire-elections') {
+        const reporting=new NewHireReporting(new WorkspaceStore(records)), store=reporting.store
+        reporting.owner(actor)
+        if(tail.length===1 && post) {const result=await reporting.election(actor,value);response=ui?redirect(base+'/new-hire-elections'):json(result,201)}
+        else if(tail.length===3 && tail[2]==='review' && !post) {const result=await store.review(actor,'new-hire-election',tail[1]);response=ui?electionContent(session,companies,actor,await reporting.elections(actor),result):json(result)}
+        else if(tail.length===3 && tail[2]==='approve' && post) {const result=await store.decide(actor,'new-hire-election',tail[1],value);response=ui?redirect(base+'/new-hire-elections'):json(result)}
+        else if(tail.length===1 && !post) response=ui?electionContent(session,companies,actor,await reporting.elections(actor)):json(await reporting.elections(actor))
+        else throw new PayrollError('not_found',404)
+      } else if (tail[0]==='people' && tail[2]==='new-hire-reports') {
+        const reporting=new NewHireReporting(new WorkspaceStore(records)),person=await records.person(actor,tail[1]),id=tail[3], action=tail[4],back=base+'/people/'+person.id+'/new-hire-reports'
+        if(tail.length===3 && !post) response=ui?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id)):json(await reporting.reports(actor,person.id))
+        else if(tail.length===3 && post) {const result=await reporting.save(actor,person.id,value);response=ui?redirect(back):json(result,201)}
+        else if(tail.length===5 && action==='review' && !post) {const review=await reporting.review(actor,person.id,id);response=ui?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id),review):json(review)}
+        else if(tail.length===5 && post) {
+          const result=action==='approve'?await reporting.approve(actor,person.id,id,value):action==='repair'?await reporting.save(actor,person.id,value,id):action==='response'?await reporting.response(actor,person.id,id,value):action==='transfer'?await reporting.transfer(actor,person.id,id,value):(()=>{throw new PayrollError('not_found',404)})()
+          response=ui?(action==='transfer'?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id),undefined,result as Awaited<ReturnType<NewHireReporting['transfer']>>):redirect(back)):json(result)
+        } else throw new PayrollError('not_found',404)
+      } else if (!ui && tail.length === 1 && tail[0] === 'operations' && !post) {
         response = json(await new Lifecycle(records).health(actor))
       } else if (!ui && tail[0] === 'webhooks') {
         const lifecycle = new Lifecycle(records)

@@ -18,7 +18,7 @@ export function createEnvelopeArchivePolicy({ recordKey = () =>
     product: ['just-every', 'envelope'].join('/'),
     extraPayloads: { 'envelope-source-editions': sourceEditionPayload },
     includeTables: [...identityHistory],
-    excludeTables: ['env_review_presentations', 'env_passkeys', 'env_human_challenges', 'oa_sessions', 'oa_tokens', 'oa_credentials',
+    excludeTables: ['env_new_hire_authority', 'env_review_presentations', 'env_passkeys', 'env_human_challenges', 'oa_sessions', 'oa_tokens', 'oa_credentials',
       'oa_step_up_challenges', 'oa_policy_approvals', 'oc_idp_grants',
       'env_external_providers', 'env_agent_credentials', 'env_webhook_keys', 'env_grants',
       'env_rate_reviews', 'env_workspace_reviews', 'env_notice_reviews',
