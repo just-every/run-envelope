@@ -15,7 +15,16 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
  try {
  const context=await browser.newContext();const [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
- const capture=async(label,target=screen,prepare)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+target);await page.locator('h1').waitFor();if(prepare) await prepare();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(await page.locator('button,a').evaluateAll(controls=>controls.every(control=>control.textContent.trim().length>1)),true,'Reporting controls have visible labels');await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement?.tagName==='A'));await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})}}
+ const capture=async(label,target=screen,prepare)=>{
+  for(const width of [1440,390]) {
+   await page.setViewportSize({width,height:1000});await page.goto(origin+target);await page.locator('h1').waitFor()
+   await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement?.tagName==='A'))
+   if(prepare) await prepare()
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+   assert.equal(await page.locator('button,a').evaluateAll(controls=>controls.every(control=>control.textContent.trim().length>1)),true,'Reporting controls have visible labels')
+   await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
+  }
+ }
  await capture('empty')
  await capture('coverage',base.replace('/api/','/app/')+'/new-hire-coverage')
  await capture('election-empty',base.replace('/api/','/app/')+'/new-hire-elections')

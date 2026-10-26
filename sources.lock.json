@@ -2950,7 +2950,7 @@
       "executable": false
     },
     "tests/new-hire-runtime.mjs": {
-      "sha256": "910f15d646ae1af1ab783e21d1878cbb8da63918637ddb58941b11344cb24068",
+      "sha256": "c90c59a18277e069cc99ac095cf442662f06200a096d64f9b6e0c93b8f66d733",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
