@@ -15,7 +15,7 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
  try {
  const context=await browser.newContext();const [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
- const capture=async(label,target=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+target);await page.locator('h1').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(await page.locator('button,a').evaluateAll(controls=>controls.every(control=>control.textContent.trim().length>1)),true,'Reporting controls have visible labels');await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement?.tagName==='A'));await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})}}
+ const capture=async(label,target=screen,prepare)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+target);await page.locator('h1').waitFor();if(prepare) await prepare();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(await page.locator('button,a').evaluateAll(controls=>controls.every(control=>control.textContent.trim().length>1)),true,'Reporting controls have visible labels');await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement?.tagName==='A'));await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})}}
  await capture('empty')
  await capture('coverage',base.replace('/api/','/app/')+'/new-hire-coverage')
  await capture('election-empty',base.replace('/api/','/app/')+'/new-hire-elections')
@@ -124,7 +124,12 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
  console.log('Directory matrix executed '+cases+' hire and rehire cases; official transport evidence remains explicitly incomplete.')
  const afterMatrix=await data(base+'/new-hire-coverage');assert.equal(afterMatrix.complete,false,'Human-attested confirmations cannot certify nationwide execution');assert.equal(afterMatrix.passing,51)
  await capture('state-fields',screen+'?directory=IN')
- await capture('pennsylvania-fields',screen+'?directory=PA');await capture('new-hampshire-fields',screen+'?directory=NH')
+ await capture('pennsylvania-fields',screen+'?directory=PA');await capture('new-hampshire-fields',screen+'?directory=NH',async()=>{
+  for(const [field,value] of Object.entries({hireDate:'2026-07-01',employeeFirstName:'Alexandermichaelchristopherbenjamin',employeeLastName:'Montgomerywellingtonfitzgerald',employeeAddress:'1 Synthetic Street, Concord NH 03301',employeeSsn:input.employeeSsn,employerName:'Synthetic Ohio employer',employerAddress:'2 Synthetic Street, Concord NH 03301',employerFein:input.employerFein,stateEmployerId:optionalSourceValues.stateEmployerId,workerType:'employee'})) {
+   await page.locator('input[name="'+field+'"]').fill(value)
+   assert.equal(await page.locator('input[name="'+field+'"]').inputValue(),value,'New Hampshire form preserves entered '+field)
+  }
+ })
  await capture('person-navigation',base.replace('/api/','/app/')+'/people/'+person.id)
 
  assert.equal((await call(door,undefined,'')).status,401)

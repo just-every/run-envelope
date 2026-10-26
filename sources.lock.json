@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "cd41c76cf91f8f30aa2c410a71fa65aead6c4858a9e6dff57322d235039ba347",
+      "sha256": "22bb0e78729dbdba6d5d48e53ccd624d1ba204a2aceb151eda15dae77abda6ac",
       "executable": false
     },
     "AGENTS.md": {
@@ -2950,7 +2950,7 @@
       "executable": false
     },
     "tests/new-hire-runtime.mjs": {
-      "sha256": "db326041c7e56810b2fda4c3ba2748fa4ae45aeae87a5eedf175475d86e2d590",
+      "sha256": "910f15d646ae1af1ab783e21d1878cbb8da63918637ddb58941b11344cb24068",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
