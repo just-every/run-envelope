@@ -110,7 +110,8 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
   }
  }
  assert.equal(cases,102)
- console.log('Directory matrix executed '+cases+' hire and rehire cases; unmapped directories remain named failures.')
+ console.log('Directory matrix executed '+cases+' hire and rehire cases; official transport evidence remains explicitly incomplete.')
+ const afterMatrix=await data(base+'/new-hire-coverage');assert.equal(afterMatrix.complete,false,'Human-attested confirmations cannot certify nationwide execution');assert.equal(afterMatrix.passing,51)
  await capture('state-fields',screen+'?directory=IN')
  await capture('pennsylvania-fields',screen+'?directory=PA');await capture('new-hampshire-fields',screen+'?directory=NH')
  await capture('person-navigation',base.replace('/api/','/app/')+'/people/'+person.id)

@@ -406,7 +406,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Judged from the code and tests at commit `ac47cc37ede33b3c6f1124d559e7a62b62c38f67` (27 October 2026). The status includes the ENV-017 candidate increment evidenced below. Status rows retain their cited implementation evidence. The CT scope ruling of 26 October 2026 changes no clause status and supplies no implementation or release-readiness proof.
+Judged from the code and tests at commit `3f8f76b738f7a1e1e2b372ce3d1abb97087fbcec` (27 October 2026). The status includes the ENV-017 candidate increment evidenced below. Status rows retain their cited implementation evidence. The CT scope ruling of 26 October 2026 changes no clause status and supplies no implementation or release-readiness proof.
 
 No clause is complete payroll or production readiness.
 
