@@ -38,7 +38,7 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
  assert.equal((await data(door)).find(r=>r.id===boundary.id).overdue,true)
  const report=await data(door,input,201),item=door+'/'+report.id
  assert.equal((await data(door,input,201)).replayed,true)
- let row=(await data(door))[0];assert.equal(row.data.dueOn,'2026-01-21');assert.equal(row.overdue,true);assert.ok(row.data.repairOwner)
+ let row=(await data(door)).find(r=>r.id===report.id);assert.equal(row.data.dueOn,'2026-01-21');assert.equal(row.overdue,true);assert.ok(row.data.repairOwner)
  await data(item+'/transfer',{version:1},409)
  const foreign=await data('/api/envelope/companies',{name:'Synthetic foreign employer',ein:'00-0001718'},201)
  await data('/api/envelope/companies/'+foreign.id+'/people/'+person.id+'/new-hire-reports',undefined,404)
@@ -57,7 +57,7 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
  await page.waitForURL(origin+screen)
  const repaired=await data(item+'/review');await data(item+'/approve',{version:repaired.version,reviewToken:repaired.reviewToken});await data(item+'/transfer',{version:4})
  await data(item+'/response',{version:5,receiptId:'synthetic-envelope-1718',response:'accepted',reportingDate:'2026-01-23',agencyResponse:'Synthetic Ohio portal confirmation retained by owner.'})
- row=(await data(door))[0];assert.equal(row.data.status,'accepted');assert.equal(row.data.history.length,2);assert.equal(row.overdue,false)
+ row=(await data(door)).find(r=>r.id===report.id);assert.equal(row.data.status,'accepted');assert.equal(row.data.history.length,2);assert.equal(row.overdue,false)
  await capture('accepted')
  const cross=await data(door,{...input,eventType:'rehire',hireDate:'2026-08-01',workState:'CA'},201),crossDoor=door+'/'+cross.id
  const crossReview=await data(crossDoor+'/review');await data(crossDoor+'/approve',{version:crossReview.version,reviewToken:crossReview.reviewToken})
@@ -86,13 +86,25 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
   const worker=await data(base+'/people',{name:'Synthetic '+entry.name+' employee',locationId:location.id},201),matrixDoor=base+'/people/'+worker.id+'/new-hire-reports'
   for(const eventType of ['hire','rehire']) {
    const month=eventType==='hire'?'01':'07',fields=Object.fromEntries(entry.requiredFields.map(k=>[k,input[k] ?? optionalSourceValues[k]])),payload={...fields,eventType,state:entry.code,workState:entry.code,hireDate:'2026-'+month+'-01'}
-   const created=await data(matrixDoor,payload,201),path=matrixDoor+'/'+created.id
+   if(entry.code==='PA') {
+    await data(matrixDoor,{...payload,employerContactPhone:''},400)
+    await data(matrixDoor,{...payload,employeeAddress:'PO Box 1, Harrisburg PA 17101'},400)
+    await data(matrixDoor,{...payload,employerAddress:'PO Box 2, Harrisburg PA 17101'},400)
+   }
+   if(entry.code==='NH') {
+    await data(matrixDoor,{...payload,stateEmployerId:''},400)
+    await data(matrixDoor,{...payload,workerType:'contractor'},409)
+    await data(matrixDoor,{...payload,employeeAddress:'PO Box 1, Concord NH 03301'},400)
+   }
+   const created=await data(matrixDoor,{...payload,employeeDateOfBirth:'1990-01-01'},201),path=matrixDoor+'/'+created.id
    const saved=(await data(matrixDoor)).find(r=>r.id===created.id)
    assert.equal(saved.data.dueOn,'2026-'+month+'-'+String((goldenDays[entry.code] ?? 20)+1).padStart(2,'0'),entry.name+' deadline')
    const exact=await data(path+'/review');await data(path+'/approve',{version:exact.version,reviewToken:exact.reviewToken})
    const edge=await data(path+'/transfer',{version:1})
    assert.deepEqual(Object.keys(edge.fields).sort(),[...entry.requiredFields,'hireDate',...(entry.includeWorkState?['stateOfHire']:[])].sort(),entry.name+' minimal schema fields')
    assert.equal(edge.directoryUrl,entry.directoryUrl);assert.equal(edge.submissionClaimed,false)
+   if(entry.code==='PA') {assert.equal(edge.fields.employerContactPhone,'6145550100');assert.equal(edge.fields.stateOfHire,'PA');assert.equal(Object.hasOwn(edge.fields,'employeeDateOfBirth'),false)}
+   if(entry.code==='NH') {assert.equal(edge.directoryUrl,'https://www2.nhes.nh.gov/webtax/');assert.equal(edge.fields.workerType,'employee');assert.equal(edge.fields.stateEmployerId,optionalSourceValues.stateEmployerId)}
    await data(path+'/response',{version:2,receiptId:'synthetic-envelope-matrix-'+entry.code+'-'+eventType,response:'accepted',reportingDate:'2026-'+month+'-02',agencyResponse:'Synthetic observed portal confirmation at the directory boundary'})
    assert.equal((await data(matrixDoor)).find(r=>r.id===created.id).data.status,'accepted');cases++
   }
