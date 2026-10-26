@@ -439,7 +439,7 @@ export async function payrollResponse(
         else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='new-hire-reports') {
         const reporting=new NewHireReporting(new WorkspaceStore(records)),person=await records.person(actor,tail[1]),id=tail[3], action=tail[4],back=base+'/people/'+person.id+'/new-hire-reports'
-        if(tail.length===3 && !post) response=ui?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id)):json(await reporting.reports(actor,person.id))
+        if(tail.length===3 && !post) response=ui?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id),undefined,undefined,url.searchParams.get('directory') ?? 'OH',url.searchParams.get('repair') ?? undefined):json(await reporting.reports(actor,person.id))
         else if(tail.length===3 && post) {const result=await reporting.save(actor,person.id,value);response=ui?redirect(back):json(result,201)}
         else if(tail.length===5 && action==='review' && !post) {const review=await reporting.review(actor,person.id,id);response=ui?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id),review):json(review)}
         else if(tail.length===5 && post) {
