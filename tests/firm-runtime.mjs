@@ -1,3 +1,4 @@
+import { credentialResponse } from './human-proof-fixture.mjs'
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -29,12 +30,27 @@ export async function firmJourney(context) {
   assert.equal(altered.outcomes[0].error,'preparation_key_reused')
   const run=result.outcomes[0], runPath=first.base+'/pay-settings/earnings-run/'+run.id
   const review=await data(runPath+'/review',undefined,200,people.firm.cookie)
-  await data(runPath+'/approve',{version:review.version,reviewToken:review.reviewToken},200,people.firm.cookie)
+  const secondRunPath=second.base+'/pay-settings/earnings-run/'+result.outcomes[1].id
+  const proofBrowser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  try {
+    const context=await proofBrowser.newContext(), page=await context.newPage()
+    await context.addCookies([{name:people.firm.cookie.split('=')[0],value:people.firm.cookie.split('=')[1],url:origin}])
+    await page.goto(origin+runPath.replace('/api/','/app/')+'/review')
+    const cdp=await context.newCDPSession(page)
+    await cdp.send('WebAuthn.enable')
+    await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}})
+    const now=Date.now()
+    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) SELECT 'synthetic-envelope-firm-passkey','synthetic-envelope-firm-passkey',s.id,s.operator_id,s.operator_version,'payroll:sensitive','/app',${now},${now+600000},${now} FROM oa_sessions s WHERE s.operator_id='${people.firm.id}' AND s.revoked_at IS NULL LIMIT 1`)
+    const registerDoor=first.base+'/pay-settings/passkeys'
+    const enrollment=await data(registerDoor+'/options',{},200,people.firm.cookie)
+    await data(registerDoor+'/register',{id:enrollment.id,response:await credentialResponse(page,enrollment.options,true)},200,people.firm.cookie)
+    await data(runPath+'/approve',{version:review.version,reviewToken:review.reviewToken,gesture:'approve-exact-run',humanChallenge:review.humanProof.id,assertion:await credentialResponse(page,review.humanProof.options)},200,people.firm.cookie)
+
   assert.equal((await call(second.base+'/pay-settings/earnings-run/'+run.id+'/approve',{version:review.version,reviewToken:review.reviewToken},people.firm.cookie)).status,404)
   assert.equal((await call(clients[19].base+'/pay-settings/earnings-run/'+clients[19].run.id+'/review',undefined,people.firm.cookie)).status,403)
-  const secondRunPath=second.base+'/pay-settings/earnings-run/'+result.outcomes[1].id
   const secondReview=await data(secondRunPath+'/review',undefined,200,people.firm.cookie)
-  await data(secondRunPath+'/approve',{version:secondReview.version,reviewToken:secondReview.reviewToken},200,people.firm.cookie)
+  await data(secondRunPath+'/approve',{version:secondReview.version,reviewToken:secondReview.reviewToken,gesture:'approve-exact-run',humanChallenge:secondReview.humanProof.id,assertion:await credentialResponse(page,secondReview.humanProof.options)},200,people.firm.cookie)
+  } finally {await proofBrowser.close()}
   const before=(await sql('SELECT COUNT(*) AS n FROM env_run_approvals'))[0].n
   const blocked=await call(runPath+'/release',{version:review.version},people.firm.cookie)
   assert.equal(blocked.status,409);assert.equal((await blocked.json()).error,'run_not_payable')

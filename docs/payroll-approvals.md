@@ -39,7 +39,7 @@ one person approves each run. Several current policies apply the lowest threshol
 
 GET `/earnings-run/{id}/review` returns the latest version with a one-use review
 token bound to this session, operator and grant version for ten minutes. POST
-`/earnings-run/{id}/approve` with `version` and `reviewToken` records one approval
+`/earnings-run/{id}/approve` with `version`, `reviewToken` and the distinct human proof described below records one approval
 row: approver, role, grant version, session, time, content digest and known debit,
 plus one `run.approved` audit event. The write repeats every binding: latest
 version, pinned sources and collections, bank-record versions and the review.
@@ -69,3 +69,51 @@ restored version with identical content needs fresh approval. Approval is a huma
 decision on an exact version, never payment authority. Rail delivery,
 cancellation before the rail's deadline and race reconciliation remain ENV-034
 and ENV-035 work.
+
+## Distinct human verification
+
+The existing exact review now requires a separate explicit approval gesture and
+fresh action proof. Its `humanProof` contains a five-minute challenge bound to
+the current origin, session, operator version, company, grant, review token,
+run version and content digest. POST approval additionally supplies
+`gesture: "approve-exact-run"`, `humanChallenge` and `assertion`. Model text,
+ordinary confirmation, a human flag and a session cookie alone cannot approve.
+The same checks repeat inside the atomic approval write; successful proof is
+consumed there. Earlier review-only decisions remain historical and do not count;
+retain a new run version before obtaining fresh approval.
+
+The native review uses WebAuthn with required user verification and presence.
+The person presses **Approve this exact run version** and completes their
+passkey verification. Registration uses POST `/passkeys/options` and
+`/passkeys/register` under pay settings, requires current approval permission
+and fresh Base email proof, and records an audit event. Registration verifies
+the browser origin and relying-party identifier; it does not itself approve.
+Authenticator public keys are pinned to the operator version. Individual key
+management and recovery remain open; changing the operator version invalidates
+its old keys. No authenticator secret is held by Envelope.
+
+An API caller may instead submit `assertion: {idToken}` from the currently
+linked Auth issuer. Verification uses the pinned signing keys and algorithms,
+exact issuer and audience, the challenge as OIDC `nonce`, current token times,
+a fresh `auth_time` and an `amr` containing `mfa`. Its subject must already map to
+the authenticated human; a matching email alone cannot bind a new identity.
+Provider disable, unlink or changed pin refuses. The approval transaction repeats
+the identity and link checks. Browser acquisition of this provider proof remains
+open; the native browser path uses a passkey. The committed journey supplies
+signed OIDC Core ID-token schema fixtures at this boundary, not live receipts.
+
+MCP `run.review` accepts `{companyId, runId}` with current `drafts:read`,
+compensation access and all locations. It returns an exact-version reference
+link, never an approval token or a human session. Opening it still requires a
+separate human sign-in and current approval grant. The reference binds the
+presenting credential and its version; rotation, revocation, expiry, sponsor
+changes or a changed run invalidate it. Approval records `presentingClient`
+separately from `approverId`, with `proofMethod` set to `passkey-uv` or
+`oidc-mfa`. The native client is recorded as `native-envelope`. Presenting a
+review never grants the preparer approval or release powers.
+
+Passkeys, challenges and presentation links are installation-local and excluded
+from archives. Run-linked challenge and presentation rows participate in the
+existing foreign-key custody graph. This does not prove all archive, erasure or
+future transport cases. Genuine bonus preparation, complete calculation, payable
+release, bank verification and rail cancellation remain outside this proof.

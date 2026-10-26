@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
+import { credentialResponse } from './human-proof-fixture.mjs'
 import { chromium } from '@playwright/test'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
@@ -103,12 +104,31 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
   const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] })
   try {
     const contexts = {}
-    for (const [who, value] of [['owner', cookie], ['approver-b', humans['approver-b'].cookie]]) {
+    for (const [who, value] of [['owner', cookie], ['approver-a', humans['approver-a'].cookie], ['approver-b', humans['approver-b'].cookie]]) {
       contexts[who] = await browser.newContext()
       const [name, token] = value.split('=')
       await contexts[who].addCookies([{ name, value: token, url: origin }])
     }
-    const pages = { owner: await contexts.owner.newPage(), 'approver-b': await contexts['approver-b'].newPage() }
+    const pages = Object.fromEntries(await Promise.all(Object.entries(contexts).map(async([who,context])=>[who,await context.newPage()])))
+    const authenticators={}
+    for(const [who,page] of Object.entries(pages)) {
+      const cdp=await contexts[who].newCDPSession(page)
+      await cdp.send('WebAuthn.enable')
+      authenticators[who]={cdp,...await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}})}
+      await page.goto(origin+screen)
+    }
+    const enroll=async who=>{
+      const {id,options}=await data(door+'/passkeys/options',{},200,humans[who]?.cookie??cookie)
+      const response=await credentialResponse(pages[who],options,true)
+      await data(door+'/passkeys/register',{id,response},200,humans[who]?.cookie??cookie)
+      await refused(door+'/passkeys/register',{id,response},'human_challenge_stale',humans[who]?.cookie??cookie)
+    }
+    const ownerNow=Date.now()
+    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) SELECT '${randomBytes(8).toString('hex')}','${randomBytes(16).toString('hex')}',s.id,s.operator_id,s.operator_version,'payroll:sensitive','/app',${ownerNow},${ownerNow+600000},${ownerNow} FROM oa_sessions s WHERE s.operator_id='${owner}' AND s.revoked_at IS NULL`)
+    for(const who of ['owner','approver-a']) await enroll(who)
+    const proof=async(r,who)=>({gesture:'approve-exact-run',humanChallenge:r.humanProof.id,
+      assertion:await credentialResponse(pages[who],r.humanProof.options)})
+
     const folder = process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
     const capture = async (label, path, who = 'owner') => {
       const page = pages[who]
@@ -139,6 +159,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     const savedGrant = (await data(base + '/grants')).find(g => g.operatorId === humans['approver-b'].id)
     assert.deepEqual(JSON.parse(savedGrant.actions).sort(), ['pay:approve', 'records:read'])
     await capture('payroll-grant-powers-saved', grantsScreen)
+    await enroll('approver-b')
 
     // The owner alone sets the two-person threshold, through exact review.
     const policy = { id: 'synthetic-envelope-340', version: 0, name: 'Two people from $300', secondApprovalAtCents: 30000 }
@@ -158,7 +179,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     const review = (id, who) => data(door + '/earnings-run/' + id + '/review', undefined, 200, humans[who]?.cookie ?? cookie)
     const approve = async (id, who) => {
       const r = await review(id, who)
-      return data(door + '/earnings-run/' + id + '/approve', { version: r.version, reviewToken: r.reviewToken }, 200, humans[who]?.cookie ?? cookie)
+      return data(door + '/earnings-run/' + id + '/approve', { version: r.version, reviewToken: r.reviewToken, ...await proof(r,who) }, 200, humans[who]?.cookie ?? cookie)
     }
     const release = (id, version, error, extra = {}) => refused(door + '/earnings-run/' + id + '/release', { version, ...extra }, error)
 
@@ -184,7 +205,22 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.equal((await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='run.reviewed'"))[0].n, reviewAuditBefore + 1)
     assert.doesNotMatch(JSON.stringify(sensitiveRead), /40000|synthetic-envelope-bank|reviewToken|cipher/)
     assert.ok((await data(base + '/audit')).some(e => e.action === 'workspace.approval-policy.reviewed' && e.targetId === policy.id && e.version === 1))
-    await data(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 200, humans['approver-a'].cookie)
+    const firstBody={version,reviewToken:firstReview.reviewToken}
+    for(const extra of [{yes:'yes'},{human:true,approved:true},{confirmation:true},{gesture:'approve-exact-run'}])
+      await refused(door+'/earnings-run/'+waRun+'/approve',{...firstBody,...extra},'human_step_up_required',humans['approver-a'].cookie,{},403)
+    const firstProof=await proof(firstReview,'approver-a')
+    const earlierToken=randomBytes(32).toString('base64url'), earlierHash=await hashToken(settings.SESSION_SECRET,'session',earlierToken), earlierNow=Date.now()
+    await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('synthetic-envelope-earlier-session','${earlierHash}','${humans['approver-a'].id}',1,'native',${earlierNow-60000},${earlierNow+3600000})`)
+    await refused(door+'/earnings-run/'+waRun+'/approve',{...firstBody,...firstProof},'review_stale',localCookieName('operator_session_local',origin)+'='+earlierToken)
+    const badOrigin=structuredClone(firstProof)
+    const clientData=JSON.parse(Buffer.from(badOrigin.assertion.response.clientDataJSON,'base64url'))
+    clientData.origin='https://foreign.example.com'
+    badOrigin.assertion.response.clientDataJSON=Buffer.from(JSON.stringify(clientData)).toString('base64url')
+    await refused(door+'/earnings-run/'+waRun+'/approve',{...firstBody,...badOrigin},'human_proof_invalid',humans['approver-a'].cookie,{},403)
+    await sql(`UPDATE env_human_challenges SET expires_at=1 WHERE id='${firstProof.humanChallenge}'`)
+    await refused(door+'/earnings-run/'+waRun+'/approve',{...firstBody,...firstProof},'human_challenge_stale',humans['approver-a'].cookie)
+    const freshFirst=await review(waRun,'approver-a')
+    await data(door+'/earnings-run/'+waRun+'/approve',{version,reviewToken:freshFirst.reviewToken,...await proof(freshFirst,'approver-a')},200,humans['approver-a'].cookie)
     await release(waRun, version, 'second_approval_required')
     await release(waRun, version, 'second_approval_required', { approvals: 2, thresholdCents: 99999999, secondApproverId: owner, approved: true })
     await refused(door + '/earnings-run/' + waRun + '/review', undefined, 'second_approver_must_differ', humans['approver-a'].cookie)
@@ -206,13 +242,21 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await refused(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 'human_session_required', '',
       { authorization: 'Bearer ' + agent.token }, 403)
     await capture('run-approval-pending', screen)
-    page = await capture('run-approval-review', screen + '/earnings-run/' + waRun + '/review', 'approver-b')
+    const presentedReply=await mcp('tools/call',{name:'run.review',arguments:{companyId:company.id,runId:waRun}})
+    assert.equal(presentedReply.status,200)
+    const presented=JSON.parse((await presentedReply.json()).result.content[0].text)
+    assert.equal(presented.approval,'requires-separate-human-proof')
+    assert.equal(presented.version,version)
+    const presentedPath=new URL(presented.reviewUrl).pathname+new URL(presented.reviewUrl).search
+    page = await capture('run-approval-review', presentedPath, 'approver-b')
     assert.ok((await page.locator('main').innerText()).includes('bank record v1 on file (masked)'))
     await page.getByRole('button', { name: 'Approve this exact run version', exact: true }).click()
     await page.waitForURL(origin + screen)
     let current = await status(waRun)
     assert.equal(current.current, 2)
     assert.deepEqual(current.approvals.map((a) => a.approverId), [humans['approver-a'].id, humans['approver-b'].id])
+    assert.deepEqual(current.approvals.map(a=>a.presentingClient),['native-envelope',agent.id])
+    assert.ok(current.approvals.every(a=>a.proofMethod==='passkey-uv'))
     assert.ok(current.approvals.every((a) => a.contentDigest.length === 64 && a.grantVersion === 1 && a.role === 'approver'))
     // Two distinct current people pass every binding; payment is still unavailable.
     await release(waRun, version, 'run_not_payable')
@@ -226,6 +270,11 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
       await page.screenshot({ path: join(folder, `run-release-refused-${width}.png`), fullPage: true })
     }
+
+    const pendingPresentation=await data(door+'/earnings-run/'+waRun+'/review'+new URL(presented.reviewUrl).search)
+    const pendingProof=await proof(pendingPresentation,'owner')
+    await data(base+'/agents/'+agent.id+'/revoke',{version:1},200,humans.admin.cookie)
+    await refused(door+'/earnings-run/'+waRun+'/approve',{version,reviewToken:pendingPresentation.reviewToken,...pendingProof},'presenting_client_revoked',cookie,{},403)
 
     // A changed date is a new version; a restored identical version needs fresh approval.
     version = await run(waRun, version, waSetup.group, { payDate: '2026-03-14' })
@@ -268,7 +317,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     caVersion = await run(caRun, caVersion, caSetup.group)
     const racedReview = await review(caRun, 'approver-a')
     await Promise.all([
-      call(door + '/earnings-run/' + caRun + '/approve', { version: caVersion, reviewToken: racedReview.reviewToken }, humans['approver-a'].cookie),
+      call(door + '/earnings-run/' + caRun + '/approve', { version: caVersion, reviewToken: racedReview.reviewToken, ...await proof(racedReview,'approver-a') }, humans['approver-a'].cookie),
       work(c1, 349, 'CA', 480, 3),
     ])
     await release(caRun, caVersion, 'run_sources_changed')
@@ -353,13 +402,40 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await release(tipRun, tipVersion, 'run_not_payable')
     await tip(373, 'cash', 5000, 1500, 1)
     await release(tipRun, tipVersion, 'run_sources_changed')
+    // Official OIDC ID-token schema edge: a pinned issuer signs fresh, nonce-bound MFA.
+    const signing=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
+    const jwk={...await crypto.subtle.exportKey('jwk',signing.publicKey),kid:'synthetic-envelope-822',alg:'ES256',use:'sig'}
+    const issuer='https://auth.example.com', audience='synthetic-envelope-823', subject='synthetic-envelope-824'
+    const now=Date.now()
+    await sql(`INSERT INTO oa_identity_providers(provider_id,preset,status,issuer,client_id,jwks_uri,authorization_endpoint,token_endpoint,algorithms,token_auth_method,response_iss,interface_version,linked_at,jwks) VALUES('auth','auth','linked','${issuer}','${audience}','${issuer}/jwks','${issuer}/authorize','${issuer}/token','["ES256"]','private_key_jwt',1,'1.0.0',${now},'${JSON.stringify({keys:[jwk]})}'); INSERT INTO rer_dependency_link(interface,issuer,client_id,metadata,linked_at) VALUES('oidc-provider@1','${issuer}','${audience}','{}',${now}); UPDATE oa_auth_settings SET idp_sign_in=1 WHERE singleton=1; INSERT INTO oa_external_identities(issuer,subject,operator_id) VALUES('${issuer}','${subject}','${owner}')`)
+    tipVersion=await run(tipRun,tipVersion,tipSetup.group)
+    const oidcReview=await review(tipRun,'owner')
+    const token=async extra=>{
+      const time=Math.floor(Date.now()/1000)
+      const claims={iss:issuer,aud:audience,sub:subject,iat:time,exp:time+300,auth_time:time,nonce:oidcReview.humanProof.options.challenge,amr:['pwd','mfa'],...extra}
+      const input=Buffer.from(JSON.stringify({alg:'ES256',kid:jwk.kid,typ:'JWT'})).toString('base64url')+'.'+Buffer.from(JSON.stringify(claims)).toString('base64url')
+      return input+'.'+Buffer.from(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},signing.privateKey,new TextEncoder().encode(input))).toString('base64url')
+    }
+    const mfaBody=async extra=>({version:tipVersion,reviewToken:oidcReview.reviewToken,gesture:'approve-exact-run',humanChallenge:oidcReview.humanProof.id,assertion:{idToken:await token(extra)}})
+    for(const invalid of [{amr:['pwd']},{auth_time:1},{nonce:'synthetic-envelope-825'},{aud:'synthetic-envelope-826'},{sub:'synthetic-envelope-827'},{exp:1}])
+      await refused(door+'/earnings-run/'+tipRun+'/approve',await mfaBody(invalid),'human_proof_invalid',cookie,{},403)
+    await sql("UPDATE rer_dependency_link SET needs_relink=1 WHERE interface='oidc-provider@1'")
+    await refused(door+'/earnings-run/'+tipRun+'/approve',await mfaBody({}),'human_mfa_unavailable',cookie,{},403)
+    await sql("UPDATE rer_dependency_link SET needs_relink=0 WHERE interface='oidc-provider@1'")
+    await data(door+'/earnings-run/'+tipRun+'/approve',await mfaBody({}))
+    const mfaStatus=await status(tipRun)
+    assert.equal(mfaStatus.approvals[0].approverId,owner)
+    assert.equal(mfaStatus.approvals[0].proofMethod,'oidc-mfa')
+    assert.equal(mfaStatus.approvals[0].presentingClient,'native-envelope')
+    await release(tipRun,tipVersion,'run_not_payable')
     const audit = await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='run.approved'")
     assert.equal(audit[0].n, (await sql('SELECT COUNT(*) AS n FROM env_run_approvals'))[0].n, 'every approval is audited once')
     const trail = (await data(base + '/audit')).filter((e) => e.action === 'run.approved')
-    assert.deepEqual([trail[0].actorId, trail[0].targetId, trail[0].version], [humans['approver-b'].id, tipRun, tipVersion],
+    assert.deepEqual([trail[0].actorId, trail[0].targetId, trail[0].version], [owner, tipRun, tipVersion],
       'the audit door names the latest approver and exact version')
+    await sql(`DELETE FROM oa_identity_providers WHERE client_id='${audience}'; DELETE FROM rer_dependency_link WHERE client_id='${audience}'; DELETE FROM oa_external_identities WHERE issuer='${issuer}' AND subject='${subject}'; UPDATE oa_auth_settings SET idp_sign_in=0 WHERE singleton=1`)
     console.log(
-      'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; adding people alone cannot record or revise a tip; a WA risk class and final CA FUTA void only their runs; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
+      'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; adding people alone cannot record or revise a tip; a WA risk class and final CA FUTA void only their runs; fresh passkey user verification and signed nonce-bound OIDC MFA, separate human and MCP presenter, old-session and stale-challenge refusal, and revoked presentation links; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
     )
   } finally {
     await browser.close()

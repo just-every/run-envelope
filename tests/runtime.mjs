@@ -72,7 +72,7 @@ execFileSync(
   { stdio: 'pipe', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } },
 )
 // A loopback installation with its owner's settings, so the owner's first run can be walked through the public doors.
-const origin = `http://127.0.0.1:${port}`
+const origin = `http://${process.env.ENVELOPE_JOURNEYS?.split(',').some(j=>['approvals','firm'].includes(j)) ? 'localhost' : '127.0.0.1'}:${port}`
 const setupToken = randomBytes(32).toString('hex')
 const receiverState = {secret: null, mode:'accept', received:[], effects:new Set()}
 const receiver = createReceiver(async (request,response) => {
@@ -109,7 +109,7 @@ async function launch(bindings) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
-    dev: { server:{hostname:'127.0.0.1',port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
+    dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
   })
   await instance.ready
   return instance
@@ -238,7 +238,7 @@ try {
       sponsoredWorker = await unstable_startWorker({
         config:resolve('dist/server/wrangler.json'),
         bindings:Object.fromEntries(Object.entries(settings).map(([key,value]) => [key,{type:'plain_text',value}])),
-        dev:{server:{hostname:'127.0.0.1',port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
+        dev:{server:{hostname:new URL(origin).hostname,port},inspector:false,remote:false,watch:false,persist,logLevel:'error',
           outboundService:async request => {
             // Fakes exist only at the real OpenAI and Resend HTTP edge. No arbitrary
             // URL, installation service or model-selected destination is forwarded.

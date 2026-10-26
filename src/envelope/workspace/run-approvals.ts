@@ -1,3 +1,6 @@
+import { presentationFence } from '../review-presentation'
+import { HumanProof } from '../human-proof'
+import type { AuthenticationResponseJSON } from '@simplewebauthn/server'
 import { fence, auditStatement, type Actor } from '../access'
 import type { Input } from '../records'
 import { PayrollError, integer, text } from '../security'
@@ -18,6 +21,8 @@ export interface RunApproval {
   contentDigest: string
   debitCents: number
   current: boolean
+  presentingClient: string
+  proofMethod: string
 }
 export interface RunApprovalStatus {
   runId: string
@@ -71,7 +76,7 @@ export class RunApprovals {
       await this.store.records
         .statement(
           `SELECT a.run_id AS runId,a.version,a.approver_id AS approverId,o.display_name AS approverName,a.role,a.grant_version AS grantVersion,
-          a.occurred_at AS occurredAt,a.content_digest AS contentDigest,a.debit_cents AS debitCents,
+          a.presenting_client AS presentingClient,a.proof_method AS proofMethod,a.occurred_at AS occurredAt,a.content_digest AS contentDigest,a.debit_cents AS debitCents,
           EXISTS(SELECT 1 FROM env_grants g JOIN oa_operators go ON go.id=g.operator_id WHERE g.company_id=a.company_id AND g.operator_id=a.approver_id
             AND g.version=a.grant_version AND g.revoked_at IS NULL AND go.status='active'
             AND (g.role='owner' OR EXISTS(SELECT 1 FROM json_each(g.actions) WHERE value='pay:approve'))) AS grantCurrent
@@ -87,7 +92,7 @@ export class RunApprovals {
           .filter((a) => a.runId === run.id && a.version === run.version)
           .map(({ runId: _r, version: _v, grantCurrent, ...a }) => ({
             ...a,
-            current: Boolean(grantCurrent) && a.contentDigest === exact,
+            current: Boolean(grantCurrent) && ['passkey-uv','oidc-mfa'].includes(a.proofMethod) && a.contentDigest === exact,
           }))
         const known = debit(run.data)
         return {
@@ -118,11 +123,13 @@ export class RunApprovals {
     const [status] = await this.statuses(actor, [row])
     return { row, status, exact: await contentDigest(actor, row) }
   }
-  async review(actor: Actor, id: string) {
+  async review(actor: Actor, id: string, presentation?: string) {
     await this.store.authority(actor, 'pay:approve', undefined, true)
     const { row, status } = await this.current(actor, id)
     if (status.approvals.some((a) => a.approverId === actor.session.operator.id))
       throw new PayrollError('second_approver_must_differ', 409)
+    const presentationHash=presentation ? await digest(presentation) : ''
+    const presenter=await presentationFence(this.store.records.env,presentationHash,actor.company,row.id,row.version)
     const token = crypto.randomUUID() + crypto.randomUUID(),
       f = fence(actor),
       event = crypto.randomUUID()
@@ -138,7 +145,8 @@ export class RunApprovals {
         [await digest(token), actor.session.id]),
     ])
     if (!result[0].results.length) throw new PayrollError('review_stale', 409)
-    return { ...row, reviewToken: token, approval: status }
+    const humanProof = await new HumanProof(this.store).options(actor, token, row.id, row.version, await contentDigest(actor,row),presentationHash,presenter.client)
+    return { ...row, reviewToken: token, approval: status, humanProof }
   }
   async approve(actor: Actor, id: string, input: Input) {
     await this.store.authority(actor, 'pay:approve', undefined, true)
@@ -151,26 +159,40 @@ export class RunApprovals {
       d = destinationFence(actor, row.data),
       event = crypto.randomUUID(),
       now = Date.now()
+    if (!await this.store.records.statement(`SELECT 1 AS valid FROM env_workspace_reviews WHERE token_hash=? AND company_id=? AND kind=? AND object_id=? AND version=? AND session_id=? AND operator_id=? AND grant_version=? AND expires_at>?`,
+      [hash,actor.company,kind,row.id,row.version,actor.session.id,approver,actor.grant.version,now]).first())
+      throw new PayrollError('review_stale',409)
+    if (input.gesture !== 'approve-exact-run' || !input.humanChallenge || !input.assertion)
+      throw new PayrollError('human_step_up_required',403)
+    const proof=await new HumanProof(this.store).verify(actor, String(input.humanChallenge), input.assertion as AuthenticationResponseJSON, hash,row.id,row.version,exact)
+    const humanChallenge=await new HumanProof(this.store).challenge(actor,proof.id,'approve')
+    const presenter=await presentationFence(this.store.records.env,String(humanChallenge.presentation_hash),actor.company,row.id,row.version)
     // Every binding is repeated inside the write: latest version, pinned sources and
     // collections, bank versions, one session-bound review and one row per person.
     const result = await this.store.records.env.DB.batch<Record<string, unknown>>([
       this.store.records.statement(
-        `INSERT INTO env_run_approvals(company_id,kind,run_id,version,approver_id,role,grant_version,session_id,content_digest,debit_cents,occurred_at,change_id)
-        SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
+        `INSERT INTO env_run_approvals(company_id,kind,run_id,version,approver_id,role,grant_version,session_id,content_digest,debit_cents,occurred_at,change_id,presenting_client,proof_method)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
         AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=?
         AND EXISTS(SELECT 1 FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND v.object_id=? AND v.version=? AND ${currentSources('v')})
         AND ${d.sql}
         AND EXISTS(SELECT 1 FROM env_workspace_reviews WHERE token_hash=? AND company_id=? AND kind=? AND object_id=? AND version=? AND session_id=? AND operator_id=? AND grant_version=? AND expires_at>?)
         AND NOT EXISTS(SELECT 1 FROM env_run_approvals WHERE company_id=? AND run_id=? AND version=? AND approver_id=?)
+        AND EXISTS(SELECT 1 FROM env_human_challenges h WHERE h.id=? AND h.session_id=? AND h.operator_id=? AND h.company_id=? AND h.grant_version=? AND h.review_hash=? AND h.run_id=? AND h.run_version=? AND h.content_digest=? AND h.consumed_at IS NULL AND h.expires_at>?)
+        AND ${proof.sql} AND ${presenter.sql}
         RETURNING approver_id`,
         [actor.company, kind, row.id, row.version, approver, actor.grant.role, actor.grant.version, actor.session.id,
-          exact, debit(row.data), now, event, ...f.args,
+          exact, debit(row.data), now, event, presenter.client, proof.method, ...f.args,
           actor.company, kind, row.id, row.version,
           actor.company, kind, row.id, row.version,
           ...d.args,
           hash, actor.company, kind, row.id, row.version, actor.session.id, approver, actor.grant.version, now,
-          actor.company, row.id, row.version, approver],
+          actor.company, row.id, row.version, approver,
+          proof.id,actor.session.id,approver,actor.company,actor.grant.version,hash,row.id,row.version,exact,now,
+          ...proof.args,...presenter.args],
       ),
+      this.store.records.statement('UPDATE env_human_challenges SET consumed_at=? WHERE id=? AND EXISTS(SELECT 1 FROM env_run_approvals WHERE change_id=?)',[now,proof.id,event]),
+      this.store.records.statement('UPDATE env_passkeys SET counter=? WHERE credential_id=? AND EXISTS(SELECT 1 FROM env_run_approvals WHERE change_id=?)',['nextCounter' in proof ? proof.nextCounter : 0,'credentialId' in proof ? proof.credentialId : '',event]),
       auditStatement(this.store.records.env, actor, event, 'run.approved', row.id, row.version,
         'EXISTS(SELECT 1 FROM env_run_approvals WHERE change_id=?)', [event]),
     ])

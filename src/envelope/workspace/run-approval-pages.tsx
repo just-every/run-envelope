@@ -4,6 +4,7 @@ import type { Company } from '../records'
 import { page, Card, Field, Hidden, Submit, companyPath } from '../pages'
 import type { EarningsRun } from './pay-items'
 import type { ApprovalPolicy, RunApprovalStatus } from './run-approvals'
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/server'
 import type { Revision } from './store'
 
 const dollars = (cents: number) =>
@@ -153,10 +154,10 @@ export function runReviewPage(
   session: Session,
   companies: Company[],
   actor: Actor,
-  row: Revision<EarningsRun> & { reviewToken: string; approval: RunApprovalStatus },
+  row: Revision<EarningsRun> & { reviewToken: string; approval: RunApprovalStatus; humanProof: {id:string;options:PublicKeyCredentialRequestOptionsJSON;enrolled:boolean} },
 ) {
   const base = companyPath(actor.company) + '/pay-settings'
-  return page(
+  const response = page(
     session,
     'Review an exact run version',
     companies,
@@ -192,16 +193,25 @@ export function runReviewPage(
         {row.approval.current} of {row.approval.required} current approval
         {row.approval.required > 1 ? 's. The second approval must come from a different person.' : '.'}
       </p>
-      <form method="post" action={`${base}/earnings-run/${row.id}/approve`}>
+      <p>Approval requires your passkey and a fresh verification of this exact version. Email sign-in alone cannot approve.</p>
+      {!row.humanProof.enrolled && <p>Register a passkey after fresh email verification, then return to this exact review.</p>}
+      <button className="btn" type="button" data-enroll-passkey="">Register a passkey</button>
+      <p role="alert" tabIndex={-1} data-human-message=""></p>
+      <form method="post" action={`${base.replace('/app/','/api/')}/earnings-run/${row.id}/approve`}
+        data-human-approval="" data-base={base.replace('/app/','/api/')} data-challenge={row.humanProof.id} data-options={JSON.stringify(row.humanProof.options)}>
         <Hidden name="version" value={row.version} />
         <Hidden name="reviewToken" value={row.reviewToken} />
         <Submit primary>Approve this exact run version</Submit>
       </form>
+      <script src="/envelope-human-proof.js" defer></script>
+      <noscript>Enable browser scripting to verify your passkey. Nothing can be approved without it.</noscript>
       <p>
         <a href={base}>Return without approving</a>
       </p>
     </Card>,
   )
+  response.headers.set('content-security-policy', "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+  return response
 }
 
 const refusals: Record<string, string> = {

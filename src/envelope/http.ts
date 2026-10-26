@@ -1,5 +1,7 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
+import { presentReview } from './review-presentation'
+import { HumanProof } from './human-proof'
 import { Records, type Input } from './records'
 import { ArchiveHistory } from './archive-history'
 import { privacyPage } from './privacy-pages'
@@ -251,6 +253,10 @@ export async function payrollResponse(
               properties: {companyId:{type:'string'},replyId:{type:'string'},version:{type:'integer'},digest:{type:'string'}}, required:['companyId','replyId','version','digest'],
             },
             {
+              name: 'run.review', action:'drafts:read', description:'Present a native exact-run review link to a separately authenticated human. Never approves.',
+              properties:{companyId:{type:'string'},runId:{type:'string'}},required:['companyId','runId'],
+            },
+            {
               name: 'records.list',
               action: 'records:read',
               description: 'Read a stable ID-ordered page of scoped person records; no private values. Use next as after.',
@@ -328,7 +334,9 @@ export async function payrollResponse(
               ? await processNotice(agent,args)
               : params.name === 'reply.dispatch'
                 ? await dispatchReply(agent,args)
-                : params.name === 'records.list'
+                : params.name === 'run.review'
+                  ? await presentReview(agent,args)
+                  : params.name === 'records.list'
             ? await agent.records(args)
             : params.name === 'draft.prepare'
               ? await agent.prepare(args)
@@ -555,8 +563,12 @@ export async function payrollResponse(
         } else if (post && tail.join('/') === 'pay-settings/earnings-run') {
           const result = await pay.preview(actor, value, true)
           response = ui ? redirect(base + '/pay-settings') : json(result, 201)
+        } else if (post && tail.join('/') === 'pay-settings/passkeys/options') {
+          response = json(await new HumanProof(store).registration(actor))
+        } else if (post && tail.join('/') === 'pay-settings/passkeys/register') {
+          response = json(await new HumanProof(store).register(actor,String(value.id),value.response as never))
         } else if (!post && tail.length === 4 && tail[1] === 'earnings-run' && tail[3] === 'review') {
-          const row = await approvals.review(actor, tail[2])
+          const row = await approvals.review(actor, tail[2],url.searchParams.get('presentation') ?? undefined)
           response = ui ? runReviewPage(session, companies, actor, row) : json(row)
         } else if (post && tail.length === 4 && tail[1] === 'earnings-run' && tail[3] === 'approve') {
           const result = await approvals.approve(actor, tail[2], value)

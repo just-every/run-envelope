@@ -256,13 +256,15 @@ Restored subscriptions are inactive and signing secrets are excluded from archiv
 restoring history confers no outbound authority. Complete backup and prior-release
 migration proof remains ENV-053 and ENV-056 work.
 
-Adopted conservative default pending ct review: only the configured native owner
+ct approved owner-only reference events on 26 October 2026 at 10:11Z. The retained conservative restrictions are: only the configured native owner
 may consent, inspect or explicitly send reference-only proposal events to an
 administrator-pinned destination. There is no automatic outbound action and no
 new agent power. ENV-028, ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055
 inherit current authority and custody on these doors. Full run lifecycle families,
-bonus preparation, report tools and distinct human passkey or MFA payroll approval
-remain unproved; this native identity proof does not complete ENV-051.
+bonus preparation and complete report tools remain unproved. The native exact
+earnings-run ceremony now uses a separately authenticated human and passkey
+verification, with a signed OIDC MFA assertion alternative at the API boundary;
+see [payroll-approvals.md](payroll-approvals.md). This does not complete ENV-051.
 
 The current preparation report is available through MCP `reports.proposals`,
 `GET /api/envelope/v1/companies/:company/reports/proposals` and

@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "7663dc0e924a138d853d65f162d8fa13cae6728dee29ac6374d56d896d845b26",
+      "sha256": "59464c6bfaa356a22aaaef7a8eb84dd46066855e29ae4e54ec45377c22677f4a",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fd618e0dafcd27b0715c83f1ac89205813284dc47babcd89de98728f250be814",
+      "sha256": "8c832def6d72552d43620212081b8498ad39ccef9fecbec7abf20f3fe6ca1e3d",
       "executable": false
     },
     "deploy-demo.json": {
@@ -378,7 +378,7 @@
       "executable": false
     },
     "docs/payroll-agents.md": {
-      "sha256": "20ce42b3a549272e953f213bf59d57d101edb271b8d652304a61d0a6fc9e4157",
+      "sha256": "5231af443a57429ebf93c3a303259c2ac4304ae896da819b7d70c5808bd87217",
       "executable": false
     },
     "docs/payroll-allocations.md": {
@@ -386,7 +386,7 @@
       "executable": false
     },
     "docs/payroll-approvals.md": {
-      "sha256": "c29b7d1b49e60a6893a6ad70d88bc8f01a656b89594a0c38e4838eb145f3f4b3",
+      "sha256": "41f13b2bacb017ac52f3d1ad488ac2bfed449a04b4ba29aade9ad39333520b07",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -602,7 +602,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "18de44a0b0545968bf03dfb771fc633fd139414ba64f7794fcc61673e5d8d83f",
+      "sha256": "60cc5f7bfcfa1560f08f68a8863df21bf1985615c0e038ff0b6c315fc43b151a",
       "executable": false
     },
     "packaging.json": {
@@ -610,7 +610,7 @@
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "a0b47c94703ce0cf7588bd565201503e19b52ecbecdb1228dd089967f8944c7f",
+      "sha256": "0e5b7b25a593648fd4dd86cf7b3713384cad2f88681e56631bf237e57bc49908",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -1138,7 +1138,7 @@
       "executable": false
     },
     "scripts/portability/policy.mjs": {
-      "sha256": "6ea9fddfa869e6c2a9335bf308d1eeb60a050fc2c93dcf24d78780b4ea8ca6b0",
+      "sha256": "d30d33876a850b89b49de8d4c9e3617d1951f183129afde32ad28f0d943109c2",
       "executable": false
     },
     "scripts/portability/record-key-settings.mjs": {
@@ -1402,7 +1402,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "cf7691601f37cf71e9928c70256ae31a1798fe0c88db9707cc076fe6cbbf18df",
+      "sha256": "2d8af0c5faa2d5fc01037671373dd50910c58f63b12527b445a9e692548a1aac",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -1614,11 +1614,11 @@
       "executable": false
     },
     "src/envelope/workspace/run-approval-pages.tsx": {
-      "sha256": "dcfbd719b690578665837c81809975087bc319b505c9ac580f5d287b7fa342d2",
+      "sha256": "459c81633d6d6f7feba919c365f040fcf95f54da44fc6305c50db123e7da4a8c",
       "executable": false
     },
     "src/envelope/workspace/run-approvals.ts": {
-      "sha256": "39eee33724bb660bf0f3cf2a1449a9f3d9181af0f37e68aee13945917f43add0",
+      "sha256": "787765071ad7fb41f08b22cf84502e897340f321f084e2dcfdec74c7fe85ecf1",
       "executable": false
     },
     "src/envelope/workspace/schedules.ts": {
@@ -2782,7 +2782,7 @@
       "executable": false
     },
     "tests/firm-runtime.mjs": {
-      "sha256": "d886d46348787b5561e74958f0b6da46e9ef8716f36b6ddcd58ea1eb45b7f733",
+      "sha256": "07e2ec269bae0319d60d1ec97dc4d781afdcfb22fe612e57ad7b6e6b18a2f1e1",
       "executable": false
     },
     "tests/fixtures/irs-forms/f941-2026.json": {
@@ -2902,7 +2902,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "01bcef7f6213e743af64a60abc2d00509d1ea43a0653608f3d46e76c77641f11",
+      "sha256": "ef85fabe80b0b69bb77afa571570fb26c01c6069c1a5ed48859671779fa52927",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
@@ -2914,7 +2914,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "6dd4132f6e9f995e31679457935944f0d3a80d563b25a53e0b8f6eae1f268686",
+      "sha256": "a299a54d0331be34ac249126b0559a9a40df7d6f7cffeb2c3fd19a1dbcf1939d",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
