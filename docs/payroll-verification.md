@@ -18,11 +18,15 @@ revocation, a changed worker/issuer identity or grant, a changed worker link,
 a withdrawn approval, or changed source evidence. Retained evidence is private;
 verification custody uses the explicit statutory-hold and lawful-release doors under ENV-054.
 ct approved these protected-response defaults with riders on 23 October 2026.
-The legal-authority handling default is adopted pending ct approval: deny by
-default, require the linked worker’s current explicit consent and owner-only
-exact source review and audited release. It grants no override or new exposure,
-and enables no automatic destructive action or outbound submission. ENV-068
-remains PARTIAL until ct approves this default.
+ct approved ENV-068 as PARTIAL on 25 October 2026: deny by default, require
+the linked worker’s current explicit consent and owner-only exact source review
+and audited release. Consent names the exact request and field set and remains
+withdrawable until release; release after withdrawal is refused and audited.
+Custody expiry is shown in UTC with the server clock source. This approval grants
+no authority override or new exposure and enables no automatic destructive action
+or outbound submission. ENV-068 remains PARTIAL as approved. Filing released
+statutory data through the authority’s own channel is separate, unimplemented
+work under ENV-075; a protected response does not establish that filing or receipt.
 
 ## Public doors
 
