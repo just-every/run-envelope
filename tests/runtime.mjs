@@ -31,6 +31,8 @@ import {
 import { approvalJourney } from './payroll-approvals.mjs'
 import { archiveJourney, inspectNativeSql } from './archive-runtime.mjs'
 import { withArchiveWorker } from './archive-worker.mjs'
+import { newHireJourney } from './new-hire-runtime.mjs'
+import { newHireClockWorker } from './new-hire-clock.mjs'
 import { claimsJourney } from './claims-runtime.mjs'
 import { industryJourney } from './industry-runtime.mjs'
 import { firmJourney } from './firm-runtime.mjs'
@@ -41,7 +43,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification',
-    'firm', 'industry', 'claims', 'archive',
+    'firm', 'industry', 'claims', 'archive', 'new-hires',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -104,10 +106,12 @@ const settings = {
   SETUP_TOKEN: setupToken,
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
+const clockEntrypoint = process.env.ENVELOPE_JOURNEYS === 'new-hires' ? await newHireClockWorker() : undefined
 let output = ''
 async function launch(bindings) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
+    ...(clockEntrypoint ? {entrypoint:clockEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
     dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
   })
@@ -226,7 +230,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['archive', 'claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['new-hires', 'archive', 'claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -271,6 +275,7 @@ try {
       await waitForWorker()
     }
   }
+  if (!selected || selected.includes('new-hires')) await newHireJourney({ origin, cookie, advanceClock:async instant=>{assert.ok(clockEntrypoint,'New-hire journey requires its pinned clock');assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })

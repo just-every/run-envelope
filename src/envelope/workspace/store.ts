@@ -4,6 +4,8 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'new-hire-report'
+  | 'new-hire-election'
   | 'ui-claim'
   | 'industry-classification'
   | 'industry-check'
@@ -66,6 +68,7 @@ export const digest = async (value: string) =>
   ).join('')
 
 export interface Sources {
+  noPrivacyHold?: string
   reviewSets?: ReviewInputSet[]
   people?: { id: string; version: number }[]
   objects?: { kind: Kind; id: string; version: number; approved?: boolean }[]
@@ -192,7 +195,7 @@ export class WorkspaceStore {
     const deps = sources.objects ?? []
     // Constant-size binding sets avoid D1's per-statement variable limit for
     // genuine 100-person groups and multi-day source collections.
-    const sourceSql = `AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
+    const sourceSql = `${sources.noPrivacyHold ? "AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=? AND status='held')" : ''} AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
       SELECT 1 FROM env_people p WHERE p.company_id=? AND p.id=json_extract(pin.value,'$.id') AND p.version=json_extract(pin.value,'$.version')))
       AND NOT EXISTS(SELECT 1 FROM json_each(?) src WHERE
         COALESCE((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=? AND sv.kind=json_extract(src.value,'$.kind') AND sv.object_id=json_extract(src.value,'$.id')),0)!=json_extract(src.value,'$.version')
@@ -201,6 +204,7 @@ export class WorkspaceStore {
           OR EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='withdrawn'))))`
     const reviewInputs = reviewInputFence(actor.company, sources.reviewSets ?? [])
     const sourceArgs = [
+      ...(sources.noPrivacyHold ? [actor.company,sources.noPrivacyHold] : []),
       JSON.stringify(pins),
       actor.company,
       JSON.stringify(deps),
