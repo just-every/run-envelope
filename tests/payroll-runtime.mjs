@@ -71,8 +71,9 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     )
   }
   const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
     headless: true,
-    args: ['--use-mock-keychain', '--password-store=basic'],
+    args: ['--no-sandbox', '--use-mock-keychain', '--password-store=basic'],
   })
   const proof = process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
   await mkdir(proof, { recursive: true })
@@ -930,6 +931,12 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     assert.ok(!(JSON.stringify(await data(hooks))).includes(subscription.secret))
     const storedKey = await sql(`SELECT secret_cipher FROM env_webhook_keys WHERE id='${subscription.id}'`)
     assert.ok(!JSON.stringify(storedKey).includes(subscription.secret),'signing key encrypted at rest')
+    await noWrite(async()=>{
+      const emptyHealth=await data(company+'/operations')
+      assert.equal(emptyHealth.jobs.obligations,0)
+      assert.equal(emptyHealth.status,'attention-required','no jobs never establishes payment or filing availability')
+      assert.equal(emptyHealth.providerDelivery,'not established')
+    })
     const draft = await toolData('draft.prepare', draftInput)
     assert.equal(draft.status, 'uncalculated-proposal')
     assert.equal(
@@ -961,6 +968,45 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     assert.equal(health.dependencies.filing,'unavailable')
     assert.equal(health.providerDelivery,'not established')
     await data(company+'/operations',undefined,actors.accountant.cookie,403)
+    assert.equal(health.database,'reachable')
+    assert.equal(health.dependencies.storage,'reachable')
+    assert.equal(health.dependencies.queue,'reachable')
+    assert.equal(health.dependencies.scheduler,'unavailable; explicit owner sends only')
+    assert.equal(health.dependencies.recordCustody,'key format valid; stored ciphertext not validated')
+    assert.equal(health.automaticRetry,false)
+    assert.equal(health.checks.storage.backend,'D1 encrypted private records')
+    assert.equal(health.providers.find(p=>p.id==='payroll-rails').state,'unavailable')
+    assert.equal(health.providers.find(p=>p.id==='proposal-webhooks').state,'configured; delivery not verified')
+    assert.ok(health.providers.length>0 && health.providers.every(p=>p.delivery==='not established'))
+    assert.ok(!JSON.stringify(health).includes(subscription.secret))
+    // Real storage failure must not erase or falsely clear the queue's unknown work.
+    await sql('ALTER TABLE env_private_records RENAME TO synthetic_envelope_919_storage')
+    try {
+      const unavailable=await data(company+'/operations')
+      assert.equal(unavailable.status,'attention-required')
+      assert.equal(unavailable.checks.storage.state,'unavailable')
+      assert.equal(unavailable.jobs.unknown,1)
+      assert.equal(unavailable.providerDelivery,'not established')
+      assert.ok(unavailable.nextAction.includes('restore dependency access'))
+    } finally { await sql('ALTER TABLE synthetic_envelope_919_storage RENAME TO env_private_records') }
+    await sql('ALTER TABLE env_webhook_jobs RENAME TO synthetic_envelope_919_queue')
+    try {
+      const unavailable=await data(company+'/operations')
+      assert.equal(unavailable.checks.queue.state,'unavailable')
+      assert.equal(unavailable.jobs,null,'failed inspection never reports an empty healthy queue')
+      assert.equal(unavailable.dependencies.storage,'reachable')
+      assert.equal(unavailable.status,'attention-required')
+    } finally { await sql('ALTER TABLE synthetic_envelope_919_queue RENAME TO env_webhook_jobs') }
+    await restart({ENVELOPE_RECORD_KEY:'synthetic-envelope-919',ENVELOPE_WEBHOOK_URL:''})
+    try {
+      const unavailable=await data(company+'/operations')
+      assert.equal(unavailable.dependencies.recordCustody,'unavailable')
+      assert.equal(unavailable.dependencies.receiver,'unavailable')
+      assert.ok(unavailable.nextAction.includes('restore separately held record key'))
+      assert.equal(unavailable.jobs.unknown,1)
+      assert.equal(unavailable.providerDelivery,'not established')
+    } finally { await restart() }
+
     await restart()
     assert.equal((await data(hooks)).jobs.find(j=>j.id===job.id).status,'unknown')
     receiverState.mode='accept'
@@ -999,7 +1045,12 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     await data(hooks+'/'+interruptedJob.id+'/recover',{},cookie,409)
     await sql(`UPDATE env_webhook_jobs SET started_at=${Date.now()-31000} WHERE id='${interruptedJob.id}'`)
     await restart()
-    assert.equal((await data(company+'/operations')).jobs.expiredLeases,1)
+    const interruptedHealth=await data(company+'/operations')
+    assert.equal(interruptedHealth.jobs.expiredLeases,1)
+    const lease=(await data(hooks)).jobs.find(j=>j.id===interruptedJob.id)
+    assert.equal(lease.leaseExpiresAt,lease.startedAt+30000)
+    assert.equal(lease.deadline,null,'a recovery lease never fabricates a payroll deadline')
+    assert.equal(lease.nextAction,'wait; recover after lease expires')
     const beforeRecovery=receiverState.received.length
     assert.equal((await data(hooks+'/'+interruptedJob.id+'/recover',{})).status,'unknown')
     assert.equal(receiverState.received.length,beforeRecovery,'recover does not send or assume an acknowledgement')

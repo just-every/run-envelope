@@ -1,4 +1,5 @@
 import type { Records, Input } from './records'
+import seed from '../../seed.json'
 import { fence, auditStatement, type Actor } from './access'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { PayrollError, recordKey, seal, unseal } from './security'
@@ -25,19 +26,71 @@ export class Lifecycle {
   destination() { return webhookDestination(this.records.env) }
   async health(actor: Actor) {
     this.owner(actor)
+    const checkedAt = Date.now()
+    const probe = async <T>(read: () => Promise<T>) => {
+      const started = Date.now()
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        const value = await Promise.race([read(), new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('probe_timeout')), 2000)
+        })])
+        return {state:'reachable' as const, durationMs:Date.now()-started, value}
+      } catch {
+        // Never return database diagnostics, credentials or private record values.
+        return {state:'unavailable' as const, durationMs:Date.now()-started, value:null}
+      } finally { clearTimeout(timer) }
+    }
     const f = fence(actor)
-    const row = await this.records.statement(`SELECT COUNT(*) AS obligations,
-      SUM(CASE WHEN status='unknown' THEN 1 ELSE 0 END) AS unknown,
-      SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,
-      SUM(CASE WHEN status='sending' AND started_at<? THEN 1 ELSE 0 END) AS expiredLeases
-      FROM env_webhook_jobs WHERE company_id=? AND ${f.sql}`,[Date.now()-30000,actor.company,...f.args]).first<Record<string,number>>()
-    let receiver = 'unconfigured'
+    const [database, storage, queue, providerConfiguration] = await Promise.all([
+      probe(() => this.records.statement('SELECT 1 AS reachable').first()),
+      probe(() => this.records.statement(`SELECT COUNT(*) AS records FROM env_private_records WHERE company_id=? AND ${f.sql}`,
+        [actor.company,...f.args]).first()),
+      probe(() => this.records.statement(`SELECT COUNT(*) AS obligations,
+        COALESCE(SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END),0) AS pending,
+        COALESCE(SUM(CASE WHEN status='sending' THEN 1 ELSE 0 END),0) AS sending,
+        COALESCE(SUM(CASE WHEN status='unknown' THEN 1 ELSE 0 END),0) AS unknown,
+        COALESCE(SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END),0) AS failed,
+        COALESCE(SUM(CASE WHEN status='sending' AND started_at<? THEN 1 ELSE 0 END),0) AS expiredLeases
+        FROM env_webhook_jobs WHERE company_id=? AND ${f.sql}`,
+        [checkedAt-30000,actor.company,...f.args]).first<Record<string,number>>()),
+      probe(() => this.records.statement(`SELECT id,enabled FROM env_external_providers WHERE company_id=? AND ${f.sql}`,
+        [actor.company,...f.args]).all<{id:string;enabled:number}>()),
+    ])
+    // Probe completion never revives a revoked owner session or company grant.
+    const current = fence(actor)
+    if (!await this.records.statement(`SELECT 1 WHERE ${current.sql}`,current.args).first())
+      throw new PayrollError('payroll_access_denied',403)
+    let custody = 'unavailable'
+    try { await recordKey(this.records.env.ENVELOPE_RECORD_KEY); custody = 'key format valid; stored ciphertext not validated' } catch { /* fail closed */ }
+    let receiver = 'unavailable'
     try { this.destination(); receiver = 'configured; delivery not verified' } catch { /* no health success inferred */ }
-    return {database:'reachable',scope:'native proposal webhook jobs only',jobs:row,
-      dependencies:{receiver,recordCustody:this.records.env.ENVELOPE_RECORD_KEY ? 'configured; not verified' : 'unavailable',storage:'not probed',scheduler:'no automatic webhook sender',payment:'unavailable',filing:'unavailable'},
-      status: Number(row?.unknown ?? 0)+Number(row?.failed ?? 0)+Number(row?.expiredLeases ?? 0)>0 ? 'attention-required' : 'no recorded delivery failure',
-      providerDelivery:'not established',nextAction:'inspect jobs and receiver; explicitly retry permitted events'}
+    const providers = seed.externals.map(provider => {
+      let state = provider.availability === 'unavailable' ? 'unavailable' : 'not probed'
+      if (provider.id === 'cloudflare') state = 'local bindings probed; provider control plane not probed'
+      if (provider.id === 'proposal-webhooks') state = receiver
+      if (provider.id === 'identity-provider') state = this.records.env.IDENTITY_PROVIDER ? 'configured; not probed' : 'unavailable'
+      if (provider.id === 'openai' || provider.id === 'resend') state = providerConfiguration.value?.results.some(row => row.id === provider.id && row.enabled === 1)
+        ? 'configured; not probed' : providerConfiguration.state === 'unavailable' ? 'configuration unavailable' : 'unavailable'
+      return {id:provider.id,state,delivery:'not established'}
+    })
+    return {checkedAt,database:database.state,scope:'native proposal webhook jobs only',jobs:queue.value,
+      checks:{database:{state:database.state,durationMs:database.durationMs},
+        storage:{state:storage.state,durationMs:storage.durationMs,backend:'D1 encrypted private records',content:'not validated'},
+        queue:{state:queue.state,durationMs:queue.durationMs,backend:'D1 proposal outbox'},
+        providerConfiguration:{state:providerConfiguration.state,durationMs:providerConfiguration.durationMs}},
+      dependencies:{receiver,recordCustody:custody,storage:storage.state,queue:queue.state,
+        scheduler:'unavailable; explicit owner sends only',payment:'unavailable',filing:'unavailable',
+        nativeMail:!this.records.env.MAIL_PROVIDER ? 'unavailable' : this.records.env.MAIL_PROVIDER === 'development'
+          ? 'local development; no provider delivery' : 'configured; not probed'},providers,
+      // Unimplemented required dependencies always need attention, even with no jobs.
+      status:'attention-required',providerDelivery:'not established',automaticRetry:false,
+      nextAction:queue.state === 'unavailable' || storage.state === 'unavailable'
+        ? 'restore dependency access; inspect retained obligations before any explicit send'
+        : custody === 'unavailable' ? 'restore separately held record key; inspect retained jobs before any send'
+        : receiver === 'unavailable' ? 'configure administrator-pinned receiver; obtain explicit owner consent before sending'
+        : 'inspect jobs and receiver; explicitly retry permitted events; payment and filing remain unavailable'}
   }
+
   async subscribe(actor: Actor, input: Input) {
     this.owner(actor)
     if (Object.keys(input).some(k => k !== 'consent') || input.consent !== true)
@@ -62,11 +115,13 @@ export class Lifecycle {
     const [subscriptions,jobs,attempts] = await this.records.env.DB.batch([
       this.records.statement(`SELECT id,destination,active,created_at AS createdAt FROM env_webhooks WHERE company_id=? AND ${f.sql} ORDER BY id LIMIT 100`,[actor.company,...f.args]),
       this.records.statement(`SELECT id,webhook_id AS webhookId,event_id AS eventId,status,attempt,started_at AS startedAt,finished_at AS finishedAt,
+        CASE WHEN status='sending' THEN started_at+30000 ELSE NULL END AS leaseExpiresAt,
+        NULL AS deadline,
         CASE WHEN status='delivered' THEN 'none' WHEN status='sending' THEN 'wait; recover after lease expires' WHEN attempt>=5 THEN 'retry limit reached; owner investigation required' WHEN status='unknown' THEN 'inspect receiver; explicitly replay same event' ELSE 'explicit owner delivery' END AS nextAction
         FROM env_webhook_jobs WHERE company_id=? AND ${f.sql} ORDER BY id LIMIT 100`,[actor.company,...f.args]),
       this.records.statement(`SELECT a.job_id AS jobId,a.attempt,a.started_at AS startedAt,a.finished_at AS finishedAt,a.outcome,a.http_status AS httpStatus FROM env_webhook_attempts a JOIN env_webhook_jobs j ON j.id=a.job_id WHERE j.company_id=? AND ${f.sql} ORDER BY a.started_at DESC,a.id LIMIT 200`,[actor.company,...f.args]),
     ])
-    return {subscriptions:subscriptions.results,jobs:jobs.results,attempts:attempts.results,payment:'unavailable',filing:'unavailable',automaticRetry:false}
+    return {subscriptions:subscriptions.results,jobs:jobs.results,attempts:attempts.results,payment:'unavailable',filing:'unavailable',automaticRetry:false,deadlinePolicy:'reference events have no payroll deadline; lease expiry only permits explicit unknown-state recovery'}
   }
   async revoke(actor: Actor, id: string) {
     this.owner(actor)

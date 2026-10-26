@@ -10,7 +10,7 @@ import { createServer } from 'node:net'
 import { createServer as createReceiver } from 'node:http'
 import { createHmac } from 'node:crypto'
 import { request as httpsRequest } from 'node:https'
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
@@ -57,6 +57,19 @@ await new Promise((resolve) => socket.close(resolve))
 // The installed homepage reads the claim state from D1: run the emitted Worker
 // on its own migrated store, never the checkout's local data.
 const persist = await mkdtemp(join(tmpdir(), 'foundation-runtime-'))
+// Exercise the immediate prior schema with real native records before upgrading.
+let migrationConfig = 'dist/server/wrangler.json'
+if (process.env.ENVELOPE_JOURNEYS === 'archive') {
+  const prior = join(persist,'prior-migrations')
+  await mkdir(prior)
+  const names = (await readdir('./migrations/core')).filter(name=>name.endsWith('.sql')).sort()
+  assert.ok(names.length>1)
+  for (const name of names.slice(0,-1)) await copyFile(join('./migrations/core',name),join(prior,name))
+  const current = JSON.parse(await readFile(migrationConfig,'utf8'))
+  migrationConfig = join(persist,'prior-schema.json')
+  await writeFile(migrationConfig,JSON.stringify({name:current.name,compatibility_date:current.compatibility_date,
+    d1_databases:current.d1_databases.map(binding=>({...binding,migrations_dir:prior}))}))
+}
 execFileSync(
   process.execPath,
   [
@@ -69,7 +82,7 @@ execFileSync(
     '--persist-to',
     persist,
     '--config',
-    'dist/server/wrangler.json',
+    migrationConfig,
   ],
   { stdio: 'pipe', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } },
 )
@@ -291,7 +304,7 @@ try {
   if (!selected || selected.includes('approvals'))
     await approvalJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings })
   if (!selected || selected.includes('records')) {
-    const records = await payrollJourney({ origin, cookie, settings, sql, receiverState, restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()} })
+    const records = await payrollJourney({ origin, cookie, settings, sql, receiverState, restart:async(overrides={})=>{await stopWorker();worker=await launch({...settings,...overrides});await waitForWorker()} })
     await stopWorker()
     const withoutKey = { ...settings }
     delete withoutKey.ENVELOPE_RECORD_KEY
@@ -309,7 +322,13 @@ try {
   }
   if (!selected || selected.includes('archive')) {
     await stopWorker()
-    try { await withArchiveWorker({ origin, cookie, sql, settings, root: process.cwd(), persist }, archiveJourney) }
+    try { await withArchiveWorker({ origin, cookie, sql, settings, root: process.cwd(), persist,
+      upgrade:async()=>{
+        const result=await execute(process.execPath,['node_modules/wrangler/bin/wrangler.js','d1','migrations','apply','foundation',
+          '--local','--persist-to',persist,'--config','dist/server/wrangler.json'],
+          {env:{...process.env,CI:'1',WRANGLER_SEND_METRICS:'false'},timeout:120000,maxBuffer:4*1024*1024})
+        return result.stdout
+      } }, archiveJourney) }
     finally { worker=await launch(settings); await waitForWorker() }
   }
   if (!selected || selected.includes('claims')) {

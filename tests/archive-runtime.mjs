@@ -110,6 +110,16 @@ export async function archiveJourney(context) {
   assert.equal(typeof quiesce, 'function', 'the parent pauses its native worker while its test state is copied')
   assert.ok(root && persist && settings?.ENVELOPE_RECORD_KEY, 'the native harness supplies root, persist and its independently held record key')
   const fixture = await archiveFixture(context)
+  const priorState=await snapshot(persist)
+  assert.ok(priorState.env_notice_dispatches.some(row=>row.state==='unknown'),'the prior schema has a real unknown obligation')
+  await quiesce(async()=>{
+    await context.upgrade()
+    const upgraded=await snapshot(persist)
+    assert.deepEqual(populated(upgraded),populated(priorState),'upgrade preserves every populated business and identity table byte for byte')
+    await context.upgrade()
+    assert.deepEqual(populated(await snapshot(persist)),populated(priorState),'reapplying migrations is non-destructive')
+  })
+  console.log('ARCHIVE-UPGRADE passed: populated prior schema, unknown notice obligations, unchanged ciphertext and authority history, idempotent native migration')
   const temporary = await mkdtemp(join(tmpdir(), 'envelope-archive-'))
   try {
     const source = join(temporary, 'source'), target = join(temporary, 'target'), corruptTarget = join(temporary, 'corrupt-target')
