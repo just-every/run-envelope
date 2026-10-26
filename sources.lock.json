@@ -2918,7 +2918,7 @@
       "executable": false
     },
     "tests/industry-runtime.mjs": {
-      "sha256": "55ef055b3faac9523f2dc907d111e75413cf8d1748bd24585673839e67a41628",
+      "sha256": "e35feb65061b050c7f465d5337189fc558004a64c1ae641e8fe29c5c9c78a35a",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
@@ -2934,7 +2934,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "a299a54d0331be34ac249126b0559a9a40df7d6f7cffeb2c3fd19a1dbcf1939d",
+      "sha256": "05780a26df28fc9362c5fc50532b54f043a553a3a8f0dd7ad902279db78d2efd",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdir,writeFile,readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
+import { credentialResponse } from './human-proof-fixture.mjs'
 import { industryFixture,ordinaryFacts } from './industry-fixture.mjs'
 
 export async function industryJourney(context) {
@@ -84,7 +85,19 @@ export async function payrollWithoutAiJourney(context, companyId, capture) {
  await approve(c,p,'industry-check',check.id)
  const runDoor=c.base+'/pay-settings/earnings-run/'+c.run.id
  const review=await data(runDoor+'/review')
- await data(runDoor+'/approve',{version:review.version,reviewToken:review.reviewToken})
+ const proofBrowser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ try {
+  const proofContext=await proofBrowser.newContext(), proofPage=await proofContext.newPage()
+  await proofContext.addCookies([{name:context.cookie.split('=')[0],value:context.cookie.split('=')[1],url:context.origin}])
+  await proofPage.goto(context.origin+runDoor.replace('/api/','/app/')+'/review')
+  const cdp=await proofContext.newCDPSession(proofPage)
+  await cdp.send('WebAuthn.enable')
+  await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}})
+  const enrollment=await data(c.base+'/pay-settings/passkeys/options',{})
+  await data(c.base+'/pay-settings/passkeys/register',{id:enrollment.id,response:await credentialResponse(proofPage,enrollment.options,true)})
+  await data(runDoor+'/approve',{version:review.version,reviewToken:review.reviewToken,gesture:'approve-exact-run',humanChallenge:review.humanProof.id,assertion:await credentialResponse(proofPage,review.humanProof.options)})
+ } finally {await proofBrowser.close()}
+
  const before=await context.sql('SELECT * FROM env_run_approvals; SELECT * FROM env_audit')
  const release=await call(runDoor+'/release',{version:review.version})
  assert.equal(release.status,409);assert.deepEqual(await release.json(),{error:'run_not_payable'})
