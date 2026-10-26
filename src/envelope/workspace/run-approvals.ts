@@ -76,23 +76,23 @@ export class RunApprovals {
       await this.store.records
         .statement(
           `SELECT a.run_id AS runId,a.version,a.approver_id AS approverId,o.display_name AS approverName,a.role,a.grant_version AS grantVersion,
-          a.presenting_client AS presentingClient,a.proof_method AS proofMethod,a.occurred_at AS occurredAt,a.content_digest AS contentDigest,a.debit_cents AS debitCents,
+          a.authority_active AS authorityActive,a.presenting_client AS presentingClient,a.proof_method AS proofMethod,a.occurred_at AS occurredAt,a.content_digest AS contentDigest,a.debit_cents AS debitCents,
           EXISTS(SELECT 1 FROM env_grants g JOIN oa_operators go ON go.id=g.operator_id WHERE g.company_id=a.company_id AND g.operator_id=a.approver_id
             AND g.version=a.grant_version AND g.revoked_at IS NULL AND go.status='active'
             AND (g.role='owner' OR EXISTS(SELECT 1 FROM json_each(g.actions) WHERE value='pay:approve'))) AS grantCurrent
           FROM env_run_approvals a JOIN oa_operators o ON o.id=a.approver_id WHERE a.company_id=? AND ${f.sql} ORDER BY a.occurred_at`,
           [actor.company, ...f.args],
         )
-        .all<RunApproval & { runId: string; version: number; grantCurrent: number }>()
+        .all<RunApproval & { runId: string; version: number; grantCurrent: number; authorityActive: number }>()
     ).results
     return Promise.all(
       runs.map(async (run): Promise<RunApprovalStatus> => {
         const exact = await contentDigest(actor, run)
         const approvals = rows
           .filter((a) => a.runId === run.id && a.version === run.version)
-          .map(({ runId: _r, version: _v, grantCurrent, ...a }) => ({
+          .map(({ runId: _r, version: _v, grantCurrent, authorityActive, ...a }) => ({
             ...a,
-            current: Boolean(grantCurrent) && ['passkey-uv','oidc-mfa'].includes(a.proofMethod) && a.contentDigest === exact,
+            current: Boolean(grantCurrent) && Boolean(authorityActive) && ['passkey-uv','oidc-mfa'].includes(a.proofMethod) && a.contentDigest === exact,
           }))
         const known = debit(run.data)
         return {
@@ -171,8 +171,8 @@ export class RunApprovals {
     // collections, bank versions, one session-bound review and one row per person.
     const result = await this.store.records.env.DB.batch<Record<string, unknown>>([
       this.store.records.statement(
-        `INSERT INTO env_run_approvals(company_id,kind,run_id,version,approver_id,role,grant_version,session_id,content_digest,debit_cents,occurred_at,change_id,presenting_client,proof_method)
-        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql}
+        `INSERT INTO env_run_approvals(company_id,kind,run_id,version,approver_id,role,grant_version,session_id,content_digest,debit_cents,occurred_at,change_id,presenting_client,proof_method,authority_active)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,1 WHERE ${f.sql}
         AND (SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind=? AND object_id=?)=?
         AND EXISTS(SELECT 1 FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND v.object_id=? AND v.version=? AND ${currentSources('v')})
         AND ${d.sql}

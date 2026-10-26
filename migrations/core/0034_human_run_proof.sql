@@ -14,6 +14,7 @@ CREATE TABLE env_human_challenges (
 );
 ALTER TABLE env_run_approvals ADD COLUMN presenting_client TEXT NOT NULL DEFAULT 'native-envelope';
 ALTER TABLE env_run_approvals ADD COLUMN proof_method TEXT NOT NULL DEFAULT 'legacy-review';
+ALTER TABLE env_run_approvals ADD COLUMN authority_active INTEGER NOT NULL DEFAULT 0 CHECK(authority_active IN (0,1));
 CREATE TABLE env_review_presentations (
  token_hash TEXT PRIMARY KEY, company_id TEXT NOT NULL, run_id TEXT NOT NULL,
  run_version INTEGER NOT NULL, credential_id TEXT NOT NULL, grant_version INTEGER NOT NULL,

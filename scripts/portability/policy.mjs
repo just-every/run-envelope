@@ -30,16 +30,18 @@ export function createEnvelopeArchivePolicy({ recordKey = () =>
     exportRow(table, row) {
       if (expires.includes(table)) row.expires_at = 0;
       if (table === 'env_webhooks') row.active = 0;
+      if (table === 'env_run_approvals') row.authority_active = 0;
       if (table === 'env_agent_grants') for (const field of ['actions', 'fields', 'locations', 'providers', 'models']) row[field] = '[]';
       return row;
     },
-    importSafety: {env_webhooks: {active: [0]}, ...Object.fromEntries(expires.map(table => [table, {
+    importSafety: {env_run_approvals: {authority_active: [0]}, env_webhooks: {active: [0]}, ...Object.fromEntries(expires.map(table => [table, {
       expires_at: [0], ...(table === 'env_agent_grants' ? Object.fromEntries(
         ['actions', 'fields', 'locations', 'providers', 'models'].map(field => [field, ['[]']])) : {}),
     }]))},
     importRow(table, row) {
       if (expires.includes(table)) row.expires_at = 0;
       if (table === 'env_webhooks') row.active = 0;
+      if (table === 'env_run_approvals') row.authority_active = 0;
       if (table === 'env_agent_grants') for (const field of ['actions', 'fields', 'locations', 'providers', 'models']) row[field] = '[]';
       return row;
     },

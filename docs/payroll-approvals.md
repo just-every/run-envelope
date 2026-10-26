@@ -113,7 +113,9 @@ separately from `approverId`, with `proofMethod` set to `passkey-uv` or
 review never grants the preparer approval or release powers.
 
 Passkeys, challenges and presentation links are installation-local and excluded
-from archives. Run-linked challenge and presentation rows participate in the
+from archives. Retained run approvals preserve their proof method and attribution,
+but their execution eligibility is cleared on export and import, including when
+a later grant happens to reuse the old version number. Run-linked challenge and presentation rows participate in the
 existing foreign-key custody graph. This does not prove all archive, erasure or
 future transport cases. Genuine bonus preparation, complete calculation, payable
 release, bank verification and rail cancellation remain outside this proof.

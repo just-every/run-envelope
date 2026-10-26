@@ -386,7 +386,7 @@
       "executable": false
     },
     "docs/payroll-approvals.md": {
-      "sha256": "41f13b2bacb017ac52f3d1ad488ac2bfed449a04b4ba29aade9ad39333520b07",
+      "sha256": "bb68374add1fd819eb736a96b71361f706ca0c2131ddfd340571d8cefac17a6d",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -590,7 +590,7 @@
       "executable": false
     },
     "migrations/core/0034_human_run_proof.sql": {
-      "sha256": "0e5457c81f379d001146cd3f1ad067cbb530248d5605145e678968da6a9fbe3a",
+      "sha256": "332cfd53bf0a7459270ab84e21c34b013a1aaada7b44bd3ad4ddc7d8201cf155",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1146,7 +1146,7 @@
       "executable": false
     },
     "scripts/portability/policy.mjs": {
-      "sha256": "d30d33876a850b89b49de8d4c9e3617d1951f183129afde32ad28f0d943109c2",
+      "sha256": "ed115dcb527dfbab11ba76677d9fba144a815e8085c89e86a35aa0b7ab2ed0e8",
       "executable": false
     },
     "scripts/portability/record-key-settings.mjs": {
@@ -1634,7 +1634,7 @@
       "executable": false
     },
     "src/envelope/workspace/run-approvals.ts": {
-      "sha256": "787765071ad7fb41f08b22cf84502e897340f321f084e2dcfdec74c7fe85ecf1",
+      "sha256": "12dff43992c072227ce4c5863f4746667f22c7a43c1c910e162ca615376197c2",
       "executable": false
     },
     "src/envelope/workspace/schedules.ts": {
