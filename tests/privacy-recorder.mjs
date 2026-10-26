@@ -57,6 +57,7 @@ export async function startRecordedWorker(options) {
       if (binding('MAIL_API_KEY') && request.headers.get('authorization') === 'Bearer ' + binding('MAIL_API_KEY'))
         assert.equal(request.url, mailUrl, 'Native credential never reaches a different recipient')
       if (request.url === mailUrl) assert.equal(request.headers.get('authorization'), 'Bearer ' + binding('MAIL_API_KEY'), 'Native mail credential stays at its declared transport')
+      if (binding('ENVELOPE_WEBHOOK_URL')) allowed.add(binding('ENVELOPE_WEBHOOK_URL'))
       if (!allowed.has(request.url) && request.url !== mailUrl) violations.push('Undeclared Worker destination')
       inspect(request.url, 'Outbound URL')
       const payload = await request.clone().text()
@@ -65,6 +66,7 @@ export async function startRecordedWorker(options) {
       const headers = new Headers(request.headers)
       headers.delete('authorization')
       inspect([...headers], 'Outbound headers')
+      if (request.url === binding('ENVELOPE_WEBHOOK_URL')) return nativeFetch(request.url,{method:request.method,headers:Object.fromEntries(request.headers),body:payload,redirect:'manual'})
       if (!edge) {
         violations.push('Undeclared outbound request')
         return new Response(null, { status: 502 })
@@ -76,6 +78,7 @@ export async function startRecordedWorker(options) {
 
 const launch = chromium.launch.bind(chromium)
 chromium.launch = async (...args) => {
+  if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) args[0] = {...args[0], executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args:[...(args[0]?.args ?? []),'--no-sandbox']}
   const browser = await launch(...args)
   const newContext = browser.newContext.bind(browser)
   browser.newContext = async (...contextArgs) => {

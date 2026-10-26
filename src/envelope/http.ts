@@ -18,6 +18,7 @@ import { sourcePage } from './intake/pages'
 import { LeaveLedger, leaveBucket, leaveId } from './leave/ledger'
 import { leavePage } from './leave/pages'
 import { AgentSettings, AgentTools } from './agents'
+import { Lifecycle } from './lifecycle'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
 import { providersPage, noticesPage, noticePage, replyReviewPage } from './notice-pages'
@@ -156,6 +157,15 @@ export async function payrollResponse(
       const agent = await AgentTools.authenticate(env, bearer.slice(7))
       const opened = await agent.log('transport.rest.v1', agent.grant.id).run()
       if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked', 403)
+      const reportRoute = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/reports\/proposals$/.exec(url.pathname)
+      if (reportRoute && request.method !== 'POST') {
+        if ([...url.searchParams.keys()].some(k=>!['limit','after'].includes(k) || url.searchParams.getAll(k).length!==1)) throw new PayrollError('invalid_report_query')
+        const result=await agent.proposalReport({companyId:reportRoute[1],
+          ...(url.searchParams.has('limit') ? {limit:url.searchParams.get('limit')} : {}),
+          ...(url.searchParams.has('after') ? {after:url.searchParams.get('after')} : {}),
+        })
+        return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
+      }
       const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
       if (!route) throw new PayrollError('agent_tool_denied', 403)
       const [, companyId, resource, draftId] = route
@@ -274,6 +284,11 @@ export async function payrollResponse(
               ],
             },
             {
+              name: 'reports.proposals', action: 'drafts:read',
+              description: 'Read a current scoped report of this credential’s retained uncalculated input proposals. No payroll totals, payments or filings.',
+              properties: {companyId:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},after:{type:'string'}}, required:['companyId'],
+            },
+            {
               name: 'draft.read',
               action: 'drafts:read',
               description:
@@ -317,6 +332,8 @@ export async function payrollResponse(
             ? await agent.records(args)
             : params.name === 'draft.prepare'
               ? await agent.prepare(args)
+              : params.name === 'reports.proposals'
+                ? await agent.proposalReport(args)
               : params.name === 'draft.read'
                 ? await agent.readDraft(args)
                 : (() => {
@@ -398,7 +415,16 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!tail.length && !post) {
+      if (!ui && tail.length === 1 && tail[0] === 'operations' && !post) {
+        response = json(await new Lifecycle(records).health(actor))
+      } else if (!ui && tail[0] === 'webhooks') {
+        const lifecycle = new Lifecycle(records)
+        if (tail.length === 1) response = json(post ? await lifecycle.subscribe(actor,value) : await lifecycle.read(actor),post ? 201 : 200)
+        else if (tail.length === 3 && post && tail[2] === 'revoke') response = json(await lifecycle.revoke(actor,tail[1]))
+        else if (tail.length === 3 && post && tail[2] === 'deliver') response = json(await lifecycle.deliver(actor,tail[1],value))
+        else if (tail.length === 3 && post && tail[2] === 'recover') response = json(await lifecycle.recover(actor,tail[1]))
+        else throw new PayrollError('not_found',404)
+      } else if (!tail.length && !post) {
         const company = await records.company(actor),
           locations = await records.locations(actor),
           people =

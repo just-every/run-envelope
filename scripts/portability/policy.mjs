@@ -20,7 +20,7 @@ export function createEnvelopeArchivePolicy({ recordKey = () =>
     includeTables: [...identityHistory],
     excludeTables: ['oa_sessions', 'oa_tokens', 'oa_credentials',
       'oa_step_up_challenges', 'oa_policy_approvals', 'oc_idp_grants',
-      'env_external_providers', 'env_agent_credentials', 'env_grants',
+      'env_external_providers', 'env_agent_credentials', 'env_webhook_keys', 'env_grants',
       'env_rate_reviews', 'env_workspace_reviews', 'env_notice_reviews',
       'rer_dependency_keys', 'rer_dependency_pending', 'rer_dependency_codes'],
     requiredConfiguration: ['ENVELOPE_RECORD_KEY', 'OWNER_EMAIL', 'SESSION_SECRET',
@@ -29,15 +29,17 @@ export function createEnvelopeArchivePolicy({ recordKey = () =>
     // capability scope cleared. Notice approval attribution remains evidence.
     exportRow(table, row) {
       if (expires.includes(table)) row.expires_at = 0;
+      if (table === 'env_webhooks') row.active = 0;
       if (table === 'env_agent_grants') for (const field of ['actions', 'fields', 'locations', 'providers', 'models']) row[field] = '[]';
       return row;
     },
-    importSafety: Object.fromEntries(expires.map(table => [table, {
+    importSafety: {env_webhooks: {active: [0]}, ...Object.fromEntries(expires.map(table => [table, {
       expires_at: [0], ...(table === 'env_agent_grants' ? Object.fromEntries(
         ['actions', 'fields', 'locations', 'providers', 'models'].map(field => [field, ['[]']])) : {}),
-    }])),
+    }]))},
     importRow(table, row) {
       if (expires.includes(table)) row.expires_at = 0;
+      if (table === 'env_webhooks') row.active = 0;
       if (table === 'env_agent_grants') for (const field of ['actions', 'fields', 'locations', 'providers', 'models']) row[field] = '[]';
       return row;
     },

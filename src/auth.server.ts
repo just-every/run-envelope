@@ -17,6 +17,8 @@ export interface Bindings {
  DB: D1Database
  /** Independent base64 256-bit AES key; absent payroll custody fails closed. */
  ENVELOPE_RECORD_KEY?: string
+ /** Administrator-pinned exact receiver URL. No caller-selected destinations. */
+ ENVELOPE_WEBHOOK_URL?: string
  /** Built browser files; hosted deploys run the Worker first (staticAssetResponse). */
  ASSETS?: Fetcher
  RER_DEPLOY_SOURCE?: string

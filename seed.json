@@ -216,6 +216,23 @@
       ],
       "adapters": [],
       "name": "Job earnings and practice handoffs"
+    },
+    {
+      "id": "proposal-webhooks",
+      "name": "Owner-consented proposal webhook receiver",
+      "required": false,
+      "availability": "optional",
+      "why": "Reference-only uncalculated proposal events to the exact administrator-pinned receiver after explicit native owner consent and an audited send. Signing secrets are encrypted in company storage and excluded from archives; receiver retention and deduplication are controlled by its operator. No automatic delivery, compensation, payment or filing data.",
+      "data": [
+        "stable event identifier",
+        "company identifier",
+        "proposal identifier",
+        "event type",
+        "occurrence timestamp",
+        "uncalculated proposal status",
+        "delivery timestamp and HMAC signature"
+      ],
+      "adapters": []
     }
   ],
   "env": [],

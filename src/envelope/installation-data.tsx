@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Bindings } from '../auth.server'
 import seed from '../../seed.json'
+import { webhookDestination } from './lifecycle'
 
 /** Extend only successful native owner documents; keep their authority and CSP. */
 export async function installationDataResponse(response: Response, env: Bindings): Promise<Response> {
@@ -9,6 +10,8 @@ export async function installationDataResponse(response: Response, env: Bindings
   const local = env.AUTH_LOCAL === 'true' || env.RER_DEMO === '1'
   const mail = local ? 'Local mail is suppressed' : ['rer', 'resend', 'sendgrid', 'cloudflare'].includes(env.MAIL_PROVIDER ?? '')
     ? `Selected native mail: ${env.MAIL_PROVIDER}` : 'Native mail is unavailable'
+  let receiver = 'No proposal webhook receiver configured'
+  try { receiver = webhookDestination(env) } catch { /* no invalid configuration or credential is displayed */ }
   const content = renderToStaticMarkup(<section aria-labelledby="external-data-heading">
     <h2 id="external-data-heading">External data recipients</h2>
     <p>{mail}. Installation credentials stay in owner Worker bindings and are never displayed here. Company notice providers require separate explicit consent in company settings.</p>
@@ -20,6 +23,7 @@ export async function installationDataResponse(response: Response, env: Bindings
       <p>Permitted fields: {recipient.data.join(', ')}.</p>
       <p>Destination: {recipient.availability === 'unavailable' ? 'None authorized; no request is made'
         : recipient.id === 'rer-mail' ? env.MAIL_PROVIDER === 'rer' ? env.MAIL_RELAY_URL ?? 'No managed mail relay configured' : 'Managed mail is not selected'
+        : recipient.id === 'proposal-webhooks' ? receiver
         : recipient.id === 'identity-provider' ? linked?.issuer ?? 'No identity issuer linked'
         : recipient.adapters.join(', ') || 'Owner-controlled hosting and storage'}.</p>
     </details>)}

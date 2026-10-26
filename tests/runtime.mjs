@@ -7,6 +7,8 @@ import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
+import { createServer as createReceiver } from 'node:http'
+import { createHmac } from 'node:crypto'
 import { request as httpsRequest } from 'node:https'
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -72,8 +74,29 @@ execFileSync(
 // A loopback installation with its owner's settings, so the owner's first run can be walked through the public doors.
 const origin = `http://127.0.0.1:${port}`
 const setupToken = randomBytes(32).toString('hex')
+const receiverState = {secret: null, mode:'accept', received:[], effects:new Set()}
+const receiver = createReceiver(async (request,response) => {
+  const chunks=[]
+  for await (const chunk of request) chunks.push(chunk)
+  const body=Buffer.concat(chunks).toString(), timestamp=request.headers['envelope-timestamp']
+  const expected='v1='+createHmac('sha256',receiverState.secret ?? '').update(timestamp+'.'+body).digest('hex')
+  if (!receiverState.secret || request.headers['envelope-signature']!==expected || Math.abs(Date.now()/1000-Number(timestamp))>300) {
+    response.writeHead(401);response.end();return
+  }
+  const event=JSON.parse(body)
+  assert.equal(request.headers['envelope-event-id'],event.id)
+  assert.deepEqual(Object.keys(event).sort(),['companyId','id','occurredAt','proposalId','status','type'])
+  receiverState.received.push(event)
+  if(receiverState.mode==='reject'){response.writeHead(422);response.end();return}
+  receiverState.effects.add(event.id)
+  if(receiverState.mode==='lost'){response.writeHead(503);response.end();return}
+  if(receiverState.mode==='pause') await new Promise(resolve=>{receiverState.release=resolve})
+  response.writeHead(204);response.end()
+})
+await new Promise(resolve=>receiver.listen(0,'127.0.0.1',resolve))
 const settings = {
   AUTH_LOCAL: 'true',
+  ENVELOPE_WEBHOOK_URL: `http://127.0.0.1:${receiver.address().port}/events`,
   AUTH_ORIGIN: origin,
   OWNER_EMAIL: 'owner@example.com',
   SESSION_SECRET: randomBytes(32).toString('hex'),
@@ -153,6 +176,7 @@ try {
       await page.locator('details').evaluateAll(details => details.forEach(detail => detail.open = true))
       await page.evaluate(() => document.fonts.ready)
       assert.match(await page.locator('main').innerText(), /External data recipients/)
+      assert.ok((await page.locator('main').innerText()).includes(settings.ENVELOPE_WEBHOOK_URL),'the exact proposal receiver is declared before the first request')
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
       for (const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim())
       await page.screenshot({path:join(folder, `installation-setup-${width}.png`),fullPage:true})
@@ -262,7 +286,7 @@ try {
   if (!selected || selected.includes('approvals'))
     await approvalJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('records')) {
-    const records = await payrollJourney({ origin, cookie, settings, sql })
+    const records = await payrollJourney({ origin, cookie, settings, sql, receiverState, restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()} })
     await stopWorker()
     const withoutKey = { ...settings }
     delete withoutKey.ENVELOPE_RECORD_KEY
@@ -422,6 +446,7 @@ try {
   await finishPrivacyRecording()
 } finally {
   await stopWorker()
+  await new Promise(resolve=>receiver.close(resolve))
   await rm(persist, { recursive: true, force: true })
   // wrangler dev keeps its scratch (.wrangler/tmp) beside the config it runs, which here is the emitted Worker; the artifact producer refuses that folder in dist/server, so leave the build output as rer build wrote it.
   await rm('dist/server/.wrangler', { recursive: true, force: true })

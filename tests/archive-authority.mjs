@@ -102,6 +102,7 @@ export async function archiveAuthority(context, company, notice) {
       executionId: edgeEffect.idempotencyKey.slice('envelope-notice-'.length) })
   }
 
-  return { effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
+  const webhook=await data(company.base+'/webhooks',{consent:true},201)
+  return { webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
     replyVersion: reply.version, replyDigest: reply.digest, providerSecret }
 }

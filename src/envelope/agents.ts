@@ -359,6 +359,25 @@ export class AgentTools {
     const records = result[1].results.slice(0, limit)
     return { records, limit, next: result[1].results.length > limit ? records.at(-1)?.id : null }
   }
+  async proposalReport(input: Input) {
+    this.allow('drafts:read',input.companyId)
+    if (!JSON.parse(this.grant.fields).includes('compensation')) throw new PayrollError('agent_scope_denied',403)
+    if (Object.keys(input).some(k=>!['companyId','limit','after'].includes(k))) throw new PayrollError('invalid_report_query')
+    const limit=input.limit===undefined ? 100 : integer(input.limit)
+    if (limit>100) throw new PayrollError('invalid_report_query')
+    const after=input.after===undefined ? '' : text(input.after,80), f=this.fence(), l=this.location('p.location_id'), event=uuid()
+    const result=await this.env.DB.batch<Record<string,unknown>>([
+      this.env.DB.prepare(`INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at) SELECT ?,?,?,?,'reports:proposals',?,? WHERE ${f.sql}`)
+        .bind(event,this.grant.company_id,this.grant.id,this.grant.sponsor_id,this.grant.company_id,Date.now(),...f.args),
+      this.env.DB.prepare(`SELECT d.id,d.person_id AS personId,d.person_version AS personVersion,d.rate_id AS rateId,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,(p.version!=d.person_version) AS stale
+        FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id
+        WHERE d.company_id=? AND d.credential_id=? AND d.id>? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) ORDER BY d.id LIMIT ?`)
+        .bind(this.grant.company_id,this.grant.id,after,...l.args,...f.args,event,limit+1),
+    ])
+    if (!result[0].meta.changes) throw new PayrollError('agent_authority_revoked',403)
+    const proposals=result[1].results.slice(0,limit)
+    return {kind:'run-input-proposals',proposals,limit,next:result[1].results.length>limit ? proposals.at(-1)?.id : null,payroll:'uncalculated',payment:'unavailable',filing:'unavailable'}
+  }
   async prepare(input: Input) {
     this.allow('drafts:prepare', input.companyId)
     if (!JSON.parse(this.grant.fields).includes('compensation'))

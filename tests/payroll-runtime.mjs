@@ -15,7 +15,7 @@ import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 // UUID references are public identifiers, not private numeric pay values.
 const withoutUuidReferences = text => text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, '')
 
-export async function payrollJourney({ origin, cookie, settings, sql }) {
+export async function payrollJourney({ origin, cookie, settings, sql, receiverState, restart }) {
   const base = '/api/envelope/companies',
     call = (path, who = cookie, body) =>
       fetch(origin + path, {
@@ -910,6 +910,17 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       sourceRef: 'synthetic-envelope-8',
       requestKey: 'synthetic-envelope-9',
     }
+    // LIFECYCLE-DELIVERY: exact native proposal, real controlled HTTP receiver.
+    const hooks = company + '/webhooks'
+    await data(hooks,{consent:false},cookie,400)
+    await data(hooks,{consent:true},actors.accountant.cookie,403)
+    const subscription = await data(hooks,{consent:true},cookie,201)
+    receiverState.secret = subscription.secret
+    assert.equal(subscription.payment,'unavailable')
+    assert.equal(subscription.filing,'unavailable')
+    assert.ok(!(JSON.stringify(await data(hooks))).includes(subscription.secret))
+    const storedKey = await sql(`SELECT secret_cipher FROM env_webhook_keys WHERE id='${subscription.id}'`)
+    assert.ok(!JSON.stringify(storedKey).includes(subscription.secret),'signing key encrypted at rest')
     const draft = await toolData('draft.prepare', draftInput)
     assert.equal(draft.status, 'uncalculated-proposal')
     assert.equal(
@@ -917,6 +928,77 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       draft.id,
       'replayed request returns the same persisted draft',
     )
+    let deliveryState = await data(hooks)
+    const job = deliveryState.jobs.find(j=>j.eventId===draft.id)
+    assert.ok(job)
+    assert.equal(deliveryState.jobs.length,1,'idempotent preparation enqueues one obligation')
+    assert.equal(receiverState.received.length,0,'no automatic outbound delivery')
+    await data(hooks+'/'+job.id+'/deliver',{consent:true},actors.accountant.cookie,403)
+    await data('/api/envelope/companies/'+b+'/webhooks/'+job.id+'/deliver',{consent:true},cookie,403)
+    await data(hooks+'/'+job.id+'/deliver',{consent:false},cookie,400)
+    receiverState.mode='reject'
+    assert.equal((await data(hooks+'/'+job.id+'/deliver',{consent:true})).status,'failed')
+    assert.equal(receiverState.effects.size,0)
+    await restart()
+    deliveryState=await data(hooks)
+    assert.equal(deliveryState.jobs.find(j=>j.id===job.id).status,'failed','failed obligation survives restart')
+    receiverState.mode='lost'
+    assert.equal((await data(hooks+'/'+job.id+'/deliver',{consent:true})).status,'unknown')
+    assert.equal(receiverState.effects.size,1,'receiver accepted before acknowledgement failed')
+    const health=await data(company+'/operations')
+    assert.equal(health.status,'attention-required')
+    assert.equal(health.jobs.unknown,1)
+    assert.equal(health.dependencies.payment,'unavailable')
+    assert.equal(health.dependencies.filing,'unavailable')
+    assert.equal(health.providerDelivery,'not established')
+    await data(company+'/operations',undefined,actors.accountant.cookie,403)
+    await restart()
+    assert.equal((await data(hooks)).jobs.find(j=>j.id===job.id).status,'unknown')
+    receiverState.mode='accept'
+    const delivered=await data(hooks+'/'+job.id+'/deliver',{consent:true})
+    assert.equal(delivered.status,'delivered')
+    assert.equal(delivered.eventId,draft.id)
+    assert.equal(receiverState.effects.size,1,'stable event identity deduplicates receiver work')
+    const receivedBefore=receiverState.received.length
+    assert.equal((await data(hooks+'/'+job.id+'/deliver',{consent:true})).duplicate,true)
+    assert.equal(receiverState.received.length,receivedBefore)
+    assert.equal((await data(hooks+'/'+job.id+'/deliver',{consent:true,replay:true})).status,'delivered')
+    assert.equal(receiverState.effects.size,1,'explicit replay does not repeat receiver business work')
+    const retainedDelivery=await data(hooks)
+    assert.deepEqual(retainedDelivery.attempts.map(a=>a.outcome).sort(),['delivered','delivered','failed','unknown'])
+    assert.ok(!JSON.stringify(retainedDelivery).includes(subscription.secret))
+    assert.ok(receiverState.received.every(e=>e.type==='run.proposal.created' && e.status==='uncalculated-proposal'))
+    assert.doesNotMatch(JSON.stringify(receiverState.received),/hourlyCents|minutes|personName|compensation|ssn/)
+    receiverState.mode='pause'
+    const sending=call(hooks+'/'+job.id+'/deliver',cookie,{consent:true,replay:true})
+    try {
+      for(let i=0;i<200 && !receiverState.release;i++) await new Promise(resolve=>setTimeout(resolve,10))
+      assert.equal(typeof receiverState.release,'function','receiver retains the first active claim')
+      assert.equal((await call(hooks+'/'+job.id+'/deliver',cookie,{consent:true,replay:true})).status,409,'a concurrent claimant cannot send')
+    } finally {
+      receiverState.mode='accept'
+      receiverState.release?.()
+    }
+    assert.equal((await sending).status,200)
+    await data(hooks+'/'+job.id+'/deliver',{consent:true,replay:true},cookie,409)
+    assert.equal(receiverState.effects.size,1)
+    const interrupted=await toolData('draft.prepare',{...draftInput,requestKey:'synthetic-envelope-821-recovery'})
+    const interruptedJob=(await data(hooks)).jobs.find(j=>j.eventId===interrupted.id)
+    // Fault injection models a process dying after its atomic durable claim.
+    const interruptedClaim='synthetic-envelope-821-claim'
+    await sql(`UPDATE env_webhook_jobs SET status='sending',attempt=1,started_at=${Date.now()},claim_id='${interruptedClaim}' WHERE id='${interruptedJob.id}'; INSERT INTO env_webhook_attempts(id,company_id,job_id,attempt,started_at,outcome) VALUES('${interruptedClaim}','${a}','${interruptedJob.id}',1,${Date.now()},'sending')`)
+    await data(hooks+'/'+interruptedJob.id+'/recover',{},cookie,409)
+    await sql(`UPDATE env_webhook_jobs SET started_at=${Date.now()-31000} WHERE id='${interruptedJob.id}'`)
+    await restart()
+    assert.equal((await data(company+'/operations')).jobs.expiredLeases,1)
+    const beforeRecovery=receiverState.received.length
+    assert.equal((await data(hooks+'/'+interruptedJob.id+'/recover',{})).status,'unknown')
+    assert.equal(receiverState.received.length,beforeRecovery,'recover does not send or assume an acknowledgement')
+    assert.equal((await data(hooks+'/'+interruptedJob.id+'/deliver',{consent:true})).status,'delivered')
+    await data(hooks+'/'+subscription.id+'/revoke',{})
+    await data(hooks+'/'+job.id+'/deliver',{consent:true,replay:true},cookie,403)
+    assert.equal(receiverState.received.length,beforeRecovery+1,'revocation blocks future delivery')
+    console.log('LIFECYCLE-DELIVERY passed: atomic proposal outbox, signed controlled receiver, encrypted secret, explicit consent, current owner and company fences, durable failure and unknown acknowledgement, replay with deduplicated receiver work, no compensation payload, revocation')
     const draftRead = await toolData('draft.read', { companyId: a, draftId: draft.id })
     assert.equal(draftRead.personId, maria.id)
     assert.equal(draftRead.minutes, 480)
@@ -979,6 +1061,30 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
     const readOnlyClient = await data(company + '/agents', {
       name:'synthetic-envelope-824', hours:1, actions:['records:read'], fields:[], locations:[ca.id],
     }, cookie, 201)
+    const report=await cli(['report',a])
+    assert.equal(report.code,0,report.stderr)
+    const reportData=JSON.parse(report.stdout)
+    assert.equal(reportData.kind,'run-input-proposals')
+    assert.equal(reportData.payroll,'uncalculated')
+    assert.equal(reportData.payment,'unavailable')
+    assert.equal(reportData.filing,'unavailable')
+    assert.ok(reportData.proposals.some(p=>p.id===cliDraft.id && p.minutes===480 && p.rateId===retained.rateId))
+    const reportPage=await (await rest('/reports/proposals?limit=1')).json()
+    assert.equal(reportPage.proposals.length,1)
+    const reportRows=[...reportPage.proposals]
+    let reportCursor=reportPage.next
+    while(reportCursor){
+      const next=await toolData('reports.proposals',{companyId:a,after:reportCursor,limit:1})
+      reportRows.push(...next.proposals);reportCursor=next.next
+      assert.ok(reportRows.length<=reportData.proposals.length)
+    }
+    assert.deepEqual(reportRows,reportData.proposals,'CLI, REST and MCP report pages cover the same retained records')
+    const foreignReport=await (await rest('/reports/proposals',undefined,foreignClient.token)).json()
+    assert.deepEqual(foreignReport.proposals,[],'a different credential cannot report another client’s proposals')
+    assert.equal((await mcp('reports.proposals',{companyId:b})).status,403)
+    assert.equal((await rest('/reports/proposals?limit=101')).status,400)
+    assert.equal((await rest('/reports/proposals?after=a&after=b')).status,400)
+    assert.equal((await rest('/reports/proposals?fields=ssn')).status,400)
     const beforeTransportDenials = await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts')
     await noWrite(async () => {
     assert.equal((await rest('/drafts/' + cliDraft.id, undefined, foreignClient.token)).status, 403)
@@ -1136,6 +1242,8 @@ export async function payrollJourney({ origin, cookie, settings, sql }) {
       .click()
     await page.waitForURL(origin + screen + '/agents')
     assert.equal((await rest('/drafts/' + cliDraft.id)).status, 403)
+    assert.equal((await rest('/reports/proposals')).status,403)
+    assert.equal((await mcp('reports.proposals',{companyId:a})).status,403)
     const revokedCli = await cli(['status', a, cliDraft.id])
     assert.equal(revokedCli.code, 1)
     assert.equal(revokedCli.stdout, '')

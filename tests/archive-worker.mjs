@@ -8,7 +8,7 @@ import { startRecordedWorker as unstable_startWorker, recordPrivateInput } from 
 export async function withArchiveWorker(context, journey) {
   const origin = context.origin.replace('http:', 'https:'), port = Number(new URL(origin).port);
   const edge = { mails: [], noticeEffects: [] };
-  const settings = { ...context.settings, AUTH_LOCAL: 'false', AUTH_ORIGIN: origin,
+  const settings = { ...context.settings, ENVELOPE_WEBHOOK_URL:'https://receiver.example.com/events', AUTH_LOCAL: 'false', AUTH_ORIGIN: origin,
     MAIL_PROVIDER: 'resend', MAIL_FROM: 'Envelope <signin@example.com>', MAIL_API_KEY: 'synthetic-envelope-5300' };
   const start = async storage => {
     const instance = await unstable_startWorker({ config: resolve('dist/server/wrangler.json'),

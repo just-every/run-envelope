@@ -192,3 +192,88 @@ The scoped credential isolation applies immediately to all transports. Future
 report, lifecycle, callback, download and execution doors inherit ENV-028,
 ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055 obligations. Nothing in
 this preparation interface is a passkey or MFA payroll-approval ceremony.
+
+## Signed native proposal lifecycle
+
+The native owner can explicitly subscribe to `run.proposal.created`. This is a
+persisted, uncalculated input proposal event, never a calculated payroll, payment,
+filing or provider receipt. Payment and filing lifecycle families are unavailable.
+No compensation, person name, bank data, tax value or source text leaves this door.
+
+The installation administrator pins one exact `ENVELOPE_WEBHOOK_URL` in private
+runtime configuration. There is no caller-selected URL. HTTPS is required;
+local-mode loopback receivers may use HTTP. Credentials, query and fragment in
+that URL are refused, redirects are never followed and sends time out in ten
+seconds. Configuring a URL does not establish receiver health or consent.
+
+The following native settings API routes use the existing authenticated session
+and same-origin POST rules, under `/api/envelope/companies/:company`:
+
+- `POST /webhooks` with `{consent:true}` requires the configured native owner and
+  fresh app-local identity proof. It records explicit consent to the pinned
+  destination and returns `{id,secret,destination,eventTypes,payment,filing}`.
+  Store the once-visible signing secret in the receiver's secret manager. It is
+  encrypted at rest and never returned by history. It is not an agent credential.
+- `GET /webhooks` returns up to 100 subscriptions and jobs and 200 latest attempt
+  records, ordered by immutable job ID and descending attempt time respectively.
+  This is a bounded operational view, not a complete historical export. Each job
+  includes its stable event ID, status, current attempt and permitted next action.
+- `POST /webhooks/:subscription/revoke` with `{}` stops future sends. Changing
+  the owner's grant or identity version also invalidates its old consent.
+- `POST /webhooks/:job/deliver` with `{consent:true}` explicitly attempts one
+  event. A delivered event is a no-op unless `replay:true` is also explicit.
+  Current native owner, company, session, subscription and custody are checked
+  again before sending. Held custody forbids outbound delivery even to the owner.
+- `POST /webhooks/:job/recover` with `{}` converts a sending lease older than
+  30 seconds to unknown after an interrupted sender. It sends nothing. Inspect
+  the receiver before explicitly replaying. No automatic retry or destructive
+  recovery occurs; a maximum of five total attempts bounds each obligation.
+- `GET /operations` is an owner-only health and job summary. It probes the
+  database, exposes failed and unknown jobs and expired leases, and explicitly
+  distinguishes configured dependencies from verified delivery. Storage is not
+  probed; no automatic sender exists; payment and filing are unavailable.
+  A healthy database never certifies a bank, agency or receiver.
+
+The durable outbox is written atomically with native proposal creation, shared
+across REST, CLI and MCP. Repeated preparation keys create no duplicate event.
+Subscription starts with future proposals; historical proposals are not backfilled.
+A send carries JSON `{id,type,companyId,proposalId,occurredAt,status}` where status
+is `uncalculated-proposal`. The headers are `Envelope-Event-Id`,
+`Envelope-Timestamp` (Unix seconds) and `Envelope-Signature` (`v1=` followed by
+lowercase hexadecimal HMAC SHA-256). Verify HMAC over the exact UTF-8 body prefixed
+by the timestamp and a dot, using the returned secret as UTF-8 bytes. Compare
+signatures in constant time, reject timestamps outside five minutes and commit
+receiver deduplication by event ID atomically with receiver business work. Every
+attempt and replay uses the same event ID; timestamp and signature may change.
+Acknowledge only after durable acceptance. Sender delivery history cannot promise
+exactly-once work in an arbitrary receiver.
+
+A 2xx acknowledges delivery. A 4xx is failed. A redirect, server failure, timeout
+or lost acknowledgement is unknown: the receiver may already have accepted it.
+Neither response bodies nor receiver diagnostics are retained. Concurrent senders
+claim one durable attempt; restart preserves pending, failed and unknown jobs.
+Restored subscriptions are inactive and signing secrets are excluded from archives;
+restoring history confers no outbound authority. Complete backup and prior-release
+migration proof remains ENV-053 and ENV-056 work.
+
+Adopted conservative default pending ct review: only the configured native owner
+may consent, inspect or explicitly send reference-only proposal events to an
+administrator-pinned destination. There is no automatic outbound action and no
+new agent power. ENV-028, ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055
+inherit current authority and custody on these doors. Full run lifecycle families,
+bonus preparation, report tools and distinct human passkey or MFA payroll approval
+remain unproved; this native identity proof does not complete ENV-051.
+
+The current preparation report is available through MCP `reports.proposals`,
+`GET /api/envelope/v1/companies/:company/reports/proposals` and
+`node scripts/envelope-cli.mjs report COMPANY_ID [AFTER]`. It requires the current
+`drafts:read` action and compensation field and includes only proposals made by
+that same credential in its current company and locations. Another credential
+cannot retrieve them, even with the same sponsor. It returns
+`{kind,proposals,limit,next,payroll,payment,filing}`. Each proposal carries its ID,
+retained person version and rate reference, minutes, period, payday and stale
+indication. `kind` is `run-input-proposals`; `payroll` is `uncalculated`; payment
+and filing remain `unavailable`. This is a report of actual persisted preparation
+inputs, never a payroll register, net-pay report or provider status. Pagination
+uses the same `limit` and `after` rules as records. Every transport repeats current
+sponsor, grant, field, location, bearer and custody checks and records attribution.

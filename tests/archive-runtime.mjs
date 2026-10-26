@@ -175,11 +175,13 @@ export async function archiveJourney(context) {
     const text = await readFile(archive, 'utf8')
     assert.ok(!text.includes(settings.ENVELOPE_RECORD_KEY), 'record-key custody is separate from archive contents')
     assert.ok(!text.includes(fixture.authority.agentToken) && !text.includes(fixture.authority.providerSecret), 'live agent and provider secrets never enter the archive')
+    assert.ok(!text.includes(fixture.authority.webhookSecret),'webhook signing secret is not archived')
+    assert.equal(rows.env_webhooks.find(w=>w.id===fixture.authority.webhookId).active,0,'archived webhook consent is inactive')
     assert.ok(!text.includes(fixture.privateValue), 'private worker identifiers remain encrypted')
     const includedBefore = Object.fromEntries(Object.keys(rows).map(name => [name, before[name] ?? []]))
     assert.equal(digest(ciphers(rows)), digest(ciphers(includedBefore)), 'encrypted records retain their exact ciphertext and record association')
     assert.equal(digest(rows.env_workspace_decisions), digest(before.env_workspace_decisions), 'human approval history remains evidence')
-    for (const name of ['oa_sessions', 'oa_tokens', 'oa_credentials', 'oa_step_up_challenges', 'env_grants', 'env_workspace_reviews', 'env_rate_reviews', 'env_notice_reviews', 'env_external_providers', 'env_agent_credentials'])
+    for (const name of ['oa_sessions', 'oa_tokens', 'oa_credentials', 'oa_step_up_challenges', 'env_grants', 'env_workspace_reviews', 'env_rate_reviews', 'env_notice_reviews', 'env_external_providers', 'env_agent_credentials', 'env_webhook_keys'])
       assert.equal(rows[name]?.length ?? 0, 0, 'archive carries no active authority from ' + name)
     for (const name of ['env_agent_grants', 'env_notice_approvals', 'env_verification_consents', 'env_verification_releases'])
       for (const row of rows[name] ?? []) assert.equal(row.expires_at, 0, 'retained authorization evidence is inactive')
@@ -249,7 +251,7 @@ export async function archiveJourney(context) {
     assert.equal(digest(targetRows), digest(rows), 'every archived business and identity row matches the fresh target')
     assert.equal(digest(ciphers(targetRows)), digest(ciphers(includedBefore)), 'restore preserves exact encrypted history without re-encryption')
     const after = await snapshot(state(target))
-    for (const name of ['oa_sessions', 'oa_tokens', 'oa_credentials', 'env_grants', 'env_workspace_reviews', 'env_external_providers'])
+    for (const name of ['oa_sessions', 'oa_tokens', 'oa_credentials', 'env_grants', 'env_workspace_reviews', 'env_external_providers', 'env_webhook_keys'])
       assert.equal(after[name]?.length ?? 0, 0, 'restored history does not reactivate ' + name)
     await context.withRestoredWorker(state(target), async () => {
       const outboundBefore = context.edge.mails.length

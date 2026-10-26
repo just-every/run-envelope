@@ -3,12 +3,12 @@
 
 async function main() {
   const [command, company, reference, extra] = process.argv.slice(2)
-  if (!['records', 'prepare', 'status'].includes(command) ||
+  if (!['records', 'prepare', 'status', 'report'].includes(command) ||
       !/^[-a-zA-Z0-9]+$/.test(company ?? '') || process.argv.length > 5 || extra ||
       (command === 'status' && !/^[-a-zA-Z0-9]+$/.test(reference ?? '')) ||
       (command === 'prepare' && reference) ||
-      (command === 'records' && reference && !/^[-a-zA-Z0-9]+$/.test(reference)))
-    throw Error('usage: envelope-cli.mjs records COMPANY [AFTER] | prepare COMPANY < draft.json | status COMPANY DRAFT')
+      (['records','report'].includes(command) && reference && !/^[-a-zA-Z0-9]+$/.test(reference)))
+    throw Error('usage: envelope-cli.mjs records COMPANY [AFTER] | prepare COMPANY < draft.json | status COMPANY DRAFT | report COMPANY [AFTER]')
   let origin
   try { origin = new URL(process.env.ENVELOPE_ORIGIN) } catch { throw Error('ENVELOPE_ORIGIN must name the installation origin') }
   if (origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash ||
@@ -32,7 +32,7 @@ async function main() {
     } catch { throw Error('Draft input must be a JSON object') }
   }
   const path = `/api/envelope/v1/companies/${company}/` +
-    (command === 'records' ? 'records' + (reference ? '?after=' + reference : '') :
+    (command === 'report' ? ['reports','proposals'].join('/') + (reference ? '?after=' + reference : '') : command === 'records' ? 'records' + (reference ? '?after=' + reference : '') :
       command === 'prepare' ? 'drafts' : 'drafts/' + reference)
   const response = await fetch(new URL(path, origin), {
     method: body === undefined ? 'GET' : 'POST', redirect: 'error',
