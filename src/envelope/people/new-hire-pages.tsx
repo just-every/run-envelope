@@ -2,7 +2,7 @@ import type { Session } from '../../modules/operator-auth/index.mjs'
 import type { Actor } from '../access'
 import type { Company, Person } from '../records'
 import { page,Card,Field,Hidden,Select,Submit,companyPath } from '../pages'
-import { directories, type NewHireReporting, type HireReport } from './new-hire-reporting'
+import { directories, reportFieldLimit, type NewHireReporting, type HireReport } from './new-hire-reporting'
 import type { Revision } from '../workspace/store'
 export function newHirePage(session:Session, companies:Company[], actor:Actor,person:Person,rows:Awaited<ReturnType<NewHireReporting['reports']>>, review?:Revision<HireReport>&{reviewToken:string},packet?:Awaited<ReturnType<NewHireReporting['transfer']>>,selectedDirectory='OH',selectedRepair?:string) {
  const directory=directories.find(d=>d.code===selectedDirectory) ?? directories.find(d=>d.code==='OH')!
@@ -34,9 +34,9 @@ export function newHirePage(session:Session, companies:Company[], actor:Actor,pe
     {repair && <Hidden name="version" value={repair.version}/>}
     <p>Source updated {directory.updated}. Calendar deadline: {directory.deadlineDays} days. Required source fields are shown below. Optional worker fields are omitted. <a href={'additionalSource' in directory ? String(directory.additionalSource) : 'https://acf.gov/ocse/contact-information/state-new-hire-reporting-contacts-and-program-requirements'}>Official requirements</a></p>
     <Select name="eventType" label="Employment event" choices={['hire','rehire']} value={repair?.data.eventType}/><Hidden name="state" value={directory.code}/><Select name="workState" label="Actual state of hire" choices={directories.map(d=>d.code)} value={repair?.data.workState ?? directory.code}/><Field name="hireDate" label="First day of this employment" type="date" value={repair?.data.hireDate}/>
-    {directory.requiredFields.map(field=><Field key={field} name={field} value={repair?.data.fields[field]} label={fieldLabels[field] ?? field.replace(/([A-Z])/g,' $1')} type={field.endsWith('Ssn')||field.endsWith('Fein')?'password':field==='employeeDateOfBirth'?'date':'text'} required={field!=='employeeMiddleName'} maxLength={field.toLowerCase().endsWith('address')?500:120}/>)}
+    {directory.requiredFields.map(field=><Field key={field} name={field} value={repair?.data.fields[field]} label={fieldLabels[field] ?? field.replace(/([A-Z])/g,' $1')} type={field.endsWith('Ssn')||field.endsWith('Fein')?'password':field==='employeeDateOfBirth'?'date':'text'} required={field!=='employeeMiddleName'} maxLength={reportFieldLimit(directory.code,field)}/>)}
     {directory.requiredFields.some(f=>f.includes('Insurance')) && <p>Health availability uses yes or no. If no dependent health benefits exist, enter not-eligible for the eligibility date.</p>}
-    {directory.code==='NH' && <p>An active NHES state account is required for the WebTax channel. The statutory account field is conditional for other channels; this prepares WebTax fields only.</p>}
+    {directory.code==='NH' && <p>An active NHES state account is required for the WebTax channel. The statutory account field is conditional for other channels; this prepares WebTax fields only. WebTax allows up to 35 characters for each first and last name. Names are never shortened automatically.</p>}
     {directory.requiredFields.includes('workerType') && <p>Worker type is employee. Contractor reporting is a separate obligation.</p>}
     <Field name="electionId" label="Approved multistate election ID (optional)" value={repair?.data.electionId} required={false}/><Submit primary={!review}>{repair?'Prepare repaired version':'Prepare for exact review'}</Submit>
    </form> : <p role="alert">Reporting unavailable: {directory.gap} The obligation remains open; no submission is claimed.</p>}

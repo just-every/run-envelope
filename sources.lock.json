@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "caeef89043830b57e0762e3ffb2e8807d16d823db8ebba2639fa90db64f71746",
+      "sha256": "e4e21e8bd515edd68255cf34313e5a5344c17cce75197f09cfa8a1ae38946e84",
       "executable": false
     },
     "deploy-demo.json": {
@@ -398,7 +398,7 @@
       "executable": false
     },
     "docs/payroll-new-hire-reporting.md": {
-      "sha256": "0522bc5edfde214bfe9c25f4d962b3931da179ebf99641414ae387f7112cdc69",
+      "sha256": "1796fe88931bfd53c8510e1d0809723204a84c890f557c9cac51d76b6a2fbc96",
       "executable": false
     },
     "docs/payroll-notices.md": {
@@ -1538,11 +1538,11 @@
       "executable": false
     },
     "src/envelope/people/new-hire-pages.tsx": {
-      "sha256": "ba649140fb975fbfd823c576bb2b4b00e20e80d3a4c22e714d4b4f06eec216d3",
+      "sha256": "a06d29b8cd0df7835862160c1857141942e689e0d1787484cc73f8c528662c92",
       "executable": false
     },
     "src/envelope/people/new-hire-reporting.ts": {
-      "sha256": "ed4199b36e601efad4bed54d430c89868430f92b8a95a8f347310b5aa4098ea1",
+      "sha256": "8250913645f47627d0a073f03a5e3510522476f91e488da53c1015c400fc3c7a",
       "executable": false
     },
     "src/envelope/privacy-pages.tsx": {
@@ -2950,7 +2950,7 @@
       "executable": false
     },
     "tests/new-hire-runtime.mjs": {
-      "sha256": "a5642961c19ddb5432d5e11d6cb660cd0901f79f4c499b4738534a8c36f7e4d5",
+      "sha256": "cf7bccb4d7ea8b069cfabdc04136da3e55c8698c3225f815eeb593313f98fa72",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

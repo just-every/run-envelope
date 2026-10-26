@@ -95,6 +95,10 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
     await data(matrixDoor,{...payload,employerAddress:'PO Box 2, Harrisburg PA 17101'},400)
    }
    if(entry.code==='NH') {
+    await data(matrixDoor,{...payload,employeeFirstName:'Alexandermichaelchristopherbenjaminjames'},400)
+    await data(matrixDoor,{...payload,employeeLastName:'Montgomerywellingtonfitzgeraldharrington'},400)
+    payload.employeeFirstName='Alexandermichaelchristopherbenjamin'
+    payload.employeeLastName='Montgomerywellingtonfitzgerald'
     await data(matrixDoor,{...payload,stateEmployerId:''},400)
     await data(matrixDoor,{...payload,workerType:'contractor'},409)
     await data(matrixDoor,{...payload,employeeAddress:'PO Box 1, Concord NH 03301'},400)
@@ -102,12 +106,16 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
    const created=await data(matrixDoor,{...payload,employeeDateOfBirth:'1990-01-01'},201),path=matrixDoor+'/'+created.id
    const saved=(await data(matrixDoor)).find(r=>r.id===created.id)
    assert.equal(saved.data.dueOn,'2026-'+month+'-'+String((goldenDays[entry.code] ?? 20)+1).padStart(2,'0'),entry.name+' deadline')
+   if(entry.code==='NH') {
+    await data(path+'/repair',{...payload,employeeFirstName:'Alexandermichaelchristopherbenjaminjames',version:1},400)
+    if(eventType==='hire') await capture('new-hampshire-review',path.replace('/api/','/app/')+'/review')
+   }
    const exact=await data(path+'/review');await data(path+'/approve',{version:exact.version,reviewToken:exact.reviewToken})
    const edge=await data(path+'/transfer',{version:1})
    assert.deepEqual(Object.keys(edge.fields).sort(),[...entry.requiredFields,'hireDate',...(entry.includeWorkState?['stateOfHire']:[])].sort(),entry.name+' minimal schema fields')
    assert.equal(edge.directoryUrl,entry.directoryUrl);assert.equal(edge.submissionClaimed,false)
    if(entry.code==='PA') {assert.equal(edge.fields.employerContactName,'Synthetic Pennsylvania reporting owner','Pennsylvania transfers the reviewed employer contact name');assert.equal(edge.fields.employerContactPhone,'6145550100');assert.equal(edge.fields.stateOfHire,'PA');assert.equal(Object.hasOwn(edge.fields,'employeeDateOfBirth'),false)}
-   if(entry.code==='NH') {assert.equal(edge.directoryUrl,'https://www2.nhes.nh.gov/webtax/');assert.equal(edge.fields.workerType,'employee');assert.equal(edge.fields.stateEmployerId,optionalSourceValues.stateEmployerId)}
+   if(entry.code==='NH') {assert.equal(edge.fields.employeeFirstName,payload.employeeFirstName,'New Hampshire preserves the reviewed first name');assert.equal(edge.fields.employeeLastName,payload.employeeLastName,'New Hampshire preserves the reviewed last name');assert.equal(edge.directoryUrl,'https://www2.nhes.nh.gov/webtax/');assert.equal(edge.fields.workerType,'employee');assert.equal(edge.fields.stateEmployerId,optionalSourceValues.stateEmployerId)}
    await data(path+'/response',{version:2,receiptId:'synthetic-envelope-matrix-'+entry.code+'-'+eventType,response:'accepted',reportingDate:'2026-'+month+'-02',agencyResponse:'Synthetic observed portal confirmation at the directory boundary'})
    assert.equal((await data(matrixDoor)).find(r=>r.id===created.id).data.status,'accepted');cases++
   }

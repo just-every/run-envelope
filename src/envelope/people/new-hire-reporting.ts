@@ -6,6 +6,10 @@ import { WorkspaceStore, digest, revision, choice, currentSources, type Revision
 import source from './new-hire-directories.json'
 
 export const directories = source.directories
+export function reportFieldLimit(state:string,field:string) {
+  if(state==='NH' && ['employeeFirstName','employeeLastName'].includes(field)) return 35
+  return field.toLowerCase().endsWith('address') ? 500 : 120
+}
 export function coverage() {
   return { source: source.source, sourceSha256: source.sha256, total: directories.length,
     complete: false, remainingFailures: source.remainingFailures,
@@ -53,7 +57,7 @@ export class NewHireReporting {
     const eventType=choice(input.eventType,['hire','rehire']), hireDate=date(input.hireDate), state=choice(input.state,directories.map(d=>d.code))
     const directory=directoryFor(state), workState=choice(input.workState ?? input.state,directories.map(d=>d.code))
     const fields:Record<string,string>={}
-    for(const field of directory.requiredFields) fields[field]=field==='employeeMiddleName' && !input[field] ? '' : text(input[field],field.toLowerCase().endsWith('address')?500:120)
+    for(const field of directory.requiredFields) fields[field]=field==='employeeMiddleName' && !input[field] ? '' : text(input[field],reportFieldLimit(state,field))
     if(['PA','NH'].includes(state) && /\bp\.?\s*o\.?\s*box\b/i.test(fields.employeeAddress)) throw new PayrollError('employee_home_address_required')
     if(state==='PA' && /\bp\.?\s*o\.?\s*box\b/i.test(fields.employerAddress)) throw new PayrollError('employer_street_address_required')
     if(fields.employerContactPhone && !/^[+()0-9 .-]{7,30}$/.test(fields.employerContactPhone)) throw new PayrollError('invalid_employer_contact_phone')
