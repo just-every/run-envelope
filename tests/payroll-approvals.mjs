@@ -250,6 +250,17 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     const presentedPath=new URL(presented.reviewUrl).pathname+new URL(presented.reviewUrl).search
     page = await capture('run-approval-review', presentedPath, 'approver-b')
     assert.ok((await page.locator('main').innerText()).includes('bank record v1 on file (masked)'))
+    const expiredChallenge=await page.locator('[data-human-approval]').getAttribute('data-challenge')
+    await sql(`UPDATE env_human_challenges SET expires_at=1 WHERE id='${expiredChallenge}'`)
+    await page.getByRole('button', { name: 'Approve this exact run version', exact: true }).click()
+    await page.getByRole('alert').filter({hasText:'This identity review expired.'}).waitFor()
+    assert.equal((await status(waRun)).current,1,'an expired browser ceremony records no second approval')
+    for(const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000})
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+      await page.screenshot({path:join(folder,`run-human-proof-expired-${width}.png`),fullPage:true})
+    }
+    page=await capture('run-human-proof-fresh',presentedPath,'approver-b')
     await page.getByRole('button', { name: 'Approve this exact run version', exact: true }).click()
     await page.waitForURL(origin + screen)
     let current = await status(waRun)

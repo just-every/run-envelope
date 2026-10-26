@@ -589,6 +589,10 @@
       "sha256": "b817b6170559241157a277a5a76ba9a7a600c8e15280dbf42e2714623929e418",
       "executable": false
     },
+    "migrations/core/0034_human_run_proof.sql": {
+      "sha256": "0e5457c81f379d001146cd3f1ad067cbb530248d5605145e678968da6a9fbe3a",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "5dce7856fac22b695fc39b505e90971b52044c076d2935837a57c73bf01b427e",
       "executable": false
@@ -643,6 +647,10 @@
     },
     "public/brand/mark.svg": {
       "sha256": "aa7e32cef0581507c4e8fd98d3da005d8e68cd2835f2a53e44c5b9ab11696347",
+      "executable": false
+    },
+    "public/envelope-human-proof.js": {
+      "sha256": "109d1b983795a46586a076b737ff602b32b9a80793378f652b2a40150f30e4db",
       "executable": false
     },
     "public/favicon-32.svg": {
@@ -1405,6 +1413,10 @@
       "sha256": "2d8af0c5faa2d5fc01037671373dd50910c58f63b12527b445a9e692548a1aac",
       "executable": false
     },
+    "src/envelope/human-proof.ts": {
+      "sha256": "7f624d2bb94c6b09937d3982880d907416dd8cf0c8e710a252d640883063b490",
+      "executable": false
+    },
     "src/envelope/income-verification/pages.tsx": {
       "sha256": "d8fa920bda13fffb7ae43684a61cf22f7980bfec1d743e9e3e33bdf574436293",
       "executable": false
@@ -1519,6 +1531,10 @@
     },
     "src/envelope/records.ts": {
       "sha256": "56b4a2758c85ec9a0cbfb7918cf2c266e6562fcdd4522b4e27429f109967c1a2",
+      "executable": false
+    },
+    "src/envelope/review-presentation.ts": {
+      "sha256": "2499d0a208e16a89c39170de0ef9f5f8b3c1aa21c42eca91a57f175b426f50fa",
       "executable": false
     },
     "src/envelope/security.ts": {
@@ -2885,6 +2901,10 @@
       "sha256": "8e91e1da13d870d33704c0d78eeab809292a6e84deb24e39e4ce9641fe76919c",
       "executable": false
     },
+    "tests/human-proof-fixture.mjs": {
+      "sha256": "878549599d1eb4b4eedd219822874590d5ec1d762863ce571752b6d47f3910ea",
+      "executable": false
+    },
     "tests/incremental-typecheck.test.mjs": {
       "sha256": "496f3c5bf81317a0a4ea8fa4ee787c6fc7df256a913493ff2e0eeb22a46d3d06",
       "executable": false
@@ -2902,7 +2922,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "ef85fabe80b0b69bb77afa571570fb26c01c6069c1a5ed48859671779fa52927",
+      "sha256": "ef02b8c0ce81db68a2511a166bd4414d9799157451163ad2ff7085f1078a719b",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {

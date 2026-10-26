@@ -11,7 +11,12 @@ const post = async (url, body) => {
   return result
 }
 const form=document.querySelector('[data-human-approval]'), message=document.querySelector('[data-human-message]')
-const report=error=>{message.textContent=error.message==='NotAllowedError'?'Identity verification was canceled. Nothing was approved.':error.message; message.focus()}
+const notices={human_challenge_stale:'This identity review expired. Open a fresh review; nothing was approved.',
+  review_stale:'This review changed. Open a fresh review; nothing was approved.',
+  human_proof_invalid:'Identity verification failed. Nothing was approved.',
+  presenting_client_revoked:'The presenting client is no longer authorized. Open a new review in Envelope.',
+  step_up_required:'Confirm your identity with a fresh email verification before registering a passkey.'}
+const report=error=>{message.textContent=error.name==='NotAllowedError'?'Identity verification was canceled. Nothing was approved.':notices[error.message]??'Verification could not finish. Nothing was approved. Try a fresh review.'; message.focus()}
 if(form) {
   const base=form.dataset.base
   document.querySelector('[data-enroll-passkey]').addEventListener('click',async event=>{
