@@ -169,3 +169,10 @@ the same restricted history and explicit custody review.
 ## Request-specific consent
 
 Worker consent names `requestId`, the exact initial disclosure identifier, and one selected field set. A second request or changed fields requires fresh worker consent. A linked correction retains the same consent and request lineage; it cannot use another request’s consent. The worker may revoke before release. A release attempted after withdrawal is refused and attributed as `verification.release-refused-withdrawn`, with no response token, release row or outbound submission. Custody screens name the server clock and render release gates in UTC.
+
+The same journey also inventories the original mapped Willow hire link and every
+hire-source revision. Its held review refuses ordinary readers; eligible erasure
+removes the mapping and source versions. The old review and hire collection expose
+no erased source, and replaying that original hire source cannot recreate the worker.
+This is bounded mapped-hire custody proof under ENV-054; the remaining HRIS event,
+adapter and shared downstream custody matrix remains unproved.

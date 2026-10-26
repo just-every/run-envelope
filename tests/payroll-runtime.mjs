@@ -4340,6 +4340,15 @@ export async function incomeVerificationJourney(runtime) {
     assert.ok(inventory.retained.some(r=>r.table==='env_workspace_versions' && r.key.kind==='income-source' && r.key.version===1))
     assert.ok(inventory.retained.some(r=>r.table==='env_workspace_versions' && r.key.kind==='disclosure' && r.key.object_id===corrected.id))
     assert.ok(inventory.retained.some(r=>r.table==='env_workspace_versions' && r.key.object_id===termination.id))
+    const mappedHireRows=await sql(`SELECT * FROM env_hris_people WHERE company_id='${c.id}' AND person_id='${p.id}'`)
+    assert.equal(mappedHireRows.length,1)
+    assert.equal(mappedHireRows[0].source_id,hire.id)
+    const mappedHireEntries=inventory.retained.filter(r=>r.table==='env_hris_people')
+    assert.deepEqual(mappedHireEntries.map(r=>r.key.source_key),mappedHireRows.map(r=>r.source_key),'custody includes the original hire mapping, not only the later worker events')
+    const originalHireRows=await sql(`SELECT version FROM env_workspace_versions WHERE company_id='${c.id}' AND kind='hris-hire' AND object_id='${hire.id}'`)
+    assert.ok(originalHireRows.length)
+    assert.deepEqual(inventory.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='hris-hire' && r.key.object_id===hire.id).map(r=>r.key.version).sort(),originalHireRows.map(r=>r.version).sort(),'every original mapped hire revision shares verification source custody')
+
     assert.match(inventory.boundary,/Downloaded copies and already-filed agency records are outside local recall/)
     await data(privacy+'/request',{consent:true,fingerprint:inventory.fingerprint})
     for(const who of [identities.worker.cookie,identities.coworker.cookie,identities.requester.cookie]) {
@@ -4347,7 +4356,7 @@ export async function incomeVerificationJourney(runtime) {
       await data(door,undefined,403,who)
     }
     await capture(page,privacy,'verification-custody-held')
-    const heldDoors=[door,door+'/verification-worker/'+binding.id+'/review',door+'/income-source/'+source.id+'/review',door+'/disclosure/'+pendingCustody.id+'/review']
+    const heldDoors=[door,door+'/verification-worker/'+binding.id+'/review',door+'/income-source/'+source.id+'/review',door+'/disclosure/'+pendingCustody.id+'/review',api+'/hris-hires/'+hire.id+'/review']
     for(const path of heldDoors) {
       const ownerStatus=path===door||path.includes(pendingCustody.id)?200:409
       await data(path,undefined,ownerStatus)
@@ -4402,6 +4411,13 @@ export async function incomeVerificationJourney(runtime) {
       assert.equal(erasedHtml.status,404)
       assert.ok(!(await erasedHtml.text()).includes('345600'),'erased HTML transports expose no wage facts')
     }
+    assert.equal((await sql(`SELECT COUNT(*) AS n FROM env_hris_people WHERE company_id='${c.id}' AND person_id='${p.id}'`))[0].n,0,'eligible erasure removes the mapped hire link')
+    assert.equal((await sql(`SELECT COUNT(*) AS n FROM env_workspace_versions WHERE company_id='${c.id}' AND kind='hris-hire' AND object_id='${hire.id}'`))[0].n,0,'eligible erasure removes all mapped original hire revisions')
+    await data(api+'/hris-hires/'+hire.id+'/review',undefined,404)
+    assert.ok(!(await data(api+'/hris-hires')).some(row=>row.id===hire.id),'the hire collection cannot expose the erased original')
+    const replayedHire=await call(api+'/hris-hires',{provider:'willow',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-1023',sourceEvidence:'synthetic-envelope-1024',sourceApprovedBy:'Synthetic HR reviewer',export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-1025',effectiveDate:'2025-09-15',values:{name:'María, mortgage applicant',locationId:location.id}}})
+    assert.equal(replayedHire.status,409,await replayedHire.clone().text())
+    assert.equal((await sql(`SELECT COUNT(*) AS n FROM env_hris_people WHERE company_id='${c.id}' AND person_id='${p.id}'`))[0].n,0,'replaying the original source cannot restore the erased worker mapping')
     await get(finalRelease,identities.requester.cookie,403)
     await data(door,undefined,404)
     await data('/api/envelope/protected-response/ack',{id:finalRelease.id,token:finalRelease.token},403,identities.requester.cookie)
