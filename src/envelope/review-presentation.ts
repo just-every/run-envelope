@@ -13,8 +13,9 @@ export async function presentReview(agent: AgentTools, input: Input) {
   const runId=text(input.runId), f=agent.fence(), token=crypto.randomUUID()+crypto.randomUUID()
   const result=await agent.env.DB.prepare(`INSERT INTO env_review_presentations(token_hash,company_id,run_id,run_version,credential_id,grant_version,credential_hash,expires_at)
     SELECT ?,company_id,object_id,MAX(version),?,?,?,? FROM env_workspace_versions WHERE company_id=? AND kind='earnings-run' AND object_id=? AND ${f.sql}
+    AND (NOT EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=env_workspace_versions.company_id AND a.action='bonus.prepared' AND a.target_id=env_workspace_versions.object_id) OR EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=env_workspace_versions.company_id AND a.action='bonus.prepared' AND a.target_id=env_workspace_versions.object_id AND a.credential_id=?))
     HAVING MAX(version) IS NOT NULL RETURNING run_version`).bind(await digest(token),agent.grant.id,agent.grant.version,agent.grant.token_hash,Date.now()+300000,
-      agent.grant.company_id,runId,...f.args).first<{run_version:number}>()
+      agent.grant.company_id,runId,...f.args,agent.grant.id).first<{run_version:number}>()
   if(!result) throw new PayrollError('review_unavailable',404)
   await agent.log('run.review',runId).run()
   return {runId,version:result.run_version,reviewUrl:agent.env.AUTH_ORIGIN+'/app/envelope/companies/'+encodeURIComponent(agent.grant.company_id)+'/pay-settings/earnings-run/'+encodeURIComponent(runId)+'/review?presentation='+encodeURIComponent(token),approval:'requires-separate-human-proof'}

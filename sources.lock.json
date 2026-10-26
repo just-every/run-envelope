@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "22bb0e78729dbdba6d5d48e53ccd624d1ba204a2aceb151eda15dae77abda6ac",
+      "sha256": "2a273aa7911b6c752177a8c1d3d8b57f9db6d9ffc6fa8f5ed2cef8010d4df22b",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e4e21e8bd515edd68255cf34313e5a5344c17cce75197f09cfa8a1ae38946e84",
+      "sha256": "c13e289c7bcf4bd1694b3bcbca85142e5c4a87b96fda11c2c710e23fc422d1d7",
       "executable": false
     },
     "deploy-demo.json": {
@@ -378,7 +378,7 @@
       "executable": false
     },
     "docs/payroll-agents.md": {
-      "sha256": "5231af443a57429ebf93c3a303259c2ac4304ae896da819b7d70c5808bd87217",
+      "sha256": "3110d7a972e64236b48fa4f7c09daa0f3a833f8e9f625e9338aa9532db537c66",
       "executable": false
     },
     "docs/payroll-allocations.md": {
@@ -1114,7 +1114,7 @@
       "executable": false
     },
     "scripts/envelope-cli.mjs": {
-      "sha256": "798d1a8e60ee5d4255d2b122c48317a4682133ce32e77619eb54844065062ee5",
+      "sha256": "bf938783cebb1b764b80f307d1784377c51779122bdd1c232736e287cbef9ebe",
       "executable": false
     },
     "scripts/install.mjs": {
@@ -1337,6 +1337,10 @@
       "sha256": "57c0ee04314b58f34cdc5aa1e9ae48eedd1374e47e4382e2f52695554afb59b3",
       "executable": false
     },
+    "src/envelope/bonus-runs.ts": {
+      "sha256": "746a3729eeeef7fd6eb94385995feb7681f3d3c6690613889a2521a1f24792cb",
+      "executable": false
+    },
     "src/envelope/claims/form-fields.tsx": {
       "sha256": "ec0f591a0bf74c7e97891278b852987f908c614d6c56240dfb8f5abeeb23d5fd",
       "executable": false
@@ -1422,7 +1426,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "33bdb91d61f99f9e7ec4debd7f59dd3f6e5e9c8a95402ef92a892bb65382ae30",
+      "sha256": "c61027283f6e840740cf79b7a545dc551d97fe44ded6fd3d33d2f0a8edbfd0ec",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -1474,7 +1478,7 @@
       "executable": false
     },
     "src/envelope/industry/records.ts": {
-      "sha256": "658af462854fb3500e5a5e27b444f404463b65e0c274a0c2d35e81fdda7fd19a",
+      "sha256": "62e509b2fba284ca86659b2cec4a867b855a0dcc00490220cc71808143caf33b",
       "executable": false
     },
     "src/envelope/industry/return-pages.tsx": {
@@ -1558,7 +1562,7 @@
       "executable": false
     },
     "src/envelope/review-presentation.ts": {
-      "sha256": "2499d0a208e16a89c39170de0ef9f5f8b3c1aa21c42eca91a57f175b426f50fa",
+      "sha256": "1bbf9f7053e932b83c6e36d88cb41c565ef26c2261df81f2c13f9ae661b47eaa",
       "executable": false
     },
     "src/envelope/security.ts": {
@@ -1618,7 +1622,7 @@
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "c4097ba646df88767e249d2838e7df77b20cfad79856228657d45d1da288cc57",
+      "sha256": "c1125ca7de3b4ba2d9537ab4b62b55b0aca171aee22dd041b60ae09fc6db6898",
       "executable": false
     },
     "src/envelope/workspace/pay-change-diff.ts": {
@@ -1630,7 +1634,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "8ea6609c47ad14950ddcaef8e66acf24b3f65900e89d86d2cbfee734a2802945",
+      "sha256": "041b093c84336ee6896c9846a06f201d31671d6fa0ff5096219e3982015bf823",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -2954,7 +2958,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "70054b65d1db42a8e2bfa78328e8e153aa4e699edec5057296c12691c8b8165f",
+      "sha256": "c0cef4ac9983b3455a78b677e116c09298534b7c373681e95addde3ff4d3e9e8",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
@@ -2966,7 +2970,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "078c20460a6662b36b8342c95d7b9bc573de821976e38d7cedf688ad61293c9c",
+      "sha256": "cce1a5e79ae5b99c4778866ac7d71e6f4de6760646ac64742effd384e9c6521e",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {

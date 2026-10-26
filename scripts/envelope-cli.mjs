@@ -3,12 +3,12 @@
 
 async function main() {
   const [command, company, reference, extra] = process.argv.slice(2)
-  if (!['records', 'prepare', 'status', 'report'].includes(command) ||
+  if (!['records', 'prepare', 'status', 'report', 'bonus', 'bonus-status', 'bonus-report'].includes(command) ||
       !/^[-a-zA-Z0-9]+$/.test(company ?? '') || process.argv.length > 5 || extra ||
-      (command === 'status' && !/^[-a-zA-Z0-9]+$/.test(reference ?? '')) ||
-      (command === 'prepare' && reference) ||
-      (['records','report'].includes(command) && reference && !/^[-a-zA-Z0-9]+$/.test(reference)))
-    throw Error('usage: envelope-cli.mjs records COMPANY [AFTER] | prepare COMPANY < draft.json | status COMPANY DRAFT | report COMPANY [AFTER]')
+      (['status','bonus-status'].includes(command) && !/^[-a-zA-Z0-9]+$/.test(reference ?? '')) ||
+      (['prepare','bonus'].includes(command) && reference) ||
+      (['records','report','bonus-report'].includes(command) && reference && !/^[-a-zA-Z0-9]+$/.test(reference)))
+    throw Error('usage: envelope-cli.mjs records COMPANY [AFTER] | prepare COMPANY < draft.json | status COMPANY DRAFT | report COMPANY [AFTER] | bonus COMPANY < bonus.json | bonus-status COMPANY RUN | bonus-report COMPANY [AFTER]')
   let origin
   try { origin = new URL(process.env.ENVELOPE_ORIGIN) } catch { throw Error('ENVELOPE_ORIGIN must name the installation origin') }
   if (origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash ||
@@ -17,7 +17,7 @@ async function main() {
   const token = process.env.ENVELOPE_TOKEN
   if (!/^[A-Za-z0-9_-]{43}$/.test(token ?? '')) throw Error('ENVELOPE_TOKEN must contain a current sponsored credential')
   let body
-  if (command === 'prepare') {
+  if (['prepare','bonus'].includes(command)) {
     const chunks = []
     let size = 0
     for await (const chunk of process.stdin) {
@@ -32,7 +32,7 @@ async function main() {
     } catch { throw Error('Draft input must be a JSON object') }
   }
   const path = `/api/envelope/v1/companies/${company}/` +
-    (command === 'report' ? ['reports','proposals'].join('/') + (reference ? '?after=' + reference : '') : command === 'records' ? 'records' + (reference ? '?after=' + reference : '') :
+    (command === 'bonus-report' ? ['reports','bonus-runs'].join('/') + (reference ? '?after=' + reference : '') : command === 'bonus' ? 'bonus-runs' : command === 'bonus-status' ? 'bonus-runs/' + reference : command === 'report' ? ['reports','proposals'].join('/') + (reference ? '?after=' + reference : '') : command === 'records' ? 'records' + (reference ? '?after=' + reference : '') :
       command === 'prepare' ? 'drafts' : 'drafts/' + reference)
   const response = await fetch(new URL(path, origin), {
     method: body === undefined ? 'GET' : 'POST', redirect: 'error',

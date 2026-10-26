@@ -1,3 +1,4 @@
+import type { BonusPreparation } from '../bonus-runs'
 import { SourceIntake, reviewedRate, currentEvents } from '../intake/sources'
 import { LeaveLedger } from '../leave/ledger'
 import type { Actor } from '../access'
@@ -59,6 +60,7 @@ export interface PayChange {
   }[]
 }
 export interface EarningsRun {
+  bonusPreparation?: BonusPreparation
   periodStart: string
   periodEnd: string
   payDate: string
@@ -141,6 +143,7 @@ export async function runCurrency(
   policies: Revision<ProrationPolicy>[],
   rules: Revision<PayrollRule>[],
 ) {
+  if (run.data.bonusPreparation) return {setup:Boolean(run.sourcesCurrent),rules:Boolean(run.sourcesCurrent)}
   return {
     setup:
       Boolean(run.sourcesCurrent) &&

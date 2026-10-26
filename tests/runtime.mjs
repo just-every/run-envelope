@@ -168,7 +168,7 @@ try {
     (await manual('/app', { headers: { cookie } })).headers.get('location'),
     '/setup',
   )
-  const setupBrowser = await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const setupBrowser = await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   try {
     const context = await setupBrowser.newContext()
     await context.addCookies([{name:cookie.split('=')[0],value:cookie.split('=')[1],url:origin,httpOnly:true}])
@@ -289,7 +289,7 @@ try {
     await payItemsJourney({ origin, cookie, sql })
   if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
   if (!selected || selected.includes('approvals'))
-    await approvalJourney({ origin, cookie, sql, settings })
+    await approvalJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings })
   if (!selected || selected.includes('records')) {
     const records = await payrollJourney({ origin, cookie, settings, sql, receiverState, restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()} })
     await stopWorker()

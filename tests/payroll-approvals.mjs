@@ -1,6 +1,7 @@
 // Run approval journey: exact versions, distinct people, voided approvals, no effects.
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { credentialResponse } from './human-proof-fixture.mjs'
 import { chromium } from '@playwright/test'
@@ -101,7 +102,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
   }
   for (const p of [w1, w2, c1]) await bank(p, 0)
   const period = { periodStart: '2026-03-01', periodEnd: '2026-03-07', payDate: '2026-03-13', frequency: 'weekly' }
-  const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] })
+  const browser = await chromium.launch({ executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, headless: true, args: ['--no-sandbox', '--use-mock-keychain', '--password-store=basic'] })
   try {
     const contexts = {}
     for (const [who, value] of [['owner', cookie], ['approver-a', humans['approver-a'].cookie], ['approver-b', humans['approver-b'].cookie]]) {
@@ -285,7 +286,139 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
 
     const pendingPresentation=await data(door+'/earnings-run/'+waRun+'/review'+new URL(presented.reviewUrl).search)
     const pendingProof=await proof(pendingPresentation,'owner')
+    // BONUS-PREPARATION: a conversational client prepares native immutable earnings,
+    // then a different human reviews the exact amount with their own authenticator.
+    const tool=async(name,args,expected=200)=>{
+      const r=await mcp('tools/call',{name,arguments:args})
+      assert.equal(r.status,expected,await r.clone().text())
+      const json=await r.json()
+      return expected===200 ? JSON.parse(json.result.content[0].text) : json
+    }
+    const bonusInput={companyId:company.id,personId:w1.id,amountCents:25000,
+      periodStart:period.periodStart,periodEnd:period.periodEnd,payDate:period.payDate,
+      sourceRef:'synthetic-envelope-915',requestKey:'synthetic-envelope-916'}
+    const bonus=await tool('bonus.prepare',bonusInput)
+    assert.equal(bonus.dispatch,'unavailable')
+    const bonusRead=await tool('bonus.read',{companyId:company.id,runId:bonus.id})
+    assert.equal(bonusRead.preview.people[0].earningsCents,25000)
+    assert.equal(bonusRead.preview.grossCashCents,25000)
+    assert.equal(bonusRead.preview.taxAmounts,null)
+    assert.equal(bonusRead.preview.netPay,null)
+    assert.equal(bonusRead.preview.paymentReady,false)
+    assert.equal(bonusRead.preview.bonusPreparation.credentialId,agent.id)
+    assert.ok(bonusRead.preview.holds.some(h=>h.code==='bonus-calculation-incomplete'))
+    const bonusCli=(command,body,token=agent.token)=>new Promise((resolve,reject)=>{
+      const child=spawn(process.execPath,['scripts/envelope-cli.mjs',command,company.id,...(command==='bonus-status'?[bonus.id]:[])],
+        {env:{...process.env,ENVELOPE_ORIGIN:origin,ENVELOPE_TOKEN:token},stdio:['pipe','pipe','pipe']})
+      let stdout='',stderr=''
+      child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk)
+      child.on('error',reject);child.on('close',code=>resolve({code,stdout,stderr}))
+      child.stdin.end(body ? JSON.stringify(body):undefined)
+    })
+    const {companyId:ignored,...bonusBody}=bonusInput
+    const cliReplay=await bonusCli('bonus',bonusBody)
+    assert.equal(cliReplay.code,0,cliReplay.stderr)
+    assert.equal(JSON.parse(cliReplay.stdout).id,bonus.id,'MCP and CLI share the same exact immutable run')
+    const cliRead=await bonusCli('bonus-status')
+    assert.equal(cliRead.code,0,cliRead.stderr)
+    assert.deepEqual(JSON.parse(cliRead.stdout),bonusRead)
+    const cliNew=await bonusCli('bonus',{...bonusBody,amountCents:12345,requestKey:'synthetic-envelope-917'})
+    assert.equal(cliNew.code,0,cliNew.stderr)
+    const cliId=JSON.parse(cliNew.stdout).id
+    assert.equal((await tool('bonus.read',{companyId:company.id,runId:cliId})).preview.grossCashCents,12345)
+    const concurrentInput={...bonusBody,amountCents:12500,requestKey:'synthetic-envelope-921'}
+    const [viaCli,viaTool]=await Promise.all([bonusCli('bonus',concurrentInput),tool('bonus.prepare',{companyId:company.id,...concurrentInput})])
+    assert.equal(viaCli.code,0,viaCli.stderr)
+    assert.equal(JSON.parse(viaCli.stdout).id,viaTool.id)
+    assert.equal((await sql(`SELECT COUNT(*) AS n FROM env_workspace_versions WHERE company_id='${company.id}' AND kind='earnings-run' AND object_id='${viaTool.id}'`))[0].n,1,'concurrent transports retain exactly one immutable bonus version')
+    await refused(base+'/people/'+w1.id+'/industry/checks',{id:'synthetic-envelope-922',version:0,runId:bonus.id,runVersion:1,socialSecurityWagesCents:0,medicareWagesCents:0,futaWagesCents:0},'special_pay_items_require_complete_calculation')
+    const bonusRows=()=>sql(`SELECT COUNT(*) AS n FROM env_workspace_versions WHERE company_id='${company.id}' AND kind='earnings-run'`)
+    const reportReply=await bonusCli('bonus-report')
+    assert.equal(reportReply.code,0,reportReply.stderr)
+    const bonusReport=JSON.parse(reportReply.stdout)
+    assert.equal(bonusReport.kind,'bonus-earnings-preparations')
+    assert.equal(bonusReport.payroll,'uncalculated')
+    assert.equal(bonusReport.payment,'unavailable')
+    assert.equal(bonusReport.filing,'unavailable')
+    assert.equal(bonusReport.bonuses.find(r=>r.id===bonus.id).amountCents,25000)
+    const reportRows=[]
+    let cursor
+    do {
+      const page=await tool('reports.bonuses',{companyId:company.id,limit:1,...(cursor?{after:cursor}:{})})
+      reportRows.push(...page.bonuses);cursor=page.next
+      assert.ok(reportRows.length<=bonusReport.bonuses.length)
+    } while(cursor)
+    assert.deepEqual(reportRows,bonusReport.bonuses,'every paginated MCP row matches the actual CLI report')
+    const priorBonusRows=await bonusRows()
+    await tool('bonus.prepare',{...bonusInput,amountCents:25001},409)
+    for(const extra of [{approved:true},{human:true},{confirmation:'yes'},{amountCents:0},{amountCents:1.5},{amountCents:100000001}])
+      await tool('bonus.prepare',{...bonusInput,...extra},400)
+    assert.deepEqual(await bonusRows(),priorBonusRows,'conflicts and spoofed preparation flags create no run')
+    // Revoke a real suspended preparation after transport authentication, before
+    // its JSON body finishes. Neither transport may persist the bonus afterward.
+    for(const transport of ['rest','mcp']) {
+      await stepUp()
+      const racing=await data(base+'/agents',{name:'synthetic-envelope-923',hours:1,actions:['drafts:prepare'],locations:['*'],fields:['compensation']},201,humans.admin.cookie)
+      const payload=transport==='rest' ? {...bonusBody,requestKey:'synthetic-envelope-924'} :
+        {jsonrpc:'2.0',id:924,method:'tools/call',params:{name:'bonus.prepare',arguments:{...bonusInput,requestKey:'synthetic-envelope-924'}}}
+      const encoded=JSON.stringify(payload)
+      let controller
+      const body=new ReadableStream({start(stream){controller=stream;stream.enqueue(new TextEncoder().encode(encoded.slice(0,-1)))}})
+      const pending=fetch(origin+(transport==='rest'?'/api/envelope/v1/companies/'+company.id+'/bonus-runs':'/api/envelope/mcp'),
+        {method:'POST',duplex:'half',signal:AbortSignal.timeout(10000),headers:{authorization:'Bearer '+racing.token,origin,'content-type':'application/json'},body})
+      try {
+        let opened=false
+        for(let attempt=0;attempt<80;attempt++) {
+          opened=(await sql(`SELECT COUNT(*) AS n FROM env_agent_access WHERE credential_id='${racing.id}' AND action='${transport==='rest'?'transport.rest.v1':'transport.open'}'`))[0].n>0
+          if(opened)break
+          await new Promise(resolve=>setTimeout(resolve,25))
+        }
+        assert.equal(opened,true,'the request genuinely authenticated before revocation')
+        await data(base+'/agents/'+racing.id+'/revoke',{version:1},200,humans.admin.cookie)
+      } finally {
+        controller.enqueue(new TextEncoder().encode(encoded.slice(-1)));controller.close()
+      }
+      const denied=await pending
+      assert.equal(denied.status,403,await denied.clone().text())
+      assert.deepEqual(await bonusRows(),priorBonusRows,'revocation in flight persists no bonus')
+    }
+
+    const foreign=await data(base+'/agents',{name:'synthetic-envelope-918',hours:1,actions:['drafts:read'],locations:['*'],fields:['compensation']},201,humans.admin.cookie)
+    const foreignCall=async(name)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+foreign.token,origin,'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:915,method:'tools/call',params:{name,arguments:{companyId:company.id,runId:bonus.id}}})})
+    const foreignReport=await fetch(origin+'/api/envelope/v1/companies/'+company.id+'/reports/bonus-runs',{headers:{authorization:'Bearer '+foreign.token}})
+    assert.equal(foreignReport.status,200)
+    assert.deepEqual((await foreignReport.json()).bonuses,[],'foreign credential receives no bonus compensation in reports')
+    assert.equal((await foreignCall('bonus.read')).status,403)
+    assert.equal((await foreignCall('run.review')).status,404)
+    const foreignPrepare=await bonusCli('bonus',{...bonusBody,requestKey:'synthetic-envelope-919'},foreign.token)
+    assert.equal(foreignPrepare.code,1,'a read-only credential cannot prepare')
+    const bonusPresentation=await tool('run.review',{companyId:company.id,runId:bonus.id})
+    const bonusReviewUrl=new URL(bonusPresentation.reviewUrl)
+    const bonusPath=bonusReviewUrl.pathname+bonusReviewUrl.search
+    page=await capture('bonus-human-review',bonusPath,'approver-b')
+    assert.ok((await page.locator('main').innerText()).includes('Bonus: 25000 cents'))
+    assert.ok((await page.locator('main').innerText()).includes('Supplemental withholding'))
+    const humanBonusReview=await data(bonusPath.replace('/app/','/api/'),undefined,200,humans['approver-b'].cookie)
+    await refused(door+'/earnings-run/'+bonus.id+'/approve',{version:1,reviewToken:humanBonusReview.reviewToken,human:true,confirmation:'yes'},'human_step_up_required',humans['approver-b'].cookie,{},403)
+    await refused(door+'/earnings-run/'+bonus.id+'/approve',{version:1,human:true},'human_session_required','',{authorization:'Bearer '+agent.token},403)
+    await page.getByRole('button',{name:'Approve this exact run version',exact:true}).click()
+    await page.waitForURL(origin+screen)
+    const bonusApproval=await status(bonus.id)
+    assert.equal(bonusApproval.current,1)
+    assert.equal(bonusApproval.approvals[0].approverId,humans['approver-b'].id)
+    assert.equal(bonusApproval.approvals[0].presentingClient,agent.id)
+    assert.equal(bonusApproval.approvals[0].proofMethod,'passkey-uv')
+    await capture('bonus-human-approved',screen,'approver-b')
+    await release(bonus.id,1,'run_not_payable')
+    await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${foreign.id}'`)
+    assert.equal((await foreignCall('bonus.read')).status,403)
+    console.log('BONUS-PREPARATION passed: native encrypted exact bonus earnings via CLI and conversational MCP, cross-transport idempotency, no foreign credential or scope escalation, separately authenticated passkey approval and client attribution, calculation holds and no release; 1440 and 390.')
+
     await data(base+'/agents/'+agent.id+'/revoke',{version:1},200,humans.admin.cookie)
+    await tool('reports.bonuses',{companyId:company.id},403)
+    await tool('bonus.read',{companyId:company.id,runId:bonus.id},403)
+    await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},403)
+    assert.equal((await bonusCli('bonus-status')).code,1)
     await refused(door+'/earnings-run/'+waRun+'/approve',{version,reviewToken:pendingPresentation.reviewToken,...pendingProof},'presenting_client_revoked',cookie,{},403)
 
     // A changed date is a new version; a restored identical version needs fresh approval.
@@ -354,6 +487,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       sourceUrl: 'https://www.lni.wa.gov/insurance/rates-risk-classes/',
       details: { riskClass: 'synthetic-envelope-354', totalRate: '1.9', employeeRate: '0.4', hoursMethod: 'actual' } })
     await release(waRun, version, 'run_rules_changed')
+    await refused(door+'/earnings-run/'+bonus.id+'/review',undefined,'run_sources_changed',humans['approver-b'].cookie)
     await release(caRun, caVersion, 'run_not_payable')
     await publish({ ...rule, id: 'synthetic-envelope-355', name: 'Final CA FUTA credit reduction', family: 'futa', state: 'CA',
       value: '1.2', unit: 'percent', sourceUrl: 'https://oui.doleta.gov/unemploy/futa_credit.asp',
@@ -446,6 +580,26 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual([trail[0].actorId, trail[0].targetId, trail[0].version], [owner, tipRun, tipVersion],
       'the audit door names the latest approver and exact version')
     await sql(`DELETE FROM oa_identity_providers WHERE client_id='${audience}'; DELETE FROM rer_dependency_link WHERE client_id='${audience}'; DELETE FROM oa_external_identities WHERE issuer='${issuer}' AND subject='${subject}'; UPDATE oa_auth_settings SET idp_sign_in=0 WHERE singleton=1`)
+    // Native custody discovers the real bonus derivative and closes both agent
+    // reads and human approval when a current privacy request holds the worker.
+    await stepUp()
+    const custodyClient=await data(base+'/agents',{name:'synthetic-envelope-925',hours:1,actions:['drafts:prepare','drafts:read'],locations:['*'],fields:['compensation']},201,humans.admin.cookie)
+    const custodyRequest=await fetch(origin+'/api/envelope/v1/companies/'+company.id+'/bonus-runs',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'content-type':'application/json'},body:JSON.stringify({...bonusBody,requestKey:'synthetic-envelope-926'})})
+    assert.equal(custodyRequest.status,201,await custodyRequest.clone().text())
+    const custodyRun=await custodyRequest.json()
+    const privacy=base+'/people/'+w1.id+'/privacy', inventory=await data(privacy)
+    assert.ok(inventory.retained.some(r=>r.table==='env_workspace_versions' && r.key.object_id===custodyRun.id),'privacy inventory includes the encrypted native bonus derivative')
+    await data(privacy+'/request',{consent:true,fingerprint:inventory.fingerprint})
+    for(const resource of ['/bonus-runs/'+custodyRun.id,'/reports/bonus-runs']) {
+      const held=await fetch(origin+'/api/envelope/v1/companies/'+company.id+resource,{headers:{authorization:'Bearer '+custodyClient.token}})
+      assert.equal(held.status,403)
+      assert.doesNotMatch(await held.text(),/25000|Synthetic Seattle cook|synthetic-envelope-915/,'held reads disclose no bonus compensation')
+    }
+    const heldMcp=await fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:925,method:'tools/call',params:{name:'bonus.read',arguments:{companyId:company.id,runId:custodyRun.id}}})})
+    assert.equal(heldMcp.status,403)
+    await capture('bonus-custody-held',screen,'approver-b')
+    console.log('BONUS-CUSTODY passed: suspended REST and MCP preparations lose authority after revocation; native inventory retains the actual bonus derivative, and an explicit privacy hold denies agent preview and report reads and human access without compensation disclosure; 1440 and 390.')
+
     console.log(
       'RUN-APPROVALS passed: owner two-person threshold; exact run versions bind payees, bank-record versions, dates, earnings and rules; threshold bypass, self-second-approval, copied review, restored version and MCP/bearer agent approval refused with zero effects; rate, hours, new hours, bank, date, approver-grant, setup-withdrawal and tip settlement or furnished-funds edits void approval; adding people alone cannot record or revise a tip; a WA risk class and final CA FUTA void only their runs; fresh passkey user verification and signed nonce-bound OIDC MFA, separate human and MCP presenter, old-session and stale-challenge refusal, and revoked presentation links; fully approved release still refuses without tax obligations or an authorized rail; 1440/390.',
     )

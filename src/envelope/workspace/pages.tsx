@@ -612,7 +612,7 @@ export function paySettingsPage(
         <article key={p.id}>
           <h3>{p.name}</h3>
           <p>
-            Regular/salaried earnings ${(p.earningsCents / 100).toFixed(2)} · taxable cash
+            {r.bonusPreparation ? 'Bonus earnings' : 'Regular or salaried earnings'} ${(p.earningsCents / 100).toFixed(2)} · taxable cash
             basis ${(p.taxableCashCents / 100).toFixed(2)} · proposed reimbursement $
             {(p.reimbursementCents / 100).toFixed(2)} · after-tax deductions $
             {(p.afterTaxDeductionCents / 100).toFixed(2)}
@@ -771,7 +771,7 @@ export function paySettingsPage(
       <Card title="Immutable earnings drafts">
         {!result.runs.length && <p>No earnings drafts yet.</p>}
         {[...result.runs].sort((a, b) => b.createdAt - a.createdAt).map((r) => (
-          <article key={r.id + ':' + r.version}>
+          <article className="evidence-text" key={r.id + ':' + r.version}>
             <h3>
               {r.id} · v{r.version} · {r.sourceStatus}
             </h3>

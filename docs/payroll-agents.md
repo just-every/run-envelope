@@ -128,7 +128,7 @@ References are nonempty bounded strings: source 240 characters and request key
 The worker must be within the current location scope and have a reviewed rate
 at period start. The immutable proposal ID binds the retained person version,
 rate ID, dates, minutes and source. It is an hourly input proposal with no tax
-or net-pay calculation; bonus preparation, payroll reports, payment status,
+or net-pay calculation; complete bonus payroll, payroll reports, payment status,
 filing status and lifecycle webhooks are still unimplemented ENV-030 work.
 A missing family is never reported as a completed effect.
 
@@ -261,7 +261,7 @@ may consent, inspect or explicitly send reference-only proposal events to an
 administrator-pinned destination. There is no automatic outbound action and no
 new agent power. ENV-028, ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055
 inherit current authority and custody on these doors. Full run lifecycle families,
-bonus preparation and complete report tools remain unproved. The native exact
+complete bonus payroll and complete report tools remain unproved. The native exact
 earnings-run ceremony now uses a separately authenticated human and passkey
 verification, with a signed OIDC MFA assertion alternative at the API boundary;
 see [payroll-approvals.md](payroll-approvals.md). This does not complete ENV-051.
@@ -279,3 +279,90 @@ and filing remain `unavailable`. This is a report of actual persisted preparatio
 inputs, never a payroll register, net-pay report or provider status. Pagination
 uses the same `limit` and `after` rules as records. Every transport repeats current
 sponsor, grant, field, location, bearer and custody checks and records attribution.
+
+## Bonus-only earnings preparation
+
+A conversational client can use MCP `bonus.prepare` with
+`{companyId,personId,amountCents,periodStart,periodEnd,payDate,sourceRef,requestKey}`.
+The equivalent REST door is `POST /api/envelope/v1/companies/COMPANY_ID/bonus-runs`,
+with the company omitted from the JSON body. The CLI uses the same installation
+origin and sponsored bearer as the preparation commands above:
+
+```sh
+node scripts/envelope-cli.mjs bonus COMPANY_ID < bonus.json
+node scripts/envelope-cli.mjs bonus-status COMPANY_ID RUN_ID
+```
+
+Example `bonus.json`:
+
+```json
+{
+  "personId": "PERSON_ID",
+  "amountCents": 25000,
+  "periodStart": "2026-12-01",
+  "periodEnd": "2026-12-07",
+  "payDate": "2026-12-11",
+  "sourceRef": "synthetic-envelope-915",
+  "requestKey": "synthetic-envelope-916"
+}
+```
+
+`drafts:prepare`, the compensation field and all-location scope are required.
+The amount is an integer from 1 to 100,000,000 cents, the period covers at most
+31 calendar dates and payday cannot precede its end. Unknown fields, including
+human, confirmation and approval flags, refuse with 400. The existing private
+JSON size, shared rate limit, date validation and credential rules apply.
+Idempotency is scoped to the company, credential and request key across REST,
+MCP and CLI: identical inputs return the original version; changed inputs
+return 409. Concurrent identical requests retain one native version. Rotation
+retains the credential identity; another credential has its own key space.
+
+Preparation returns `{id,version,status,approval,dispatch}` with version 1,
+status `uncalculated-earnings-run`, approval `requires-separate-human-proof`
+and dispatch `unavailable`. It writes a genuine encrypted, immutable native
+bonus-only earnings run, a worker-version custody pin, rule-collection pins
+and a separately attributed credential event atomically. The sponsor is the
+record's sponsoring operator; `bonusPreparation.credentialId` and the access
+history identify the actual preparation client. No human decision is recorded.
+
+MCP `bonus.read` with `{companyId,runId}`, REST
+`GET /api/envelope/v1/companies/COMPANY_ID/bonus-runs/:id` and CLI `bonus-status`
+require `drafts:read`, compensation and all locations. They return the exact
+retained `preview`, `sourcesCurrent` and the preparation status fields.
+HEAD repeats authorization and returns no body. Only the preparing credential
+can read this compensation or present its review. Current sponsor, grant,
+secret, company and held-custody fences apply to every request, including
+repeated checks after compensation decryption. The existing preparation report still covers hourly input proposals.
+MCP `reports.bonuses`, REST
+`GET /api/envelope/v1/companies/COMPANY_ID/reports/bonus-runs` and CLI
+`node scripts/envelope-cli.mjs bonus-report COMPANY_ID [AFTER]` return a separate
+current scoped report of actual retained bonus earnings. It requires the same
+read authority and returns `{kind,bonuses,limit,next,payroll,payment,filing}`.
+The kind is `bonus-earnings-preparations`; each row names the immutable run ID
+and version, worker ID, amount in cents, period, payday, current-source flag
+and uncalculated status. Pagination uses `limit` from 1 to 100 and the last
+returned ID as `after`, ordered by ascending immutable run ID. A different
+credential sees no bonus rows, and revocation during report assembly returns
+no compensation. Payroll remains `uncalculated`; payment and filing remain
+`unavailable`. A compensation input report is never a paid payroll register.
+
+Call MCP `run.review` with the returned run ID to present a five-minute native
+review link. The link grants no authority: the human signs in separately, sees
+the exact amount, period, source, masked destination version and unresolved
+calculation, then uses the existing explicit passkey approval ceremony.
+The approval records the human and presenting credential separately. A changed
+worker, bank record or rule collection requires fresh preparation and review;
+revoking the credential invalidates its pending presentation. Ordinary text,
+confirmation and bearer credentials never approve. An approved earnings version
+still cannot dispatch payroll.
+
+This is bonus earnings preparation, not a complete bonus payroll preview.
+Supplemental withholding, regular-rate overtime adjustments, complete state and
+local taxes, net pay and fees remain uncalculated. The regular-wage industry
+calculator refuses bonus runs instead of misclassifying them. No payment,
+filing, provider receipt or bonus lifecycle event is fabricated. Existing
+proposal webhooks cover hourly proposals only. Complete bonus payroll,
+calculated-run events, permitted payment and filing status and their lifecycle
+families remain ENV-030 work. Native encrypted history, inactive recovery,
+current authority and statutory custody remain obligations under ENV-028,
+ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055 on this transport.

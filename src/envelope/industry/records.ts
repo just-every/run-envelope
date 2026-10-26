@@ -59,9 +59,10 @@ export class IndustryRecords {
   }
   async preview(actor: Actor, personId:string,input:Input) {
     human(actor);const person=await this.scope(actor,personId,'rates:propose')
+    const run=await this.store.find<EarningsRun>(actor,'earnings-run',objectId(input.runId),undefined,true)
+    if(run.data.bonusPreparation)throw new PayrollError('special_pay_items_require_complete_calculation',409)
     const classification=await this.store.find<ClassificationRecord>(actor,'industry-classification','industry-'+personId,personId,true)
     if(!classification.approvedBy||classification.withdrawnBy||!classification.sourcesCurrent)throw new PayrollError('reviewed_current_classification_required',409)
-    const run=await this.store.find<EarningsRun>(actor,'earnings-run',objectId(input.runId),undefined,true)
     if(run.version!==integer(input.runVersion))throw new PayrollError('run_version_superseded',409)
     const sourceCheck=await new PayItems(this.store).sourceCheck(actor,run)
     if(!sourceCheck.setup||!sourceCheck.rules)throw new PayrollError('run_sources_changed',409)

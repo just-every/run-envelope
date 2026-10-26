@@ -1,5 +1,6 @@
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
+import { prepareBonus, readBonus, bonusReport } from './bonus-runs'
 import { presentReview } from './review-presentation'
 import { HumanProof } from './human-proof'
 import { Records, type Input } from './records'
@@ -161,18 +162,32 @@ export async function payrollResponse(
       const agent = await AgentTools.authenticate(env, bearer.slice(7))
       const opened = await agent.log('transport.rest.v1', agent.grant.id).run()
       if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked', 403)
-      const reportRoute = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/reports\/proposals$/.exec(url.pathname)
+      const reportRoute = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/reports\/(proposals|bonus-runs)$/.exec(url.pathname)
       if (reportRoute && request.method !== 'POST') {
         if ([...url.searchParams.keys()].some(k=>!['limit','after'].includes(k) || url.searchParams.getAll(k).length!==1)) throw new PayrollError('invalid_report_query')
-        const result=await agent.proposalReport({companyId:reportRoute[1],
+        const result=await (reportRoute[2]==='bonus-runs' ? bonusReport.bind(null,agent) : agent.proposalReport.bind(agent))({companyId:reportRoute[1],
           ...(url.searchParams.has('limit') ? {limit:url.searchParams.get('limit')} : {}),
           ...(url.searchParams.has('after') ? {after:url.searchParams.get('after')} : {}),
         })
         return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
       }
-      const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
+      const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts|bonus-runs)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
       if (!route) throw new PayrollError('agent_tool_denied', 403)
       const [, companyId, resource, draftId] = route
+      if (resource === 'bonus-runs') {
+        if (url.search) throw new PayrollError('invalid_bonus_input')
+        if (!draftId && request.method === 'POST') {
+          if (request.headers.get('content-type')?.split(';')[0] !== 'application/json') throw new PayrollError('unsupported_content_type',415)
+          const value=await input(request)
+          if (Object.hasOwn(value,'companyId')) throw new PayrollError('invalid_bonus_input')
+          return json(await prepareBonus(agent,{...value,companyId}),201)
+        }
+        if (draftId && request.method !== 'POST') {
+          const result=await readBonus(agent,{companyId,runId:draftId})
+          return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
+        }
+        throw new PayrollError('agent_tool_denied',403)
+      }
       if (resource === 'records' && !draftId && request.method !== 'POST') {
         if ([...url.searchParams.keys()].some(k => !['limit', 'after'].includes(k)) ||
             [...url.searchParams.keys()].some(k => url.searchParams.getAll(k).length !== 1))
@@ -255,6 +270,15 @@ export async function payrollResponse(
               properties: {companyId:{type:'string'},replyId:{type:'string'},version:{type:'integer'},digest:{type:'string'}}, required:['companyId','replyId','version','digest'],
             },
             {
+              name: 'bonus.prepare', action:'drafts:prepare', description:'Prepare an immutable bonus-only earnings run. Tax and overtime remain uncalculated; never approves or dispatches.',
+              properties:{companyId:{type:'string'},personId:{type:'string'},amountCents:{type:'integer',minimum:1,maximum:100000000},periodStart:{type:'string'},periodEnd:{type:'string'},payDate:{type:'string'},sourceRef:{type:'string'},requestKey:{type:'string'}},
+              required:['companyId','personId','amountCents','periodStart','periodEnd','payDate','sourceRef','requestKey'],
+            },
+            {
+              name:'bonus.read',action:'drafts:read',description:'Read this credential’s exact immutable bonus earnings and outstanding calculation holds.',
+              properties:{companyId:{type:'string'},runId:{type:'string'}},required:['companyId','runId'],
+            },
+            {
               name: 'run.review', action:'drafts:read', description:'Present a native exact-run review link to a separately authenticated human. Never approves.',
               properties:{companyId:{type:'string'},runId:{type:'string'}},required:['companyId','runId'],
             },
@@ -290,6 +314,10 @@ export async function payrollResponse(
                 'sourceRef',
                 'requestKey',
               ],
+            },
+            {
+              name:'reports.bonuses',action:'drafts:read',description:'Read a current scoped page of this credential’s native bonus earnings preparations. No calculated payroll or payment claim.',
+              properties:{companyId:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},after:{type:'string'}},required:['companyId'],
             },
             {
               name: 'reports.proposals', action: 'drafts:read',
@@ -340,6 +368,12 @@ export async function payrollResponse(
                   ? await presentReview(agent,args)
                   : params.name === 'records.list'
             ? await agent.records(args)
+            : params.name === 'reports.bonuses'
+              ? await bonusReport(agent,args)
+            : params.name === 'bonus.prepare'
+              ? await prepareBonus(agent,args)
+              : params.name === 'bonus.read'
+                ? await readBonus(agent,args)
             : params.name === 'draft.prepare'
               ? await agent.prepare(args)
               : params.name === 'reports.proposals'
