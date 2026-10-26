@@ -87,6 +87,9 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
   for(const eventType of ['hire','rehire']) {
    const month=eventType==='hire'?'01':'07',fields=Object.fromEntries(entry.requiredFields.map(k=>[k,input[k] ?? optionalSourceValues[k]])),payload={...fields,eventType,state:entry.code,workState:entry.code,hireDate:'2026-'+month+'-01'}
    if(entry.code==='PA') {
+    payload.employerContactName='Synthetic Pennsylvania reporting owner'
+    const {employerContactName,...withoutContactName}=payload
+    assert.equal((await call(matrixDoor,withoutContactName)).status,400,'Pennsylvania refuses a missing employer contact name')
     await data(matrixDoor,{...payload,employerContactPhone:''},400)
     await data(matrixDoor,{...payload,employeeAddress:'PO Box 1, Harrisburg PA 17101'},400)
     await data(matrixDoor,{...payload,employerAddress:'PO Box 2, Harrisburg PA 17101'},400)
@@ -103,7 +106,7 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
    const edge=await data(path+'/transfer',{version:1})
    assert.deepEqual(Object.keys(edge.fields).sort(),[...entry.requiredFields,'hireDate',...(entry.includeWorkState?['stateOfHire']:[])].sort(),entry.name+' minimal schema fields')
    assert.equal(edge.directoryUrl,entry.directoryUrl);assert.equal(edge.submissionClaimed,false)
-   if(entry.code==='PA') {assert.equal(edge.fields.employerContactPhone,'6145550100');assert.equal(edge.fields.stateOfHire,'PA');assert.equal(Object.hasOwn(edge.fields,'employeeDateOfBirth'),false)}
+   if(entry.code==='PA') {assert.equal(edge.fields.employerContactName,'Synthetic Pennsylvania reporting owner','Pennsylvania transfers the reviewed employer contact name');assert.equal(edge.fields.employerContactPhone,'6145550100');assert.equal(edge.fields.stateOfHire,'PA');assert.equal(Object.hasOwn(edge.fields,'employeeDateOfBirth'),false)}
    if(entry.code==='NH') {assert.equal(edge.directoryUrl,'https://www2.nhes.nh.gov/webtax/');assert.equal(edge.fields.workerType,'employee');assert.equal(edge.fields.stateEmployerId,optionalSourceValues.stateEmployerId)}
    await data(path+'/response',{version:2,receiptId:'synthetic-envelope-matrix-'+entry.code+'-'+eventType,response:'accepted',reportingDate:'2026-'+month+'-02',agencyResponse:'Synthetic observed portal confirmation at the directory boundary'})
    assert.equal((await data(matrixDoor)).find(r=>r.id===created.id).data.status,'accepted');cases++
