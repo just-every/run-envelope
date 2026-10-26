@@ -16,6 +16,15 @@ import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 const withoutUuidReferences = text => text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, '')
 
 export async function payrollJourney({ origin, cookie, settings, sql, receiverState, restart }) {
+  // Other journeys can establish valid owner proof. Start this journey with
+  // a distinct native session so missing-proof refusals never depend on runtime.
+  const incomingHash = await hashToken(settings.SESSION_SECRET, 'session', cookie.split('=')[1])
+  const recordsToken = randomBytes(32).toString('base64url')
+  const recordsHash = await hashToken(settings.SESSION_SECRET, 'session', recordsToken)
+  const recordsSession = 'synthetic-envelope-records-owner-session'
+  const recordsNow = Date.now()
+  await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) SELECT '${recordsSession}','${recordsHash}',operator_id,operator_version,'native',${recordsNow},${recordsNow + 3600000} FROM oa_sessions WHERE token_hash='${incomingHash}' AND revoked_at IS NULL`)
+  cookie = `${localCookieName('operator_session_local', origin)}=${recordsToken}`
   const base = '/api/envelope/companies',
     call = (path, who = cookie, body) =>
       fetch(origin + path, {
@@ -473,7 +482,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     )
     const ownerSession = (
       await sql(
-        'SELECT id,operator_id,operator_version FROM oa_sessions WHERE revoked_at IS NULL ORDER BY created_at LIMIT 1',
+        `SELECT id,operator_id,operator_version FROM oa_sessions WHERE id='${recordsSession}' AND revoked_at IS NULL`,
       )
     )[0]
     const proofToken = randomBytes(32).toString('base64url'),
