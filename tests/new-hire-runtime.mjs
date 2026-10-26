@@ -95,8 +95,8 @@ export async function newHireJourney({origin,cookie,advanceClock}) {
     await data(matrixDoor,{...payload,employerAddress:'PO Box 2, Harrisburg PA 17101'},400)
    }
    if(entry.code==='NH') {
-    await data(matrixDoor,{...payload,employeeFirstName:'Alexandermichaelchristopherbenjaminjames'},400)
-    await data(matrixDoor,{...payload,employeeLastName:'Montgomerywellingtonfitzgeraldharrington'},400)
+    assert.equal((await call(matrixDoor,{...payload,employeeFirstName:'Alexandermichaelchristopherbenjaminjames'})).status,400,'New Hampshire refuses an overlength first name')
+    assert.equal((await call(matrixDoor,{...payload,employeeLastName:'Montgomerywellingtonfitzgeraldharrington'})).status,400,'New Hampshire refuses an overlength last name')
     payload.employeeFirstName='Alexandermichaelchristopherbenjamin'
     payload.employeeLastName='Montgomerywellingtonfitzgerald'
     await data(matrixDoor,{...payload,stateEmployerId:''},400)
