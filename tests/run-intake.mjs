@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import { read, utils, write } from '@e965/xlsx'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 
@@ -389,7 +389,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
             c.after === 481 + i
         )
       )
-      assert.equal(diff.data.fileDigest.length, 64)
+      assert.equal(diff.data.fileDigest, createHash('sha256').update(new Uint8Array(bytes)).digest('hex'), 'provenance hashes the exact uploaded bytes')
       if (i === 0) {
         await page.goto(origin + door.replace('/api/', '/app/'))
         await page.setViewportSize({ width: 1440, height: 1000 })
