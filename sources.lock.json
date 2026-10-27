@@ -2862,7 +2862,7 @@
       "executable": false
     },
     "tests/archive-erasure.mjs": {
-      "sha256": "c43d530de0f6357c3637e77a425de280ce519bdc076ae0b4f2994321acbe4ec9",
+      "sha256": "5b7d8f8287f104c9198e2cae1e952803c557f0019fbcf1194c655917c3739fcf",
       "executable": false
     },
     "tests/archive-fixture.mjs": {

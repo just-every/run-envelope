@@ -195,9 +195,11 @@ export async function archiveErasure(context, fixture) {
     personBase+'/new-hire-reports/'+reporting.activeReportId+'/review',
     personBase+'/withholding-instructions',personBase+'/withholding-instructions/review',
     personBase+'/withholding-instructions/original/1',personBase+'/withholding-instructions/original/2']
+  const approvedReviewDoors=new Set([company+'/hris-hires/'+fixture.hireCustody.id+'/review',personBase+'/new-hire-reports/'+reporting.activeReportId+'/review',personBase+'/withholding-instructions/review'])
+  const ownerStatus=path=>approvedReviewDoors.has(path)?409:200
   for(const path of privateDoors) {
     const originalResponse=await call(path)
-    assert.equal(originalResponse.status,200,'current owner reads the retained original or private history')
+    assert.equal(originalResponse.status,ownerStatus(path),'current owner reads retained custody: '+path+' '+await originalResponse.clone().text())
     if(path.includes('/original/')) assert.equal(Buffer.from(await originalResponse.arrayBuffer()).toString('base64'),fixture.privateCustody.pdf,'the positive original path returns the exact retained bytes')
     assert.equal((await call(path,undefined,{cookie:''})).status,401,'signed-out direct private transport refuses')
     assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'ordinary grant cannot acquire owner-only original custody')
@@ -205,7 +207,7 @@ export async function archiveErasure(context, fixture) {
   }
   for(const path of privateDoors) {
     const html=await call(path.replace('/api/','/app/'))
-    assert.equal(html.status,200,'the current owner can use the corresponding private page or download')
+    assert.equal(html.status,ownerStatus(path),'the current owner can use private transport '+path)
     if(!path.includes('/original/')) assert.match(html.headers.get('content-type'),/text\/html/)
     const denied=await call(path.replace('/api/','/app/'),undefined,{cookie:viewerCookie})
     assert.equal(denied.status,403,'the native page transport refuses the ordinary identity too')
@@ -216,7 +218,7 @@ export async function archiveErasure(context, fixture) {
   const ownerConfirmed=await call('/auth/confirm',{token:ownerLink.searchParams.get('token')},{cookie:''})
   assert.equal(ownerConfirmed.status,303)
   const oldOwner=ownerConfirmed.headers.get('set-cookie').split(';')[0]
-  for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:oldOwner})).status,200,'a second current owner session can read retained custody')
+  for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:oldOwner})).status,ownerStatus(path),'a second current owner session reads '+path)
   assert.equal((await call('/auth/signout',{}, {cookie:oldOwner})).status,204)
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:oldOwner})).status,401,'sign-out immediately fences a previously usable private transport')
   assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,200,'current scoped viewer can read mapped source history before the request')
@@ -230,7 +232,7 @@ export async function archiveErasure(context, fixture) {
   assert.equal(heldReports.find(r=>r.id===reporting.activeReportId).canTransfer,false,'a held request removes pending transfer authority')
   assert.equal((await call(personBase+'/new-hire-reports/'+reporting.activeReportId+'/transfer',{version:1})).status,409,'an approved report cannot transfer while held')
   for(const path of privateDoors) {
-    assert.equal((await call(path)).status,200,'the owner retains explicit audited custody while held')
+    assert.equal((await call(path)).status,ownerStatus(path),'the owner retains audited custody; completed reviews cannot issue a new approval')
     assert.equal((await call(path.replace('/api/','/app/'),undefined,{cookie:viewerCookie})).status,403,'held native pages refuse ordinary access')
   }
   for (const door of custodyReads) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/' + door, undefined, {cookie:viewerCookie})).status,403,
@@ -393,7 +395,7 @@ export async function archiveErasure(context, fixture) {
         'erased intake source cannot resurrect under a new worker identity')
     }
     const auditEvents = await (await call(company + '/audit')).json()
-    assert.ok(!auditEvents.some(e => [fixture.privacyPersonId,fixture.privacyWorkId,...fixture.custodyObjects,fixture.noticeCustody.id,fixture.noticeCustody.replyId,fixture.noticeCustody.analysisId,fixture.privateCustody.paperId].includes(e.targetId)), 'retained action targets are anonymized across every erased source and private derivative')
+    assert.ok(!auditEvents.some(e => [fixture.privacyPersonId,fixture.privacyWorkId,...fixture.custodyObjects,fixture.noticeCustody.id,fixture.noticeCustody.replyId,fixture.noticeCustody.analysisId,fixture.privateCustody.paperId,...fixture.noticeCustody.linkIds,reporting.reportId,reporting.activeReportId,reporting.instructionId].includes(e.targetId)), 'retained action targets are anonymized across every erased source and private derivative')
     for (const width of [1440,390]) {
       await page.setViewportSize({width,height:1000})
       const response = await page.goto(origin + (company + '/people/' + fixture.privacyPersonId).replace('/api/','/app/'))
