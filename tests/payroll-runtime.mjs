@@ -4832,8 +4832,131 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     const deniedPage=await outsiderContext.newPage()
     for(const width of [1440,390]) {await deniedPage.setViewportSize({width,height:1000});const reply=await deniedPage.goto(origin+screen);assert.equal(reply.status(),403);assert.equal((await deniedPage.content()).includes('1925'),false);await deniedPage.screenshot({path:join(folder,'paper-refused-'+width+'.png'),fullPage:true})}
   } finally {await browser.close()}
+  // Delegated paper powers are independent of rate, bank, export and payment powers.
+  const staff=async(id,label,role,actions,fields=['tax','ssn'],locations=[location.id])=>{
+    await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${id}','${id}@example.com','${label}','member','active',1,1)`)
+    await data(base+'/grants',{operatorId:id,version:0,role,locations,fields,actions:['records:read',...actions]})
+    return signIn(id)
+  }
+  let sessionNumber=0
+  const signIn=async id=>{
+    const token=randomBytes(32).toString('base64url'),hash=await hashToken(settings.SESSION_SECRET,'session',token)
+    await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-paper-staff-${++sessionNumber}','${hash}','${id}',1,'native',${Date.now()},${Date.now()+3600000})`)
+    return localCookieName('operator_session_local',origin)+'='+token
+  }
+  const preparerId='synthetic-envelope-1929-bookkeeper',reviewerId='synthetic-envelope-1929-payroll',downloadId='synthetic-envelope-1929-hr'
+  let preparer=await staff(preparerId,'Synthetic bookkeeper','accountant',['paper:entry'])
+  let reviewer=await staff(reviewerId,'Synthetic payroll administrator','payroll-admin',['paper:review'])
+  const downloader=await staff(downloadId,'Synthetic HR custodian','preparer',['paper:download'])
+  const wrongFields=await staff('synthetic-envelope-1929-fields','Synthetic limited fields','preparer',['paper:entry','paper:review','paper:download'],['tax'])
+  const otherLocation=await data(base+'/locations',{name:'Synthetic other workplace',state:'OH'},201)
+  const wrongLocation=await staff('synthetic-envelope-1929-location','Synthetic limited location','preparer',['paper:entry','paper:review','paper:download'],['tax','ssn'],[otherLocation.id])
+  const delegated={...input,version:4}
+  await noWrite(async()=>{
+    await data(door+'/review',undefined,403,preparer)
+    await data(door+'/original/1/state',undefined,403,preparer)
+    await data(door,delegated,403,reviewer)
+    await data(door+'/original/1/federal',undefined,403,reviewer)
+    await data(door,delegated,403,downloader)
+    await data(door+'/review',undefined,403,downloader)
+    for(const who of [wrongFields,wrongLocation]) {
+      await data(door,undefined,who===wrongFields?403:404,who)
+      await data(door,delegated,who===wrongFields?403:404,who)
+      await data(door+'/review',undefined,who===wrongFields?403:404,who)
+      await data(door+'/original/1/state',undefined,who===wrongFields?403:404,who)
+    }
+    await data('/api/envelope/companies/'+foreign.id+'/people/'+person.id+'/paper-onboarding',undefined,403,preparer)
+    await data(base+'/export',undefined,403,preparer)
+    await data(base+'/paper-policy',{version:0,requireSeparateReviewer:false},403,preparer)
+  })
+  await data(door,delegated,201,preparer)
+  const beforePolicy=await data(door+'/review',undefined,200,reviewer)
+  await data(base+'/paper-policy',{version:0,requireSeparateReviewer:true})
+  await noWrite(async()=>{await data(door+'/approve',{version:5,reviewToken:beforePolicy.reviewToken},409,reviewer)})
+  // A person with both powers still cannot review their own transcription under the policy.
+  await data(base+'/grants',{operatorId:preparerId,version:1,role:'accountant',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:entry','paper:review']})
+  const oldPreparer=preparer;preparer=await signIn(preparerId)
+  await noWrite(async()=>{
+    await data(door,undefined,401,oldPreparer)
+    await data(door+'/review',undefined,403,preparer)
+    await data(door+'/approve',{version:5,reviewToken:beforePolicy.reviewToken},403,preparer)
+  })
+  const staffReview=await data(door+'/review',undefined,200,reviewer)
+  await data(door+'/approve',{version:5,reviewToken:staffReview.reviewToken},200,reviewer)
+  const delegatedRow=(await data(door,undefined,200,downloader))[0]
+  assert.equal(delegatedRow.createdBy,preparerId);assert.equal(delegatedRow.approvedBy,reviewerId)
+  assert.equal(delegatedRow.data.enteredByName,'Synthetic bookkeeper');assert.equal(delegatedRow.paperworkReviewed,true);assert.equal(delegatedRow.payable,false)
+  assert.equal(delegatedRow.data.tin,'•••••1925');assert.equal(JSON.stringify(delegatedRow).includes(pdf),false)
+  for(const form of ['federal','state']) {
+    const original=await call(door+'/original/5/'+form,undefined,downloader)
+    assert.equal(original.status,200);assert.equal(Buffer.from(await original.arrayBuffer()).toString('base64'),pdf)
+  }
+  const staffAudit=await data(base+'/audit')
+  for(const [action,actorId,targetId,version] of [
+    ['workspace.paper-onboarding.recorded',preparerId,'paper-'+person.id,5],
+    ['workspace.paper-onboarding.reviewed',reviewerId,'paper-'+person.id,5],
+    ['workspace.paper-onboarding.approved',reviewerId,'paper-'+person.id,5],
+    ['onboarding.original.read',downloadId,'paper-'+person.id,5],
+  ]) assert.ok(staffAudit.some(event=>event.action===action && event.actorId===actorId && event.targetId===targetId && event.version===version && event.occurredAt>0),'paper audit attributes '+action)
+  assert.equal(JSON.stringify(staffAudit).includes(input.tin),false);assert.equal(JSON.stringify(staffAudit).includes(pdf),false)
+  const staffBrowser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+  try {
+    const folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
+    for(const [label,who] of [['entry',preparer],['reviewer',reviewer],['originals',downloader],['grants',cookie]]) {
+      const context=await staffBrowser.newContext(),parts=who.split('=');await context.addCookies([{name:parts[0],value:parts[1],url:origin}])
+      const page=await context.newPage()
+      for(const width of [1440,390]) {
+        await page.setViewportSize({width,height:1000})
+        assert.equal((await page.goto(origin+(label==='grants'?base+'/grants':door).replace('/api/','/app/'))).status(),200)
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+        for(const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim().length>1,'paper and grant controls have visible labels')
+        await page.locator('details').evaluateAll(elements=>elements.forEach(element=>element.open=true))
+        if(label==='originals') {assert.equal(await page.getByRole('link',{name:'Download signed state original',exact:true}).count(),5);assert.equal(await page.getByRole('button',{name:'Record signed paper version',exact:true}).count(),0)}
+        if(label==='reviewer') assert.equal(await page.getByRole('link',{name:/Download signed/}).count(),0)
+        await page.screenshot({path:join(folder,'paper-staff-'+label+'-'+width+'.png'),fullPage:true})
+      }
+      await context.close()
+    }
+  } finally {await staffBrowser.close()}
+  await data(door,{...input,version:5},201,preparer)
+  const revokedReview=await data(door+'/review',undefined,200,reviewer)
+  await data(base+'/grants',{operatorId:reviewerId,version:1,revoke:true})
+  await data(base+'/grants',{operatorId:downloadId,version:1,revoke:true})
+  await noWrite(async()=>{
+    await data(door+'/approve',{version:6,reviewToken:revokedReview.reviewToken},401,reviewer)
+    await data(door+'/review',undefined,401,reviewer)
+    await data(door+'/original/5/state',undefined,401,downloader)
+    await data(door,undefined,401,downloader)
+  })
+  await data(base+'/grants',{operatorId:reviewerId,version:2,role:'payroll-admin',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:review']})
+  const oldReviewer=reviewer;reviewer=await signIn(reviewerId)
+  await noWrite(async()=>{
+    await data(door+'/approve',{version:6,reviewToken:revokedReview.reviewToken},401,oldReviewer)
+    await data(door+'/approve',{version:6,reviewToken:revokedReview.reviewToken},409,reviewer)
+  })
+  const renewed=await data(door+'/review',undefined,200,reviewer)
+  await data(door,{...input,version:6},201,preparer)
+  await noWrite(async()=>{await data(door+'/approve',{version:6,reviewToken:renewed.reviewToken},409,reviewer)})
+  assert.equal((await data(door))[0].payable,false)
+  // Held custody does not acquire a delegated escape door.
+  const inventory=await data(base+'/people/'+person.id+'/privacy')
+  await data(base+'/people/'+person.id+'/privacy/request',{consent:true,fingerprint:inventory.fingerprint})
+  await noWrite(async()=>{
+    for(const who of [preparer,reviewer]) {
+      await data(door,undefined,403,who)
+      await data(door,{...input,version:7},403,who)
+      await data(door+'/review',undefined,403,who)
+      await data(door+'/original/1/state',undefined,403,who)
+    }
+  })
+  const heldOriginal=await call(door+'/original/1/state');assert.equal(heldOriginal.status,200);assert.equal(Buffer.from(await heldOriginal.arrayBuffer()).toString('base64'),pdf)
+  for(const path of [door,door+'/review',door+'/original/1/state']) {
+    const denied=await fetch(origin+path,{headers:{authorization:'Bearer synthetic-envelope-1929',origin},redirect:'manual'})
+    assert.ok([401,403].includes(denied.status),'agent credentials gain no paper authority')
+    assert.equal((await denied.text()).includes(input.tin),false)
+  }
   const stored=JSON.stringify(await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}'`));assert.equal(stored.includes(input.tin),false);assert.equal(stored.includes(pdf),false)
-  const custody=await data(base+'/people/'+person.id+'/privacy');assert.equal(custody.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='paper-onboarding').length,4)
+  const custody=await data(base+'/people/'+person.id+'/privacy');assert.equal(custody.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='paper-onboarding').length,7)
   assert.equal((await data(base)).people.length,2,'updates never create another worker')
   console.log('PAPER-ONBOARDING passed: no-contact employee and contractor paper intake, signed originals, exact review, masked reads, historical federal elections, PA and Ohio certificates, district move, encrypted custody, unsigned and foreign refusals; no payable or IRS authority claimed')
 }

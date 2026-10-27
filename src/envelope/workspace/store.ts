@@ -13,6 +13,7 @@ export type Kind =
   | 'intake-source'
   | 'paper-onboarding'
   | 'automation-policy'
+  | 'paper-policy'
   | 'new-hire-report'
   | 'new-hire-election'
   | 'ui-claim'
@@ -123,6 +124,32 @@ export class WorkspaceStore {
       throw new PayrollError('all_locations_required', 403)
     return null
   }
+  async paperAuthority(actor: Actor, action: string, personId?: string) {
+    if (actor.session.kind !== 'native') throw new PayrollError('native_paper_session_required', 403)
+    const person = await this.records.person(actor, personId!)
+    requireAction(actor, action, person.locationId, 'tax')
+    requireAction(actor, action, person.locationId, 'ssn')
+    return person
+  }
+  async paperPolicy(actor: Actor) {
+    const f = fence(actor)
+    const row = await this.records.statement(`SELECT object_id,version,cipher FROM env_workspace_versions
+      WHERE company_id=? AND kind='paper-policy' AND object_id='paper-review' AND ${f.sql} ORDER BY version DESC LIMIT 1`,
+      [actor.company,...f.args]).first<{object_id:string;version:number;cipher:string}>()
+    if (!row) return {version:0,requireSeparateReviewer:false}
+    const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
+    const data = JSON.parse(await unseal(key,JSON.stringify([actor.company,'paper-policy',row.object_id,row.version]),row.cipher))
+    return {version:row.version,requireSeparateReviewer:data.requireSeparateReviewer===true}
+  }
+  async paperReviewFence(actor: Actor, kind: Kind, createdBy: string, withdraw=false) {
+    const f = fence(actor)
+    if (kind !== 'paper-onboarding') return {...f,salt:''}
+    const policy = await this.paperPolicy(actor)
+    if (!withdraw && policy.requireSeparateReviewer && createdBy === actor.session.operator.id)
+      throw new PayrollError('distinct_paper_reviewer_required',403)
+    return {sql:f.sql+" AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind='paper-policy' AND object_id='paper-review'),0)=?",
+      args:[...f.args,actor.company,policy.version],salt:':paper-policy:'+policy.version}
+  }
   async list<T = Input>(
     actor: Actor,
     kind: Kind,
@@ -130,7 +157,7 @@ export class WorkspaceStore {
     compensation = false,
     audited = true,
   ): Promise<Revision<T>[]> {
-    const person = await this.authority(actor, 'records:read', personId, compensation)
+    const person = kind==='paper-onboarding' ? await this.paperAuthority(actor,'records:read',personId) : await this.authority(actor, 'records:read', personId, compensation)
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const f = fence(actor),
       event = crypto.randomUUID()
@@ -193,7 +220,7 @@ export class WorkspaceStore {
     sources: Sources = {},
   ) {
     objectId(id)
-    const person = await this.authority(
+    const person = kind==='paper-onboarding' ? await this.paperAuthority(actor,'paper:entry',personId) : await this.authority(
       actor,
       compensation ? 'rates:propose' : 'records:write',
       personId,
@@ -334,12 +361,13 @@ export class WorkspaceStore {
   }
   async review<T = Input>(actor: Actor, kind: Kind, id: string, personId?: string, condition?: SourceFence) {
     const row = await this.find<T>(actor, kind, id, personId, true)
-    await this.authority(actor, 'rates:approve', personId, true)
+    if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
+    else await this.authority(actor, 'rates:approve', personId, true)
     if (!row.sourcesCurrent || row.approvedBy || row.withdrawnBy)
       throw new PayrollError('review_stale', 409)
+    const f = await this.paperReviewFence(actor,kind,row.createdBy)
     const token = crypto.randomUUID() + crypto.randomUUID(),
-      hash = await digest(token),
-      f = fence(actor),
+      hash = await digest(token+f.salt),
       event = crypto.randomUUID()
     if (condition) {
       f.sql += ` AND (${condition.sql})`
@@ -383,9 +411,10 @@ export class WorkspaceStore {
     condition?: SourceFence,
   ) {
     const row = await this.find(actor, kind, id, personId, true)
-    await this.authority(actor, 'rates:approve', personId, true)
+    if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
+    else await this.authority(actor, 'rates:approve', personId, true)
     const version = integer(input.version),
-      f = fence(actor),
+      f = await this.paperReviewFence(actor,kind,row.createdBy,withdraw),
       event = crypto.randomUUID()
     if (
       (!withdraw && !row.sourcesCurrent) ||
@@ -398,7 +427,7 @@ export class WorkspaceStore {
       f.sql += ` AND (${condition.sql})`
       f.args.push(...condition.args)
     }
-    const hash = withdraw ? '' : await digest(text(input.reviewToken, 100))
+    const hash = withdraw ? '' : await digest(text(input.reviewToken, 100)+f.salt)
     const result = await this.records.env.DB.batch<Record<string, unknown>>([
       this.records.statement(
         `INSERT INTO env_workspace_decisions(company_id,kind,object_id,version,decision,actor_id,occurred_at,change_id)
