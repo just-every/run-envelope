@@ -19,6 +19,25 @@ function cents(value: unknown) {
     throw new PayrollError('provider_fractional_cent')
   return result
 }
+function identity(value: unknown) {
+  if (!Number.isSafeInteger(value) || Number(value) < 1)
+    throw new PayrollError('invalid_provider_identity')
+  return String(value)
+}
+function closedMinutes(start: number, end: number, values: unknown, keys: [string, string, string]) {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 86400000)
+    throw new PayrollError('closed_provider_time_required', 409)
+  if (!Array.isArray(values)) throw new PayrollError('provider_break_review_required', 409)
+  const breaks = values.map(value => {
+    const row = object(value), from = Date.parse(String(row[keys[0]])), through = Date.parse(String(row[keys[1]]))
+    if (!Number.isFinite(from) || !Number.isFinite(through) || from < start || through > end || through <= from || typeof row[keys[2]] !== 'boolean')
+      throw new PayrollError('provider_break_review_required', 409)
+    return { from, through, paid: row[keys[2]] }
+  }).sort((a,b) => a.from - b.from)
+  if (breaks.some((row,i) => i > 0 && row.from < breaks[i-1].through))
+    throw new PayrollError('provider_break_review_required', 409)
+  return (end - start - breaks.filter(row => !row.paid).reduce((n,row) => n + row.through - row.from, 0)) / 60000
+}
 
 /** Reviewed source captures, never an authenticated provider acknowledgement. */
 export async function providerInput(value: unknown) {
@@ -26,7 +45,7 @@ export async function providerInput(value: unknown) {
   try { input = object(typeof value === 'string' ? JSON.parse(value) : value) }
   catch { throw new PayrollError('invalid_provider_export') }
   const provider = text(input.provider), account = text(input.account, 80)
-  if (!['lanyard', 'toast', 'clockify', 'square', 'deputy', 'when-i-work'].includes(provider)) throw new PayrollError('unsupported_time_provider')
+  if (!['lanyard', 'toast', 'clockify', 'square', 'deputy', 'when-i-work', 'homebase', '7shifts', 'quickbooks-time', 'clover'].includes(provider)) throw new PayrollError('unsupported_time_provider')
   const payload = input.payload, mappings = object(input.mappings), evidence = text(input.evidence, 500)
   const rows: IntakeLine[] = []
   const add = (id: string, map: Input, code: string, minutes: number, amountCents: number, settlement = '') => {
@@ -60,6 +79,77 @@ export async function providerInput(value: unknown) {
       add(key + ':' + code.replaceAll(' ', '-'), mapping, code === 'tips' ? 'tip' : premium ? code.replaceAll(' ', '-') : 'regular', minutes, amount,
         code === 'tips' ? String(mapping.settlement) : '')
       if (premium) rows.at(-1)!.state = 'CA'
+    }
+  } else if (provider === 'homebase' || provider === '7shifts') {
+    const homebase = provider === 'homebase', envelope = homebase ? undefined : object(payload)
+    const entries = homebase ? payload : envelope!.data
+    if (!Array.isArray(entries)) throw new PayrollError('invalid_provider_export')
+    if (envelope && (envelope.object !== 'time_punches' || object(object(envelope.meta).cursor).next !== null))
+      throw new PayrollError('complete_provider_capture_required', 409)
+    for (const value of entries) {
+      const entry = object(value), id = identity(entry.id), worker = identity(entry.user_id), mapping = object(mappings[id])
+      if (mapping.sourcePersonId !== worker || (!homebase && String(entry.company_id) !== account))
+        throw new PayrollError('provider_worker_mapping_required', 409)
+      if (entry.approved !== true || (!homebase && (entry.deleted !== false || entry.auto_clocked_out !== false)))
+        throw new PayrollError('approved_provider_export_required', 409)
+      const minutes = closedMinutes(Date.parse(String(entry[homebase ? 'clock_in' : 'clocked_in'])),
+        Date.parse(String(entry[homebase ? 'clock_out' : 'clocked_out'])), entry[homebase ? 'timebreaks' : 'breaks'],
+        homebase ? ['start_at','end_at','paid'] : ['in','out','paid'])
+      add(id + ':regular', mapping, 'regular', minutes, 0)
+      if (homebase) {
+        const labor = object(entry.labor)
+        // Timecard labor cannot prove time-off totals; never silently import them as worked time.
+        for (const key of ['break_penalty','paid_time_off_hours','time_off_hours','daily_overtime','double_overtime','seventh_day_overtime_15','seventh_day_overtime_20'])
+          if (labor[key] !== undefined && labor[key] !== 0) throw new PayrollError('provider_pay_code_review_required', 409)
+        if (Math.abs(number(labor.paid_hours) * 60 - minutes) > 0.000001 ||
+          Math.abs((number(labor.regular_hours) + number(labor.weekly_overtime)) * 60 - minutes) > 0.000001)
+          throw new PayrollError('provider_hours_reconciliation_required', 409)
+        const settlements = object(mapping.settlements)
+        for (const key of ['cash_tips','credit_tips']) {
+          if (!['cash','paycheck'].includes(String(settlements[key]))) throw new PayrollError('tip_settlement_required', 409)
+          add(id + ':' + key, mapping, 'tip', 0, cents(labor[key]), String(settlements[key]))
+        }
+      } else {
+        const amount = number(entry.tips)
+        if (!Number.isSafeInteger(amount)) throw new PayrollError('provider_fractional_cent')
+        if (!['cash','paycheck'].includes(String(mapping.settlement))) throw new PayrollError('tip_settlement_required', 409)
+        add(id + ':tip', mapping, 'tip', 0, amount, String(mapping.settlement))
+      }
+    }
+  } else if (provider === 'quickbooks-time') {
+    const envelope = object(payload), entries = object(object(envelope.results).timesheets), supplemental = object(envelope.supplemental_data)
+    const users = object(supplemental.users), jobs = object(supplemental.jobcodes)
+    if (envelope.more !== false) throw new PayrollError('complete_provider_capture_required', 409)
+    for (const [key, value] of Object.entries(entries)) {
+      const entry = object(value), id = identity(entry.id), worker = identity(entry.user_id), mapping = object(mappings[id])
+      const user = object(users[worker]), job = object(jobs[identity(entry.jobcode_id)])
+      if (key !== id || identity(user.id) !== worker || mapping.sourcePersonId !== worker)
+        throw new PayrollError('provider_worker_mapping_required', 409)
+      const day = date(entry.date), approvedThrough = date(user.approved_to)
+      if (user.active !== true || approvedThrough < day) throw new PayrollError('approved_provider_export_required', 409)
+      if (mapping.day !== day) throw new PayrollError('provider_day_mapping_required', 409)
+      if (entry.type !== 'regular' || job.type !== 'regular' || entry.on_the_clock !== false)
+        throw new PayrollError('provider_pay_code_review_required', 409)
+      const minutes = closedMinutes(Date.parse(String(entry.start)), Date.parse(String(entry.end)), [], ['start','end','paid'])
+      if (!Number.isSafeInteger(entry.duration) || number(entry.duration) !== minutes * 60)
+        throw new PayrollError('provider_hours_reconciliation_required', 409)
+      add(id + ':regular', mapping, 'regular', minutes, 0)
+    }
+  } else if (provider === 'clover') {
+    const entries = object(payload).elements
+    if (!Array.isArray(entries) || input.currency !== 'USD') throw new PayrollError('invalid_provider_export')
+    for (const value of entries) {
+      const entry = object(value), id = text(entry.id, 100), mapping = object(mappings[id])
+      if (mapping.sourcePersonId !== object(entry.employee).id) throw new PayrollError('provider_worker_mapping_required', 409)
+      if (entry.deletedTime || (entry.overrideInTime && !object(entry.overrideInEmployee).id) || (entry.overrideOutTime && !object(entry.overrideOutEmployee).id))
+        throw new PayrollError('provider_pay_code_review_required', 409)
+      const start = entry.overrideInTime || entry.inTime, end = entry.overrideOutTime || entry.outTime
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) throw new PayrollError('closed_provider_time_required', 409)
+      const minutes = closedMinutes(Number(start), Number(end), [], ['start','end','paid']), amount = number(entry.cashTipsCollected)
+      if (!Number.isSafeInteger(amount)) throw new PayrollError('provider_fractional_cent')
+      if (!['cash','paycheck'].includes(String(mapping.settlement))) throw new PayrollError('tip_settlement_required', 409)
+      add(id + ':regular', mapping, 'regular', minutes, 0)
+      add(id + ':tip', mapping, 'tip', 0, amount, String(mapping.settlement))
     }
   } else if (provider === 'deputy' || provider === 'when-i-work') {
     if (!Array.isArray(payload)) throw new PayrollError('invalid_provider_export')

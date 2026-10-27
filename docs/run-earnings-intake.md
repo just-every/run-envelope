@@ -113,7 +113,7 @@ erasure and restore matrix.
 ## Reviewed provider captures
 
 The optional `providerCapture` field on the existing intake form and its preview
-and apply API accepts JSON containing `provider` (`lanyard`, `toast`, `deputy`, `when-i-work`, `clockify` or `square`),
+and apply API accepts JSON containing `provider` (`lanyard`, `toast`, `deputy`, `when-i-work`, `clockify`, `square`, `homebase`, `7shifts`, `quickbooks-time` or `clover`),
 `account` (the stable source workplace identifier), `payload`, `mappings` and
 `evidence` (the reviewed source reference). Applying uses that same capture and
 the exact preview digest. The source namespace is derived from provider and
@@ -156,8 +156,8 @@ feed. Withdraw the local source approval when its external approval changes;
 affected earnings require fresh review and earlier frozen versions remain
 unchanged. The Lanyard and Toast tests execute a reviewed five-day source workweek.
 Clockify and Square tests execute bounded time-entry cases. These do not prove
-authenticated provider approval, every official schema field or actual payment. Other named
-adapters, source-specific custody proof and full jurisdiction calculation remain
+authenticated provider approval, every official schema field or actual payment. Complete
+adapter coverage, source-specific custody proof and full jurisdiction calculation remain
 open. No provider relationship, settlement or agency outcome is fabricated.
 
 Clockify accepts a reviewed array of locked `REGULAR` entries from the current
@@ -210,3 +210,59 @@ inspect held history with attributed audit. Stored captures are encrypted.
 This bounded inventory and held-read proof does not establish complete statutory
 retention classification, eligible erasure, source replay fencing, shared-run
 erasure or inactive archive restore. Those remain explicit completion gaps.
+
+Homebase accepts a reviewed array of approved, closed timecards from the official
+[timecard and labor schemas](https://app.joinhomebase.com/api/public/swagger_doc.json).
+Positive `id` and `user_id` values identify each entry. `clock_in`, `clock_out`
+and `timebreaks` retain actual intervals; only unpaid breaks reduce worked time.
+`labor.paid_hours` and the sum of `regular_hours` and `weekly_overtime` must
+independently reconcile to those intervals. Native payroll recalculates weekly
+overtime rather than trusting a source wage amount. `cash_tips` and `credit_tips`
+are dollar amounts, each requiring its own explicit `settlements` mapping.
+Nonzero break penalties, leave and unsupported daily or seventh-day overtime
+are refused rather than discarded or converted into worked hours. Homebase
+documents that individual timecard labor cannot supply complete leave totals;
+this adapter does not claim leave coverage from those records.
+
+7shifts accepts a complete reviewed `time_punches` response with `data` and
+`meta.cursor.next: null`, following its official
+[payroll integration guide](https://developers.7shifts.com/docs/read-time-punch-data)
+and [time punch schema](https://developers.7shifts.com/reference/gettimepunches).
+Each positive `id` and `user_id` maps explicitly; `company_id` must match the
+declared source account. Punches must be approved, undeleted and closed without
+automatic clock-out. Paid breaks remain worked time; unpaid, closed,
+nonoverlapping break intervals are subtracted. `tips` uses integer cents, as
+specified by the [tip update guide](https://developers.7shifts.com/docs/update-time-punch-data),
+and requires explicit settlement. An outstanding next-page cursor is refused;
+the current path does not fetch additional pages or synchronize webhooks.
+
+QuickBooks Time accepts a complete reviewed response using the official
+[timesheet, user and job-code schemas](https://tsheetsteam.github.io/api_docs/).
+Supply `results.timesheets` keyed by timesheet ID, `more: false` and
+`supplemental_data.users` and `supplemental_data.jobcodes`. Each regular closed
+timesheet must retain `id`, `user_id`, `jobcode_id`, `start`, `end`, `duration`
+in seconds, `date` and `on_the_clock: false`. Its job code must be regular time;
+its active user's `approved_to` date must cover the actual source day. A lock
+flag is never evidence of approval. The source day must match the reviewed day,
+and duration must reconcile to the interval. Manual time and leave codes remain
+unimplemented; they are refused. Account identity remains a reviewed declaration.
+
+Clover accepts a reviewed `elements` array of
+[employee shift objects](https://docs.clover.com/dev/reference/employeecreateshift)
+with `id`, `employee.id`, closed millisecond `inTime` and `outTime`, and integer
+`cashTipsCollected` in merchant currency units. The capture must explicitly
+declare `currency: USD`. An overridden interval requires its corresponding
+`overrideInEmployee` or `overrideOutEmployee` attribution. Source employee
+mapping and explicit tip settlement are mandatory; `serverBanking` does not
+decide whether payroll owes the money. Clover shifts carry no manager-approval
+field here; native exact human review remains required. Break policy, payment
+tip allocation, service charges and authenticated merchant approval remain
+unproved and cannot be inferred from this shift capture.
+
+The existing intake journey imports five-day reviewed workweeks from these four
+additional sources. It asserts 37.5 and 40 actual hours for two workers, $600
+already held and $300 owed through payroll where tips exist, exact corrections,
+unchanged frozen history, replay, refusal of unknown workers and unsafe source
+states, local withdrawal and settlement-only changes. All ten named adapters
+now have a bounded capture path; this does not complete every provider code,
+jurisdiction, custody duty or the statutory tip-tax shortfall path.

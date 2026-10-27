@@ -190,7 +190,7 @@ export function runIntakePage(
           ))}
 <details>
             <summary>Import reviewed provider data</summary>
-            <p>Paste a reviewed Lanyard, Toast, Deputy, When I Work, Clockify or Square capture. Its source workplace supplies the source name. Exact review is still required.</p>
+            <p>Paste reviewed time or POS data from any documented adapter. Its source workplace supplies the source name. Exact review is still required. See the run earnings intake documentation for each provider's format.</p>
             <label className="field"><span>Reviewed source data (JSON)</span><textarea name="providerCapture" rows={4} /></label>
           </details>
           <Submit primary>Preview exact cell changes</Submit>

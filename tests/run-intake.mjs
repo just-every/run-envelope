@@ -496,6 +496,116 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
   await data(door + '/' + clockifyBody.id + '/withdraw', { version: 2 })
   await data(pay + '/earnings-run', { ...clockifyRun, version: 2 }, 409)
 
+  for (const provider of ['homebase','7shifts','quickbooks-time','clover']) {
+    const entries = [], mappings = {}, users = {}, jobcodes = { '8900': { id: 8900, type: 'regular' } }
+    for (let day = 2; day <= 6; day++) for (let i = 0; i < 2; i++) {
+      const id = 89000 + day * 10 + i, worker = 8911 + i, localDay = '2026-11-0' + day
+      const start = localDay + 'T09:00:00Z', end = localDay + (i ? 'T17:00:00Z' : 'T16:30:00Z')
+      const tip = day === 2 ? [60000,30000][i] : 0
+      mappings[String(id)] = { sourcePersonId: String(worker), personId: people[i].id, day: localDay,
+        workweek: '2026-11-02', settlement: ['cash','paycheck'][i], settlements: { cash_tips: 'cash', credit_tips: ['cash','paycheck'][i] } }
+      users[String(worker)] = { id: worker, active: true, approved_to: '2026-11-06' }
+      if (provider === 'homebase') entries.push({ id, user_id: worker, approved: true,
+        clock_in: start, clock_out: localDay + 'T17:00:00Z', updated_at: localDay + 'T18:00:00Z',
+        timebreaks: [{ id: id + 1000, timecard_id: id, paid: i === 1,
+          start_at: localDay + 'T12:00:00Z', end_at: localDay + 'T12:30:00Z' }],
+        labor: { regular_hours: i ? 8 : 7.5, weekly_overtime: 0, paid_hours: i ? 8 : 7.5,
+          cash_tips: 0, credit_tips: tip / 100, break_penalty: 0, paid_time_off_hours: 0, time_off_hours: 0 } })
+      if (provider === '7shifts') entries.push({ id, company_id: 8900, user_id: worker, location_id: 8901,
+        approved: true, deleted: false, auto_clocked_out: false, clocked_in: start, clocked_out: localDay + 'T17:00:00Z', tips: tip,
+        modified: localDay + 'T18:00:00Z', breaks: [{ id: id + 1000, user_id: worker, paid: i === 1,
+          in: localDay + 'T12:00:00Z', out: localDay + 'T12:30:00Z' }] })
+      if (provider === 'quickbooks-time') entries.push({ id, user_id: worker, jobcode_id: 8900, type: 'regular',
+        start, end, date: localDay, duration: i ? 28800 : 27000, on_the_clock: false, locked: 0,
+        last_modified: localDay + 'T18:00:00Z' })
+      if (provider === 'clover') entries.push({ id: String(id), employee: { id: String(worker) },
+        inTime: Date.parse(start), outTime: Date.parse(end), cashTipsCollected: tip, serverBanking: i === 0 })
+    }
+    const payload = provider === '7shifts' ? { data: entries, object: 'time_punches', meta: { cursor: { next: null } } }
+      : provider === 'quickbooks-time' ? { results: { timesheets: Object.fromEntries(entries.map(e => [e.id,e])) },
+        more: false, supplemental_data: { users, jobcodes } } : provider === 'clover' ? { elements: entries } : entries
+    const source = { provider, account: '8900', currency: 'USD', evidence: 'synthetic-envelope-reviewed-' + provider, payload, mappings }
+    const body = { id: 'synthetic-envelope-' + provider + '-run', version: 0, providerCapture: source }
+    const preview = await data(door + '/preview', body)
+    assert.deepEqual(preview.data.rows.filter(r => r.code === 'regular').map(r => [r.personId,r.minutes]),
+      [2,3,4,5,6].flatMap(() => [[people[0].id,450],[people[1].id,480]]), provider + ' reconciles the explicit five-day workweek')
+    assert.equal(preview.data.providerCapture.sourceDigest, createHash('sha256').update(JSON.stringify(payload)).digest('hex'))
+    if (provider !== 'quickbooks-time') assert.deepEqual(preview.data.rows.filter(r => r.code === 'tip' && r.amountCents).map(r => [r.personId,r.amountCents,r.settlement]),
+      [[people[0].id,60000,'cash'],[people[1].id,30000,'paycheck']], provider + ' preserves cents and settlement')
+    await data(door + '/apply', { ...body, digest: preview.digest }, 201)
+    const run = { id: body.id, version: 0, groupId: 'synthetic-envelope-802',
+      periodStart: '2026-11-02', periodEnd: '2026-11-15', payDate: '2026-11-16', frequency: 'biweekly' }
+    await data(pay + '/earnings-run', run, 409, cookie)
+    const approveSource = async version => {
+      const review = await data(door + '/' + body.id + '/review')
+      await data(door + '/' + body.id + '/approve', { version, reviewToken: review.reviewToken })
+    }
+    await approveSource(1)
+    const expected = provider === 'quickbooks-time' ? 77500 : 107500
+    assert.equal((await data(pay + '/earnings-run', run, 201)).preview.grossCashCents, expected)
+    const replay = await data(door + '/preview', { ...body, version: 1 })
+    assert.equal((await data(door + '/apply', { ...body, version: 1, digest: replay.digest }, 201)).replayed, true)
+    await data(door + '/preview', { ...body, id: body.id + '-duplicate' }, 409)
+    const unknown = structuredClone(source); unknown.mappings['89020'].personId = 'synthetic-envelope-unknown'
+    await data(door + '/preview', { ...body, version: 1, providerCapture: unknown }, 409)
+    const badSource = structuredClone(source)
+    if (provider === 'homebase') badSource.payload[0].approved = false
+    if (provider === '7shifts') badSource.payload.data[0].approved = false
+    if (provider === 'quickbooks-time') {
+      badSource.payload.supplemental_data.users['8911'].approved_to = '2026-11-01'
+      badSource.payload.results.timesheets['89020'].locked = 1
+    }
+    if (provider === 'clover') delete badSource.payload.elements[0].outTime
+    await data(door + '/preview', { ...body, version: 1, providerCapture: badSource }, 409)
+    const unsafe = structuredClone(source)
+    if (provider === 'homebase') unsafe.payload[0].labor.break_penalty = 1
+    if (provider === '7shifts') unsafe.payload.data[0].breaks.push(unsafe.payload.data[0].breaks[0])
+    if (provider === 'quickbooks-time') unsafe.payload.supplemental_data.jobcodes['8900'].type = 'pto'
+    if (provider === 'clover') { unsafe.payload.elements[0].overrideOutTime = Date.parse('2026-11-02T16:00:00Z') }
+    await data(door + '/preview', { ...body, version: 1, providerCapture: unsafe }, 409)
+    if (provider === '7shifts' || provider === 'quickbooks-time') {
+      const incomplete = structuredClone(source)
+      if (provider === '7shifts') incomplete.payload.meta.cursor.next = 'synthetic-envelope-next-page'
+      else incomplete.payload.more = true
+      await data(door + '/preview', { ...body, version: 1, providerCapture: incomplete }, 409)
+    }
+    const corrected = structuredClone(source)
+    if (provider === 'homebase') {
+      corrected.payload[0].clock_out = '2026-11-02T16:30:00Z'
+      corrected.payload[0].labor.regular_hours = 7; corrected.payload[0].labor.paid_hours = 7
+    }
+    if (provider === '7shifts') corrected.payload.data[0].clocked_out = '2026-11-02T16:30:00Z'
+    if (provider === 'quickbooks-time') {
+      corrected.payload.results.timesheets['89020'].end = '2026-11-02T16:00:00Z'
+      corrected.payload.results.timesheets['89020'].duration = 25200
+    }
+    if (provider === 'clover') {
+      corrected.payload.elements[0].overrideOutTime = Date.parse('2026-11-02T16:00:00Z')
+      corrected.payload.elements[0].overrideOutEmployee = { id: 'synthetic-envelope-manager' }
+    }
+    const change = { ...body, version: 1, providerCapture: corrected }, difference = await data(door + '/preview', change)
+    assert.deepEqual(difference.cells.filter(c => c.status === 'change').map(c => [c.sourceId,c.field,c.before,c.after]),
+      [['89020:regular','minutes',450,420]], provider + ' identifies the exact source correction')
+    await data(door + '/apply', { ...change, digest: difference.digest }, 201)
+    await data(pay + '/earnings-run', { ...run, version: 1 }, 409)
+    await approveSource(2)
+    assert.equal((await data(pay + '/earnings-run', { ...run, version: 1 }, 201)).preview.grossCashCents, expected - 500)
+    assert.equal((await data(pay)).runs.find(r => r.id === body.id && r.version === 1).data.grossCashCents, expected)
+    if (provider !== 'quickbooks-time') {
+      const settlement = structuredClone(corrected)
+      if (provider === 'homebase') settlement.mappings['89020'].settlements.credit_tips = 'paycheck'
+      else settlement.mappings['89020'].settlement = 'paycheck'
+      const settlementBody = { ...body, version: 2, providerCapture: settlement }, diff = await data(door + '/preview', settlementBody)
+      assert.deepEqual(diff.cells.filter(c => c.status === 'change').map(c => [c.field,c.before,c.after]), [['settlement','cash','paycheck']])
+      await data(door + '/apply', { ...settlementBody, digest: diff.digest }, 201)
+      await data(pay + '/earnings-run', { ...run, version: 2 }, 409)
+      await approveSource(3)
+      assert.equal((await data(pay + '/earnings-run', { ...run, version: 2 }, 201)).preview.grossCashCents, expected + 59500)
+    }
+    await data(door + '/' + body.id + '/withdraw', { version: provider === 'quickbooks-time' ? 2 : 3 })
+    await data(pay + '/earnings-run', { ...run, version: provider === 'quickbooks-time' ? 2 : 3 }, 409)
+  }
+
   const caLocation = await data(api + '/locations', { name: 'California premium workplace', state: 'CA' }, 201)
   const caWorker = await data(api + '/people', { name: 'Synthetic premium worker', locationId: caLocation.id }, 201)
   await setup('group', 'synthetic-envelope-premium-group', { name: 'Premium review', people: [caWorker.id] })
@@ -1152,7 +1262,8 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     const inventory = await data(custody)
     for (const id of [runId, 'synthetic-envelope-lanyard-run', 'synthetic-envelope-toast-run',
       'synthetic-envelope-deputy-run', 'synthetic-envelope-when-i-work-run',
-      'synthetic-envelope-clockify-run', 'synthetic-envelope-square-run']) {
+      'synthetic-envelope-clockify-run', 'synthetic-envelope-square-run', 'synthetic-envelope-homebase-run',
+      'synthetic-envelope-7shifts-run', 'synthetic-envelope-quickbooks-time-run', 'synthetic-envelope-clover-run']) {
       assert.ok(inventory.retained.filter(r => r.table === 'env_workspace_versions' && r.key.kind === 'run-intake' && r.key.object_id === id).length >= 2,
         'custody explicitly includes original and corrected intake: ' + id)
     }
