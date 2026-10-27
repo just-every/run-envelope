@@ -21,13 +21,14 @@ Each row carries these fields:
 | `personId` | Current payroll worker ID; names never join workers automatically. |
 | `day` | Actual work or earning date, as an ISO date. |
 | `workweek` | Actual recurring workweek start, as an ISO date. |
-| `code` | Regular time, bonus, nondiscretionary bonus, commission, other earning, reimbursement, tip, meal premium, rest premium or a state assessment allocation. |
+| `code` | Regular time, bonus, nondiscretionary bonus, commission, other earning, reimbursement, tip, service charge, paid leave, unpaid leave, meal premium, rest premium or a state assessment allocation. |
 | `minutes` | Actual minutes, including fractional assessment minutes. Premiums and monetary earnings cannot create worked hours. |
 | `amountCents` | Nonnegative integer cents. Regular time uses the reviewed effective rate instead of a supplied amount. |
-| `settlement` | Required for tips: `cash` means already held; `paycheck` means owed as new cash. Other codes leave this blank. |
+| `settlement` | Required for tips and service charges: `cash` means already held; `paycheck` means owed as new cash. Service charges require `paycheck` and evidence that these are unpaid wages; already-paid or uncertain service wages require reconciliation and are refused. Other codes leave this blank. |
 | `evidence` | Retained source approval or tip settlement evidence reference. |
 | `state` | WA or OR for the corresponding assessment allocation. |
 | `riskClass` | Required for each WA risk-class allocation. |
+| `job` | Reviewed job label retained on each source row and its exact diff; not an inferred accounting destination. Older templates may omit this optional column. |
 
 Keep the source name unchanged across corrections and formats. A blank patch
 cell preserves the existing row value. Numeric zero replaces it with zero.
@@ -133,6 +134,11 @@ California premium codes without creating worked hours. Map each `timeId` or `pa
 actual `workweek`. Tip mappings additionally require `settlement` as `cash` or
 `paycheck`. The source lineage (or input identity) and earning code form the permanent row
 claim across batches; changing batch identity cannot duplicate a source.
+First-revision Lanyard `PTO` input lines with attributed, dated approval retain
+their reviewed `minutes` and `costCents` as
+paid leave, never worked time. Later PTO exports are signed differences from
+prior claimed inputs and remain refused pending complete reconciliation. Source
+`job` labels remain on ordinary rows.
 Signed corrections, segmented duplicate identities and other earning codes
 require additional implementation; they are refused, never treated as ordinary
 replacement hours or silently discarded. Imported status is retained evidence
@@ -147,8 +153,11 @@ entry GUID to exact `sourcePersonId`, native `personId`, local `day`, actual
 `workweek` and `settlements` with explicit values for both tip fields. The
 reviewed day must match the source business date. Dollar tip amounts convert to
 integer cents; source worked hours remain separate from monetary tips. Tender
-does not determine settlement. Service charges, withheld tips and rounding
-losses require further treatment and are refused when nonzero. An omitted
+does not determine settlement. Mandatory service charges remain wage rows, separately from tips. A nonzero
+`cashGratuityServiceCharges` or `nonCashGratuityServiceCharges` amount needs an
+explicit `paycheck` value in that field's reviewed settlement mapping, confirming
+unpaid wages. Already-paid or uncertain service wages are refused until
+reconciled. Withheld tips and rounding losses remain refused when nonzero. An omitted
 previously active source row is refused; submit an explicit zero correction.
 
 Reviewed capture imports have no outbound connection or automatic revocation
@@ -286,3 +295,31 @@ remapping its worker cannot restore erased captures. This covers all ten bounded
 adapter fixtures and the manual source. It does not establish real-world legal
 eligibility, every transport, external deletion or an intake-specific older
 archive recovery matrix. No timer releases a hold.
+
+
+## Non-work pay and service wages
+
+The manual grid and all three spreadsheet formats accept `paid-leave` and
+`unpaid-leave`. Both retain minutes separately from worked time. Paid leave
+retains an explicitly reviewed monetary amount; it does not infer a legal leave
+rate, accrue a balance or consume a connected balance. Unpaid leave cannot
+create money. Statutory leave rates, balance ownership and downstream
+consumption retain a named hold before payment.
+
+A `service-charge` is mandatory wage compensation, never a declared tip. It
+requires explicit unpaid-wage evidence and `paycheck` settlement. In the bounded
+ordinary federal weekly component, service wages join allocated bonuses and
+commissions in the regular-rate numerator. Bona fide paid time not worked stays
+outside worked hours and that numerator, following
+[29 CFR 778.218](https://www.ecfr.gov/current/title-29/section-778.218).
+Service wages follow the wage boundary in
+[IRS tip guidance](https://www.irs.gov/businesses/small-businesses-self-employed/tip-recordkeeping-and-reporting),
+not the employee tip settlement default. This remains a held earnings preview,
+not proof of withholding, legal leave treatment, full jurisdiction calculation
+or an actual wage payment.
+
+Job labels appear in the input diff, retained exact review and earnings
+provenance. A provider mapping may supply a reviewed `job`; Lanyard's own `job`
+field takes precedence. No accounting destination, worker identity or legal
+jurisdiction is inferred from a job label. Segmented Lanyard rows sharing one
+lineage remain refused rather than dropping or duplicating one allocation.

@@ -99,6 +99,7 @@ export function runIntakePage(
                       evidence: 'approval evidence',
                       state: 'state',
                       riskClass: 'risk class',
+                      job: 'job allocation',
                     }[key]
                   }
                   value={key}
@@ -167,7 +168,7 @@ export function runIntakePage(
                 />
                 <Select
                   name={`row${i}.settlement`}
-                  label="Tip settlement (tips only)"
+                  label="Settlement (tips or unpaid service charges)"
                   choices={['', 'cash', 'paycheck']}
                 />
                 <Field
@@ -175,6 +176,7 @@ export function runIntakePage(
                   label="Source approval or settlement evidence"
                   required={false}
                 />
+                <Field name={`row${i}.job`} label="Reviewed job allocation" required={false} />
                 <Field
                   name={`row${i}.state`}
                   label="Assessment state (WA or OR)"
@@ -243,7 +245,7 @@ export function runIntakePage(
             <p key={r.sourceId}>
               {r.sourceId} · {people.find((p) => p.id === r.personId)?.name} ·{' '}
               {r.day} · week {r.workweek} · {r.code} · {r.minutes} minutes ·{' '}
-              {r.amountCents} cents · {r.settlement || 'no tip settlement'} ·{' '}
+              {r.amountCents} cents · {r.settlement || 'no settlement'} · job {r.job || 'unassigned'} ·{' '}
               {r.evidence}
             </p>
           ))}

@@ -571,13 +571,15 @@ export class PayItems {
         .filter((t) => t.data.day >= periodStart && t.data.day <= periodEnd)
       const tipped = { cash: 0, paycheck: 0, funds: 0 }
       for(const line of inputLines){
-        details.push(`Run intake ${runInput!.id} v${runInput!.version}, source ${runInput!.data.namespace} row ${line.sourceId}, ${line.day}, workweek ${line.workweek}, ${line.code}: ${line.minutes} minutes, ${line.amountCents} cents, ${line.settlement || 'no tip settlement'}, ${line.state} ${line.riskClass}; evidence ${line.evidence}`)
+        details.push(`Run intake ${runInput!.id} v${runInput!.version}, source ${runInput!.data.namespace} row ${line.sourceId}, ${line.day}, workweek ${line.workweek}, ${line.code}: ${line.minutes} minutes, ${line.amountCents} cents, ${line.settlement || 'no tip settlement'}, ${line.state} ${line.riskClass}, job ${line.job || 'unassigned'}; evidence ${line.evidence}`)
         if(line.code==='tip')tipped[line.settlement as 'cash'|'paycheck']+=line.amountCents
         else if(line.code==='reimbursement'){
           reimbursement+=line.amountCents
           if(line.amountCents)holds.push({personId:member.id,reason:'Run reimbursement requires substantiation and return-of-excess review before tax exclusion.'})
-        } else if(['bonus','nondiscretionary-bonus','commission','other-earning','meal-premium','rest-premium'].includes(line.code)){
+        } else if(['bonus','nondiscretionary-bonus','commission','other-earning','service-charge','paid-leave','meal-premium','rest-premium'].includes(line.code)){
           earnings+=line.amountCents;taxable+=line.amountCents
+          if(line.code==='paid-leave' && (line.minutes || line.amountCents))
+            holds.push({personId:member.id,reason:'Reviewed paid-leave amount retained separately from worked time; statutory leave rate, balance ownership and consumption require reconciliation before payroll payment.'})
         }
       }
       // 29 CFR 778.109, 778.110 and 778.209: allocate remuneration to its
@@ -587,9 +589,9 @@ export class PayItems {
         const overtime=week.microMinutes>2400000000n?week.microMinutes-2400000000n:0n
         if(!overtime)continue
         const scoped=inputLines.filter(r=>r.workweek===weekStart)
-        const unsupported=!week.nonexempt || periodStart>weekStart || periodEnd<addDays(weekStart,6) || work.some(w=>w.data.day>=weekStart && w.data.day<=addDays(weekStart,6)) || scoped.some(r=>['tip','bonus','other-earning','meal-premium','rest-premium'].includes(r.code)) || tips.some(t=>t.data.day>=weekStart && t.data.day<=addDays(weekStart,6)) || sourceEarnings.some(e=>e.data.effectiveDate>=weekStart&&e.data.effectiveDate<=addDays(weekStart,6)) || items.some(i=>i.data.taxCode!=='accountable-reimbursement'&&i.data.taxCode!=='after-tax-deduction')
+        const unsupported=!week.nonexempt || periodStart>weekStart || periodEnd<addDays(weekStart,6) || work.some(w=>w.data.day>=weekStart && w.data.day<=addDays(weekStart,6)) || scoped.some(r=>(r.code==='tip' && r.amountCents>0) || ['bonus','other-earning','meal-premium','rest-premium'].includes(r.code)) || tips.some(t=>t.data.amountCents>0 && t.data.day>=weekStart && t.data.day<=addDays(weekStart,6)) || sourceEarnings.some(e=>e.data.effectiveDate>=weekStart&&e.data.effectiveDate<=addDays(weekStart,6)) || items.some(i=>i.data.taxCode!=='accountable-reimbursement'&&i.data.taxCode!=='after-tax-deduction')
         if(unsupported){holds.push({personId:member.id,reason:`${weekStart}: complete workweek remuneration, nonexempt classification and tipped or premium overtime require review; no partial regular-rate result is substituted.`});continue}
-        const allocated=scoped.filter(r=>['nondiscretionary-bonus','commission'].includes(r.code)).reduce((sum,r)=>sum+BigInt(r.amountCents),0n)
+        const allocated=scoped.filter(r=>['nondiscretionary-bonus','commission','service-charge'].includes(r.code)).reduce((sum,r)=>sum+BigInt(r.amountCents),0n)
         const premium=money((week.straightNumerator+allocated*60000000n)*overtime,60000000n*2n*week.microMinutes)
         earnings+=premium;taxable+=premium
         details.push(`Federal weekly overtime component for ${weekStart}: ${Number(week.microMinutes)/60000000} hours, ${Number(overtime)/60000000} overtime hours, ${Number(allocated)} cents allocated remuneration, ${premium} cents additional half-time. Complete jurisdiction and tax calculation remains held.`)
@@ -603,9 +605,9 @@ export class PayItems {
           assigned.find(p=>p.id===member.id)?.state!=='CA' || line.state!=='CA' ||
           periodStart>line.workweek || periodEnd<addDays(line.workweek,6) ||
           work.some(w=>w.data.day>=line.workweek && w.data.day<=addDays(line.workweek,6)) ||
-          scoped.some(r=>['tip','bonus','other-earning'].includes(r.code)) || tips.length || sourceEarnings.length || items.length
+          scoped.some(r=>(r.code==='tip' && r.amountCents>0) || ['bonus','other-earning','paid-leave','unpaid-leave'].includes(r.code)) || tips.some(t=>t.data.amountCents>0) || sourceEarnings.length || items.length
         if(unsupported){holds.push({personId:member.id,reason:`${line.day}: complete California premium regular-rate remuneration requires review; no partial premium amount is substituted.`});continue}
-        const allocated=scoped.filter(r=>['nondiscretionary-bonus','commission'].includes(r.code)).reduce((n,r)=>n+BigInt(r.amountCents),0n)
+        const allocated=scoped.filter(r=>['nondiscretionary-bonus','commission','service-charge'].includes(r.code)).reduce((n,r)=>n+BigInt(r.amountCents),0n)
         const premium=money((week.straightNumerator+allocated*60000000n)*BigInt(line.minutes)*1000000n,60000000n*week.microMinutes)
         earnings+=premium;taxable+=premium
         details.push(`California ${line.code} ${line.day}, source ${line.sourceId}: ${line.minutes} premium minutes, ${premium} cents at the workweek regular rate; zero additional worked hours.`)
