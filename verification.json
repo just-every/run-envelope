@@ -32,7 +32,7 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=allocations,schedules,pay-items,rules,leave,source-intake pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=allocations,schedules,pay-items,rules,leave,source-intake,intake pnpm run test:runtime"
       ]
     },
     {

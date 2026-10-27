@@ -1,3 +1,5 @@
+import { weeklyOvertime } from './regular-rate'
+import type { RunInput } from './run-input'
 import type { BonusPreparation } from '../bonus-runs'
 import { SourceIntake, reviewedRate, currentEvents } from '../intake/sources'
 import { LeaveLedger } from '../leave/ledger'
@@ -61,6 +63,7 @@ export interface PayChange {
 }
 export interface EarningsRun {
   bonusPreparation?: BonusPreparation
+  intake?: RunInput
   periodStart: string
   periodEnd: string
   payDate: string
@@ -76,6 +79,7 @@ export interface EarningsRun {
     /** Already received by the worker: wages for tax, never paid again. */
     cashTipsCents: number
     paycheckTipsCents: number
+    reportedTipsCents?: number
     tipFundsCents: number
     details: string[]
   }[]
@@ -98,6 +102,9 @@ export interface EarningsRun {
     name: string
     determination: string
     approved: boolean
+    state?: string
+    family?: string
+    details?: Record<string, string>
   }[]
 }
 const latest = <T>(rows: Revision<T>[]) =>
@@ -397,11 +404,15 @@ export class PayItems {
     const policies = allPolicies.filter((p) => p.data.groupId === group.id)
     const changes = latest(allChanges).filter((c) => c.data.groupId === group.id),
       items = latest(allItems).filter((i) => i.data.groupId === group.id)
+    const intake = input.id ? (await this.store.list<RunInput>(actor,'run-input',undefined,true,false)).find(row => row.id === input.id) : undefined
+    if (intake && (intake.data.groupId !== group.id || intake.data.periodStart !== periodStart || intake.data.periodEnd !== periodEnd)) throw new PayrollError('intake_scope_changed',409)
+    const intakeCurrent = Boolean(intake?.approvedBy && !intake.withdrawnBy && intake.sourcesCurrent)
     const people: EarningsRun['people'] = [],
       holds: EarningsRun['holds'] = [],
       objects: NonNullable<Sources['objects']> = [
         { kind: 'group', id: group.id, version: group.version, approved: true },
       ]
+    if (intake) objects.push({kind:'run-input',id:intake.id,version:intake.version,approved:true})
     const assigned = (
       await this.store.records
         .statement(
@@ -411,13 +422,20 @@ export class PayItems {
         .all<{ id: string; state: string }>()
     ).results
     for (const member of group.data.people) {
-      const intake = new SourceIntake(this.store), hr = await intake.timeline(actor, member.id, 'hris-event')
-      const sourceEarnings = await intake.timeline(actor, member.id, 'source-earning')
+      const sourceIntake = new SourceIntake(this.store), hr = await sourceIntake.timeline(actor, member.id, 'hris-event')
+      const sourceEarnings = await sourceIntake.timeline(actor, member.id, 'source-earning')
       for(const hire of hr.filter(r=>r.kind==='hris-hire')) objects.push({kind:hire.kind,id:hire.id,version:hire.version,approved:true})
       const firstHire=hr.filter(r=>r.data.type==='hire' && r.approvedBy && !r.withdrawnBy && r.sourcesCurrent).sort((a,b)=>a.data.effectiveDate.localeCompare(b.data.effectiveDate))[0]
       const work = latest(
         await this.store.list<WorkDay>(actor, 'work', member.id, true, false),
       ).filter((w) => w.data.day >= periodStart && w.data.day <= periodEnd)
+      const nativeWork = work.slice()
+      const weekly = new Map<string,{start:string;minutes:number;straightMinuteCents:bigint}>()
+      const intakeRows = intakeCurrent ? intake!.data.rows.filter(row => row.personId === member.id) : []
+      if (intake && !intakeCurrent) holds.push({personId:member.id,reason:'Run intake requires exact current human source approval.'})
+      for (const row of intakeRows.filter(row => row.code === 'hours')) {
+        work.push({id:'intake-'+row.rowId,kind:'work',version:intake!.version,data:{day:row.day,minutes:row.minutes,state:row.state,locality:'',earnedCents:row.amountCents,officeState:row.state,nyReason:'not-applicable',evidence:row.sourceRef,sourceRef:row.sourceRef,owner:'',ownerId:''}} as Revision<WorkDay>)
+      }
       let numerator = 0n,
         denominator = 1n,
         earnings = 0
@@ -518,7 +536,7 @@ export class PayItems {
               holds.push({ personId: member.id, ...hold })
           if (setup.salaryType === 'nonexempt')
             for (const w of work.filter((w) => w.data.day === day))
-              objects.push({kind: 'work', id: w.id, version: w.version})
+              if (nativeWork.includes(w)) objects.push({kind: 'work', id: w.id, version: w.version})
           if (current.data.effectiveDate > periodStart && current.data.effectiveDate !== setup.employmentFrom)
             holds.push({personId: member.id, code: 'proration-rate-change-review',
               reason: 'Effective salary change within the period requires salary-basis and stricter work-state review before any reduction.'})
@@ -535,8 +553,15 @@ export class PayItems {
           }
           // Hourly regular earnings only: overtime and premium coverage remain a hold.
           add(BigInt(minutes) * BigInt(setup.rateCents), 60n)
+          if (intake?.data.workweekStart) {
+            const anchor=intake.data.workweekStart
+            const start=addDays(anchor,Math.floor((Date.parse(day)-Date.parse(anchor))/604800000)*7)
+            const own=entries.filter(entry=>!nativeWork.includes(entry)).reduce((sum,entry)=>sum+entry.data.minutes,0)
+            const week=weekly.get(start)??{start,minutes:0,straightMinuteCents:0n}
+            week.minutes+=own;week.straightMinuteCents+=BigInt(own)*BigInt(setup.rateCents);weekly.set(start,week)
+          }
           for (const w of entries)
-            objects.push({ kind: 'work', id: w.id, version: w.version })
+            if (nativeWork.includes(w)) objects.push({ kind: 'work', id: w.id, version: w.version })
         }
       }
       earnings = money(numerator, denominator)
@@ -549,6 +574,28 @@ export class PayItems {
       const tips = latest(await this.store.list<TipEntry>(actor, 'tip', member.id, true, false))
         .filter((t) => t.data.day >= periodStart && t.data.day <= periodEnd)
       const tipped = { cash: 0, paycheck: 0, funds: 0 }
+      for (const row of intakeRows.filter(row => row.code === 'tip')) {
+        if (tips.some(tip => tip.data.sourceRef === row.sourceRef)) throw new PayrollError('duplicate_tip_source',409)
+        tipped[row.settlement as 'cash'|'paycheck'] += row.amountCents
+      }
+      for (const row of intakeRows) {
+        details.push(`Intake ${row.rowId}: ${row.code}, ${row.minutes} worked minutes, ${row.amountCents} cents, ${row.settlement || 'no tip settlement'}, state ${row.state || 'not supplied'}, risk class ${row.riskClass || 'not supplied'}, covered minutes ${row.coveredMinutes}; source ${row.sourceRef}`)
+        if (row.code === 'bonus') { earnings += row.amountCents; taxable += row.amountCents }
+        if (row.code === 'reimbursement') { reimbursement += row.amountCents; holds.push({personId:member.id,reason:'Intake reimbursement requires accountable-plan substantiation before tax exclusion.'}) }
+        if (['meal-premium','rest-premium'].includes(row.code)) holds.push({personId:member.id,reason:'Intake premium retained separately; applicable regular-rate calculation remains unimplemented.'})
+      }
+      const bonusCents=intakeRows.filter(row=>row.code==='bonus').reduce((sum,row)=>sum+row.amountCents,0)
+      if (intakeRows.some(row=>row.code==='hours')) {
+        if (!intake?.data.workweekStart || nativeWork.length || (bonusCents && intake.data.bonusAllocation!=='hours-worked') || weekly.size===0) {
+          holds.push({personId:member.id,reason:'Weekly overtime requires a reviewed workweek anchor, complete hourly intake and explicit bonus allocation; mixed native work requires reconciliation.'})
+        } else {
+          for(const week of weeklyOvertime([...weekly.values()],bonusCents)) {
+            if(week.start<periodStart || addDays(week.start,6)>periodEnd) holds.push({personId:member.id,reason:'A partial workweek requires complete adjacent-period earnings before final overtime.'})
+            earnings+=week.premiumCents;taxable+=week.premiumCents
+            details.push(`Federal workweek ${week.start}: ${week.minutes} actual minutes, ${week.overtimeMinutes} overtime minutes, ${week.premiumCents} cents extra half-time; period bonus allocated by actual hours under 29 CFR 778.109 and 778.209. Stricter work-state rules remain unresolved.`)
+          }
+        }
+      }
       for (const t of tips) {
         tipped[t.data.settlement] += t.data.amountCents
         tipped.funds += t.data.furnishedCents
@@ -574,7 +621,7 @@ export class PayItems {
           details.push(`Leave bank ${line.bucket}: ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${line.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
       }
       taxable += tipped.paycheck
-      if (tips.length)
+      if (tips.length || intakeRows.some(row => row.code === 'tip'))
         holds.push({ personId: member.id,
           reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-009).' })
       // A reviewed source can describe one exact period's after-tax deduction.
@@ -674,6 +721,7 @@ export class PayItems {
         cashTipsCents: tipped.cash,
         paycheckTipsCents: tipped.paycheck,
         tipFundsCents: tipped.funds,
+        reportedTipsCents: tipped.cash + tipped.paycheck,
         details,
       })
     }
@@ -681,11 +729,9 @@ export class PayItems {
       field: 'taxableCashCents' | 'reimbursementCents' | 'afterTaxDeductionCents',
     ) => people.reduce((s, p) => s + p[field], 0)
     const locationStates = [
-      ...new Set(
-        assigned
+      ...new Set([...(intake?.data.rows.map(row => row.state).filter(Boolean) ?? []), ...assigned
           .filter((p) => group.data.people.some((m) => m.id === p.id))
-          .map((p) => p.state),
-      ),
+          .map((p) => p.state)]),
     ]
     const rules = await this.store.list<PayrollRule>(
       actor,
@@ -714,6 +760,7 @@ export class PayItems {
       periodEnd,
       payDate,
       frequency,
+      ...(intake ? {intake:intake.data} : {}),
       groupId: group.id,
       people,
       holds,
@@ -737,6 +784,9 @@ export class PayItems {
         id: r.id,
         version: r.version,
         name: r.data.name,
+        state: r.data.state,
+        family: r.data.family,
+        details: r.data.details,
         determination: r.data.determination,
         approved: Boolean(r.approvedBy && !r.withdrawnBy),
       })),

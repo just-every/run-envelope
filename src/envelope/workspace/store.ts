@@ -5,6 +5,7 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'run-input'
   | 'company-funding'
   | 'company-funding-plan'
   | 'paper-onboarding'
@@ -73,6 +74,7 @@ export const digest = async (value: string) =>
   ).join('')
 
 export interface Sources {
+  writeFence?: {sql:string; args:(string|number)[]}
   freshProof?: boolean
   noPrivacyHold?: string
   reviewSets?: ReviewInputSet[]
@@ -192,6 +194,10 @@ export class WorkspaceStore {
     const f = fence(actor),
       event = crypto.randomUUID(),
       version = expected + 1
+    if (sources.writeFence) {
+      f.sql += ` AND (${sources.writeFence.sql})`
+      f.args.push(...sources.writeFence.args)
+    }
     if (sources.freshProof) {
       const proof = stepUpFence(actor)
       f.sql += ` AND ${proof.sql}`

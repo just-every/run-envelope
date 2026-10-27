@@ -740,6 +740,51 @@ export function paySettingsPage(
           exemption classification, employment dates and coded unpaid leave for exact human review. Untyped unpaid dates never authorize salary deductions.
         </p>
       </Card>
+      <Card title="Prepare hours and earnings">
+        <p>Download a template, keep each source row ID stable, and enter the worker ID and work date. Blank cells preserve existing values; zero replaces a value. Tips require cash for already-held funds or paycheck for money still owed. Preparation shows exact changes for review before they enter the run.</p>
+        <p>{['csv','xls','xlsx'].map(format => <a key={format} href={base+'/earnings-template/'+format}>Download {format.toUpperCase()} template{' · '}</a>)}</p>
+        <form className="field" method="post" encType="multipart/form-data" action={base+'/intake'}>
+          <Field name="id" label="Run ID" />
+          <Field name="version" label="Previous intake version (0 for new)" type="number" value={0} />
+          <Field name="groupId" label="Reviewed pay group ID" />
+          <Field name="periodStart" label="Period start" type="date" />
+          <Field name="periodEnd" label="Period end" type="date" />
+          <Field name="workweekStart" label="First workweek start" type="date" required={false} />
+          <Select name="bonusAllocation" label="Nondiscretionary bonus allocation" choices={['','hours-worked']} labels={['Not yet reviewed','Proportional to actual workweek hours']} />
+          <Field name="file" label="Earnings spreadsheet" type="file" />
+          <Field name="mapping" label="Column mapping (optional JSON object)" required={false} />
+          <Submit>Prepare exact earnings changes</Submit>
+        </form>
+        <details>
+          <summary>Enter manual earnings</summary>
+          <p>Enter up to three rows at a time. Keep the same row ID when correcting an entry. Leave an unused row ID blank.</p>
+          <form className="field" method="post" action={base+'/intake'}>
+            <Field name="id" label="Manual run ID" />
+            <Field name="version" label="Previous manual intake version" type="number" value={0} />
+            <NamedSelect name="groupId" label="Manual pay group" choices={groupIds.map(id=>({id,name:result.groups.find(group=>group.id===id)!.data.name}))} />
+            <Field name="periodStart" label="Manual period start" type="date" />
+            <Field name="periodEnd" label="Manual period end" type="date" />
+            <Field name="workweekStart" label="Manual first workweek start" type="date" required={false} />
+            <Select name="bonusAllocation" label="Manual bonus allocation" choices={['','hours-worked']} labels={['Not yet reviewed','Proportional to actual workweek hours']} />
+            {[0,1,2].map(index=><fieldset key={index}>
+              <legend>Earning row {index+1}</legend>
+              <Field name={`row${index}.rowId`} label={`Row ${index+1} ID`} required={false} />
+              <Select name={`row${index}.personId`} label={`Row ${index+1} worker`} choices={['',...people.map(person=>person.id)]} labels={['Choose a worker',...people.map(person=>person.name)]} />
+              <Field name={`row${index}.day`} label={`Row ${index+1} date`} type="date" required={false} />
+              <Select name={`row${index}.code`} label={`Row ${index+1} earning code`} choices={['hours','tip','bonus','reimbursement','meal-premium','rest-premium','assessment']} />
+              <Field name={`row${index}.minutes`} label={`Row ${index+1} worked minutes`} type="number" required={false} />
+              <Field name={`row${index}.amountCents`} label={`Row ${index+1} amount in cents`} type="number" required={false} />
+              <Select name={`row${index}.settlement`} label={`Row ${index+1} tip settlement`} choices={['','cash','paycheck']} labels={['No tip settlement','Tips already held by worker','Tips owed through paycheck']} />
+              <Select name={`row${index}.state`} label={`Row ${index+1} state`} choices={['',...states]} />
+              <details><summary>Assessment allocation</summary>
+                <Field name={`row${index}.riskClass`} label={`Row ${index+1} WA risk class`} required={false} />
+                <Field name={`row${index}.coveredMinutes`} label={`Row ${index+1} covered minutes`} type="number" required={false} />
+              </details>
+            </fieldset>)}
+            <Submit>Review manual earnings</Submit>
+          </form>
+        </details>
+      </Card>
       <Card title="Preview and retain earnings">
         <form className="field" method="post" action={base + '/earnings-run'}>
           <Field name="id" label="Earnings draft ID" />
