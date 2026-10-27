@@ -74,7 +74,9 @@ export const digest = async (value: string) =>
     (b) => b.toString(16).padStart(2, '0'),
   ).join('')
 
+export interface SourceFence { sql: string; args: (string | number)[] }
 export interface Sources {
+  condition?: SourceFence
   freshProof?: boolean
   noPrivacyHold?: string
   reviewSets?: ReviewInputSet[]
@@ -200,6 +202,10 @@ export class WorkspaceStore {
       f.sql += ` AND ${proof.sql}`
       f.args.push(...proof.args)
     }
+    if (sources.condition) {
+      f.sql += ` AND (${sources.condition.sql})`
+      f.args.push(...sources.condition.args)
+    }
     const pins = [
       ...(sources.people ?? []),
       ...(person ? [{ id: person.id, version: person.version }] : []),
@@ -311,7 +317,7 @@ export class WorkspaceStore {
     if (!row) throw new PayrollError('record_not_found', 404)
     return row
   }
-  async review<T = Input>(actor: Actor, kind: Kind, id: string, personId?: string) {
+  async review<T = Input>(actor: Actor, kind: Kind, id: string, personId?: string, condition?: SourceFence) {
     const row = await this.find<T>(actor, kind, id, personId, true)
     await this.authority(actor, 'rates:approve', personId, true)
     if (!row.sourcesCurrent || row.approvedBy || row.withdrawnBy)
@@ -320,6 +326,10 @@ export class WorkspaceStore {
       hash = await digest(token),
       f = fence(actor),
       event = crypto.randomUUID()
+    if (condition) {
+      f.sql += ` AND (${condition.sql})`
+      f.args.push(...condition.args)
+    }
     const result = await this.records.env.DB.batch([
       this.records.statement(
         `INSERT INTO env_workspace_reviews(token_hash,company_id,kind,object_id,version,session_id,operator_id,grant_version,expires_at)
@@ -355,6 +365,7 @@ export class WorkspaceStore {
     input: Input,
     personId?: string,
     withdraw = false,
+    condition?: SourceFence,
   ) {
     const row = await this.find(actor, kind, id, personId, true)
     await this.authority(actor, 'rates:approve', personId, true)
@@ -368,6 +379,10 @@ export class WorkspaceStore {
       (withdraw ? !row.approvedBy : row.approvedBy)
     )
       throw new PayrollError('review_stale', 409)
+    if (condition) {
+      f.sql += ` AND (${condition.sql})`
+      f.args.push(...condition.args)
+    }
     const hash = withdraw ? '' : await digest(text(input.reviewToken, 100))
     const result = await this.records.env.DB.batch<Record<string, unknown>>([
       this.records.statement(

@@ -312,3 +312,5 @@ permits the ordinary lower election to determine the calculated check. The
 original, modification and release remain separate attributed encrypted versions;
 no source PDF or decision is overwritten. These synthetic format cases do not
 establish every IRS letter variant, source authenticity or legal effect.
+
+Instruction versions pin the private SSN revision, with atomic checks on creation and review decisions. Restoring an old SSN value does not restore review authority. Every effective pending modification remains a hold even beneath a later pending release. Linked SUI evidence retains its exact approved rule dependency; edited or withdrawn rules refuse evidence appends, while reopening clears the link.
