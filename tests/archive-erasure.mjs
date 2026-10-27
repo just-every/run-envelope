@@ -130,9 +130,24 @@ export async function archiveErasure(context, fixture) {
   assert.ok(held.retained.some(r => r.table === 'env_workspace_versions' && r.key.object_id === fixture.privacyWorkId))
   assert.ok(held.retained.some(r => r.table === 'env_workspace_people'))
   assert.ok(held.retained.filter(r => r.table === 'env_workspace_reviews').length >= 5, 'private review challenges join the exact retained revision')
+  assert.equal(fixture.custodyInputs.length,15,'all nine supported HRIS cases and six earning adapters are populated')
+  assert.deepEqual(fixture.custodyInputs.filter(i=>i.door==='hris').map(i=>i.body.provider+':'+i.body.type).sort(),
+    ['willow:hire','willow:rate','willow:location','willow:leave','willow:benefit','willow:termination','bamboohr:rate','hibob:rate','rippling:rate'].sort())
+  assert.deepEqual(fixture.custodyInputs.filter(i=>i.door==='earnings-sources').map(i=>i.body.provider).sort(),['gauge','plinth','glove','mallet','strap','orbit'].sort())
   for (const id of fixture.custodyObjects) {
-    assert.equal(held.retained.filter(r => r.table === 'env_workspace_versions' && r.key.object_id === id).length, 2,
-      'each leave bank and intake source retains both encrypted revisions')
+    const expected=id===fixture.sharedCustody.groupId||id===fixture.sharedCustody.runId?1:(id.endsWith('-sick')||id.endsWith('-holiday'))?3:2
+    assert.equal(held.retained.filter(r => r.table === 'env_workspace_versions' && r.key.object_id === id).length, expected,
+      'every source revision, connected bank, shared group and downstream run is retained: '+id)
+  }
+  for(const [table,key,value] of [['env_notices','id',fixture.noticeCustody.id],['env_notice_analysis','id',fixture.noticeCustody.analysisId],
+    ['env_notice_replies','id',fixture.noticeCustody.replyId],['env_notice_reviews','reply_id',fixture.noticeCustody.replyId],
+    ['env_notice_approvals','reply_id',fixture.noticeCustody.replyId],['env_notice_dispatches','reply_id',fixture.noticeCustody.replyId]])
+    assert.ok(held.retained.some(r=>r.table===table&&(table==='env_notice_reviews'?r.fields.includes('reply_id'):r.key[key]===value)),'worker notice inventory includes '+table)
+  assert.equal(held.retained.filter(r=>r.table==='env_notice_replies'&&r.key.id===fixture.noticeCustody.replyId).length,2,'both encrypted notice reply versions are retained')
+  assert.equal(held.retained.filter(r=>r.table==='env_workspace_versions'&&r.key.kind==='hris-hire'&&r.key.object_id===fixture.hireCustody.id).length,2,'mapped original hire and correction are in custody')
+  assert.ok(held.retained.some(r=>r.table==='env_hris_people'&&r.key.source_key),'the original payroll identity mapping is retained')
+  for(const [kind,id] of [['paper-onboarding',fixture.privateCustody.paperId],['tax-notice-case',fixture.privateCustody.caseId]]) {
+    assert.equal(held.retained.filter(r=>r.table==='env_workspace_versions'&&r.key.kind===kind&&r.key.object_id===id).length,2,'private originals and retained evidence versions join the full erasure scope')
   }
   for (const door of ['hris','earnings-sources']) {
     const path = company + '/people/' + fixture.privacyPersonId + '/' + door
@@ -154,15 +169,59 @@ export async function archiveErasure(context, fixture) {
   assert.equal((await call(privacyDoor, undefined, {authorization:'Bearer ' + fixture.authority.agentToken})).status, 403)
   assert.equal((await call('/api/envelope/companies/' + fixture.companies[1] + '/people/' + fixture.privacyPersonId + '/privacy')).status, 404)
   assert.equal((await call(company + '/grants', {operatorId:viewer.id,version:0,role:'accountant',locations:['*'],fields:['tax','compensation','ssn','bank'],actions:['records:read','private:read','export']})).status,200)
+  const privateDoors=[company+'/people/'+fixture.privacyPersonId+'/paper-onboarding',
+    company+'/people/'+fixture.privacyPersonId+'/paper-onboarding/original/1/federal',
+    company+'/people/'+fixture.privacyPersonId+'/paper-onboarding/original/2/federal',
+    company+'/people/'+fixture.privacyPersonId+'/paper-onboarding/original/1/state',
+    company+'/people/'+fixture.privacyPersonId+'/paper-onboarding/original/2/state',
+    company+'/notices/'+fixture.noticeCustody.id+'/case',
+    company+'/notices/'+fixture.noticeCustody.id+'/case/original/1/0',
+    company+'/notices/'+fixture.noticeCustody.id+'/case/original/2/1']
+  for(const path of privateDoors) {
+    const originalResponse=await call(path)
+    assert.equal(originalResponse.status,200,'current owner reads the retained original or private history')
+    if(path.includes('/original/')) assert.equal(Buffer.from(await originalResponse.arrayBuffer()).toString('base64'),fixture.privateCustody.pdf,'the positive original path returns the exact retained bytes')
+    assert.equal((await call(path,undefined,{cookie:''})).status,401,'signed-out direct private transport refuses')
+    assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'ordinary grant cannot acquire owner-only original custody')
+    assert.equal((await call(path,undefined,{authorization:'Bearer '+fixture.authority.agentToken})).status,403,'mixed agent credentials cannot acquire owner custody')
+  }
+  assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,200,'current scoped viewer can read mapped source history before the request')
+  Object.assign(held,await getPrivacy())
   const custodyReads = ['leave','hris','earnings-sources',...['ssn','bank','tax'].map(kind => 'private/' + kind)]
   for (const door of custodyReads) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/' + door, undefined, {cookie:viewerCookie})).status,200,
     'a current ordinary grant can read the exact custody family before the erasure request')
   assert.equal((await call(privacyDoor+'/request',{consent:true,fingerprint:held.fingerprint})).status,200)
   for (const door of custodyReads) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/' + door, undefined, {cookie:viewerCookie})).status,403,
     'a held request withdraws ordinary access to each leave, intake and private attachment door')
+  assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,403,'held mapped source history refuses ordinary access')
+  for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'held private originals remain restricted')
   const scopedRead=await worker.fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+fixture.authority.agentToken},body:JSON.stringify({jsonrpc:'2.0',id:54,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0],personId:fixture.privacyPersonId}}})})
   assert.equal(scopedRead.status,403,'a previously usable sponsored bearer cannot read retained company data')
   await browserProof('loaded',privacyDoor.replace('/api/','/app/'),/Local inventory: held/)
+  const providerDoor=company+'/privacy-provider-requests'
+  const requestHistory=await (await call(company+'/privacy-requests')).json()
+  const localRequest=requestHistory.find(r=>r.personId===fixture.privacyPersonId)
+  assert.ok(localRequest,'external follow-up must name a real separate local erasure request')
+  const externalOutboundBefore=context.edge.mails.length
+  const followup={version:0,consent:true,requestId:localRequest.id,provider:'openai',reference:'synthetic-envelope-provider-request',status:'requested',evidence:'Synthetic owner requests provider follow-up; no remote deletion is asserted.'}
+  assert.equal((await call(providerDoor,{...followup,requestId:'synthetic-envelope-foreign-request'})).status,409)
+  assert.equal((await call('/api/envelope/companies/'+fixture.companies[1]+'/privacy-provider-requests',followup)).status,409,'another company cannot bind the local erasure request')
+  assert.equal((await call(providerDoor,{...followup,status:'confirmation-reported'})).status,409,'a local request cannot start as remotely confirmed')
+  assert.equal((await call(providerDoor,followup,{cookie:viewerCookie})).status,403)
+  assert.equal((await call(providerDoor,followup,{cookie:''})).status,401)
+  assert.equal((await call(providerDoor,followup,{authorization:'Bearer '+fixture.authority.agentToken})).status,403)
+  const externalCreated=await call(providerDoor,followup)
+  assert.equal(externalCreated.status,201,await externalCreated.clone().text())
+  const externalId=(await externalCreated.json()).id
+  for(const [version,status] of [[1,'submitted'],[2,'unknown'],[3,'rejected'],[4,'submitted']]) {
+    const updated=await call(providerDoor+'/'+externalId,{version,consent:true,status,evidence:'Synthetic owner-attested '+status+' reference; provider retention remains separately governed.'})
+    assert.equal(updated.status,201,await updated.clone().text())
+  }
+  assert.equal((await call(providerDoor+'/'+externalId,{version:1,consent:true,status:'confirmation-reported',evidence:'Stale response'})).status,409)
+  let externalHistory=await (await call(providerDoor)).json()
+  assert.deepEqual(externalHistory.filter(r=>r.id===externalId).map(r=>r.data.status),['submitted','rejected','unknown','submitted','requested'])
+  assert.ok(externalHistory.every(r=>r.data.externalDeletionVerified===false&&r.data.provenance==='owner-attested'))
+  assert.equal(context.edge.mails.length,externalOutboundBefore,'recording provider status sends no outbound request')
   const selection = {fingerprint: held.fingerprint, records: held.retained.map(r => r.id), consent: true,
     legalBasis: 'Synthetic reviewed statutory retention release; no active legal hold remains.', custodian: 'Native payroll owner'}
   assert.equal((await call(privacyDoor + '/release', selection)).status, 409, 'an unclassified statutory hold cannot be released')
@@ -251,6 +310,24 @@ export async function archiveErasure(context, fixture) {
     assert.equal((await call(company + '/people/' + fixture.privacyPersonId)).status,404)
     for (const kind of ['ssn','bank','tax']) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/private/' + kind)).status,404)
     assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/allocations')).status,404)
+    assert.equal((await call(company+'/hris-hires',fixture.hireCustody.input)).status,409,'original mapped hire source cannot resurrect a worker')
+    assert.ok(!(await (await call(company+'/hris-hires')).json()).some(r=>r.id===fixture.hireCustody.id),'erased mapped hire is absent from the collection')
+    assert.equal((await call(company+'/people/'+fixture.sharedCustody.coworkerId)).status,200,'erasing a shared run does not erase its unrelated coworker')
+    const afterSettings=await (await call(company+'/pay-settings')).json()
+    assert.ok(!afterSettings.runs.some(r=>r.id===fixture.sharedCustody.runId),'shared downstream payroll is absent after erasure')
+    assert.equal((await call(company+'/notices/'+fixture.noticeCustody.id)).status,403,'erased notice body and derivatives are unavailable')
+    for(const path of privateDoors) assert.ok([403,404].includes((await call(path)).status),'erased private history and original bytes are unavailable')
+    assert.equal((await call(company+'/notice-replies/'+fixture.noticeCustody.replyId+'/review')).status,403)
+    assert.equal((await call(company+'/notices',fixture.noticeCustody.input)).status,409,'retired notice source cannot resurrect under a new random identifier')
+    externalHistory=await (await call(providerDoor)).json()
+    assert.equal(externalHistory.filter(r=>r.id===externalId).length,5,'local erasure preserves the separate unresolved provider request')
+    assert.equal(externalHistory.find(r=>r.id===externalId).data.status,'submitted','local completion does not manufacture an external outcome')
+    assert.equal(JSON.stringify(externalHistory).includes(fixture.privacyPersonId),false,'provider history contains no erased worker identifier')
+    const reported=await call(providerDoor+'/'+externalId,{version:5,consent:true,status:'confirmation-reported',evidence:'Synthetic retained provider confirmation entered by the owner; authenticity remains unverified.'})
+    assert.equal(reported.status,201)
+    const reportedHistory=await (await call(providerDoor)).json()
+    assert.equal(reportedHistory.find(r=>r.id===externalId).data.externalDeletionVerified,false,'an attested receipt is not independent provider proof')
+    assert.equal((await call(providerDoor+'/'+externalId,{version:6,consent:true,status:'submitted',evidence:'Duplicate request'})).status,409,'confirmation cannot silently restart destruction')
     for (const door of ['leave','hris','earnings-sources']) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/' + door)).status,404)
     for (const input of fixture.custodyInputs) {
       const currentCompany = await (await call(company)).json()
@@ -259,7 +336,7 @@ export async function archiveErasure(context, fixture) {
         'erased intake source cannot resurrect under a new worker identity')
     }
     const auditEvents = await (await call(company + '/audit')).json()
-    assert.ok(!auditEvents.some(e => e.targetId === fixture.privacyPersonId || e.targetId === fixture.privacyWorkId), 'retained action targets are anonymized across the erased graph')
+    assert.ok(!auditEvents.some(e => [fixture.privacyPersonId,fixture.privacyWorkId,...fixture.custodyObjects,fixture.noticeCustody.id,fixture.noticeCustody.replyId,fixture.noticeCustody.analysisId,fixture.privateCustody.paperId].includes(e.targetId)), 'retained action targets are anonymized across every erased source and private derivative')
     for (const width of [1440,390]) {
       await page.setViewportSize({width,height:1000})
       const response = await page.goto(origin + (company + '/people/' + fixture.privacyPersonId).replace('/api/','/app/'))
