@@ -18,7 +18,7 @@ export async function automationJourney({origin,cookie,sql,advanceClock,restart,
   await data(pay+'/group/'+group+'/approve',{version:review.version,reviewToken:review.reviewToken})
   const screen=door.replace('/api/','/app/'),browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox']})
   const context=await browser.newContext();await context.addCookies([{name:cookie.split('=')[0],value:cookie.split('=')[1],url:origin}]);const page=await context.newPage()
-  const proof=process.env.ENVELOPE_PROOF_DIR??'test-results/envelope';await mkdir(proof,{recursive:true})
+  const proof=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope';await mkdir(proof,{recursive:true})
   const capture=async (label,path=screen)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+path);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);for(const control of await page.locator('button,a').all())assert.ok((await control.innerText()).trim(),'all controls have visible words');await page.screenshot({path:join(proof,'automation-'+label+'-'+width+'.png'),fullPage:true})}}
   try {
     await capture('company',base.replace('/api/','/app/'))
