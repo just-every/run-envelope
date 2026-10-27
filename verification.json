@@ -59,7 +59,8 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=industry pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=industry pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=accounting pnpm run test:runtime"
       ]
     },
     {

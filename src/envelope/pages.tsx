@@ -183,6 +183,7 @@ export function companyPage(
           {actor.grant.role === 'owner' && (
             <>
               <a className="btn" href={`${base}/automation`}>Automation settings</a>
+              <a className="btn" href={`${base}/accounting`}>Accounting settings</a>
               <a className="btn" href={`${base}/grants`}>
                 Payroll grants
               </a>
