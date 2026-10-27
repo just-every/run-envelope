@@ -7,15 +7,13 @@ bank instructions, match a TIN or send money. Email invitations, SMS, portal
 completion and linking remain unavailable in this increment.
 
 Open a worker’s **Signed paper onboarding** link to record and review paper
-elections in the native owner screen. Choose employee or contractor certificates,
+elections in the native paper screen. Choose employee or contractor certificates,
 upload the signed originals, transcribe their fields and inspect the exact version
 before confirming review. A changed district or election requires a new signed
 version. Every control has a visible label and supports keyboard access.
 
 Use the ordinary company and people API to create the employer, location and
-person. Do not create another person when updating elections. The native owner
-session is required for every paper intake door; other payroll grants cannot
-read the papers or approve them. All POST requests require the installation's
+person. Do not create another person when updating elections. A current native human session and current company grant are required. In Payroll grants, the owner may independently assign `paper:entry`, `paper:review` and `paper:download`, alongside `records:read` and both `tax` and `ssn` field access at the worker’s location. Role labels confer no authority. A review permission does not grant original downloads; a download permission does not grant entry or review. No rate approval, compensation, bank, export, portal, payment or filing permission is implied. All POST requests require the installation's
 Origin and existing session cookie. Bearer credentials are refused.
 
 The native screen uses the same path with the `/app/envelope` prefix. The API base path is
@@ -87,3 +85,17 @@ retained, and an unapproved release does not remove the restriction. Source or
 identity changes require reconciliation. This does not calculate withholding,
 implement current-form comparisons, make a worker payable or prove first-check
 application. See [notice custody and instruction boundaries](./payroll-notices.md).
+
+
+The company’s Payroll grants screen also configures paper review separation. When
+required, the entering person cannot review or confirm their own version, including
+the owner. Changing the policy invalidates pending review tokens. Each review is
+bound to the exact version, current policy, current grant and current native
+session. Grant changes revoke existing sessions; re-granting requires fresh sign-in
+and review. Current statutory holds deny all delegated paper doors while native
+owner custody remains restricted and audited. No hold release is implied. The
+policy and paper history are retained as encrypted workspace versions; restored
+history supplies no session, grant or active review token. Paper-specific complete
+archive and erasure proof remains unproved.
+
+CT scope ruling, 27 October 2026: APPROVE WITH RIDERS for the current paper-intake increment only. The configured native installation owner, acting through a current native session and current company authority, may enter signed paper elections, review an exact retained version and download its originals. Owner-only clerical handling is too narrow for day-one use by the contracted employer and accounting-firm teams. ENV-028 must provide separately grantable paper entry, exact-version human review and original-download permissions for authorized bookkeepers, payroll administrators and HR staff, scoped by company, location and sensitive fields, with immediate revocation and attributed access and decision audit. Configured separation of duties requires distinct authorized people. Those delegated permissions confer no bank-edit, export, payment, filing, portal-account or approval power beyond their explicit scope. Paper entry and review retain the signed originals, effective dates, field provenance and entering and reviewing identities; changed sources, payloads or current authority invalidate affected pending review. Unsigned evidence and duplicate invitations cannot create payable authority. Any later verified portal invitation must link to the existing worker and preserve elections, history and custody. Payroll transaction approval and uncertain effects remain governed by ENV-034 and ENV-035; current sessions, statutory custody and inactive restore remain governed by ENV-051, ENV-053 and ENV-054, and external disclosure remains governed by ENV-055 and ENV-073. Held records retain their existing restricted and audited custody; delegated access cannot release a hold. Agent credentials gain no paper authority from this ruling. No automatic portal activation, outbound action, payment, filing, erasure, hold release or external deletion is authorized. Legal sufficiency of paper and signatures, invitation carrier operation, actual delivery and all original onboarding and payment outcomes remain separately evidenced. This ruling accepts no implementation, completion or production readiness and preserves every original acceptance sentence and the current PARTIAL row.
