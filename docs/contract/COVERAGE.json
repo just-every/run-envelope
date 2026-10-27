@@ -13489,41 +13489,6 @@
     },
     {
       "file": "CONTRACT.md",
-      "line": 432,
-      "text": "| Clauses | Done | Partial | Missing | Total |",
-      "to": "section",
-      "section": "Status"
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 434,
-      "text": "| Published | 1 | 0 | 0 | 1 |",
-      "to": "generated",
-      "note": "The Status summary counts are generated from the clause rows by contract-docs write."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 435,
-      "text": "| Target and push further | 4 | 25 | 45 | 74 |",
-      "to": "generated",
-      "note": "The Status summary counts are generated from the clause rows by contract-docs write."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 436,
-      "text": "| All | 5 | 25 | 45 | 75 |",
-      "to": "generated",
-      "note": "The Status summary counts are generated from the clause rows by contract-docs write."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 438,
-      "text": "| Clause | Title | Kind | Status | Evidence | Gap |",
-      "to": "section",
-      "section": "Status"
-    },
-    {
-      "file": "CONTRACT.md",
       "line": 440,
       "cell": "gap",
       "text": "Still unproved: complete applicable jurisdiction/risk-class coverage and source documents; lawful lookback/schedule derivation; WA/OR worker applicability and consistent elections/calculations; official withholding/new-employer SUI and correct payday wages; actual deadline-dated liabilities, penalty exposure and retained duties; ENV-002 confirmed issuance, reviewed true-up and once-only deposit/filing without repeated wages. Entered issued-evidence is not agency confirmation, and register restrictions are not calculated liabilities or payment receipts. Full wage/remittance proof additionally needs the owner-authorized ENV-011/065 rail/company; no such agreement or funded authorization is established by this run.",

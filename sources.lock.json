@@ -326,7 +326,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "dc6afb76b3c3ee92f466ee34c77ec81939fae97c2e87119b2703395336168725",
+      "sha256": "d1adae86204bda0b6a05fb2a09391a9c9e6a0761dbc96709a31f1743b65422fe",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -378,7 +378,7 @@
       "executable": false
     },
     "docs/contract/COVERAGE.json": {
-      "sha256": "fd79142331a82a5f3f21e42466af61f21b256616f6d3a21e451663c6dacb60be",
+      "sha256": "2c2eb38098e6f23b750d6b3cabc2cacf120c46bf02bd975c74d87e768e8abf88",
       "executable": false
     },
     "docs/contract/ID-MAP.json": {
@@ -1358,7 +1358,7 @@
       "executable": false
     },
     "src/base/contract-docs.mjs": {
-      "sha256": "9c1d8f38c42cd18539792f71bda94cbcd6ebe30e25c884eb6af51de1dccabdfd",
+      "sha256": "d98e14f489c57f60446c2cc68310db09f298f7974d77026dbaa2c62868cc4838",
       "executable": false
     },
     "src/base/contract-filter.ts": {

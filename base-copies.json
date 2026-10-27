@@ -628,9 +628,9 @@
     {
       "path": "src/base/contract-docs.mjs",
       "originPath": "foundation/runtime/contract-docs.mjs",
-      "revision": "43c30a885856d293964264e2d85dbac99d9fd38d",
+      "revision": "0fe27af9a5cb1bd9dc5e41da024784082e609010",
       "files": {
-        "src/base/contract-docs.mjs": "9c1d8f38c42cd18539792f71bda94cbcd6ebe30e25c884eb6af51de1dccabdfd"
+        "src/base/contract-docs.mjs": "d98e14f489c57f60446c2cc68310db09f298f7974d77026dbaa2c62868cc4838"
       },
       "modes": {
         "src/base/contract-docs.mjs": "100644"
