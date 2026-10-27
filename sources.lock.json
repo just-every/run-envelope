@@ -3050,7 +3050,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "b8eab73c6a10c88c29501f2f28082511446659e01480b2c5964b8f072dd06032",
+      "sha256": "26c65e0ff0191323201072ed116ebbf61683002b779817711269986816f139aa",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
