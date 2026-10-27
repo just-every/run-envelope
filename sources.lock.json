@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f4929dbc68a3b6152154ca2f087c8785260ced0cdf70566da46b3fcd957dbdcc",
+      "sha256": "7030c66cf8a91a66f4125b8776f77486187416d2a9f1211b5ebbbf92c4adae70",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1674,7 +1674,7 @@
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "bf4b5a882cba9847eab107797e53e824ab955274970460b4ceb2dee7c69104f7",
+      "sha256": "c712e54bd52891d0aa51cae5e1bceed394e24a0ac092b4da494dda5af9562c77",
       "executable": false
     },
     "src/envelope/workspace/pay-change-diff.ts": {
@@ -1686,7 +1686,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "f0d342489d83c3f0fb38bf2513b8d747531e7b3800ddaf2fec68d952fbff108e",
+      "sha256": "8105d5366f8045d81adf1317cf9796a8133a15950a33b3d8bb84faac2e8bbfe4",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -1742,7 +1742,7 @@
       "executable": false
     },
     "src/envelope/workspace/tips.ts": {
-      "sha256": "71f52e712202cd5d6b3e354ce1aabf4bfb0ab904b2ea63578a7315d15bd25498",
+      "sha256": "e788e3ee0869f24c0f648d495ee3880c5be848ed262983a76f5ddd4db5951331",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -2886,7 +2886,7 @@
       "executable": false
     },
     "tests/earnings-intake.mjs": {
-      "sha256": "553dd530995f909bd95a433ee9507dace0f8f6909cf0c482b0f5c4b64c1ab7e4",
+      "sha256": "e2e962880de1217a4248884b6f1888c45dacbc99174f5baa619fa716a452777f",
       "executable": false
     },
     "tests/firm-fixture.mjs": {
@@ -3030,7 +3030,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "b5d14395438e90f21d2ac97697972311eb3d3b68e78661915e04e222047a6a2a",
+      "sha256": "982a90362250f73c43463249e4a08774c996b9894b184546c2f0eff93b7e79bd",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {

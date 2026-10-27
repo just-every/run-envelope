@@ -406,7 +406,7 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
-Judged from the code and tests at commit `e648b490f0f1e2e300a8789a48f7ed1eb4128940` (27 October 2026).
+Judged from the code and tests at commit `4710091c65e8205a636b0eb31d21f0a44a228a7a` (27 October 2026).
 
 Native earnings intake adds bounded preparation and exact-review evidence; no complete payroll, tax, filing or payment result is claimed.
 

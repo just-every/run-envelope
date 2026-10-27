@@ -2,7 +2,7 @@ import type { Actor } from '../access'
 import type { Input } from '../records'
 import { date, integer, text, PayrollError } from '../security'
 import { WorkspaceStore, objectId, revision, choice } from './store'
-import { collectionPins } from './review-inputs'
+import { collectionPins, reviewInputFence } from './review-inputs'
 
 /**
  * One recorded tip for one worker and day. Cash tips were already received by the
@@ -43,6 +43,6 @@ export class Tips {
       owner: actor.session.operator.displayName,
       ownerId: actor.session.operator.id,
     }
-    return this.store.append(actor, 'tip', id, revision(input.version), data, personId, true, {reviewSets:pins})
+    return this.store.append(actor, 'tip', id, revision(input.version), data, personId, true, {writeFence:reviewInputFence(actor.company,pins)})
   }
 }

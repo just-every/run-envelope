@@ -359,6 +359,7 @@ export class PayItems {
       items,
       changes,
       policies,
+      intakes: await this.store.list<RunInput>(actor,'run-input',undefined,true),
       runs: await Promise.all(
         runs.map(async (r) => {
           const current = await runCurrency(r, changes, items, policies, rules)
