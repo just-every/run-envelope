@@ -48,6 +48,7 @@ export function calculateTipTaxes(input: {
   const fromWages = Math.min(wages-regular+paycheck,collectedFica+collectedFit)
   const usedFurnished = collectedFica+collectedFit-fromWages
   const uncollectedSs = tipSs-collectedSs, uncollectedMed = tipMed-collectedMed
+  const uncollectedAdditional = tipAdditional-collectedAdditional
   return {
     wagesCents:wages, heldTipsCents:held, paycheckTipsCents:paycheck, reportedTipsCents:tips,
     newCashBeforeTaxCents:wages+paycheck, netCashCents:wages+paycheck-regular-fromWages,
@@ -58,11 +59,11 @@ export function calculateTipTaxes(input: {
     regular:{socialSecurityCents:wageSs,medicareCents:wageMed,additionalMedicareCents:wageAdditional,incomeTaxCents:wageFit},
     tipTaxes:{socialSecurityCents:tipSs,medicareCents:tipMed,additionalMedicareCents:tipAdditional,incomeTaxCents:tipFit},
     collected:{socialSecurityCents:collectedSs,medicareCents:collectedMed,additionalMedicareCents:collectedAdditional,incomeTaxCents:collectedFit},
-    uncollected:{socialSecurityCents:uncollectedSs,medicareCents:uncollectedMed,additionalMedicareCents:tipAdditional-collectedAdditional,incomeTaxCents:tipFit-collectedFit},
+    uncollected:{socialSecurityCents:uncollectedSs,medicareCents:uncollectedMed,additionalMedicareCents:uncollectedAdditional,incomeTaxCents:tipFit-collectedFit},
     employer:{socialSecurityCents:wageSs+tipSs,medicareCents:wageMed+tipMed},
     reportingBasis:{form941:{line5bTipWagesCents:Math.min(tips,Math.max(0,cap-wages)),line5bTaxCents:2*tipSs,
       line5cWagesCents:wages+tips,line5cTaxCents:2*(wageMed+tipMed),line5dWagesCents:above(wages+tips),line5dTaxCents:wageAdditional+tipAdditional,
-      line9AdjustmentCents:-(uncollectedSs+uncollectedMed)},form944:{line6AdjustmentCents:-(uncollectedSs+uncollectedMed)},
+      line9AdjustmentCents:-(uncollectedSs+uncollectedMed+uncollectedAdditional)},form944:{line6AdjustmentCents:-(uncollectedSs+uncollectedMed+uncollectedAdditional)},
       w2Box12:{A:uncollectedSs,B:uncollectedMed}},
     paymentReady:false, filingStatus:'calculation-only',
   }
@@ -119,7 +120,11 @@ export class TipTaxPreviews {
     if (amountCents>shortage) throw new PayrollError('furnished_funds_exceed_shortage',409)
     const data:Funds = {runId:b.run.id,reportReceivedOn:b.reportReceivedOn,amountCents,receivedOn:b.today,
       receiptRef:text(input.receiptRef,500),provenance:'human-attested-received-funds'}
-    const saved = await this.store.append(actor,'tip-tax-funds',objectId(input.id),0,data,personId,true,{reviewSets:b.fundsPins,exclusiveSourceIds:['tip-funds-'+await digest(JSON.stringify([personId,b.run.id,data.receiptRef]))],objects:[{kind:'earnings-run',id:b.run.id,version:b.run.version}]})
+    // Include older retained receipts whose source claims used a run-specific key.
+    const people = await this.store.records.people(actor)
+    const priorReceipts = (await Promise.all(people.map(p => this.store.list<Funds>(actor,'tip-tax-funds',p.id,true)))).flat()
+    if (priorReceipts.some(r => r.data.receiptRef === data.receiptRef)) throw new PayrollError('tip_funds_receipt_already_allocated',409)
+    const saved = await this.store.append(actor,'tip-tax-funds',objectId(input.id),0,data,personId,true,{reviewSets:b.fundsPins,exclusiveSourceIds:['tip-funds-'+await digest(JSON.stringify([data.receiptRef]))],objects:[{kind:'earnings-run',id:b.run.id,version:b.run.version}]})
     return {...saved,data}
   }
 }

@@ -59,13 +59,14 @@ PARTIAL.
 
 The returned reporting basis includes full tip wages and both shares on 941 line
 5b, all Medicare wages and both shares on 5c, Additional Medicare on 5d, the
-negative uncollected regular FICA adjustment on 941 line 9 and 944 line 6, and
+negative uncollected Social Security, Medicare and Additional Medicare adjustment on 941 line 9 and 944 line 6, and
 W-2 box 12 A and B. Before the window closes these remain provisional. This is
 not final-schema validation, a filed return, a qualified-tip deduction claim,
 Form 8846, Form 8027 or W-2 TP, TT, occupation or allocated-tip reporting.
 
 Sources: [IRS Publication 15, sections 6 and 13](https://www.irs.gov/publications/p15),
 [IRS Publication 15-T](https://www.irs.gov/publications/p15t), and
+[IRS Additional Medicare employer FAQ](https://www.irs.gov/businesses/small-businesses-self-employed/questions-and-answers-for-the-additional-medicare-tax), and
 [26 CFR 31.3102-3](https://www.ecfr.gov/current/title-26/section-31.3102-3).
 The supported calculation and its refusal boundaries are exercised through native
 HTTP in `tests/run-intake.mjs`, runIntakeCases, within the existing source intake
