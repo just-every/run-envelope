@@ -81,15 +81,27 @@ Complete state rules and gross-to-net treatment remain held.
 
 State assessment allocations retain their fractional minutes and separate risk
 classes. They do not create ordinary wage hours. Meal and rest premiums retain
-their own codes and supplied amounts, without creating worked hours; complete
-official regular-rate premium calculation remains unimplemented.
+their own codes and incident day. For the bounded California calculation, enter
+60 premium minutes, zero supplied cents and state CA. One meal and one rest
+premium may be reviewed per worker per workday; duplicate active codes on that
+day are refused. Premium minutes do not enter worked hours. With complete
+ordinary nonexempt workweeks, the premium uses straight earnings plus explicitly
+allocated nondiscretionary bonuses and commissions divided by worked hours.
+The amount is rounded to cents for each premium. An explicit zero removes the
+premium contribution after fresh review. The basis follows the official
+[California meal-period guidance](https://www.dir.ca.gov/dlse/FAQ_MealPeriods.htm)
+and [rest-period guidance](https://www.dir.ca.gov/dlse/FAQ_RestPeriods.htm).
+Incomplete weeks, unsupported remuneration, tipped work, other locations and
+mixed time sources retain a named hold. Complete California daily overtime,
+special wage orders and broader jurisdiction treatment remain unproved. Legacy
+zero-minute supplied premium amounts remain reviewed declarations, not a computed
+regular-rate result.
 
 ## Current boundaries
 
-This is native manual and spreadsheet preparation. It does not connect to
-Lanyard, Toast or the other contracted time and POS providers, validate their
-official schemas or establish source approval at a provider. Source names and
-evidence references are reviewed declarations. Complete provider intake,
+This is native preparation with bounded reviewed Lanyard and Toast captures.
+It does not establish authenticated source synchronization or provider approval.
+Source names and evidence references are reviewed declarations. Complete provider intake,
 approved tip pools, minimum-wage top-ups, tax ordering and voluntary funds,
 collection windows, statutory shortfall payday completion, filing schemas and
 year-end forms remain owed. No supported statutory shortfall is claimed from
@@ -97,3 +109,52 @@ the current general gross-to-net hold. Reimbursement substantiation and complete
 assessment calculations also remain unproved. Existing encrypted custody and
 archive foundations do not establish the complete intake-specific retention,
 erasure and restore matrix.
+
+## Reviewed provider captures
+
+The optional `providerCapture` field on the existing intake form and its preview
+and apply API accepts JSON containing `provider` (`lanyard` or `toast`),
+`account` (the stable source workplace identifier), `payload`, `mappings` and
+`evidence` (the reviewed source reference). Applying uses that same capture and
+the exact preview digest. The source namespace is derived from provider and
+account. Keep the account identity unchanged; it is a reviewed declaration, not
+a verified external tenant. Raw source content, its computed SHA-256 digest and
+reviewed mappings remain in encrypted version history. Native source review is
+still required before the input can enter an earnings preview.
+
+Lanyard uses the exported batch shape produced by its current
+[payroll implementation](https://github.com/just-every/run-lanyard/blob/main/src/lanyard/domain/payroll.ts)
+and payroll input lines. Supply `id`, `revision`, `status`, `exportedBy`,
+`exportedAt` and `lines`. The supported subset is ordinary worked minutes, `meal premium` and
+`rest premium` units, and `tips` input amounts in `costCents`. Each line retains
+its positive integer `revision`; meal and rest units map to the separate native
+California premium codes without creating worked hours. Map each `timeId` or `payInputId` to
+`sourcePersonId` (the exact `payrollId`), native `personId`, local `day` and
+actual `workweek`. Tip mappings additionally require `settlement` as `cash` or
+`paycheck`. The source lineage (or input identity) and earning code form the permanent row
+claim across batches; changing batch identity cannot duplicate a source.
+Signed corrections, segmented duplicate identities and other earning codes
+require additional implementation; they are refused, never treated as ordinary
+replacement hours or silently discarded. Imported status is retained evidence
+from the supplied capture; it is not verified against a running Lanyard tenant.
+
+Toast uses the array returned by the published
+[Labor time entries endpoint](https://doc.toasttab.com/openapi/labor/operation/timeEntriesGet/).
+Each supported closed entry supplies `guid`, `employeeReference.guid`,
+`inDate`, `outDate`, `businessDate`, `deleted: false`, `autoClockedOut: false`,
+`regularHours`, `overtimeHours`, `declaredCashTips` and `nonCashTips`. Map each
+entry GUID to exact `sourcePersonId`, native `personId`, local `day`, actual
+`workweek` and `settlements` with explicit values for both tip fields. The
+reviewed day must match the source business date. Dollar tip amounts convert to
+integer cents; source worked hours remain separate from monetary tips. Tender
+does not determine settlement. Service charges, withheld tips and rounding
+losses require further treatment and are refused when nonzero. An omitted
+previously active source row is refused; submit an explicit zero correction.
+
+Reviewed capture imports have no outbound connection or automatic revocation
+feed. Withdraw the local source approval when its external approval changes;
+affected earnings require fresh review and earlier frozen versions remain
+unchanged. The tests exercise one day's mapped inputs, not a complete approved
+provider workweek, every official schema field or actual payment. Other named
+adapters, source-specific custody proof and full jurisdiction calculation remain
+open. No provider relationship, settlement or agency outcome is fabricated.

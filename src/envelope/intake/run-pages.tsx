@@ -187,6 +187,7 @@ export function runIntakePage(
               </div>
             </details>
           ))}
+<Field name="providerCapture" label="Reviewed Lanyard or Toast capture (JSON; optional)" required={false} />
           <Submit primary>Preview exact cell changes</Submit>
         </form>
       </Card>
@@ -218,7 +219,7 @@ export function runIntakePage(
             <Hidden name="id" value={preview.id} />
             <Hidden name="version" value={preview.version} />
             <Hidden name="namespace" value={preview.data.namespace} />
-            <Hidden name="rows" value={JSON.stringify(preview.data.rows)} />
+            {preview.data.providerCapture ? <Hidden name="providerCapture" value={JSON.stringify(preview.data.providerCapture)} /> : <Hidden name="rows" value={JSON.stringify(preview.data.rows)} />}
             <Hidden name="fileDigest" value={preview.data.fileDigest} />
             <Hidden name="format" value={preview.data.format} />
             <Hidden name="digest" value={preview.digest} />
@@ -256,7 +257,8 @@ export function runIntakePage(
               {row.id} · v{row.version}
             </h3>
             <p>
-              {row.data.rows.length} rows · {row.data.namespace} ·{' '}
+              {row.data.providerCapture && <span style={{overflowWrap: 'anywhere'}}>{String(row.data.providerCapture.provider)} · reviewed capture · digest {String(row.data.providerCapture.sourceDigest)} · </span>}
+            {row.data.rows.length} rows · {row.data.namespace} ·{' '}
               {row.withdrawnBy
                 ? 'Withdrawn'
                 : row.approvedBy

@@ -1,3 +1,4 @@
+import { providerInput } from './provider-input'
 import { read, utils, write } from '@e965/xlsx'
 import type { Actor } from '../access'
 import type { Input } from '../records'
@@ -56,6 +57,7 @@ export interface RunInput {
   editorId: string
   editorName: string
   format: string
+  providerCapture?: Input
 }
 type Cell = {
   sourceId: string
@@ -207,15 +209,18 @@ export class RunIntake {
   }
   async preview(actor: Actor, input: Input) {
     await this.store.authority(actor, 'rates:propose', undefined, true)
+    const provider = input.providerCapture ? await providerInput(input.providerCapture) : undefined
     const id = objectId(input.id),
       expected = revision(input.version),
-      namespace = text(input.namespace, 120)
+      namespace = provider?.namespace ?? text(input.namespace, 120)
     const existing = (await this.rows(actor)).find((r) => r.id === id)
     if ((existing?.version ?? 0) !== expected)
       throw new PayrollError('intake_version_conflict', 409)
     if (existing && existing.data.namespace !== namespace)
       throw new PayrollError('intake_namespace_immutable', 409)
-    let patches: unknown = input.rows,
+    if (existing?.data.providerCapture && !provider)
+      throw new PayrollError('provider_capture_required', 409)
+    let patches: unknown = provider?.rows ?? input.rows,
       format = choice(input.format || 'grid', ['grid', 'csv', 'xls', 'xlsx']),
       fileDigest = ''
     let mapping: Input = {}
@@ -232,6 +237,8 @@ export class RunIntake {
     for (const key of intakeColumns)
       if (typeof input['map.' + key] === 'string' && input['map.' + key])
         mapping[key] = input['map.' + key]
+    if (provider && (input.fileBytes || input.csv || input.rows))
+      throw new PayrollError('provider_capture_conflict')
     if (input.fileBytes instanceof Uint8Array) {
       patches = workbookRows(input.fileBytes, mapping)
       fileDigest = await fileHash(input.fileBytes)
@@ -313,10 +320,14 @@ export class RunIntake {
         throw new PayrollError('regular_hours_require_reviewed_rate')
       if (
         line.code !== 'regular' &&
+        !['meal-premium','rest-premium'].includes(line.code) &&
         !line.code.endsWith('assessment-hours') &&
         line.minutes !== 0
       )
         throw new PayrollError('premium_or_earning_cannot_create_hours')
+      if (['meal-premium','rest-premium'].includes(line.code) && line.minutes &&
+        (line.minutes !== 60 || line.amountCents !== 0 || line.state !== 'CA'))
+        throw new PayrollError('california_premium_unit_required', 409)
       if (
         line.code.endsWith('assessment-hours') &&
         (line.amountCents ||
@@ -342,7 +353,13 @@ export class RunIntake {
       if (index < 0) rows.push(line)
       else rows[index] = line
     }
+    if (provider)
+      for (const row of rows) if (!seen.has(row.sourceId) && (row.minutes || row.amountCents))
+        throw new PayrollError('provider_removed_row_requires_explicit_zero', 409)
     if (rows.length > 500) throw new PayrollError('intake_row_limit')
+    const incidents = rows.filter(r => ['meal-premium','rest-premium'].includes(r.code) && r.minutes)
+    if (new Set(incidents.map(r => JSON.stringify([r.personId,r.day,r.code]))).size !== incidents.length)
+      throw new PayrollError('duplicate_daily_premium', 409)
     for (const personId of new Set(rows.map((r) => r.personId))) {
       const weeks = [
         ...new Set(
@@ -380,6 +397,7 @@ export class RunIntake {
       editorId: actor.session.operator.id,
       editorName: actor.session.operator.displayName,
       format,
+      ...(provider ? { providerCapture: provider.capture } : {}),
     }
     const exact = await digest(
       JSON.stringify([
@@ -392,6 +410,7 @@ export class RunIntake {
         rows,
         fileDigest,
         format,
+        provider?.capture ?? null,
       ])
     )
     return {
@@ -402,7 +421,7 @@ export class RunIntake {
       digest: exact,
       claims,
       unchanged: Boolean(
-        existing && JSON.stringify(existing.data.rows) === JSON.stringify(rows)
+        existing && JSON.stringify(existing.data.rows) === JSON.stringify(rows) && JSON.stringify(existing.data.providerCapture) === JSON.stringify(data.providerCapture)
       ),
       existing,
     }
