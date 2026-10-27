@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "5e4ef8e13e23718dc55e6de397758d6e9e5f93b3efc953a7f6753580dcf27628",
+      "sha256": "27dc4e8c40e7e107f0857f5ef29803582f93914f02f643a2fed0c9fcdef479f0",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e23a83f81736bd3ee0e3edc2aeee8726c930843499397c29a0092ba4aab87213",
+      "sha256": "25ab8d66db2eeb24e8d2b79ef95b71accbc0a65a53d2ed8f8b587a6bdb7c67fc",
       "executable": false
     },
     "deploy-demo.json": {
@@ -3082,7 +3082,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "097111c7faf9700058cf968881e33ec46dcc05b41bc079b4d104af0125ff1752",
+      "sha256": "443c44c91c7654b5442a548968f02f90a08a0d62103a6f18ad32447fb406b30f",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {

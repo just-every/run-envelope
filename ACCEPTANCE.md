@@ -177,7 +177,7 @@ Open scope: ENV-017 remains PARTIAL. Required employee report fields and ordinar
 | Kind | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 24 | 46 | 74 |
-| All | 5 | 24 | 46 | 75 |
+| Target and push further | 4 | 25 | 45 | 74 |
+| All | 5 | 25 | 45 | 75 |
 
 **ENV-075 — Filing of the released statutory data to the authority through its own channel. Status: missing.** Through the authority channel submit the exact reviewed released statutory data under current authorization, inspect its acknowledgement and refuse withdrawn or stale authority without submission. Open scope: authority-channel filing and acknowledgement remain unimplemented.

@@ -417,8 +417,8 @@ The ENV-023 increment adds bounded native accounting preparation; provider posti
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 24 | 46 | 74 |
-| All | 5 | 24 | 46 | 75 |
+| Target and push further | 4 | 25 | 45 | 74 |
+| All | 5 | 25 | 45 | 75 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
