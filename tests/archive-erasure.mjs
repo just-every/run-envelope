@@ -307,7 +307,7 @@ export async function archiveErasure(context, fixture) {
   assert.equal(packet.requestSent,false)
   assert.equal(packet.externalDeletionVerified,false)
   assert.equal(packet.transport,'owner-manual')
-  for(const [headers,status] of [[{cookie:viewerCookie},403],[{cookie:''},401],[{authorization:'Bearer '+fixture.authority.agentToken},403]])
+  for(const [headers,status] of [[{cookie:viewerCookie},403],[{cookie:oldOwner},401],[{cookie:''},401],[{cookie:'',authorization:'Bearer '+fixture.authority.agentToken},403],[{authorization:'Bearer '+fixture.authority.agentToken},403]])
     assert.equal((await call(packetDoor,undefined,headers)).status,status,'request scope remains private')
   for(const change of [{provider:'resend'},{reference:'synthetic-envelope-rebound'},{requestId:'synthetic-envelope-rebound'},{channel:'synthetic-envelope-rebound'},{records:[]},{fingerprint:'synthetic-envelope-rebound'}])
     assert.equal((await call(providerDoor+'/'+externalId,{version:1,consent:true,status:'submitted',evidence:'Synthetic changed request scope',...change})).status,409,'a status gesture cannot widen frozen provider scope')
