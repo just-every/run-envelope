@@ -79,9 +79,20 @@ function paper(value: unknown, federal: boolean, workerType: string): PaperForm 
 export class PaperOnboarding {
   constructor(public store: WorkspaceStore) {}
   owner(actor: Actor) { return new WorkerPrivacy(this.store.records).owner(actor) }
+  async access(actor: Actor, personId: string) {
+    const person=await this.store.paperAuthority(actor,'records:read',personId)
+    if (actor.grant.role!=='owner' && !['paper:entry','paper:review','paper:download'].some(action=>actor.grant.actions.includes(action)))
+      throw new PayrollError('payroll_access_denied',403)
+    return person
+  }
+  async setPolicy(actor: Actor, input: Input) {
+    this.owner(actor)
+    if (input.requireSeparateReviewer!==true && input.requireSeparateReviewer!==false && input.requireSeparateReviewer!=='true' && input.requireSeparateReviewer!=='false') throw new PayrollError('invalid_paper_policy')
+    return this.store.append(actor,'paper-policy','paper-review',revision(input.version),{requireSeparateReviewer:input.requireSeparateReviewer===true || input.requireSeparateReviewer==='true'})
+  }
   id(personId: string) { return 'paper-' + personId }
   async save(actor: Actor, personId: string, input: Input) {
-    this.owner(actor)
+    await this.store.paperAuthority(actor,'paper:entry',personId)
     if (input.attestTranscription !== true) throw new PayrollError('paper_transcription_attestation_required')
     const workerType=choice(input.workerType,['employee','contractor'])
     const tin=code(input.tin,/^\d{9}$/)
@@ -98,21 +109,20 @@ export class PaperOnboarding {
       payable:false, holds:['Payroll eligibility and payment execution remain unimplemented. Contractor TIN matching and backup withholding remain unavailable.']}
   }
   async history(actor: Actor, personId: string) {
-    this.owner(actor)
+    await this.access(actor,personId)
     return (await this.store.list<Packet>(actor,'paper-onboarding',personId)).map(row=>this.masked(row))
   }
   async review(actor: Actor, personId: string) {
-    this.owner(actor)
+    await this.store.paperAuthority(actor,'paper:review',personId)
     const row=await this.store.review<Packet>(actor,'paper-onboarding',this.id(personId),personId)
     return {...this.masked(row),reviewToken:row.reviewToken}
   }
   async decide(actor: Actor, personId: string, input: Input, withdraw=false) {
-    this.owner(actor)
+    await this.store.paperAuthority(actor,'paper:review',personId)
     return this.store.decide(actor,'paper-onboarding',this.id(personId),input,personId,withdraw)
   }
   async original(actor: Actor, personId: string, version: string, which: string) {
-    this.owner(actor)
-    const person=await this.store.records.person(actor,personId)
+    const person=await this.store.paperAuthority(actor,'paper:download',personId)
     const rows=await this.store.list<Packet>(actor,'paper-onboarding',personId)
     const row=rows.find(r=>String(r.version)===version)
     if (!row || !['federal','state'].includes(which)) throw new PayrollError('record_not_found',404)

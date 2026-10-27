@@ -5,6 +5,9 @@ import { PayrollError } from './security'
 export const actions = [
   'records:read',
   'records:write',
+  'paper:entry',
+  'paper:review',
+  'paper:download',
   'rates:propose',
   'rates:approve',
   'private:read',
