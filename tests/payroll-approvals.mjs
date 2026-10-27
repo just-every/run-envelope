@@ -141,7 +141,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
         await page.keyboard.press('Tab')
         assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'A', 'keyboard reaches native app navigation')
         for (const control of await page.locator('button,a').all())
-          assert.ok((await control.innerText()).trim(), label + ': every control has visible words')
+          assert.ok((await control.textContent()).trim(), label + ': every control has visible words')
         await page.screenshot({ path: join(folder, `${label}-${width}.png`), fullPage: true })
       }
       return page
@@ -489,6 +489,9 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await release(waRun, version, 'run_rules_changed')
     await refused(door+'/earnings-run/'+bonus.id+'/review',undefined,'run_sources_changed',humans['approver-b'].cookie)
     await release(caRun, caVersion, 'run_not_payable')
+    version = await run(waRun, version, waSetup.group)
+    page = await capture('run-assessment-binding', screen + '/earnings-run/' + waRun + '/review', 'approver-b')
+    assert.match(await page.locator('main').innerText(), /WA.*synthetic-envelope-354/s, 'exact review shows retained state and risk class')
     await publish({ ...rule, id: 'synthetic-envelope-355', name: 'Final CA FUTA credit reduction', family: 'futa', state: 'CA',
       value: '1.2', unit: 'percent', sourceUrl: 'https://oui.doleta.gov/unemploy/futa_credit.asp',
       details: { reduction: '1.2', bcr: '0', addOn: '0', finalNoticeRef: 'synthetic-envelope-356' } })
@@ -610,8 +613,12 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
         amountCents, settlement, furnishedCents, sourceRef: 'synthetic-envelope-tip-' + n })
     const tip = (n, settlement, amountCents, furnishedCents, version = 0, who = cookie) =>
       data(tipPath, tipBody(n, settlement, amountCents, furnishedCents, version), 201, who)
-    await tip(373, 'cash', 5000, 1000)
-    await tip(374, 'paycheck', 3000, 0)
+    await tip(373, 'cash', 60000, 1000)
+    await tip(374, 'paycheck', 30000, 0)
+    const duplicate = {...tipBody(373, 'cash', 60000, 1000, 0), id:'synthetic-envelope-377'}
+    await refused(tipPath, duplicate, 'tip_source_already_recorded')
+    await refused(tipPath, {...tipBody(373, 'cash', 60000, 1000, 1),sourceRef:'synthetic-envelope-reassigned'}, 'tip_source_identity_changed')
+    await refused(tipPath, {...tipBody(378, 'paycheck', 30000, 0, 0),settlement:''}, 'invalid_input', cookie, {}, 400)
     // Adding people does not authorize tip amounts: recording or revising a tip needs compensation access.
     await grant('clerk', 'preparer', [], ['records:read', 'records:write'])
     await refused(tipPath, tipBody(376, 'paycheck', 25000, 0, 0), 'payroll_access_denied', humans.clerk.cookie, {}, 403)
@@ -620,22 +627,25 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     let tipVersion = await run(tipRun, 0, tipSetup.group)
     const tipData = async () => (await data(door)).runs.find((r) => r.id === tipRun).data
     let tipped = await tipData()
-    assert.equal(tipped.grossCashCents, 23000, 'paycheck tips are paid; cash tips were already received')
-    assert.deepEqual([tipped.people[0].cashTipsCents, tipped.people[0].paycheckTipsCents, tipped.people[0].tipFundsCents], [5000, 3000, 1000])
+    assert.equal(tipped.grossCashCents, 50000, 'paycheck tips are paid; cash tips were already received')
+    assert.deepEqual([tipped.people[0].cashTipsCents, tipped.people[0].paycheckTipsCents, tipped.people[0].tipFundsCents], [60000, 30000, 1000])
+    assert.equal(tipped.people[0].reportedTipsCents, 90000, 'both settlement types remain reportable; this is not computed tax')
     await approve(tipRun, 'approver-b')
+    await release(tipRun, tipVersion, 'second_approval_required')
+    await approve(tipRun, 'owner')
     await release(tipRun, tipVersion, 'run_not_payable')
-    await tip(374, 'cash', 3000, 0, 1, humans.admin.cookie)
+    await tip(374, 'cash', 30000, 0, 1, humans.admin.cookie)
     await release(tipRun, tipVersion, 'run_sources_changed')
     tipVersion = await run(tipRun, tipVersion, tipSetup.group)
     tipped = await tipData()
     assert.equal(tipped.grossCashCents, 20000, 'a revised payout is a new version')
     await release(tipRun, tipVersion, 'approval_required')
     page = await capture('run-tip-binding', screen + '/earnings-run/' + tipRun + '/review', 'approver-b')
-    assert.ok((await page.locator('main').innerText()).includes('$30.00 cash, employee-furnished funds $0.00'))
+    assert.ok((await page.locator('main').innerText()).includes('$300.00 cash, employee-furnished funds $0.00'))
     await page.getByRole('button', { name: 'Approve this exact run version', exact: true }).click()
     await page.waitForURL(origin + screen)
     await release(tipRun, tipVersion, 'run_not_payable')
-    await tip(373, 'cash', 5000, 1500, 1)
+    await tip(373, 'cash', 60000, 1500, 1)
     await release(tipRun, tipVersion, 'run_sources_changed')
     // Official OIDC ID-token schema edge: a pinned issuer signs fresh, nonce-bound MFA.
     const signing=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
