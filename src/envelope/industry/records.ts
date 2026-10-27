@@ -1,3 +1,6 @@
+import { WithholdingInstructions } from '../withholding-instructions'
+import { TaxNoticeCases, type SuiAssessment } from '../tax-notices'
+import { collectionPins } from '../workspace/review-inputs'
 import { zero } from '../leave/ledger'
 import { requireAction, type Actor } from '../access'
 import type { Input } from '../records'
@@ -14,6 +17,8 @@ export interface ClassificationRecord {
   evidenceTitle: string; evidenceIssuer: string; evidenceReference: string; evidenceText: string
 }
 export interface IndustryCheck {
+  sui?:SuiAssessment|null; totalEmployerLiabilityCents?:number
+  withholdingInstruction?:Awaited<ReturnType<WithholdingInstructions['forCheck']>>
   personId: string; personName: string; runId: string; runVersion: number
   classificationId: string; classificationVersion: number; yearToDateEvidence: string; input: IndustryPayInput; result: IndustryPayResult
   corrects: string; correctionReason: string; amendment: ReturnType<typeof compareIndustryPay> | null
@@ -76,11 +81,20 @@ export class IndustryRecords {
     const ytd=input.yearToDate as IndustryPayInput['yearToDate']
     if(!ytd||typeof ytd!=='object')throw new PayrollError('year_to_date_basis_required')
     const payInput:IndustryPayInput={payDate:run.data.payDate,cashGrossCents:worker.earningsCents,housingAllowanceCents:zero(input.housingAllowanceCents??0),shareholderHealthInsuranceCents:zero(input.shareholderHealthInsuranceCents??0),periodsPerYear:({weekly:52,biweekly:26,semimonthly:24,monthly:12} as const)[run.data.frequency as 'weekly']!,facts,w4:classification.data.w4,yearToDate:ytd}
+    const instructionPins=await collectionPins(this.store,actor,[{kind:'withholding-instruction',personId,exceptId:''},{kind:'private-ssn',personId,exceptId:''}])
+    const withholdingInstruction=await new WithholdingInstructions(this.store).forCheck(actor,personId,payInput)
+    if(withholdingInstruction) {
+      if(facts.taxResidency!=='resident' || facts.claims.length || payInput.housingAllowanceCents || payInput.shareholderHealthInsuranceCents || facts.employerKind!=='business' || facts.workerRole!=='employee') throw new PayrollError('lock_in_special_taxability_unavailable',409)
+      payInput.w4=withholdingInstruction.selectedW4
+    }
     let result:IndustryPayResult;try{result=calculateIndustryPay(payInput)}catch(error){throw new PayrollError(error instanceof Error?error.message:'invalid_industry_calculation')}
+    const reviewSets=await collectionPins(this.store,actor,[{kind:'tax-notice-case',personId:'',exceptId:''},{kind:'rule',personId:'',exceptId:''}])
+    const sui=await new TaxNoticeCases(this.store).assessment(actor,personId,run.data,input)
+    if(sui && (facts.employerKind!=='business' || facts.entityType!=='corporation' || facts.workerRole!=='employee' || facts.workKind!=='nonagricultural' || facts.claims.length || payInput.housingAllowanceCents || payInput.shareholderHealthInsuranceCents)) throw new PayrollError('sui_special_taxability_unavailable',409)
     const corrects=input.corrects?objectId(input.corrects):''
     const prior=corrects?await this.store.find<IndustryCheck>(actor,'industry-check',corrects,personId,true):null
     if(prior&&(!prior.approvedBy||prior.withdrawnBy||prior.data.runId!==run.id||prior.data.runVersion!==run.version))throw new PayrollError('reviewed_same_run_correction_required',409)
-    const data:IndustryCheck={personId,personName:person.name,runId:run.id,runVersion:run.version,classificationId:classification.id,classificationVersion:classification.version,yearToDateEvidence:text(input.yearToDateEvidence,1000),input:payInput,result,corrects,correctionReason:corrects?text(input.correctionReason,1000):'',amendment:prior?compareIndustryPay(prior.data.result,result):null}
-    return this.store.append(actor,'industry-check',objectId(input.id),revision(input.version),data,personId,true,{objects:[{kind:'industry-classification',id:classification.id,version:classification.version,approved:true},{kind:'earnings-run',id:run.id,version:run.version}]})
+    const data:IndustryCheck={withholdingInstruction,sui,totalEmployerLiabilityCents:result.totalEmployerTaxCents+(sui?.employerLiabilityCents??0),personId,personName:person.name,runId:run.id,runVersion:run.version,classificationId:classification.id,classificationVersion:classification.version,yearToDateEvidence:text(input.yearToDateEvidence,1000),input:payInput,result,corrects,correctionReason:corrects?text(input.correctionReason,1000):'',amendment:prior?compareIndustryPay(prior.data.result,result):null}
+    return this.store.append(actor,'industry-check',objectId(input.id),revision(input.version),data,personId,true,{reviewSets:[...reviewSets,...instructionPins],objects:[...(withholdingInstruction?[{kind:'withholding-instruction' as const,id:withholdingInstruction.id,version:withholdingInstruction.sourceVersion,approved:withholdingInstruction.sourceVersion===withholdingInstruction.version}]:[]),...(sui?[{kind:'tax-notice-case' as const,id:sui.noticeId,version:sui.noticeVersion,approved:true},{kind:'rule' as const,id:sui.ruleId,version:sui.ruleVersion,approved:true}]:[]),{kind:'industry-classification',id:classification.id,version:classification.version,approved:true},{kind:'earnings-run',id:run.id,version:run.version}]})
   }
 }

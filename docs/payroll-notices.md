@@ -126,9 +126,9 @@ The notice review screen links to **Manage notice evidence and deadlines**. This
 bounded ENV-025 increment retains original PDFs, unverified OCR text, checked
 facts, corrections, deposit proof and reported agency responses. It supports
 SUI rate letters and IRS deposit mismatches. It does not implement automatic OCR,
-agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll changes.
+agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll payment.
 
-The current conservative policy is pending CT review: only the configured native
+The approved conservative casework policy permits only the configured native
 installation owner with a current company session may use case routes or download
 their originals. Existing generic notice and correspondence permissions keep their
 existing scope. No case action sends data, pays money, signs a filing, releases a
@@ -164,8 +164,7 @@ corresponding app route. An agent bearer cannot use these native-human doors.
   case review and separate rule review. The final SUI rule must match state,
   percentage and effective date, with `sourceRef` exactly
   `notice:<notice id>:<original PDF sha256>`. A source edit or withdrawal makes
-  the link stale. Linking is not application of a rate to calculated wages or
-  liabilities. Existing rule administration remains the human review door.
+  the link stale. Linking alone does not apply a rate. The regular-wage preview below can calculate a bounded employer liability. Existing rule administration remains the human review door.
 - `GET /original/:version/:index` downloads the exact retained PDF, with private
   no-store headers and current authority. Index zero is the notice original;
   later indexes are evidence in recorded order. Native multipart uploads are
@@ -198,7 +197,7 @@ retention proof remain owed by ENV-025 and its existing cross-cutting clauses.
 
 The worker's signed-paper screen links to **IRS withholding instructions** at
 `/api/envelope/companies/:company/people/:person/withholding-instructions`.
-The same conservative native-owner restriction applies. These are bounded legacy
+The same conservative native-owner restriction applies. These are bounded legacy and current-form
 instruction records, not a complete withholding engine or legal-authenticity
 service. A PDF, model response or unchecked attestation cannot self-approve.
 
@@ -217,8 +216,11 @@ Legacy settings require `filingStatus`, `maximumAllowances` and
 `minimumAdditionalCents`. The supported 2800C date is 60 calendar days after its
 letter date. A modification or release is recorded effective on receipt and
 requires an earlier approved instruction. Other formats or unusual effective-date
-cases need additional implementation and authoritative review. Current-form
-W-4 amount comparisons remain unavailable.
+cases need additional implementation and authoritative review. For `settingsFormat:current`, retain `filingStatus`, `multipleJobs`, annual
+`dependentCreditCents`, `otherIncomeCents`, `deductionsCents` and per-check
+`minimumAdditionalCents`. The current settings are retained as an exact
+Publication 15-T W-4 arrangement; no credit, deduction or adjustment is inferred
+from model text.
 
 `GET /review` and `POST /approve` require an exact current human review token.
 Originals and source, actor and date history are retained by version at
@@ -247,4 +249,77 @@ disregard of a decreasing W-4, permitted increases, and immediate modification
 on receipt of Letter 2808C. A synthetic matching-format PDF and a human-reported
 source check in a journey do not establish actual IRS authenticity or legal effect.
 
-Evidence appended to a linked SUI case carries the exact approved rule dependency. An edited or withdrawn rule refuses the append; it cannot make the retained link current again. Reopening explicitly clears the link and preserves the prior evidence.
+
+## Reviewed notice application in regular-wage previews
+
+The existing industry check door now applies a selected SUI notice to ordinary
+single-state business employee wages retained in the selected earnings run.
+The case version after linking and the exact final rule version both require
+human review. The rule must retain `details.wageBaseCents`, an official
+`details.wageBaseSourceUrl` and `details.wageBaseReference`. The check requires
+`suiNoticeId`, explicit `suiYearToDateWagesCents` and `suiYearToDateEvidence` for
+that worker and employer in that tax year. A known applicable notice cannot be
+bypassed by omitting its selection. Ambiguous cases, missing wage basis, changed
+sources, unreviewed rules, special taxability and mixed-state work refuse.
+
+The taxable amount is the smaller of current retained wages and the positive
+remaining annual wage base. Decimal rate arithmetic rounds once to cents. The
+check retains the original digest, case and rule versions, source, prior wages,
+taxable wages and employer liability separately from federal taxes. SUI adds no
+employee deduction and produces no payment. Prior wages remain human-supplied
+register evidence; complete reconciliation and SUI legal coverage are unproved.
+
+A due retained IRS instruction is also checked at the regular-wage preview door.
+Pending implementation blocks that preview. For a reviewed legacy or current-form instruction,
+Publication 15-T calculates its amount independently of the retained W-4; the
+higher amount is used for this check. Thus a current-form election cannot lower
+the calculated lock-in amount and a higher election remains available.
+An approved release removes this calculation constraint; a pending release does
+not. Changed identity refuses. The check retains the selected settings, both
+compared amounts, exact instruction version, effective date and decision. New
+instruction, notice or rule versions invalidate affected check authority even
+after check approval; a stale check cannot prepare a return. These checks
+cover ordinary resident business employee cash wages only; special taxability
+refuses. Complete source-format validation, all effective-date cases, actual first
+required payment and independent IRS authenticity remain unproved.
+
+The bounded calculation records remain distinct from the casework policy ruling.
+They authorize no payroll payment, filing, external send, destruction or hold
+release, and ENV-025 remains PARTIAL.
+
+
+Current-form paper entry accepts the exact reviewed filing status and multiple
+jobs arrangement with no increase to allowed credits or deductions, no decrease
+to required other income, and no decrease to additional withholding. This
+monotone comparison proves a compatible higher election without guessing future
+wages. An alternate status or multiple-jobs arrangement requires an unavailable
+complete amount comparison and refuses entry. Regular-wage previews compare
+actual amounts on the check date and retain the higher amount. The journey
+records a synthetic current-format original through native upload, independently
+asserts every retained setting, rejects each decreasing field through the paper
+door, calculates on the specified effective date and honors a higher election.
+It does not prove timely human implementation or actual first-check payment.
+
+Official current-form arrangement and higher-election guidance:
+https://www.irs.gov/businesses/small-businesses-self-employed/withholding-compliance-questions-and-answers
+(2020 Form W-4 questions 1–3; consulted 27 October 2026). The retained source is
+human-authenticated, not independently authenticated by the application.
+
+
+The current-form journey also retains and reviews an immediate-on-receipt
+modification, recalculates its withholding floor and proves that an unapproved
+release preserves that floor. Only exact human approval of the retained release
+permits the ordinary lower election to determine the calculated check. The
+original, modification and release remain separate attributed encrypted versions;
+no source PDF or decision is overwritten. These synthetic format cases do not
+establish every IRS letter variant, source authenticity or legal effect.
+
+Instruction versions pin the private SSN revision, with atomic checks on creation and review decisions. Restoring an old SSN value does not restore review authority. Every effective pending modification remains a hold even beneath a later pending release. Linked SUI evidence retains its exact approved rule dependency; edited or withdrawn rules refuse evidence appends, while reopening clears the link.
+
+## CT casework ruling, 27 October 2026
+
+CT scope ruling, 27 October 2026: APPROVE WITH RIDERS for conservative notice casework only. The configured native installation owner, using a current native session and current company authority, may retain case facts and originals and review exact source-bound case decisions. No automatic outbound action, payroll mutation, hold release, destruction or external deletion is authorized. A notice review does not approve a rate, signed response, filing or payment; each consequential action retains its separately authorized exact human approval. Source, worker identity, instruction, linked rule or current authority changes invalidate affected pending review even after evidence append or restoration of an earlier identity value. A pending release cannot override an unresolved stricter instruction. Closure reports remain unresolved until supported by agency disposition and actual remaining liability and penalty evidence; unknown balances stay unknown, claimed abatement stays distinct from actual abatement, and reopening preserves earlier evidence. Owner-only casework is too narrow for day-one payroll teams: ENV-028 must provide authorized bookkeepers, payroll administrators and accountants separately scoped case intake, investigation, exact review and original access by company, location and sensitive fields, with immediate revocation, distinct attribution and configured separation of duties. Delegation grants no consequential authority beyond its explicit scope. Existing generic correspondence keeps its separate authority; agent credentials gain no authority over these case records. Statutory custody, lawful eligible erasure and inactive restore remain owed under ENV-051, ENV-053 and ENV-054. This ruling supersedes the pending casework-policy label, preserves every original outcome and acceptance sentence, changes no status, and accepts no implementation completion or production readiness.
+
+## Saved-check source safety
+
+An unapproved correction cannot move a previously reviewed applicable SUI notice outside payday and silently remove its liability. Checks pin the worker private SSN revision before calculation and at append, and recheck it for review, approval and return preparation. Changing the identity and restoring its former value does not revive check authority. Checks from older versions without the required instruction, notice, rule and private-identity pins remain historical evidence and require a fresh calculation before review or return preparation.
