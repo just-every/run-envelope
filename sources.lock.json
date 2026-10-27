@@ -1426,7 +1426,7 @@
       "executable": false
     },
     "src/envelope/disclosures/protected.ts": {
-      "sha256": "14a46cbead8d8ae6adfdcc6d02d9ebdcb34adbf4c6525f5b19e132d03bfd841c",
+      "sha256": "cb86ff0422839058bc34f38f39d71ab4c2b6014e57e3f2ddf26dc93a22c73114",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -1478,7 +1478,7 @@
       "executable": false
     },
     "src/envelope/income-verification/requests.ts": {
-      "sha256": "954d1dc89b77fb21bb65c36d23b055f96b8efa23aca4fef8c4fbf64d9d8eeb66",
+      "sha256": "dc42b07787efbb99cc35f0ecc9a4c4cf6a4205afdb39dd0dbeb855d66c8165e7",
       "executable": false
     },
     "src/envelope/income-verification/text.ts": {
@@ -1754,7 +1754,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "a3eb11df628b3d6abf44fbca178f26fc87b83c3e80783a2ee6bc7f6e20a45881",
+      "sha256": "9fd21fa17763e0bfb0d425a3112a84347299ec1a6399e84a1f32a8c7a262e279",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {

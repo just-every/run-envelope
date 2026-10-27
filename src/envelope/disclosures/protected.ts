@@ -13,7 +13,7 @@ import {
 } from '../income-verification/requests'
 const disclosureCurrent = `v.kind='disclosure'
  AND v.version=(SELECT MAX(version) FROM env_workspace_versions nv WHERE nv.company_id=v.company_id AND nv.kind=v.kind AND nv.object_id=v.object_id)
- AND ${currentSources('v')} AND ${currentReviewInputs('v')}
+ AND ${currentSources('v', 'disclosure')} AND ${currentReviewInputs('v')}
  AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved')
  AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn')`
 /** No outbound call. A protected response is retrieved by its named native identity. */

@@ -81,7 +81,7 @@ export const bindingFence = (
  WHERE wo.id=${alias}.worker_id AND wo.version=${alias}.worker_version AND wo.status='active' AND wg.version=${alias}.worker_grant_version AND wg.revoked_at IS NULL) AND EXISTS(SELECT 1 FROM env_workspace_versions b
  WHERE b.company_id=${alias}.company_id AND b.kind='verification-worker' AND b.object_id=${alias}.binding_id AND b.version=${alias}.binding_version
  AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
- AND ${currentSources('b')}
+ AND ${currentSources('b', 'verification-worker')}
  AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='approved')
  AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='withdrawn'))`
 export class VerificationRequests {
@@ -92,7 +92,7 @@ export class VerificationRequests {
       const binding = await this.binding(actor, personId, true)
       f.sql += ` AND EXISTS(SELECT 1 FROM env_workspace_versions b WHERE b.company_id=? AND b.kind='verification-worker' AND b.object_id=? AND b.version=?
         AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
-        AND ${currentSources('b')}
+        AND ${currentSources('b', 'verification-worker')}
         AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='approved')
         AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='withdrawn'))`
       f.args.push(actor.company, binding.id, binding.version)
@@ -229,7 +229,7 @@ export class VerificationRequests {
       this.store.records.statement(
         `INSERT INTO env_verification_consents(company_id,id,person_id,worker_id,worker_version,worker_grant_version,requester_id,requester_version,binding_id,binding_version,cipher,created_session,created_at,expires_at,change_id)
       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND version=? AND status='active') AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
-      AND EXISTS(SELECT 1 FROM env_workspace_versions b WHERE b.company_id=? AND b.kind='verification-worker' AND b.object_id=? AND b.version=? AND ${currentSources('b')}
+      AND EXISTS(SELECT 1 FROM env_workspace_versions b WHERE b.company_id=? AND b.kind='verification-worker' AND b.object_id=? AND b.version=? AND ${currentSources('b', 'verification-worker')}
        AND b.version=(SELECT MAX(version) FROM env_workspace_versions nb WHERE nb.company_id=b.company_id AND nb.kind=b.kind AND nb.object_id=b.object_id)
        AND EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='approved')
        AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=b.company_id AND d.kind=b.kind AND d.object_id=b.object_id AND d.version=b.version AND d.decision='withdrawn')) RETURNING id`,
