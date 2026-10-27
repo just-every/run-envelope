@@ -687,7 +687,7 @@ export class PayItems {
       taxable += tipped.paycheck
       if (tips.length || inputLines.some(r=>r.code==='tip') || intakeRows.some(row => row.code === 'tip'))
         holds.push({ personId: member.id, code:'tip-tax-calculation-unavailable',
-          reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-009).' })
+          reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-082).' })
       // A reviewed source can describe one exact period's after-tax deduction.
       // No enrollment, pretax treatment, remittance or paid result is inferred.
       const benefits = latest(hr).filter(r => r.data.type === 'benefit'

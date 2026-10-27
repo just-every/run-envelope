@@ -23,7 +23,9 @@ RULINGS.md, history in CHANGELOG.md and contract sources, the large-local list
 and the coverage and id maps in docs/contract/.
 
 Lander-Regenerate: node src/base/contract-docs.mjs write
-Lander-Regenerate: node scripts/edition-authoring/cli.mjs lock This new seed contains only Base's technical foundation; every payroll
+Lander-Regenerate: node scripts/edition-authoring/cli.mjs lock
+
+This new seed contains only Base's technical foundation; every payroll
 clause is missing. Do not add mock data, pretend features or provider fallbacks.
 The app wears the owner-approved look (app pick A): build every screen from the
 tokens and components named in docs/LOOK.md, and keep public/rer-theme.css

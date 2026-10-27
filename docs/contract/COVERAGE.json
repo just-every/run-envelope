@@ -8495,17 +8495,10 @@
       "file": "CONTRACT.md",
       "line": 147,
       "text": "Auth/MFA signs users in, but Envelope enforces its own current role server-side on every route, download, API and tool.",
-      "to": "clause",
+      "to": "base",
       "ids": [
-        "ENV-028"
-      ],
-      "also": [
-        {
-          "to": "base",
-          "ids": [
-            "BASE-ROLE-001"
-          ]
-        }
+        "BASE-ROLE-001",
+        "BASE-SIGNIN-001"
       ]
     },
     {
@@ -9579,15 +9572,35 @@
       "file": "CONTRACT.md",
       "line": 171,
       "text": "Install, configure, run and upgrade Envelope in the owner's Cloudflare account through Base, using owner-controlled database, object storage, queues, secrets and domains.",
-      "to": "clause",
+      "to": "base",
       "ids": [
-        "ENV-050"
+        "BASE-INSTALL-001",
+        "BASE-OPS-002"
       ]
     },
     {
       "file": "CONTRACT.md",
       "line": 171,
-      "text": "The owner can operate the native payroll workspace independently of the marketplace/author and optional agents; provide setup, backups, recovery, cost and provider-enrollment instructions.",
+      "text": "The owner can operate the native payroll workspace independently of the marketplace/author and optional agents;",
+      "to": "base",
+      "ids": [
+        "BASE-DATA-005"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 171,
+      "text": " provide setup, backups, recovery, cost and",
+      "to": "base",
+      "ids": [
+        "BASE-INSTALL-001",
+        "BASE-BACKUP-001"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 171,
+      "text": " provider-enrollment instructions.",
       "to": "clause",
       "ids": [
         "ENV-050"
@@ -9632,7 +9645,7 @@
     {
       "file": "CONTRACT.md",
       "line": 171,
-      "text": "Use Base's documented setup/deployment door in a fresh owner account, configure USD/US timezone and required providers, sign in and complete a draft/preview, archive and restore.",
+      "text": "Use Base's documented setup/deployment door in a fresh owner account, configure USD/US timezone and required providers, sign in and complete a draft/preview,",
       "to": "clause",
       "ids": [
         "ENV-050"
@@ -9641,7 +9654,27 @@
     {
       "file": "CONTRACT.md",
       "line": 171,
-      "text": "Upgrade a populated prior release with its recovery instructions; deny author/marketplace egress and confirm payroll workspace access and effect-specific activation holds that never classify missing state/local tax accounts/grants as wage-payment holds.",
+      "text": " archive and restore.",
+      "to": "base",
+      "ids": [
+        "BASE-DATA-001",
+        "BASE-BACKUP-001"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 171,
+      "text": "Upgrade a populated prior release with its recovery instructions; deny author/marketplace egress",
+      "to": "base",
+      "ids": [
+        "BASE-OPS-002",
+        "BASE-DATA-005"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 171,
+      "text": " and confirm payroll workspace access and effect-specific activation holds that never classify missing state/local tax accounts/grants as wage-payment holds.",
       "to": "clause",
       "ids": [
         "ENV-050"
@@ -10037,19 +10070,20 @@
     {
       "file": "CONTRACT.md",
       "line": 175,
-      "text": "Provide Base native allowlisted email-link sign-in and optional passkeys, plus a linked Auth/OIDC identity path with MFA and step-up for sensitive payroll operations.",
+      "text": "Provide Base native allowlisted email-link sign-in and optional passkeys,",
+      "to": "base",
+      "ids": [
+        "BASE-ACCESS-001",
+        "BASE-SIGNIN-002"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 175,
+      "text": " plus a linked Auth/OIDC identity path with MFA and step-up for sensitive payroll operations.",
       "to": "clause",
       "ids": [
         "ENV-051"
-      ],
-      "also": [
-        {
-          "to": "base",
-          "ids": [
-            "BASE-ACCESS-001",
-            "BASE-SIGNIN-002"
-          ]
-        }
       ]
     },
     {
@@ -10064,7 +10098,16 @@
     {
       "file": "CONTRACT.md",
       "line": 175,
-      "text": "Validate sessions and current grants independently on private documents, handlers, downloads and generated transports; sign-out/removal/identity revocation ends access, sessions expire within the Base inactivity bound and public endpoints are declared/rate-limited.",
+      "text": "Validate sessions and current grants independently on private documents, handlers, downloads and generated transports;",
+      "to": "base",
+      "ids": [
+        "BASE-ACCESS-002"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 175,
+      "text": " sign-out/removal/identity revocation ends access,",
       "to": "clause",
       "ids": [
         "ENV-051"
@@ -10073,10 +10116,19 @@
         {
           "to": "base",
           "ids": [
-            "BASE-ACCESS-002",
-            "BASE-ACCESS-003"
+            "BASE-ACCESS-002"
           ]
         }
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 175,
+      "text": " sessions expire within the Base inactivity bound and public endpoints are declared/rate-limited.",
+      "to": "base",
+      "ids": [
+        "BASE-ACCESS-002",
+        "BASE-ACCESS-003"
       ]
     },
     {
@@ -10092,15 +10144,33 @@
       "file": "CONTRACT.md",
       "line": 175,
       "text": "Use sign-in, invite and sign-out doors with valid, unknown, expired/replayed and revoked identities, then call private routes and downloads directly.",
-      "to": "clause",
+      "to": "base",
       "ids": [
-        "ENV-051"
+        "BASE-ACCESS-001",
+        "BASE-ACCESS-002"
+      ],
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "ENV-051"
+          ]
+        }
       ]
     },
     {
       "file": "CONTRACT.md",
       "line": 175,
-      "text": "Confirm no data/action for denied requests, no session when mail/Auth is unavailable, immediate revocation and proper MFA/step-up before bank change/release; retained employee form access needs an explicit permitted identity.",
+      "text": "Confirm no data/action for denied requests,",
+      "to": "base",
+      "ids": [
+        "BASE-ACCESS-002"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 175,
+      "text": " no session when mail/Auth is unavailable, immediate revocation and proper MFA/step-up before bank change/release; retained employee form access needs an explicit permitted identity.",
       "to": "clause",
       "ids": [
         "ENV-051"
@@ -10547,7 +10617,7 @@
     {
       "file": "CONTRACT.md",
       "line": 185,
-      "text": "Owners can request entity erasure across records, documents, search, caches, exports and AI derivatives, with completion within five minutes for eligible data and an anonymized permanent action audit.",
+      "text": "Owners can request entity erasure across records, documents, search, caches, exports and AI derivatives,",
       "to": "clause",
       "ids": [
         "ENV-054"
@@ -10559,6 +10629,15 @@
             "BASE-DATA-003"
           ]
         }
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 185,
+      "text": " with completion within five minutes for eligible data and an anonymized permanent action audit.",
+      "to": "base",
+      "ids": [
+        "BASE-DATA-003"
       ]
     },
     {
@@ -10599,10 +10678,19 @@
     {
       "file": "CONTRACT.md",
       "line": 185,
-      "text": "Through privacy routes erase an eligible worker, verify all dependent local reads/files/derivatives absent within five minutes and audit anonymized.",
+      "text": "Through privacy routes erase an eligible worker, verify all dependent local reads/files/derivatives absent",
       "to": "clause",
       "ids": [
         "ENV-054"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 185,
+      "text": " within five minutes and audit anonymized.",
+      "to": "base",
+      "ids": [
+        "BASE-DATA-003"
       ]
     },
     {
@@ -10860,7 +10948,34 @@
     {
       "file": "CONTRACT.md",
       "line": 193,
-      "text": "Validate every API and upload at its boundary, keep notices and tax forms and attachment versions in private owner storage with type and size limits and authorized downloads, and render imported text and HTML without scripts, tracking pixels or unrequested remote images.",
+      "text": "Validate every API and upload at its boundary,",
+      "to": "base",
+      "ids": [
+        "BASE-INPUT-001"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " keep notices and tax forms and attachment versions in private owner storage",
+      "to": "clause",
+      "ids": [
+        "ENV-057"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " with type and size limits",
+      "to": "base",
+      "ids": [
+        "BASE-INPUT-003"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " and authorized downloads,",
       "to": "clause",
       "ids": [
         "ENV-057"
@@ -10869,8 +10984,6 @@
         {
           "to": "base",
           "ids": [
-            "BASE-INPUT-001",
-            "BASE-INPUT-002",
             "BASE-INPUT-003"
           ]
         }
@@ -10879,7 +10992,16 @@
     {
       "file": "CONTRACT.md",
       "line": 193,
-      "text": "Declare minimal public Lobby, documentation and contract, setup, sign-in, invite and verified callback doors; public pages expose no payroll data and load no third-party resources or visitor identifiers before interaction.",
+      "text": " and render imported text and HTML without scripts, tracking pixels or unrequested remote images.",
+      "to": "base",
+      "ids": [
+        "BASE-INPUT-002"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": "Declare minimal public Lobby, documentation and contract, setup, sign-in, invite and verified callback doors; public pages expose no payroll data",
       "to": "clause",
       "ids": [
         "ENV-057"
@@ -10888,10 +11010,18 @@
         {
           "to": "base",
           "ids": [
-            "BASE-PUBLIC-001",
             "BASE-ACCESS-003"
           ]
         }
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " and load no third-party resources or visitor identifiers before interaction.",
+      "to": "base",
+      "ids": [
+        "BASE-PUBLIC-001"
       ]
     },
     {
@@ -10932,7 +11062,18 @@
     {
       "file": "CONTRACT.md",
       "line": 193,
-      "text": "Upload hostile PDFs and HTML, malformed imports and oversized files through actual doors; no planted script or request executes and unauthorized downloads fail.",
+      "text": "Upload hostile PDFs and HTML, malformed imports and oversized files through actual doors; no planted script or request executes",
+      "to": "base",
+      "ids": [
+        "BASE-INPUT-001",
+        "BASE-INPUT-002",
+        "BASE-INPUT-003"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " and unauthorized downloads fail.",
       "to": "clause",
       "ids": [
         "ENV-057"
@@ -10941,27 +11082,55 @@
     {
       "file": "CONTRACT.md",
       "line": 193,
-      "text": "Visit public pages signed out at 1440 and 390, rate-limit sign-in and verify no private response, cookie or third-party request before interaction; inspect labels, focus and automated accessibility results.",
+      "text": "Visit public pages signed out at 1440 and 390,",
       "to": "clause",
       "ids": [
         "ENV-057"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " rate-limit sign-in",
+      "to": "base",
+      "ids": [
+        "BASE-ACCESS-003"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " and verify no private response,",
+      "to": "clause",
+      "ids": [
+        "ENV-057"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " cookie or third-party request before interaction;",
+      "to": "base",
+      "ids": [
+        "BASE-PUBLIC-001"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 193,
+      "text": " inspect labels, focus and automated accessibility results.",
+      "to": "base",
+      "ids": [
+        "BASE-ACCESSIBILITY-001"
       ]
     },
     {
       "file": "CONTRACT.md",
       "line": 193,
       "text": "Inspect all changed public and operator journeys against WCAG 2.2 AA with the named automated and manual interaction checks at both viewport sizes.",
-      "to": "clause",
+      "to": "base",
       "ids": [
-        "ENV-057"
-      ],
-      "also": [
-        {
-          "to": "base",
-          "ids": [
-            "BASE-ACCESSIBILITY-001"
-          ]
-        }
+        "BASE-ACCESSIBILITY-001"
       ]
     },
     {
@@ -12332,42 +12501,42 @@
     {
       "file": "CONTRACT.md",
       "line": 222,
-      "text": "- **People and time:** [Willow](https://github.com/just-every/run-willow) owns employment records, HR onboarding/offboarding checklists, I-9, documents, leave policy/ledger and benefit enrollment; ENV-040 is the effective-dated acknowledgement handoff. [Lodge](https://github.com/just-every/run-lodge) sends hires through Willow. [Lanyard](https://github.com/just-every/run-lanyard) owns schedules, clock-ins, breaks, time approval and shift tip-pool calculations; ENV-008/009 own importing approved allocations, regular-rate premiums, withholding and payment. External BambooHR/Rippling/HiBob and named time providers are equivalent connections, not a reason to recreate their full product.",
+      "text": "**People and time:** [Willow](https://github.com/just-every/run-willow) owns employment records, HR onboarding/offboarding checklists, I-9, documents, leave policy/ledger and benefit enrollment; ENV-040 is the effective-dated acknowledgement handoff. [Lodge](https://github.com/just-every/run-lodge) sends hires through Willow. [Lanyard](https://github.com/just-every/run-lanyard) owns schedules, clock-ins, breaks, time approval and shift tip-pool calculations; ENV-008/009 own importing approved allocations, regular-rate premiums, withholding and payment. External BambooHR/Rippling/HiBob and named time providers are equivalent connections, not a reason to recreate their full product.",
       "to": "section",
       "section": "Boundaries"
     },
     {
       "file": "CONTRACT.md",
       "line": 223,
-      "text": "- **Finance:** [Pantry](https://github.com/just-every/run-pantry) owns ledger and AP; ENV-023 posts payroll journals/liabilities and ENV-013 shares payee identity and explicit 1099 ownership so AP-paid vendors stay Pantry's. [Easel](https://github.com/just-every/run-easel) owns headcount/compensation planning and reads permitted labor actuals; it cannot run pay. [Coaster](https://github.com/just-every/run-coaster) owns expense approval and its ACH; only an explicit company choice sends an unpaid reimbursement through ENV-036. [Purse](https://github.com/just-every/run-purse) owns suppliers/POs; Envelope pays people.",
+      "text": "**Finance:** [Pantry](https://github.com/just-every/run-pantry) owns ledger and AP; ENV-023 posts payroll journals/liabilities and ENV-013 shares payee identity and explicit 1099 ownership so AP-paid vendors stay Pantry's. [Easel](https://github.com/just-every/run-easel) owns headcount/compensation planning and reads permitted labor actuals; it cannot run pay. [Coaster](https://github.com/just-every/run-coaster) owns expense approval and its ACH; only an explicit company choice sends an unpaid reimbursement through ENV-036. [Purse](https://github.com/just-every/run-purse) owns suppliers/POs; Envelope pays people.",
       "to": "section",
       "section": "Boundaries"
     },
     {
       "file": "CONTRACT.md",
       "line": 224,
-      "text": "- **Practice, identity and automation:** [Blotter](https://github.com/just-every/run-blotter) owns firm client work/deadlines/billing; ENV-029/044 link to actual payroll operations here. [Auth](https://github.com/just-every/run-auth) authenticates, Envelope grants payroll roles. [Inkwell](https://github.com/just-every/run-inkwell) holds document signatures under ENV-037/044; a signature is not general payroll approval. [Crank](https://github.com/just-every/run-crank) orchestrates within scoped grants; ENV-030/052 enforce exact payroll authority.",
+      "text": "**Practice, identity and automation:** [Blotter](https://github.com/just-every/run-blotter) owns firm client work/deadlines/billing; ENV-029/044 link to actual payroll operations here. [Auth](https://github.com/just-every/run-auth) authenticates, Envelope grants payroll roles. [Inkwell](https://github.com/just-every/run-inkwell) holds document signatures under ENV-037/044; a signature is not general payroll approval. [Crank](https://github.com/just-every/run-crank) orchestrates within scoped grants; ENV-030/052 enforce exact payroll authority.",
       "to": "section",
       "section": "Boundaries"
     },
     {
       "file": "CONTRACT.md",
       "line": 225,
-      "text": "- **Earnings sources:** [Gauge](https://github.com/just-every/run-gauge), [Plinth](https://github.com/just-every/run-plinth), [Glove](https://github.com/just-every/run-glove), [Mallet](https://github.com/just-every/run-mallet), [Strap](https://github.com/just-every/run-strap) and [Orbit](https://github.com/just-every/run-orbit) retain their job, commission and per-service records. ENV-041 imports approved earnings and returns restricted labor cost; it does not rebuild those products.",
+      "text": "**Earnings sources:** [Gauge](https://github.com/just-every/run-gauge), [Plinth](https://github.com/just-every/run-plinth), [Glove](https://github.com/just-every/run-glove), [Mallet](https://github.com/just-every/run-mallet), [Strap](https://github.com/just-every/run-strap) and [Orbit](https://github.com/just-every/run-orbit) retain their job, commission and per-service records. ENV-041 imports approved earnings and returns restricted labor cost; it does not rebuild those products.",
       "to": "section",
       "section": "Boundaries"
     },
     {
       "file": "CONTRACT.md",
       "line": 226,
-      "text": "- **Regulated partners:** sponsor banks/ACH processors or embedded rails execute money movement, authorized reporting-agent/agency channels accept filings, recordkeepers receive retirement funds and carriers underwrite insurance. Envelope still owns setup, approval, deadlines, proof, reconciliation and exception completion. No broad bank charter, lending, tax-adviser opinion or insurance brokerage is implied by payroll software. Missing provider applications, production permission or unsupported rail coverage remain explicit unfinished obligations.",
+      "text": "**Regulated partners:** sponsor banks/ACH processors or embedded rails execute money movement, authorized reporting-agent/agency channels accept filings, recordkeepers receive retirement funds and carriers underwrite insurance. Envelope still owns setup, approval, deadlines, proof, reconciliation and exception completion. No broad bank charter, lending, tax-adviser opinion or insurance brokerage is implied by payroll software. Missing provider applications, production permission or unsupported rail coverage remain explicit unfinished obligations.",
       "to": "section",
       "section": "Boundaries"
     },
     {
       "file": "CONTRACT.md",
       "line": 227,
-      "text": "- **Separate employment models:** PEO co-employment goes to Justworks/TriNet or an equivalent separate service; overseas EOR goes to Deel/Remote. Benefits brokerage stays with a licensed broker/Willow-connected partner. US payroll for the employer's own workers remains complete; territories/non-US employee payroll are later markets, not silent omissions within the promised 50-state/DC/local target.",
+      "text": "**Separate employment models:** PEO co-employment goes to Justworks/TriNet or an equivalent separate service; overseas EOR goes to Deel/Remote. Benefits brokerage stays with a licensed broker/Willow-connected partner. US payroll for the employer's own workers remains complete; territories/non-US employee payroll are later markets, not silent omissions within the promised 50-state/DC/local target.",
       "to": "section",
       "section": "Boundaries"
     },
@@ -13523,15 +13692,15 @@
       "line": 454,
       "cell": "gap",
       "text": "Adopted interim (ct 22 Oct 2026): calendar-day salary proration previews only, under a named proration hold. It is never approved, payable or dispatched, and it does not authorize any deduction. Extended preparation now supports human-chosen effective group methods and coded leave previews, also never payable.",
-      "to": "rulings",
+      "to": "gap",
       "ids": [
-        "RL-9"
+        "ENV-084"
       ],
       "also": [
         {
-          "to": "gap",
+          "to": "rulings",
           "ids": [
-            "ENV-084"
+            "RL-9"
           ]
         }
       ]
@@ -14908,22 +15077,22 @@
       "file": "ACCEPTANCE.md",
       "line": 193,
       "text": "| Published | 1 | 0 | 0 | 1 |",
-      "to": "copy",
-      "of": 434
+      "to": "generated",
+      "note": "The contract generator writes this status count."
     },
     {
       "file": "ACCEPTANCE.md",
       "line": 194,
       "text": "| Target and push further | 4 | 25 | 45 | 74 |",
-      "to": "copy",
-      "of": 435
+      "to": "generated",
+      "note": "The contract generator writes this status count."
     },
     {
       "file": "ACCEPTANCE.md",
       "line": 195,
       "text": "| All | 5 | 25 | 45 | 75 |",
-      "to": "copy",
-      "of": 436
+      "to": "generated",
+      "note": "The contract generator writes this status count."
     },
     {
       "file": "ACCEPTANCE.md",

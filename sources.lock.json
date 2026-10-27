@@ -318,11 +318,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "9b76d3ff50538ecc2b51c74c6d16b2c69b8d93961c8512d4a5c6974bcd144d4e",
+      "sha256": "a77db4e189fdc2977f156cc68c777620e58dc41763f1009cba925df831e095d3",
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "bb5055a9eacd2d2600136360dd23ef3d2cbe8fa6f598552034c97a8208940d7e",
+      "sha256": "884104026f5986c017c1d712438c96823fb8e8d281c113e6555df2489c2218b2",
       "executable": false
     },
     "base-copies.json": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b86fe18f36ce9cd64ac0cbc16cfeeee2c14d08e1e8798a4eff0d8d435e7412fc",
+      "sha256": "398ce9ad982de675ecb6ce1ebc9541c7b54a79b255253efd87e78426aae7d318",
       "executable": false
     },
     "deploy-demo.json": {
@@ -378,7 +378,7 @@
       "executable": false
     },
     "docs/contract/COVERAGE.json": {
-      "sha256": "abef1fac4cb08ad7eb2da6ee4a24b62d33ef39ff8700efe2c730b652f61867a4",
+      "sha256": "fd79142331a82a5f3f21e42466af61f21b256616f6d3a21e451663c6dacb60be",
       "executable": false
     },
     "docs/contract/ID-MAP.json": {
@@ -1858,7 +1858,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "6b919f56f867e3a3e4d94e2e03f63d55b4c433feeb54703b8feb670c90af4f5f",
+      "sha256": "8d7e1752c40082f29cee7ea2775b19f1fba4b113c857e47cc3959db99da56a1f",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
