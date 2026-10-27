@@ -559,7 +559,7 @@ export function paySettingsPage(
 ) {
   const base = companyPath(actor.company) + '/pay-settings'
   const revisions = (
-    kind: 'group' | 'pay-item' | 'pay-change' | 'proration-policy',
+    kind: 'group' | 'pay-item' | 'pay-change' | 'proration-policy' | 'run-input',
     rows: import('./store').Revision[],
   ) =>
     rows.map((r, index) => (
@@ -739,6 +739,10 @@ export function paySettingsPage(
           retains every person's source version, effective rate, salary/hourly basis,
           exemption classification, employment dates and coded unpaid leave for exact human review. Untyped unpaid dates never authorize salary deductions.
         </p>
+      </Card>
+      <Card title="Prepared earnings sources">
+        {!result.intakes.length && <p>No manual or spreadsheet preparation yet.</p>}
+        {revisions('run-input',result.intakes as unknown as import('./store').Revision[])}
       </Card>
       <Card title="Prepare hours and earnings">
         <p>Download a template, keep each source row ID stable, and enter the worker ID and work date. Blank cells preserve existing values; zero replaces a value. Tips require cash for already-held funds or paycheck for money still owed. Preparation shows exact changes for review before they enter the run.</p>

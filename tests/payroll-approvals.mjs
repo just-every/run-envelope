@@ -491,7 +491,8 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await release(caRun, caVersion, 'run_not_payable')
     version = await run(waRun, version, waSetup.group)
     page = await capture('run-assessment-binding', screen + '/earnings-run/' + waRun + '/review', 'approver-b')
-    assert.match(await page.locator('main').innerText(), /WA.*synthetic-envelope-354/s, 'exact review shows retained state and risk class')
+    await page.setViewportSize({width:1440,height:1000})
+    assert.ok((await page.locator('main').innerText()).includes('state WA; wa-li: riskClass: synthetic-envelope-354'), 'exact review shows retained state and risk class independently of the rule name')
     await publish({ ...rule, id: 'synthetic-envelope-355', name: 'Final CA FUTA credit reduction', family: 'futa', state: 'CA',
       value: '1.2', unit: 'percent', sourceUrl: 'https://oui.doleta.gov/unemploy/futa_credit.asp',
       details: { reduction: '1.2', bcr: '0', addOn: '0', finalNoticeRef: 'synthetic-envelope-356' } })
@@ -647,6 +648,24 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await release(tipRun, tipVersion, 'run_not_payable')
     await tip(373, 'cash', 60000, 1500, 1)
     await release(tipRun, tipVersion, 'run_sources_changed')
+    // A spreadsheet correction and source withdrawal invalidate real human run approvals.
+    const intakeRun='synthetic-envelope-379'
+    const intakeBody={id:intakeRun,version:0,groupId:waSetup.group.id,periodStart:period.periodStart,periodEnd:period.periodEnd,
+      rows:[{rowId:'synthetic-envelope-379-row',personId:w1.id,day:'2026-03-02',code:'bonus',amountCents:10000,sourceRef:'synthetic-envelope-379-source'}]}
+    await data(door+'/intake',intakeBody,201)
+    await approveSetup('run-input',intakeRun)
+    const intakeVersion=await run(intakeRun,0,waSetup.group)
+    await approve(intakeRun,'owner');await approve(intakeRun,'approver-b')
+    await release(intakeRun,intakeVersion,'run_not_payable')
+    const oldIntakeRun=(await data(door)).runs.find(row=>row.id===intakeRun)
+    await data(door+'/intake',{...intakeBody,version:1,rows:[{...intakeBody.rows[0],amountCents:0}]},201)
+    await release(intakeRun,intakeVersion,'run_sources_changed')
+    assert.deepEqual((await data(door)).runs.find(row=>row.id===intakeRun).data,oldIntakeRun.data,'file correction preserves the exact approved run')
+    await approveSetup('run-input',intakeRun)
+    const refreshedIntakeVersion=await run(intakeRun,intakeVersion,waSetup.group)
+    await approve(intakeRun,'owner');await approve(intakeRun,'approver-b')
+    await data(door+'/run-input/'+intakeRun+'/withdraw',{version:2})
+    await release(intakeRun,refreshedIntakeVersion,'run_sources_changed')
     // Official OIDC ID-token schema edge: a pinned issuer signs fresh, nonce-bound MFA.
     const signing=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
     const jwk={...await crypto.subtle.exportKey('jwk',signing.publicKey),kid:'synthetic-envelope-822',alg:'ES256',use:'sig'}

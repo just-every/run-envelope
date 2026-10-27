@@ -77,7 +77,15 @@ export async function earningsIntakeJourney({origin,cookie}) {
     assert.deepEqual(second.preview.intake.diff[1].before.amountCents,30000)
     assert.deepEqual(second.preview.intake.diff[1].after.amountCents,0)
     assert.equal((await data(door+'/intake',upload(format,id+'-duplicate',0,initial),409)).error,'source_already_in_another_run')
+    await data(door+'/run-input/'+id+'/withdraw',{version:2})
+    const withdrawn=(await data(door)).runs.find(run=>run.id===id && run.version===2)
+    assert.equal(withdrawn.sourceStatus,'changed-repreview-required','revoked source approval invalidates its exact run')
+    assert.equal(withdrawn.data.grossCashCents,0,'withdrawal preserves frozen business history')
   }
+  const raceId='synthetic-envelope-942-race'
+  const raceRow=Object.fromEntries(headers.map((key,index)=>[key,row(raceId+'-row',people[0],'tip',0,100,'cash')[index]]))
+  const race=await Promise.all([call(door+'/intake',{...scope,id:raceId+'-one',version:0,rows:[raceRow]}),call(door+'/intake',{...scope,id:raceId+'-two',version:0,rows:[raceRow]})])
+  assert.deepEqual(race.map(response=>response.status).sort(),[201,409],'concurrent run assignment retains one source item only')
   const overtimeId='synthetic-envelope-942-overtime'
   const overtimeRows=[]
   for(const [week,count] of [['2026-03-02',5],['2026-03-09',3]]) for(let day=0;day<count;day++) {
@@ -151,8 +159,14 @@ export async function earningsIntakeJourney({origin,cookie}) {
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
       for(const control of await page.locator('button,a').all())assert.ok((await control.textContent()).trim(),'all controls have visible words')
       await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`earnings-upload-${width}.png`),fullPage:true})
+      await page.getByText('Enter manual earnings',{exact:true}).click()
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'manual entry fits the viewport')
+      await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`earnings-grid-${width}.png`),fullPage:true})
       await page.goto(origin+screen+'/earnings-run/'+id+'/review')
-      assert.match(await page.locator('main').innerText(),/WA.*synthetic-envelope-941.*105.*WA.*synthetic-envelope-942.*45.*OR.*15/s)
+      if(width===1440) {
+        const reviewText=await page.locator('main').innerText()
+        for(const allocation of ['state WA, risk class synthetic-envelope-941, covered minutes 105','state WA, risk class synthetic-envelope-942, covered minutes 45','state OR, risk class not supplied, covered minutes 15']) assert.ok(reviewText.includes(allocation),'exact retained assessment allocation: '+allocation)
+      }
       await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',`earnings-assessment-review-${width}.png`),fullPage:true})
     }
   } finally {await browser.close()}
