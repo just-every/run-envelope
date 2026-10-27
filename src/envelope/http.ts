@@ -1,3 +1,4 @@
+import { accountingResponse } from './accounting/http'
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
 import { prepareBonus, readBonus, bonusReport } from './bonus-runs'
@@ -442,6 +443,8 @@ export async function payrollResponse(
     if (claim) return claim
     const industry = await industryResponse({ ui, post, parts, value, records, session, companies })
     if (industry) return industry
+    const accounting = await accountingResponse({ ui, post, parts, value, records, session, companies })
+    if (accounting) return accounting
     const automation = await automationResponse({ ui, post, parts, value, records, session, companies })
     if (automation) return automation
     const firm = await firmResponse({ url, ui, post, parts, value, records, session, companies })
