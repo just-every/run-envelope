@@ -4909,8 +4909,8 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
         await page.setViewportSize({width,height:1000})
         assert.equal((await page.goto(origin+(label==='grants'?base+'/grants':door).replace('/api/','/app/'))).status(),200)
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
-        for(const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim().length>1,'paper and grant controls have visible labels')
         await page.locator('details').evaluateAll(elements=>elements.forEach(element=>element.open=true))
+        for(const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim().length>1,'paper and grant controls have visible labels: '+await control.getAttribute('href'))
         if(label==='originals') {assert.equal(await page.getByRole('link',{name:'Download signed state original',exact:true}).count(),5);assert.equal(await page.getByRole('button',{name:'Record signed paper version',exact:true}).count(),0)}
         if(label==='reviewer') assert.equal(await page.getByRole('link',{name:/Download signed/}).count(),0)
         await page.screenshot({path:join(folder,'paper-staff-'+label+'-'+width+'.png'),fullPage:true})
