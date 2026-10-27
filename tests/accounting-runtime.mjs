@@ -72,8 +72,9 @@ export async function accountingJourney({ origin, cookie, sql, settings, restart
     assert.ok((await page.locator('body').innerText()).includes('proposed net $80.00'))
     assert.equal((await data(door)).journals.length, 0)
     for (const width of [1440, 390]) { await page.setViewportSize({width, height:1000}); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true); await page.screenshot({path:join(proof,'accounting-preview-'+width+'.png'),fullPage:true}) }
+    await page.setViewportSize({ width:1440, height:1000 })
     const prepared = page.waitForResponse(r => r.request().method() === 'POST' && new URL(r.url()).pathname === screen + '/prepare')
-    await worksheet.getByRole('button', { name: 'Prepare worksheet', exact: true }).click(); assert.equal((await prepared).status(), 303); await page.waitForLoadState('networkidle')
+    await worksheet.getByRole('button', { name: 'Prepare worksheet', exact: true }).focus(); await page.keyboard.press('Enter'); assert.equal((await prepared).status(), 303); await page.waitForLoadState('networkidle')
     await assertError(door + '/prepare', proposal, 409, 'input_or_authority_changed')
     const path = door + '/journals/' + proposal.id
     await assertError(path + '/post', { version: 1 }, 409, 'journal_review_required')
@@ -86,7 +87,7 @@ export async function accountingJourney({ origin, cookie, sql, settings, restart
     await assertError(path + '/approve', {version:1,reviewToken:review.reviewToken}, 409, 'review_stale')
     await capture('review', path.replace('/api/', '/app/') + '/review')
     await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(origin + path.replace('/api/', '/app/') + '/review')
-    await page.getByRole('button', { name: 'Approve journal preparation', exact: true }).click(); await page.waitForURL(origin + screen)
+    await page.getByRole('button', { name: 'Approve journal preparation', exact: true }).focus(); await page.keyboard.press('Enter'); await page.waitForURL(origin + screen)
     const original = (await data(door)).journals[0]
     assert.ok(original.approvedBy)
     assert.equal(original.data.postingState, 'unavailable')
