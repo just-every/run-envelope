@@ -72,6 +72,49 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
   await data(tipApi+'/tip-tax-funds',receiptBody,409)
   await data(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-tip-alias'},409)
   await data(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-tip-excess',receiptRef:'synthetic-envelope-excess',amountCents:100000},409)
+  // One physical receipt cannot fund another run or another worker.
+  const nextTaxRun = 'synthetic-envelope-tip-next-run'
+  const nextRows = taxRows.map(row => ({...row,sourceId:row.sourceId+'-next',...(row.code==='tip' ? {settlement:'cash',amountCents:60000} : {})}))
+  const nextPreview = await data(taxDoor+'/preview',{id:nextTaxRun,version:0,namespace:'synthetic-envelope-next-tip-reports',rows:nextRows})
+  await data(taxDoor+'/apply',{id:nextTaxRun,version:0,namespace:nextPreview.data.namespace,rows:nextPreview.data.rows,digest:nextPreview.digest,format:'grid'},201)
+  const nextReview = await data(taxDoor+'/'+nextTaxRun+'/review')
+  await data(taxDoor+'/'+nextTaxRun+'/approve',{version:1,reviewToken:nextReview.reviewToken})
+  await data(taxPay+'/earnings-run',{id:nextTaxRun,version:0,groupId,periodStart:'2026-01-19',periodEnd:'2026-01-25',payDate:'2026-01-30',frequency:'weekly'},201)
+  await data(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-cross-run-receipt',runId:nextTaxRun},409)
+  await data(secondTipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-cross-person-receipt',runId:nextTaxRun,amountCents:1},409)
+  const untouched = await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-next-run-unfunded',runId:nextTaxRun},201)
+  assert.equal(untouched.data.result.furnishedCents,0)
+  assert.equal(untouched.data.result.reportingBasis.form941.line9AdjustmentCents,-656)
+
+  // Independent high-YTD fixture exercises Additional Medicare shortage reporting.
+  const highRun = 'synthetic-envelope-tip-high-run'
+  const highRows = taxRows.map(row => ({...row,sourceId:row.sourceId+'-high',...(row.code==='tip' && row.settlement==='cash' ? {amountCents:600000} : {})}))
+  const highPreview = await data(taxDoor+'/preview',{id:highRun,version:0,namespace:'synthetic-envelope-high-tip-reports',rows:highRows})
+  await data(taxDoor+'/apply',{id:highRun,version:0,namespace:highPreview.data.namespace,rows:highPreview.data.rows,digest:highPreview.digest,format:'grid'},201)
+  const highReview = await data(taxDoor+'/'+highRun+'/review')
+  await data(taxDoor+'/'+highRun+'/approve',{version:1,reviewToken:highReview.reviewToken})
+  await data(taxPay+'/earnings-run',{id:highRun,version:0,groupId,periodStart:'2026-01-19',periodEnd:'2026-01-25',payDate:'2026-01-30',frequency:'weekly'},201)
+  const highBasis = {...taxBody,runId:highRun,socialSecurityBeforeCents:18450000,medicareBeforeCents:20000000}
+  const highBefore = await data(tipApi+'/tip-tax-previews',{...highBasis,id:'synthetic-envelope-high-before'},201)
+  assert.equal(highBefore.data.result.uncollected.socialSecurityCents,0)
+  assert.equal(highBefore.data.result.uncollected.medicareCents,4540)
+  assert.equal(highBefore.data.result.uncollected.additionalMedicareCents,5400)
+  assert.equal(highBefore.data.result.reportingBasis.form941.line9AdjustmentCents,-9940)
+  assert.equal(highBefore.data.result.reportingBasis.form944.line6AdjustmentCents,-9940)
+  assert.deepEqual(highBefore.data.result.reportingBasis.w2Box12,{A:0,B:4540})
+  await data(tipApi+'/tip-tax-funds',{...highBasis,id:'synthetic-envelope-high-receipt',amountCents:500,status:'received',receiptRef:'synthetic-envelope-high-actual'},201)
+  const highAfter = await data(tipApi+'/tip-tax-previews',{...highBasis,id:'synthetic-envelope-high-after'},201)
+  assert.equal(highAfter.data.result.uncollected.medicareCents,4040)
+  assert.equal(highAfter.data.result.uncollected.additionalMedicareCents,5400)
+  assert.equal(highAfter.data.result.reportingBasis.form941.line9AdjustmentCents,-9440)
+  assert.equal(highAfter.data.result.reportingBasis.form944.line6AdjustmentCents,-9440)
+  assert.deepEqual(highAfter.data.result.reportingBasis.w2Box12,{A:0,B:4040})
+  const crossRunRace = await Promise.all([
+    {...highBasis,id:'synthetic-envelope-receipt-race-high'},
+    {...taxBody,runId:nextTaxRun,id:'synthetic-envelope-receipt-race-next'},
+  ].map(basis => call(tipApi+'/tip-tax-funds',{...basis,amountCents:1,status:'received',receiptRef:'synthetic-envelope-one-physical-receipt'})))
+  assert.deepEqual(crossRunRace.map(r=>r.status).sort(),[201,409],'Concurrent different runs may claim one physical receipt only once')
+
   const reduced=await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-after'},201)
   assert.equal(reduced.data.result.furnishedCents,500);assert.equal(reduced.data.result.uncollected.socialSecurityCents,126);assert.equal(reduced.data.result.uncollected.medicareCents,30)
   assert.equal(reduced.data.result.reportingBasis.form941.line9AdjustmentCents,-156);assert.equal(reduced.data.result.netCashCents,0)
