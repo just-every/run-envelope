@@ -39,12 +39,24 @@ export async function multiCompanyJourney(context) {
   assert.equal(report.rows.length,2)
   assert.ok(report.rows.some(row=>row.checkId===corrected.id))
   assert.ok(!report.rows.some(row=>row.checkId===checks[0].id))
+  const sameIdCorrection = await preview(b,b.people[0],{id:checks[1].id,version:1,corrects:checks[1].id,correctionReason:'Reviewed same-identity register correction',yearToDate:{socialSecurityWagesCents:0,medicareWagesCents:0,futaWagesCents:700000}})
+  assert.equal(sameIdCorrection.version,2)
+  const assertCorrectedReport = async (employerTaxCents) => {
+    const current = await data(reportDoor)
+    assert.deepEqual(current.rows.map(row=>[row.companyId,row.personId,row.runId,row.checkId,row.grossCents,row.netCents]).sort(),
+      [[a.id,a.people[0].id,a.run.id,corrected.id,100000,84542],[b.id,b.people[0].id,b.run.id,checks[1].id,100000,83542]].sort())
+    assert.deepEqual(current.totals,{grossCents:200000,netCents:168084,employeeTaxCents:31916,employerTaxCents})
+  }
+  await assertCorrectedReport(27300)
+  await approve(b,b.people[0],'industry-check',sameIdCorrection.id)
+  await assertCorrectedReport(21300)
+  checks[1] = sameIdCorrection
   const duplicate = await preview(a,a.people[0])
   await approve(a,a.people[0],'industry-check',duplicate.id)
   const ambiguous = await call(reportDoor)
   assert.equal(ambiguous.status,409);assert.equal((await ambiguous.json()).error,'ambiguous_prepared_checks')
   await data(path(a,a.people[0])+'/decision/industry-check/'+duplicate.id,{version:1,withdraw:true})
-  assert.deepEqual((await data(reportDoor)).totals,{grossCents:200000,netCents:168084,employeeTaxCents:31916,employerTaxCents:27300})
+  assert.deepEqual((await data(reportDoor)).totals,{grossCents:200000,netCents:168084,employeeTaxCents:31916,employerTaxCents:21300})
   const snapshot = () => sql('SELECT * FROM env_workspace_versions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_workspace_decisions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_audit ORDER BY id; SELECT * FROM env_people ORDER BY company_id,id; SELECT * FROM env_private_records ORDER BY company_id,person_id,kind; SELECT * FROM env_run_approvals ORDER BY company_id,run_id,version')
   const refused = async (request, status) => { const before = await snapshot(); const response = await request(); assert.equal(response.status,status,await response.clone().text()); assert.deepEqual(await snapshot(),before,'a refused cross-company or unavailable payment request writes nothing'); return response }
   const accountInput = {id:'synthetic-envelope-funding-a',version:0,name:'Operating account A',lastFour:'0101',accountReference:'synthetic-envelope-6101'}
@@ -61,7 +73,7 @@ export async function multiCompanyJourney(context) {
     assert.ok(!JSON.stringify(visible).includes('accountReference'))
     plans.push(await data(c.base+'/funding-plans',{id:'synthetic-envelope-plan-'+index,version:0,runId:c.run.id,runVersion:1,accountId:account.id,accountVersion:1},201))
     await refused(() => call(c.base+'/funding-plans/'+plans[index].id+'/release',{version:1}),409)
-    const form = await data(c.base+'/industry-returns',{id:'synthetic-envelope-separate-return-'+index,version:0,form:'941',taxYear:2026,quarter:4,checks:[{personId:c.people[0].id,id:checks[index].id,version:1}],address:{street:'100 Main Street',city:'Austin',state:'TX',postalCode:'78701'},employeeCount:0,depositsCents:0,basis:'Separate reviewed employer payroll'},201)
+    const form = await data(c.base+'/industry-returns',{id:'synthetic-envelope-separate-return-'+index,version:0,form:'941',taxYear:2026,quarter:4,checks:[{personId:c.people[0].id,id:checks[index].id,version:checks[index].version}],address:{street:'100 Main Street',city:'Austin',state:'TX',postalCode:'78701'},employeeCount:0,depositsCents:0,basis:'Separate reviewed employer payroll'},201)
     const exact = await data(c.base+'/industry-returns/'+form.id+'/review')
     assert.equal(exact.data.company.legalName,c.name)
     assert.equal(exact.data.totals.incomeTaxWithheldCents,index?8808:7808)

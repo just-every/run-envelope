@@ -68,9 +68,10 @@ export async function combinedLaborReport(records: Records) {
     const people = await records.people(actor)
     for (const person of people) {
       const checks = await store.list<IndustryCheck>(actor, 'industry-check', person.id, true)
-      const latest = checks.filter((row, index) => checks.findIndex(other => other.id === row.id) === index)
-      const eligible = latest.filter(row => row.approvedBy && !row.withdrawnBy && row.sourcesCurrent)
-      const replaced = new Set(eligible.map(row => row.data.corrects).filter(Boolean))
+      const approved = checks.filter(row => row.approvedBy)
+      const latest = approved.filter((row, index) => approved.findIndex(other => other.id === row.id) === index)
+      const eligible = latest.filter(row => !row.withdrawnBy && row.sourcesCurrent)
+      const replaced = new Set(eligible.filter(row => row.data.corrects !== row.id).map(row => row.data.corrects).filter(Boolean))
       const active = eligible.filter(row => !replaced.has(row.id))
       if (new Set(active.map(row => row.data.runId)).size !== active.length) throw new PayrollError('ambiguous_prepared_checks', 409)
       for (const check of active) {

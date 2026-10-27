@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "723774558d07abef4bfee5b8b33c18dafab957eba88dd7a8e3c1bdc1751d4a68",
+      "sha256": "a9bf66c7b4eb775b625b7ac522b71f9c572096320bc2255aeffd1b367ca9b450",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "a51e0317e9f37fece8d06954ee16b296981bb1dd04c8767745c40cbe7ace4c1f",
+      "sha256": "88aaa9cd0967ef5e021bf038519bcb093655bd3ac04afe01deff85826c6bb013",
       "executable": false
     },
     "deploy-demo.json": {
@@ -378,7 +378,7 @@
       "executable": false
     },
     "docs/multiple-companies.md": {
-      "sha256": "09967dcab93446f5c414185f81da0a0411249ffed561b6ec52f930c4b0f548a0",
+      "sha256": "132a4028cbb54e0886180c10d73eb9c539f657f138f6101b525774d97c27feec",
       "executable": false
     },
     "docs/paper-onboarding.md": {
@@ -1414,7 +1414,7 @@
       "executable": false
     },
     "src/envelope/companies.ts": {
-      "sha256": "8e939ed14613a3df91f6864a38ed64da0601dfe0c16027fd65c5e30850f91120",
+      "sha256": "bcd98d7a32842e28e2834a0ce07ddf0dc327d9306a5807b2067180b777afd69b",
       "executable": false
     },
     "src/envelope/connectors/hris/adapters.ts": {
@@ -3018,7 +3018,7 @@
       "executable": false
     },
     "tests/multi-company-runtime.mjs": {
-      "sha256": "582f5db9e3a0582fe7ede32a7b5ad2588acdb1e2b58f3e8d8beb164ffbc46787",
+      "sha256": "53ccde20ab3dee65574de96c2f76e28a408b7946883735c2d52acf2252911500",
       "executable": false
     },
     "tests/new-hire-clock.mjs": {
