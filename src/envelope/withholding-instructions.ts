@@ -1,3 +1,5 @@
+import { federalIncomeTax } from './industry/federal-withholding'
+import type { IndustryPayInput, FederalW4 } from './industry/types'
 import type { Actor } from './access'
 import type { Input } from './records'
 import { PayrollError,date,text } from './security'
@@ -64,6 +66,24 @@ export class WithholdingInstructions {
     const row=(await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person)).find(r=>r.version===version)
     if(!row) throw new PayrollError('lock_in_original_unavailable',404)
     return Uint8Array.from(atob(row.data.original.pdf),c=>c.charCodeAt(0))
+  }
+  async forCheck(actor:Actor,person:string,input:IndustryPayInput) {
+    const rows=await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person,false,false)
+    const relevant=rows.filter(r=>r.data.effectiveFrom<=input.payDate),pending=relevant[0],active=relevant.find(r=>r.approvedBy && !r.withdrawnBy)
+    if(!pending) return null
+    this.owner(actor)
+    if(pending.data.kind!=='release' && (!active || pending.version>active.version)) throw new PayrollError('lock_in_human_implementation_required',409)
+    if(!active || !active.sourcesCurrent) throw new PayrollError('current_reviewed_lock_in_required',409)
+    if(await this.identity(actor,person)!==active.data.identityDigest) throw new PayrollError('lock_in_identity_reconciliation_required',409)
+    if(active.data.kind==='release') return {id:active.id,version:active.version,sourceVersion:pending.version,kind:'release',effectiveFrom:active.data.effectiveFrom,selectedW4:input.w4,lockedIncomeTaxCents:null,electedIncomeTaxCents:null,decision:'reviewed-irs-release'}
+    const d=active.data
+    const locked:FederalW4={version:'2019_or_earlier',filingStatus:d.filingStatus==='married'?'married_joint':'single',allowances:d.maximumAllowances,extraWithholdingCents:d.minimumAdditionalCents,firstPaidBefore2020:true}
+    const calculate=(w4:FederalW4)=>{
+      try {return federalIncomeTax({taxYear:Number(input.payDate.slice(0,4)) as 2025|2026,taxableWagesCents:input.cashGrossCents,periodsPerYear:input.periodsPerYear,w4,nonresidentAdjustment:false}).incomeTaxCents}
+      catch(error) {throw new PayrollError(error instanceof Error?error.message:'invalid_lock_in_calculation')}
+    }
+    const lockedIncomeTaxCents=calculate(locked),electedIncomeTaxCents=calculate(input.w4)
+    return {id:active.id,version:active.version,sourceVersion:pending.version,kind:d.kind,effectiveFrom:d.effectiveFrom,selectedW4:electedIncomeTaxCents>=lockedIncomeTaxCents?input.w4:locked,lockedIncomeTaxCents,electedIncomeTaxCents,decision:electedIncomeTaxCents>=lockedIncomeTaxCents?'higher-or-equal-election':'binding-irs-instruction'}
   }
   async checkElection(actor:Actor,person:string,form:{form:string;effectiveFrom:string;fields:Input},tin:string) {
     // Pin before inspecting: a concurrent letter or human decision invalidates entry.

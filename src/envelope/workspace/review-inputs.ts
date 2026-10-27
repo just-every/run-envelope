@@ -18,9 +18,9 @@ const counts = (company: string, kind: string, person: string, except: string) =
   }
 }
 /** Collection changes matter to a pending comparison, not to an already adopted rate. */
-export function currentReviewInputs(alias: string) {
+export function currentReviewInputs(alias: string, kinds?: readonly string[]) {
   const c = counts(`${alias}.company_id`, 'ri.source_kind', 'ri.source_person_id', 'ri.except_id')
-  return `NOT EXISTS(SELECT 1 FROM env_workspace_review_inputs ri WHERE ri.company_id=${alias}.company_id AND ri.kind=${alias}.kind AND ri.object_id=${alias}.object_id AND ri.version=${alias}.version AND (${c.versions}!=ri.versions OR ${c.decisions}!=ri.decisions))`
+  return `NOT EXISTS(SELECT 1 FROM env_workspace_review_inputs ri WHERE ri.company_id=${alias}.company_id AND ri.kind=${alias}.kind AND ri.object_id=${alias}.object_id AND ri.version=${alias}.version ${kinds ? `AND ri.source_kind IN (${kinds.map(kind=>`'${kind}'`).join(',')})` : ''} AND (${c.versions}!=ri.versions OR ${c.decisions}!=ri.decisions))`
 }
 export function reviewInputFence(company: string, sets: ReviewInputSet[]) {
   const c = counts('?', "json_extract(pin.value,'$.kind')", "json_extract(pin.value,'$.personId')", "json_extract(pin.value,'$.exceptId')")

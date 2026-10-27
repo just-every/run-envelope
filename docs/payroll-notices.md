@@ -126,7 +126,7 @@ The notice review screen links to **Manage notice evidence and deadlines**. This
 bounded ENV-025 increment retains original PDFs, unverified OCR text, checked
 facts, corrections, deposit proof and reported agency responses. It supports
 SUI rate letters and IRS deposit mismatches. It does not implement automatic OCR,
-agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll changes.
+agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll payment.
 
 The current conservative policy is pending CT review: only the configured native
 installation owner with a current company session may use case routes or download
@@ -164,8 +164,7 @@ corresponding app route. An agent bearer cannot use these native-human doors.
   case review and separate rule review. The final SUI rule must match state,
   percentage and effective date, with `sourceRef` exactly
   `notice:<notice id>:<original PDF sha256>`. A source edit or withdrawal makes
-  the link stale. Linking is not application of a rate to calculated wages or
-  liabilities. Existing rule administration remains the human review door.
+  the link stale. Linking alone does not apply a rate. The regular-wage preview below can calculate a bounded employer liability. Existing rule administration remains the human review door.
 - `GET /original/:version/:index` downloads the exact retained PDF, with private
   no-store headers and current authority. Index zero is the notice original;
   later indexes are evidence in recorded order. Native multipart uploads are
@@ -245,3 +244,41 @@ https://www.irs.gov/individuals/understanding-your-letter-2800c
 disregard of a decreasing W-4, permitted increases, and immediate modification
 on receipt of Letter 2808C. A synthetic matching-format PDF and a human-reported
 source check in a journey do not establish actual IRS authenticity or legal effect.
+
+
+## Reviewed notice application in regular-wage previews
+
+The existing industry check door now applies a selected SUI notice to ordinary
+single-state business employee wages retained in the selected earnings run.
+The case version after linking and the exact final rule version both require
+human review. The rule must retain `details.wageBaseCents`, an official
+`details.wageBaseSourceUrl` and `details.wageBaseReference`. The check requires
+`suiNoticeId`, explicit `suiYearToDateWagesCents` and `suiYearToDateEvidence` for
+that worker and employer in that tax year. A known applicable notice cannot be
+bypassed by omitting its selection. Ambiguous cases, missing wage basis, changed
+sources, unreviewed rules, special taxability and mixed-state work refuse.
+
+The taxable amount is the smaller of current retained wages and the positive
+remaining annual wage base. Decimal rate arithmetic rounds once to cents. The
+check retains the original digest, case and rule versions, source, prior wages,
+taxable wages and employer liability separately from federal taxes. SUI adds no
+employee deduction and produces no payment. Prior wages remain human-supplied
+register evidence; complete reconciliation and SUI legal coverage are unproved.
+
+A due retained IRS instruction is also checked at the regular-wage preview door.
+Pending implementation blocks that preview. For a reviewed legacy instruction,
+Publication 15-T calculates its amount independently of the retained W-4; the
+higher amount is used for this check. Thus a current-form election cannot lower
+the calculated legacy lock-in amount and a higher election remains available.
+An approved release removes this calculation constraint; a pending release does
+not. Changed identity refuses. The check retains the selected settings, both
+compared amounts, exact instruction version, effective date and decision. New
+instruction, notice or rule versions invalidate affected check authority even
+after check approval; a stale check cannot prepare a return. These checks
+cover ordinary resident business employee cash wages only; special taxability
+refuses. Full current-format letters, all effective-date cases, actual first
+required payment and independent IRS authenticity remain unproved.
+
+This calculation default is pending CT approval alongside the existing case
+custody default. It authorizes no payroll payment, filing, external send,
+destruction or hold release, and ENV-025 remains PARTIAL.

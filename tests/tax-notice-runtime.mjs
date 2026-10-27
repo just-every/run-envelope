@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import { ordinaryFacts,ordinaryW4 } from './industry-fixture.mjs'
 import { privateValue } from './privacy-recorder.mjs'
 import { randomBytes } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
@@ -18,7 +19,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
  const input={version:0,type:'deposit-mismatch',agency:'IRS',employerEin:'00-0002525',periodStart:'2026-07-01',periodEnd:'2026-09-30',dueOn:'2026-10-28',principalCents:123456,proposedPenaltyCents:4500,pdf,quote:'CP161: principal $1,234.56; proposed penalty $45.00.',rawExtraction:'OCR: principal 1234.56; period mistakenly read as Q2.',verifiedExtraction:true}
  const get=async()=> (await data(door))[0]
  const proof=process.env.ENVELOPE_PROOF_DIR ?? '/tmp/envelope-tax-notices';await mkdir(proof,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
  try {
   const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
   const capture=async (label,target=screen)=>{
@@ -85,7 +86,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   const sui=await data(base+'/notices',{locationId:location.id,reference:'Synthetic Ohio SUI rate letter',body:'Synthetic Ohio SUI rate 2.7%, effective January 1, 2026.'},201),suiDoor=base+'/notices/'+sui.id+'/case'
   await data(suiDoor,{...input,type:'sui-rate',agency:'Ohio unemployment',state:'OH',ratePercent:'2.7',effectiveFrom:'2026-01-01',principalCents:0,proposedPenaltyCents:0},201)
   let sr=(await data(suiDoor))[0]
-  const rule={id:'synthetic-envelope-notice-sui',version:0,name:'Ohio SUI assigned rate',family:'sui',state:'OH',locality:'',effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',publishedDate:'2025-12-01',sourceUrl:'https://jfs.ohio.gov/',sourceTitle:'Synthetic agency rate letter',sourceRef:'notice:'+sui.id+':'+sr.data.original.sha256,edition:'2026',taxYear:2026,determination:'final',value:'2.7',unit:'percent',ownerId:owner,backupId:backup,approvalDue:'2026-10-28T12:00:00Z',wageDeadline:'2026-10-30T12:00:00Z'}
+  const rule={id:'synthetic-envelope-notice-sui',version:0,name:'Ohio SUI assigned rate',family:'sui',state:'OH',locality:'',effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',publishedDate:'2025-12-01',sourceUrl:'https://jfs.ohio.gov/',sourceTitle:'Synthetic agency rate letter',sourceRef:'notice:'+sui.id+':'+sr.data.original.sha256,edition:'2026',taxYear:2026,determination:'final',value:'2.7',unit:'percent',details:{wageBaseCents:900000,wageBaseSourceUrl:'https://jfs.ohio.gov/',wageBaseReference:'Synthetic reviewed Ohio wage-base source: $9,000 annual ordinary employee wages'},ownerId:owner,backupId:backup,approvalDue:'2026-10-28T12:00:00Z',wageDeadline:'2026-10-30T12:00:00Z'}
   await data(base+'/rules',rule,201)
   await data(suiDoor+'/link-rate',{version:1,ruleId:rule.id,ruleVersion:1},409)
   const suiReview=await data(suiDoor+'/review');await data(suiDoor+'/approve',{version:suiReview.version,reviewToken:suiReview.reviewToken})
@@ -95,11 +96,40 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(suiDoor+'/link-rate',{version:1,ruleId:rule.id,ruleVersion:1})
   sr=(await data(suiDoor))[0];assert.deepEqual(sr.data.rate,{id:rule.id,version:1});assert.equal(sr.payrollChanged,false);assert.equal(sr.sourcesCurrent,1)
   await capture('sui-reviewed-link',suiDoor.replace('/api/','/app/'))
-  await data(base+'/rules',{...rule,version:1,value:'2.8'},201)
-  assert.equal((await data(suiDoor))[0].sourcesCurrent,0,'Changed SUI rule cannot remain current on the case')
   // Worker-specific legacy lock-in settings constrain the existing public paper-election door.
   const person=await data(base+'/people',{name:'Synthetic lock-in employee',locationId:location.id},201),instructionDoor=base+'/people/'+person.id+'/withholding-instructions',paperDoor=base+'/people/'+person.id+'/paper-onboarding'
   await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:0,value:'900-25-2525'},201)
+  // Apply the actual reviewed notice to a retained regular-wage payroll calculation.
+  const groupId='synthetic-envelope-notice-group',changeId='synthetic-envelope-notice-pay',runId='synthetic-envelope-notice-run'
+  const approveSetting=async(kind,id)=>{const r=await data(base+'/pay-settings/review/'+kind+'/'+id);await data(base+'/pay-settings/'+kind+'/'+id+'/approve',{version:r.version,reviewToken:r.reviewToken})}
+  await data(base+'/pay-settings/group',{id:groupId,version:0,name:'Notice employee payroll',people:[person.id]},201);await approveSetting('group',groupId)
+  await data(base+'/pay-settings/pay-change',{id:changeId,version:0,name:'Reviewed ordinary hourly wages',groupId,effectiveDate:'2026-01-01',items:[{personId:person.id,personVersion:person.version,rateCents:12500,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2026-12-31',unpaidDates:[]}]},201);await approveSetting('pay-change',changeId)
+  await data(base+'/people/'+person.id+'/allocations/work',{id:'synthetic-envelope-notice-work',version:0,day:'2026-10-19',state:'OH',locality:'Columbus',minutes:480,earnedCents:100000,officeState:'OH',nyReason:'not-applicable',sourceRef:'Signed ordinary Ohio time register'},201)
+  await data(base+'/pay-settings/earnings-run',{id:runId,version:0,groupId,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',frequency:'weekly'},201)
+  const industryDoor=base+'/people/'+person.id+'/industry'
+  const classification=await data(industryDoor+'/classification',{version:0,effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',facts:ordinaryFacts,w4:ordinaryW4,evidenceTitle:'Signed employee W-4 and ordinary business employment',evidenceIssuer:'Employer',evidenceReference:'synthetic-envelope-2525',evidenceText:'Ordinary single-state employee wages and signed single W-4.'},201)
+  const cr=await data(industryDoor+'/review/industry-classification/'+classification.id);await data(industryDoor+'/decision/industry-classification/'+classification.id,{version:cr.version,reviewToken:cr.reviewToken})
+  const checkInput={id:'synthetic-envelope-notice-check',version:0,runId,runVersion:1,yearToDate:{socialSecurityWagesCents:0,medicareWagesCents:0,futaWagesCents:0},yearToDateEvidence:'Signed same-employer wage register',suiNoticeId:sui.id,suiYearToDateWagesCents:850000,suiYearToDateEvidence:'Signed same-employer and worker register: $8,500 prior SUI wages'}
+  await data(industryDoor+'/checks',{...checkInput,suiNoticeId:undefined},409)
+  await data(industryDoor+'/checks',checkInput,401,'')
+  await data(industryDoor+'/checks',checkInput,409) // Linking appends a new unreviewed case version.
+  const linkedReview=await data(suiDoor+'/review');await data(suiDoor+'/approve',{version:linkedReview.version,reviewToken:linkedReview.reviewToken})
+  await data(industryDoor+'/checks',{...checkInput,suiYearToDateWagesCents:undefined},400)
+  await data(industryDoor+'/checks',{...checkInput,suiNoticeId:notice.id},409)
+  await data(industryDoor+'/checks',checkInput,201)
+  let checks=(await data(industryDoor)).checks,calculated=checks.find(r=>r.id===checkInput.id)
+  assert.equal(calculated.data.sui.currentWagesCents,100000);assert.equal(calculated.data.sui.taxableWagesCents,50000);assert.equal(calculated.data.sui.employerLiabilityCents,1350);assert.equal(calculated.data.sui.employeeDeductionCents,0);assert.equal(calculated.data.sui.paid,false)
+  assert.equal(calculated.data.result.netCashCents,84542);assert.equal(calculated.data.totalEmployerLiabilityCents,15000);assert.equal(calculated.data.sui.originalSha256,sr.data.original.sha256)
+  await data(industryDoor+'/checks',{...checkInput,id:'synthetic-envelope-notice-cap',suiYearToDateWagesCents:900000},201)
+  assert.equal((await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-notice-cap').data.sui.employerLiabilityCents,0,'The exhausted annual wage base yields zero SUI, not an absent assessment')
+  const capReview=await data(industryDoor+'/review/industry-check/synthetic-envelope-notice-cap');await data(industryDoor+'/decision/industry-check/synthetic-envelope-notice-cap',{version:capReview.version,reviewToken:capReview.reviewToken})
+  await capture('sui-calculated',industryDoor.replace('/api/','/app/'))
+  const checkReview=await data(industryDoor+'/review/industry-check/'+checkInput.id)
+  await data(base+'/rules',{...rule,version:1,value:'2.8'},201)
+  assert.equal((await data(suiDoor))[0].sourcesCurrent,0,'Changed SUI rule cannot remain current on the case')
+  await data(industryDoor+'/decision/industry-check/'+checkInput.id,{version:checkReview.version,reviewToken:checkReview.reviewToken},409)
+  assert.equal((await data(industryDoor)).checks.find(r=>r.id===checkInput.id).sourcesCurrent,0)
+  await data(industryDoor+'/checks',{...checkInput,id:'synthetic-envelope-notice-stale'},409)
   const lockPdf=Buffer.from('%PDF-1.7\nDepartment of the Treasury, Internal Revenue Service. Letter 2800C. Employer 00-0002525. Employee 900-25-2525. Letter date August 1, 2026. Begin withholding single, maximum 1 allowance, effective September 30, 2026.\n%%EOF').toString('base64')
   privateValue('900-25-2525');privateValue('900252525');privateValue(lockPdf)
   const instruction={version:0,kind:'2800C',pdf:lockPdf,quote:'Letter 2800C: single, maximum 1 allowance, effective September 30, 2026.',employerEin:'00-0002525',workerSsn:'900-25-2525',letterOn:'2026-08-01',receivedOn:'2026-08-03',effectiveFrom:'2026-09-30',filingStatus:'single',maximumAllowances:1,minimumAdditionalCents:0,authenticated:true,authenticationMethod:'verified-agency-correspondence',authenticationReference:'Synthetic separately checked IRS correspondence reference'}
@@ -110,7 +140,28 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   const paperOriginal={signed:true,signedBy:'Synthetic lock-in employee',signedOn:'2019-12-01',pdf}
   const paper={version:0,attestTranscription:true,workerType:'employee',hiredOn:'2019-01-01',paymentMethod:'paper-check',tin:'900252525',address:'1 Synthetic Street, Columbus OH 43215',federal:{form:'W-4-pre2020',effectiveFrom:'2026-10-01',original:paperOriginal,fields:{filingStatus:'single',allowances:1,additionalCents:0,exempt:'no'}},state:{form:'OH-IT-4',effectiveFrom:'2026-10-01',original:{...paperOriginal,signedOn:'2026-10-01'},fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:0,localExemption:'none'}}}
   await data(paperDoor,paper,409)
+  // A due unapproved instruction refuses an otherwise current regular-wage check.
+  const updatedRuleReview=await data(base+'/rules/review/'+rule.id);await data(base+'/rules/'+rule.id+'/approve',{version:updatedRuleReview.version,reviewToken:updatedRuleReview.reviewToken})
+  const nextSui={...input,type:'sui-rate',agency:'Ohio unemployment',state:'OH',ratePercent:'2.8',effectiveFrom:'2026-01-01',principalCents:0,proposedPenaltyCents:0,version:2,correctionReason:'Reviewed replacement agency rate'};delete nextSui.pdf;delete nextSui.rawExtraction
+  await data(suiDoor,nextSui,201)
+  const rateCorrectionReview=await data(suiDoor+'/review');await data(suiDoor+'/approve',{version:rateCorrectionReview.version,reviewToken:rateCorrectionReview.reviewToken})
+  await data(suiDoor+'/link-rate',{version:3,ruleId:rule.id,ruleVersion:2})
+  const rateLinkReview=await data(suiDoor+'/review');await data(suiDoor+'/approve',{version:rateLinkReview.version,reviewToken:rateLinkReview.reviewToken})
+  await data(base+'/pay-settings/earnings-run',{id:runId,version:1,groupId,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',frequency:'weekly'},201)
+  const lockedCheck={...checkInput,id:'synthetic-envelope-lock-check',runVersion:2}
+  await data(industryDoor+'/checks',lockedCheck,409)
   const ir=await data(instructionDoor+'/review');await data(instructionDoor+'/approve',{version:ir.version,reviewToken:ir.reviewToken})
+  await data(industryDoor+'/checks',lockedCheck,201)
+  let lockCheck=(await data(industryDoor)).checks.find(r=>r.id===lockedCheck.id)
+  assert.equal(lockCheck.data.result.employeeTaxes.incomeTaxCents,8800,'IRS legacy single with one allowance: (1240 + (47700 - 19900) * 12%) / 52')
+  assert.equal(lockCheck.data.withholdingInstruction.electedIncomeTaxCents,7808);assert.equal(lockCheck.data.withholdingInstruction.lockedIncomeTaxCents,8800);assert.equal(lockCheck.data.withholdingInstruction.decision,'binding-irs-instruction');assert.equal(lockCheck.data.withholdingInstruction.version,1)
+  const higherClassification=await data(industryDoor+'/classification',{version:1,effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',facts:ordinaryFacts,w4:{...ordinaryW4,step4cExtraWithholdingCents:2500},evidenceTitle:'Signed higher employee election',evidenceIssuer:'Employee',evidenceReference:'synthetic-envelope-2527',evidenceText:'Employee requests $25 additional federal withholding each week.'},201)
+  const higherReview=await data(industryDoor+'/review/industry-classification/'+higherClassification.id);await data(industryDoor+'/decision/industry-classification/'+higherClassification.id,{version:higherReview.version,reviewToken:higherReview.reviewToken})
+  await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-higher-check'},201)
+  const higherCheck=(await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-higher-check');assert.equal(higherCheck.data.result.employeeTaxes.incomeTaxCents,10308);assert.equal(higherCheck.data.withholdingInstruction.decision,'higher-or-equal-election')
+  await capture('lock-in-calculated',industryDoor.replace('/api/','/app/'))
+  const pendingHigherReview=await data(industryDoor+'/review/industry-check/synthetic-envelope-higher-check')
+  await data(industryDoor+'/decision/industry-check/synthetic-envelope-higher-check',{version:pendingHigherReview.version,reviewToken:pendingHigherReview.reviewToken})
   const election=fields=>({...paper,federal:{...paper.federal,fields:{...paper.federal.fields,...fields}}})
   for(const fields of [{allowances:2},{filingStatus:'married'},{exempt:'yes'}]) await data(paperDoor,election(fields),409)
   await data(paperDoor,{...paper,tin:'900252526'},409)
@@ -122,19 +173,30 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await advanceClock('2026-10-30T00:00:30Z')
   const modification={...instruction,pdf:Buffer.from('%PDF-1.7\nSynthetic IRS Letter 2808C. Employee 900-25-2525. Single, maximum 3 allowances, effective on receipt October 30, 2026.\n%%EOF').toString('base64'),version:1,kind:'modification',letterOn:'2026-10-30',receivedOn:'2026-10-30',effectiveFrom:'2026-10-30',maximumAllowances:3,quote:'Synthetic authenticated IRS modification permits 3 allowances immediately on receipt.'}
   await data(instructionDoor,modification,201)
+  assert.equal((await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-higher-check').sourcesCurrent,0,'An approved check cannot retain current authority after a new IRS source')
+  const staleReturn=await call(base+'/industry-returns',{form:'941',taxYear:2026,quarter:4,checks:[{personId:person.id,id:'synthetic-envelope-higher-check',version:1}]});assert.equal(staleReturn.status,409);assert.equal((await staleReturn.json()).error,'current_reviewed_check_required')
+  await data(industryDoor+'/decision/industry-check/synthetic-envelope-higher-check',{version:pendingHigherReview.version,reviewToken:pendingHigherReview.reviewToken},409)
   await data(paperDoor+'/review',undefined,409)
   await data(paperDoor,{...election({allowances:3}),version:1,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:3}}},401,'')
   await data(paperDoor,{...election({allowances:3}),version:1,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:3}}},409)
+  await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-pending-modification'},409)
   const mr=await data(instructionDoor+'/review');await data(instructionDoor+'/approve',{version:mr.version,reviewToken:mr.reviewToken})
   await data(paperDoor,{...election({allowances:3}),version:1,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:3}}},201)
+  await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-modified-check'},201)
+  const modifiedCheck=(await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-modified-check');assert.equal(modifiedCheck.data.withholdingInstruction.version,2);assert.equal(modifiedCheck.data.withholdingInstruction.lockedIncomeTaxCents,6815);assert.equal(modifiedCheck.data.result.employeeTaxes.incomeTaxCents,10308)
   const release={...modification,pdf:Buffer.from('%PDF-1.7\nSynthetic authenticated IRS written release of this employee lock-in effective on receipt October 30, 2026.\n%%EOF').toString('base64'),version:2,kind:'release',quote:'Synthetic independently checked IRS release on receipt.'}
   await data(instructionDoor,release,201)
   await data(paperDoor,{...election({allowances:5}),version:2,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:5}}},409)
+  await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-pending-release'},201)
+  const pendingReleaseCheck=(await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-pending-release');assert.equal(pendingReleaseCheck.data.withholdingInstruction.version,2);assert.equal(pendingReleaseCheck.data.withholdingInstruction.lockedIncomeTaxCents,6815)
   const rr=await data(instructionDoor+'/review');await data(instructionDoor+'/approve',{version:rr.version,reviewToken:rr.reviewToken})
   await data(paperDoor,{...election({allowances:5}),version:2,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:5}}},201)
+  await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-released-check'},201)
+  const releasedCheck=(await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-released-check');assert.equal(releasedCheck.data.withholdingInstruction.decision,'reviewed-irs-release');assert.equal(releasedCheck.data.withholdingInstruction.version,3);assert.equal(releasedCheck.data.result.employeeTaxes.incomeTaxCents,10308)
   await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:1,value:'900-25-2526'},201)
   await data(paperDoor,{...election({allowances:5}),version:3,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:5}}},409)
   await data(instructionDoor,{...release,version:3,workerSsn:'900-25-2526'},409)
+  await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-identity-changed'},409)
   const instructions=await data(instructionDoor);assert.deepEqual(instructions.map(r=>r.data.kind),['release','modification','2800C']);assert.ok(instructions.every(r=>r.createdBy===owner && r.approvedBy===owner && Number.isFinite(r.createdAt) && Number.isFinite(r.approvedAt)));assert.equal(instructions[2].data.maximumAllowances,1);assert.equal(instructions[0].data.priorVersion,2)
   for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+instructionDoor.replace('/api/','/app/'));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(proof,'withholding-instruction-history-'+width+'.png'),fullPage:true})}
   const foreign=await data('/api/envelope/companies',{name:'Synthetic foreign notice employer',ein:'00-0002526'},201)
@@ -146,7 +208,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await call('/auth/signout',{})
   for(const target of [door,door+'/original/1/0',instructionDoor,instructionDoor+'/original/1']) assert.equal((await call(target)).status,401,'Sign-out immediately denies each new case and original transport')
   const counts=await sql(`SELECT (SELECT COUNT(*) FROM env_notice_dispatches) AS dispatches,(SELECT COUNT(*) FROM env_workspace_versions WHERE kind='earnings-run') AS runs`)
-  assert.deepEqual(counts,[{dispatches:0,runs:0}],'Case evidence creates no send or payroll run')
+  assert.deepEqual(counts,[{dispatches:0,runs:2}],'Notice calculation retains two run versions and no outbound send')
  } finally {await browser.close()}
- console.log('TAX-NOTICE-CASES passed: original custody, checked extraction and correction, exact review, deposit evidence, honest nonzero disposition, replay, overdue and reopening, exact reviewed SUI linkage and current owner refusals; legacy worker-matched IRS instruction review, lower-election refusal, higher elections and reviewed modification or release; selected screens at 1440 and 390. Payroll and independent agency closure remain unproved.')
+ console.log('TAX-NOTICE-CASES passed: original custody, checked extraction and correction, exact review, deposit evidence, honest nonzero disposition, replay, overdue and reopening, exact reviewed SUI linkage, capped employer liability and current owner refusals; legacy worker-matched IRS instruction review, lower-election refusal, higher elections and reviewed modification or release; selected screens at 1440 and 390. Calculated legacy lock-in comparisons and modification or release passed; actual payroll payment and independent agency closure remain unproved.')
 }

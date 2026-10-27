@@ -4,6 +4,8 @@ import { Notices } from './notices'
 import { WorkerPrivacy } from './worker-privacy'
 import { PayrollError, date, text, recordKey, unseal } from './security'
 import { WorkspaceStore, choice, revision } from './workspace/store'
+import type { EarningsRun } from './workspace/pay-items'
+import type { WorkDay } from './workspace/allocations'
 import type { PayrollRule } from './workspace/rules'
 
 export interface Document { pdf:string; sha256:string; quote:string }
@@ -12,6 +14,12 @@ interface Facts {
   principalCents:number; proposedPenaltyCents:number; state:string; ratePercent:string; effectiveFrom:string
 }
 interface Evidence { kind:string; reference:string; document:Document; recordedBy:string; recordedAt:number; amountCents:number|null; disposition:{residualCents:number;assessedPenaltyCents:number;abatedPenaltyCents:number}|null }
+export interface SuiAssessment {
+  noticeId:string; noticeVersion:number; originalSha256:string; ruleId:string; ruleVersion:number
+  state:string; ratePercent:string; wageBaseCents:number; wageBaseSourceUrl:string; wageBaseReference:string
+  yearToDateWagesCents:number; yearToDateEvidence:string; currentWagesCents:number; taxableWagesCents:number
+  employerLiabilityCents:number; employeeDeductionCents:0; paid:false
+}
 export interface TaxNoticeCase {
   sourceDigest:string; original:Document; rawExtraction:string; facts:Facts; correctionReason:string
   ownerId:string; ownerName:string; status:'open'|'closure-reported'|'reopened'
@@ -121,6 +129,30 @@ export class TaxNoticeCases {
     const rule=await this.store.find<PayrollRule>(actor,'rule',text(input.ruleId),undefined,true),facts=row.data.facts
     if(rule.version!==revision(input.ruleVersion) || !rule.approvedBy || rule.withdrawnBy || !rule.sourcesCurrent || rule.data.family!=='sui' || rule.data.determination!=='final' || rule.data.state!==facts.state || rule.data.unit!=='percent' || Number(rule.data.value)!==Number(facts.ratePercent) || rule.data.effectiveFrom!==facts.effectiveFrom || rule.data.sourceRef!==`notice:${id}:${row.data.original.sha256}`) throw new PayrollError('exact_reviewed_notice_rule_required',409)
     return this.store.append(actor,'tax-notice-case',id,row.version,{...row.data,rate:{id:rule.id,version:rule.version}},undefined,false,{objects:[{kind:'rule',id:rule.id,version:rule.version,approved:true}]})
+  }
+  async assessment(actor:Actor,person:string,run:EarningsRun,input:Input):Promise<SuiAssessment|null> {
+    // A known applicable notice cannot be silently bypassed by omitting its ID.
+    const history=await this.store.list<TaxNoticeCase>(actor,'tax-notice-case',undefined,true,false)
+    const current=history.filter((r,i,a)=>a.findIndex(x=>x.id===r.id)===i)
+    const candidates=current.filter(r=>r.data.facts.type==='sui-rate' && run.locationStates.includes(r.data.facts.state) && r.data.facts.effectiveFrom<=run.payDate)
+    if(!candidates.length && !input.suiNoticeId) return null
+    new WorkerPrivacy(this.store.records).owner(actor)
+    if(candidates.length!==1 || candidates[0].id!==input.suiNoticeId) throw new PayrollError('exact_sui_notice_selection_required',409)
+    const row=candidates[0],facts=row.data.facts,link=row.data.rate
+    if(!link || !row.approvedBy || row.withdrawnBy || !row.sourcesCurrent || row.data.status==='closure-reported') throw new PayrollError('current_reviewed_sui_case_required',409)
+    const rule=await this.store.find<PayrollRule>(actor,'rule',link.id,undefined,true)
+    if(rule.version!==link.version || !rule.approvedBy || rule.withdrawnBy || !rule.sourcesCurrent || rule.data.family!=='sui' || rule.data.determination!=='final' || rule.data.unit!=='percent' || rule.data.state!==facts.state || rule.data.effectiveFrom!==facts.effectiveFrom || Number(rule.data.value)!==Number(facts.ratePercent) || rule.data.sourceRef!==`notice:${row.id}:${row.data.original.sha256}` || run.payDate<rule.data.effectiveFrom || run.payDate>rule.data.effectiveThrough || rule.data.taxYear!==Number(run.payDate.slice(0,4))) throw new PayrollError('current_reviewed_sui_rule_required',409)
+    // This bounded application requires ordinary wages entirely sourced to one state.
+    const work=await this.store.list<WorkDay>(actor,'work',person,true,false)
+    const days=work.filter((r,i,a)=>a.findIndex(x=>x.id===r.id)===i).filter(r=>r.data.day>=run.periodStart && r.data.day<=run.periodEnd)
+    if(run.locationStates.length!==1 || !days.length || days.some(r=>r.data.state!==facts.state)) throw new PayrollError('single_state_sui_wages_required',409)
+    const wageBaseCents=amount(rule.data.details.wageBaseCents),yearToDateWagesCents=amount(input.suiYearToDateWagesCents)
+    if(!wageBaseCents || !rule.data.details.wageBaseSourceUrl || !rule.data.details.wageBaseReference) throw new PayrollError('reviewed_sui_wage_base_required',409)
+    const worker=run.people.find(p=>p.id===person)!,currentWagesCents=worker.taxableCashCents
+    const taxableWagesCents=Math.min(currentWagesCents,Math.max(0,wageBaseCents-yearToDateWagesCents))
+    const [whole,fraction='']=facts.ratePercent.split('.'),rate=BigInt(whole)*1000000n+BigInt(fraction.padEnd(6,'0'))
+    const employerLiabilityCents=Number((BigInt(taxableWagesCents)*rate+50000000n)/100000000n)
+    return {noticeId:row.id,noticeVersion:row.version,originalSha256:row.data.original.sha256,ruleId:rule.id,ruleVersion:rule.version,state:facts.state,ratePercent:facts.ratePercent,wageBaseCents,wageBaseSourceUrl:rule.data.details.wageBaseSourceUrl,wageBaseReference:rule.data.details.wageBaseReference,yearToDateWagesCents,yearToDateEvidence:text(input.suiYearToDateEvidence,1000),currentWagesCents,taxableWagesCents,employerLiabilityCents,employeeDeductionCents:0,paid:false}
   }
   async original(actor:Actor,id:string,version:number,index:number) {
     await this.authority(actor,id)
