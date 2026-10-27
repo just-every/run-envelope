@@ -71,7 +71,8 @@ export function runIntakePage(
           />
           <Field
             name="namespace"
-            label="Source name (keep it for corrections)"
+            label="Source name for manual or spreadsheet intake"
+            required={false}
           />
           <label className="field">
             <span>Upload completed template</span>
@@ -187,7 +188,11 @@ export function runIntakePage(
               </div>
             </details>
           ))}
-<Field name="providerCapture" label="Reviewed Lanyard or Toast capture (JSON; optional)" required={false} />
+<details>
+            <summary>Import reviewed provider data</summary>
+            <p>Paste a reviewed Lanyard, Toast, Deputy, When I Work, Clockify or Square capture. Its source workplace supplies the source name. Exact review is still required.</p>
+            <label className="field"><span>Reviewed source data (JSON)</span><textarea name="providerCapture" rows={4} /></label>
+          </details>
           <Submit primary>Preview exact cell changes</Submit>
         </form>
       </Card>
