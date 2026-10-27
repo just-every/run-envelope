@@ -29,6 +29,7 @@ import {
   payItemsJourney,
   rulesJourney,
 } from './payroll-runtime.mjs'
+import { earningsIntakeJourney } from './earnings-intake.mjs'
 import { approvalJourney } from './payroll-approvals.mjs'
 import { archiveJourney, inspectNativeSql } from './archive-runtime.mjs'
 import { withArchiveWorker } from './archive-worker.mjs'
@@ -46,7 +47,7 @@ import { firmJourney } from './firm-runtime.mjs'
 if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
-    'allocations,schedules,pay-items,rules,leave,source-intake,income-verification',
+    'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
     'firm', 'industry', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
@@ -247,7 +248,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -300,6 +301,7 @@ try {
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })
+  if (!selected || selected.includes('intake')) await earningsIntakeJourney({origin,cookie})
   if (!selected || selected.includes('source-intake')) await sourceIntakeJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('leave')) await leaveJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('allocations'))

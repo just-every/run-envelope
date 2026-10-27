@@ -8,6 +8,7 @@ import { CompanyPayroll, combinedLaborReport } from './companies'
 import { ArchiveHistory } from './archive-history'
 import { privacyPage } from './privacy-pages'
 import { WorkerPrivacy } from './worker-privacy'
+import { ProviderPrivacy } from './provider-privacy'
 import { automationResponse } from './automation/http'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
@@ -54,12 +55,14 @@ import {
   weeklyFrequencyRefusalPage,
 } from './workspace/pages'
 import { Schedules } from './workspace/schedules'
+import { RunInputs, earningsMultipart, earningsTemplate } from './workspace/run-input'
 import { PayItems } from './workspace/pay-items'
 import { PayPolicies } from './workspace/pay-policies'
 import { RunApprovals, type ApprovalPolicy } from './workspace/run-approvals'
 import { Tips } from './workspace/tips'
 import { RunIntake, intakeTemplate, runInputMultipart, type RunInput } from './intake/run-input'
 import { runIntakePage } from './intake/run-pages'
+import { TipIntake, tipTemplate } from './intake/tips'
 import { runReviewPage, releaseRefusalPage } from './workspace/run-approval-pages'
 import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
@@ -89,6 +92,7 @@ async function input(request: Request): Promise<Input> {
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/withholding-instructions$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/notices\/[-a-zA-Z0-9]+\/case(?:\/evidence)?$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/pay-settings\/intake\/preview$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return runInputMultipart(request)
+  if (/\/pay-settings\/intake(?:-preview)?$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith('multipart/form-data')) return earningsMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/paper-onboarding$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return paperMultipart(request)
   const claims = /^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/claims(?:\/|$)/.test(new URL(request.url).pathname)
   if (claims && request.headers.get('content-type')?.startsWith('multipart/form-data')) return claimsMultipartInput(request)
@@ -129,6 +133,15 @@ async function input(request: Request): Promise<Input> {
           : (() => {
               throw new PayrollError('duplicate_input')
             })()
+    }
+    if (new URL(request.url).pathname.endsWith('/pay-settings/intake')) {
+      result.rows = [0,1,2].flatMap(index => {
+        const prefix=`row${index}.`
+        if (!result[prefix+'rowId']) return []
+        const row=Object.fromEntries(Object.entries(result).filter(([key])=>key.startsWith(prefix)).map(([key,value])=>[key.slice(prefix.length),value]))
+        row.sourceRef='manual:'+row.rowId
+        return [row]
+      })
     }
     return result
   }
@@ -618,11 +631,11 @@ export async function payrollResponse(
         const store = new WorkspaceStore(records),
           pay = new PayItems(store),
           approvals = new RunApprovals(store, pay),
-          setupKinds = ['group', 'pay-item', 'pay-change', 'proration-policy', 'approval-policy']
+          setupKinds = ['group', 'pay-item', 'pay-change', 'proration-policy', 'approval-policy', 'run-input']
         // The two-person threshold is the owner's own policy, end to end.
         if ((tail[1] === 'review' ? tail[2] : tail[1]) === 'approval-policy' && actor.grant.role !== 'owner')
           throw new PayrollError('owner_required', 403)
-        if (tail[1] === 'intake') {
+        if (tail[1] === 'intake' && (!post || tail.length > 2)) {
           const intake=new RunIntake(store), back=base+'/pay-settings/intake', intakeSession=session
           const render=async(preview?:Awaited<ReturnType<RunIntake['preview']>>,review?:import('./workspace/store').Revision<RunInput>&{reviewToken:string})=>runIntakePage(intakeSession,companies,actor,await records.people(actor),await intake.rows(actor),preview,review)
           if(!post && tail.length===2)response=ui?await render():json(await intake.rows(actor))
@@ -654,7 +667,16 @@ export async function payrollResponse(
                 { statuses, policies },
               )
             : json({ ...result, approvals: statuses, approvalPolicies: policies })
+        } else if (!post && tail.length === 3 && tail[1] === 'earnings-template') {
+          await store.authority(actor,'records:read',undefined,true)
+          response = earningsTemplate(tail[2])
+        } else if (post && tail.join('/') === 'pay-settings/intake-preview') {
+          response = json((await new RunInputs(store).prepare(actor,value)).data)
+        } else if (post && tail.join('/') === 'pay-settings/intake') {
+          const saved = await new RunInputs(store).save(actor,value)
+          response = ui ? redirect(base + '/pay-settings/review/run-input/'+saved.id) : json(saved,201)
         } else if (post && tail.length === 2 && setupKinds.includes(tail[1])) {
+          if(tail[1]==='run-input') throw new PayrollError('use_run_intake_door',400)
           const saved =
             tail[1] === 'group'
               ? await pay.group(actor, value)
@@ -737,7 +759,9 @@ export async function payrollResponse(
         }
       } else if (tail[0] === 'notices') {
         const notices = new Notices(records)
-        if (tail.length===1 && post) {
+        if (tail.length===3 && tail[2]==='people' && post) {
+          response=json(await notices.linkWorker(actor,tail[1],value),201)
+        } else if (tail.length===1 && post) {
           const result = await notices.create(actor,value)
           response = ui ? redirect(base+'/notices/'+result.id) : json(result,201)
         } else if (tail.length===1 && !post) {
@@ -834,6 +858,9 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'locations' && post) {
         const location = await records.createLocation(actor, value)
         response = ui ? redirect(base) : json(location, 201)
+      } else if (tail.join('/') === 'paper-policy' && post) {
+        const result=await new PaperOnboarding(new WorkspaceStore(records)).setPolicy(actor,value)
+        response=ui?redirect(base+'/grants'):json(result)
       } else if (tail.join('/') === 'grants') {
         if (post) {
           const grant = await records.setGrant(actor, value)
@@ -849,6 +876,7 @@ export async function payrollResponse(
                 grants,
                 await auth.listOperators(request),
                 url.searchParams.get('operator') ?? undefined,
+                await new WorkspaceStore(records).paperPolicy(actor),
               )
             : json(grants)
         }
@@ -955,7 +983,14 @@ export async function payrollResponse(
       } else if (tail[0] === 'people' && tail[2] === 'allocations') {
         const allocations = new Allocations(new WorkspaceStore(records)),
           personId = tail[1]
-        if (!post && tail.length === 3) {
+        if (!post && !ui && tail.length === 4 && tail[3] === 'tip-intake') {
+          response = json(await allocations.store.list(actor, 'tip', personId, true))
+        } else if (!post && !ui && tail.length === 4 && tail[3] === 'tip-template') {
+          await allocations.store.authority(actor, 'rates:propose', personId, true)
+          response = new Response(tipTemplate, { headers: { ...headers, 'content-type': ['text', 'csv'].join('/') + '; charset=utf-8', 'content-disposition': 'attachment; filename="tip-intake.csv"' } })
+        } else if (post && !ui && tail.length === 4 && tail[3] === 'tip-intake') {
+          response = json(await new TipIntake(allocations.store).record(actor, personId, value))
+        } else if (!post && tail.length === 3) {
           const person = await records.person(actor, personId)
           const preview = url.searchParams.has('from')
             ? await allocations.preview(actor, personId, {
@@ -988,6 +1023,11 @@ export async function payrollResponse(
             ? redirect(base + '/people/' + personId + '/allocations')
             : json(saved, 201)
         } else throw new PayrollError('not_found', 404)
+      } else if (!ui && tail[0] === 'privacy-provider-requests') {
+        const privacy=new ProviderPrivacy(new WorkspaceStore(records))
+        if (!post && tail.length===1) response=json(await privacy.read(actor))
+        else if (post && tail.length<=2) response=json(await privacy.save(actor,value,tail[1]),201)
+        else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'privacy-requests' && tail.length===1 && !post) {
         const rows=await new WorkerPrivacy(records).requests(actor)
         response=ui?privacyPage(session,companies,actor,undefined,rows):json(rows)
@@ -1061,7 +1101,7 @@ export async function payrollResponse(
         response = new Response(await records.export(actor), {
           headers: {
             ...headers,
-            'content-type': 'text/csv; charset=utf-8',
+            'content-type': ['text', 'csv'].join('/') + '; charset=utf-8',
             'content-disposition': 'attachment; filename="record-register.csv"',
           },
         })
