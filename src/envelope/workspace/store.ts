@@ -7,6 +7,8 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind =
   | 'provider-deletion-request'
   | 'notice-worker-link'
+  | 'tip-tax-preview'
+  | 'tip-tax-funds'
   | 'company-funding'
   | 'company-funding-plan'
   | 'tax-notice-case'
