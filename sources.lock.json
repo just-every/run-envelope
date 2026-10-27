@@ -1574,7 +1574,7 @@
       "executable": false
     },
     "src/envelope/notices.ts": {
-      "sha256": "1e07ea38d9f791f63437f442c7f99ef8f17d44b909d1c0e8d11754336162b1e6",
+      "sha256": "5185cd1fd8f29e9c8dc6b5c31bef7be1cf6791bfe95c81479f8273a7fc61dd7c",
       "executable": false
     },
     "src/envelope/pages.tsx": {
@@ -1666,7 +1666,7 @@
       "executable": false
     },
     "src/envelope/worker-privacy.ts": {
-      "sha256": "a91fe6e37aebd26b4dba615f051098b9c57ac9838818ce1538471298d38a610a",
+      "sha256": "26f15f7d12a138be43fa59b94d10449102dd00a2adb8d86e8d8f653e43472a4a",
       "executable": false
     },
     "src/envelope/workspace/allocation-tax.ts": {
@@ -2862,11 +2862,11 @@
       "executable": false
     },
     "tests/archive-erasure.mjs": {
-      "sha256": "e26aaea4f43f94baa4fd47470bcafc0c0613fb57f01163a4c7496915e4dbbc8a",
+      "sha256": "1637141d19170303678fd88074c41699a937ac587b1b23e558bbb780cd2b885c",
       "executable": false
     },
     "tests/archive-fixture.mjs": {
-      "sha256": "969e5fc59d344360b3e8d3ee0499888561a279771f32e37fa46414b9187e4995",
+      "sha256": "601f28e253b2ea2d1a098569e5dfff3725c140fe6a140a39a4deebd572ef328f",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
@@ -2878,7 +2878,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "114512f5a641e2107abe22257a8c9500602308eb67971fd7dc215c0584ad2e84",
+      "sha256": "1e0d49120f981c7ca5f0cb15b6811ef2ed4749333e01e81c52b6664ee86a5a55",
       "executable": false
     },
     "tests/archive-worker.mjs": {

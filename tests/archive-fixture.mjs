@@ -68,7 +68,7 @@ export async function archiveFixture(context) {
   const hireCustody={id:hire.id,input:hireInput}
 
   for (const kind of ['ssn', 'bank', 'tax']) await payroll.data(company.base + '/people/' + privacyPerson.id + '/private',
-    {kind, version: 0, value: 'synthetic-envelope-5401'}, 201)
+    {kind, version: 0, value: kind==='ssn'?'900005401':'synthetic-envelope-5401'}, 201)
   const custodyBase = company.base + '/people/' + privacyPerson.id
   const hostileCustody = '<img src="https://ungranted.example/custody" onerror="globalThis.syntheticEnvelope794=true">'
   const custodyObjects = []
@@ -103,15 +103,27 @@ export async function archiveFixture(context) {
     ['rippling',{id:'synthetic-envelope-rippling',worker_id:'synthetic-envelope-custody-worker',hourly_wage:{currency_type:'USD',value:25},salary_effective_date:'2026-10-19'}],
   ]) custodyInputs.push({door:'hris',body:{provider,type:'rate',sourcePersonId:'synthetic-envelope-custody-worker',
     sourceEvidence:hostileCustody,sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,export:raw}})
-  for(const [index,provider] of ['gauge','plinth','glove','mallet','strap','orbit'].entries()) custodyInputs.push({door:'earnings-sources',body:{
+  for(const provider of ['gauge','plinth','glove','mallet','strap','orbit']) for(const earningType of ['job','commission','per-service']) custodyInputs.push({door:'earnings-sources',body:{
     provider,sourcePersonId:'synthetic-envelope-custody-worker',sourceEvidence:hostileCustody,sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,
-    export:{schema:'envelope-job-earning@1',status:'approved',currency:'USD',paymentState:'unpaid',sourceId:'synthetic-envelope-custody-'+provider,
-      effectiveDate:'2026-10-19',amountCents:500,jobId:hostileCustody,approvedBy:'Synthetic reviewer',earningType:['job','commission','per-service'][index%3]}}})
+    export:{schema:'envelope-job-earning@1',status:'approved',currency:'USD',paymentState:'unpaid',sourceId:'synthetic-envelope-custody-'+provider+'-'+earningType,
+      effectiveDate:'2026-10-19',amountCents:500,jobId:hostileCustody,approvedBy:'Synthetic reviewer',earningType}}})
+  for(const code of ['pto','holiday','termination']) custodyInputs.push({door:'hris',body:{
+    provider:'willow',type:'leave',sourcePersonId:'synthetic-envelope-custody-worker',sourceEvidence:hostileCustody,
+    sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,
+    export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-custody-leave-'+code,effectiveDate:'2026-10-19',values:{minutes:60,rateCents:2500,code}}}})
+  custodyInputs.push({door:'hris',body:{provider:'willow',type:'benefit',sourcePersonId:'synthetic-envelope-custody-worker',
+    sourceEvidence:hostileCustody,sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,
+    export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-custody-benefit-period',effectiveDate:'2026-10-19',
+      values:{amountCents:500,code:'Synthetic after-tax benefit',taxTreatment:'after-tax',periodStart:'2026-10-19',periodEnd:'2026-10-25'}}}})
+  for(const separation of ['discharge','quit-with-notice','quit-without-notice']) custodyInputs.push({door:'hris',body:{
+    provider:'willow',type:'termination',sourcePersonId:'synthetic-envelope-custody-worker',sourceEvidence:hostileCustody,
+    sourceApprovedBy:'Synthetic reviewer',sourceVersion:1,version:0,
+    export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-custody-'+separation,effectiveDate:'2026-10-19',values:{separation}}}})
   for (const input of custodyInputs) {
     const source = await payroll.data(custodyBase + '/' + input.door, input.body, 201)
     input.id = source.id
     custodyObjects.push(source.id)
-    if(input.body.type==='leave') {
+    if(input.body.type==='leave' && input.body.export.values.code==='sick') {
       const first=await payroll.data(custodyBase+'/hris/'+source.id+'/review')
       await payroll.data(custodyBase+'/hris/'+source.id+'/approve',{version:first.version,reviewToken:first.reviewToken})
       await payroll.data(custodyBase+'/hris/'+source.id+'/leave-handoff',{bucket:'sick',ledgerVersion:1},201)
@@ -120,7 +132,7 @@ export async function archiveFixture(context) {
     }
     await payroll.data(custodyBase + '/' + input.door, {...input.body, version:1, sourceVersion:2}, 201)
     const review=await payroll.data(custodyBase+'/'+input.door+'/'+source.id+'/review')
-    if(input.body.type==='leave') {
+    if(input.body.type==='leave' && input.body.export.values.code==='sick') {
       await payroll.data(custodyBase+'/hris/'+source.id+'/approve',{version:review.version,reviewToken:review.reviewToken})
       await payroll.data(custodyBase+'/hris/'+source.id+'/leave-handoff',{bucket:'sick',ledgerVersion:2},201)
       const handed=await payroll.data(custodyBase+'/leave/review?bucket=sick')
@@ -131,8 +143,7 @@ export async function archiveFixture(context) {
   const custodyNoticeInput={reference:'synthetic-envelope-custody-notice',locationId:company.location.id,body:'Synthetic worker-bearing notice retained for explicit custody.'}
   const custodyNotice=await payroll.data(company.base+'/notices',custodyNoticeInput,201)
   const noticeDetails=await payroll.data(company.base+'/notices/'+custodyNotice.id)
-  await payroll.data(company.base+'/notices/'+custodyNotice.id+'/people',{personId:privacyPerson.id,digest:noticeDetails.digest,consent:true},201)
-  const custodyNoticeLinkId=custodyNotice.id
+  const firstLink=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/people',{personId:privacyPerson.id,digest:noticeDetails.digest,consent:true},201)
   let custodyReply=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/replies',{version:0,to:'agency@example.com',subject:'Private worker notice',body:'Synthetic retained worker response.'},201)
   custodyReply=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/replies',{id:custodyReply.id,version:1,to:'agency@example.com',subject:'Private worker notice',body:'Synthetic corrected retained worker response.'},201)
   const replyReview=await payroll.data(company.base+'/notice-replies/'+custodyReply.id+'/review')
@@ -152,6 +163,32 @@ export async function archiveFixture(context) {
   const paperReview=await payroll.data(paperDoor+'/review')
   await payroll.data(paperDoor+'/approve',{version:paperReview.version,reviewToken:paperReview.reviewToken})
   const privateCustody={paperId:paper.id,caseId:custodyNotice.id,pdf:custodyPdf}
+  const reportingDoor=custodyBase+'/new-hire-reports'
+  const reportInput={eventType:'hire',state:'OH',hireDate:'2026-01-02',employeeFirstName:'Synthetic',employeeMiddleName:'',employeeLastName:'Custody',
+    employeeAddress:'1 Synthetic Street, Columbus OH 43215',employeeSsn:'900005401',employeeDateOfBirth:'1990-01-01',
+    employerName:'Synthetic archive payroll employer',employerAddress:'2 Synthetic Street, Columbus OH 43215',employerFein:'000003101'}
+  const report=await payroll.data(reportingDoor,reportInput,201)
+  const reportReview=await payroll.data(reportingDoor+'/'+report.id+'/review')
+  await payroll.data(reportingDoor+'/'+report.id+'/approve',{version:reportReview.version,reviewToken:reportReview.reviewToken})
+  const packet=await payroll.data(reportingDoor+'/'+report.id+'/transfer',{version:1})
+  assert.equal(packet.fields.employeeSsn,'900005401')
+  assert.equal(packet.submissionClaimed,false)
+  await payroll.data(reportingDoor+'/'+report.id+'/response',{version:2,receiptId:'synthetic-envelope-custody-receipt',response:'rejected',reportingDate:'2026-01-03',agencyResponse:'Synthetic retained human-attested directory response'})
+  const activeReport=await payroll.data(reportingDoor,{...reportInput,eventType:'rehire',hireDate:'2026-02-02'},201)
+  const activeReview=await payroll.data(reportingDoor+'/'+activeReport.id+'/review')
+  await payroll.data(reportingDoor+'/'+activeReport.id+'/approve',{version:activeReview.version,reviewToken:activeReview.reviewToken})
+  assert.equal((await payroll.data(reportingDoor)).find(r=>r.id===activeReport.id).canTransfer,true)
+  const instructionDoor=custodyBase+'/withholding-instructions'
+  const instructionInput={version:0,kind:'2800C',pdf:custodyPdf,quote:'Synthetic retained IRS instruction original',employerEin:'00-0003101',workerSsn:'900005401',
+    letterOn:'2025-10-01',receivedOn:'2025-10-03',effectiveFrom:'2025-11-30',filingStatus:'single',maximumAllowances:1,minimumAdditionalCents:0,
+    authenticated:true,authenticationMethod:'verified-agency-correspondence',authenticationReference:'Synthetic owner authentication evidence'}
+  const instruction=await payroll.data(instructionDoor,instructionInput,201)
+  const instructionReview=await payroll.data(instructionDoor+'/review')
+  await payroll.data(instructionDoor+'/approve',{version:instructionReview.version,reviewToken:instructionReview.reviewToken})
+  await payroll.data(instructionDoor,{...instructionInput,version:1,kind:'modification',letterOn:'2025-12-01',receivedOn:'2025-12-03',effectiveFrom:'2025-12-03',maximumAllowances:0},201)
+  const modifiedReview=await payroll.data(instructionDoor+'/review')
+  await payroll.data(instructionDoor+'/approve',{version:modifiedReview.version,reviewToken:modifiedReview.reviewToken})
+  const reportingCustody={reportId:report.id,activeReportId:activeReport.id,instructionId:instruction.id,reportInput,instructionInput}
   const aiProviders=await payroll.data(company.base+'/providers')
   await payroll.data(company.base+'/providers',{id:'openai',version:aiProviders.find(p=>p.id==='openai').version,enabled:true,consent:true,secret:'synthetic-envelope-privacy-ai'},201)
   const aiAgent=await payroll.data(company.base+'/agents',{name:'Synthetic privacy analysis',hours:1,actions:['notices:process'],fields:['tax'],locations:['*'],providers:['openai'],models:['gpt-4.1-mini']},201)
@@ -163,8 +200,12 @@ export async function archiveFixture(context) {
   const analysis=await invoke(aiAgent.token,'notice.process',{companyId:company.id,noticeId:custodyNotice.id})
   const dispatched=await invoke(authority.agentToken,'reply.dispatch',{companyId:company.id,replyId:custodyReply.id,version:custodyReply.version,digest:custodyReply.digest})
   assert.equal(dispatched.state,'accepted')
-  const noticeCustody={id:custodyNotice.id,replyId:custodyReply.id,analysisId:analysis.id,input:custodyNoticeInput}
+  const noticeCustody={linkIds:[firstLink.id],id:custodyNotice.id,replyId:custodyReply.id,analysisId:analysis.id,input:custodyNoticeInput}
   const coworker=await payroll.data(company.base+'/people',{name:'Synthetic shared-run coworker',locationId:company.location.id},201)
+  const secondLink=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/people',{personId:coworker.id,digest:noticeDetails.digest,consent:true},201)
+  assert.notEqual(firstLink.id,secondLink.id,'a shared notice keeps distinct immutable worker associations')
+  noticeCustody.linkIds.push(secondLink.id)
+  await payroll.data(company.base+'/notices/'+custodyNotice.id+'/people',{personId:coworker.id,digest:noticeDetails.digest,consent:true},409)
   const custodyGroup='synthetic-envelope-custody-group',custodyRun='synthetic-envelope-custody-run'
   await payroll.data(company.base+'/pay-settings/group',{id:custodyGroup,version:0,name:'Shared local custody run',people:[privacyPerson.id,coworker.id]},201)
   const groupReview=await payroll.data(company.base+'/pay-settings/review/group/'+custodyGroup)
@@ -211,5 +252,5 @@ export async function archiveFixture(context) {
     {companyId:privacyClaims.company.id,personId:privacyClaims.person.id,objects:[privacyClaim.id],kind:'claim',
      claimId:privacyClaim.id,request:privacyClaims.validRequest(),artifactIds:privacyClaimRow.data.artifacts.map(a=>a.id)}]
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, custodyObjects, custodyInputs, noticeCustody, sharedCustody, privateCustody, hireCustody, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, custodyObjects, custodyInputs, noticeCustody, reportingCustody, sharedCustody, privateCustody, hireCustody, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }

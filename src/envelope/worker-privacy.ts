@@ -70,6 +70,10 @@ export class WorkerPrivacy {
         if (direct || child || owner || mappedSource || earlierVersion) {
           selected.add(row); changed = true
           for (const column of ['id','object_id']) if (typeof row[column] === 'string') ids.add(String(row[column]))
+          if (table.name === 'env_workspace_versions' && row.kind === 'notice-worker-link') {
+            const link = payloads.get(row) as {noticeId?: string} | undefined
+            if (link?.noticeId) ids.add(link.noticeId)
+          }
         }
       }
     }
