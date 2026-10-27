@@ -8,6 +8,7 @@ import { CompanyPayroll, combinedLaborReport } from './companies'
 import { ArchiveHistory } from './archive-history'
 import { privacyPage } from './privacy-pages'
 import { WorkerPrivacy } from './worker-privacy'
+import { ProviderPrivacy } from './provider-privacy'
 import { automationResponse } from './automation/http'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
@@ -738,7 +739,9 @@ export async function payrollResponse(
         }
       } else if (tail[0] === 'notices') {
         const notices = new Notices(records)
-        if (tail.length===1 && post) {
+        if (tail.length===3 && tail[2]==='people' && post) {
+          response=json(await notices.linkWorker(actor,tail[1],value),201)
+        } else if (tail.length===1 && post) {
           const result = await notices.create(actor,value)
           response = ui ? redirect(base+'/notices/'+result.id) : json(result,201)
         } else if (tail.length===1 && !post) {
@@ -996,6 +999,11 @@ export async function payrollResponse(
             ? redirect(base + '/people/' + personId + '/allocations')
             : json(saved, 201)
         } else throw new PayrollError('not_found', 404)
+      } else if (!ui && tail[0] === 'privacy-provider-requests') {
+        const privacy=new ProviderPrivacy(new WorkspaceStore(records))
+        if (!post && tail.length===1) response=json(await privacy.read(actor))
+        else if (post && tail.length<=2) response=json(await privacy.save(actor,value,tail[1]),201)
+        else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'privacy-requests' && tail.length===1 && !post) {
         const rows=await new WorkerPrivacy(records).requests(actor)
         response=ui?privacyPage(session,companies,actor,undefined,rows):json(rows)
