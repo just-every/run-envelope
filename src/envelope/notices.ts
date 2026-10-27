@@ -56,7 +56,8 @@ export class Notices {
     if (input.consent!==true || input.digest!==notice.digest) throw new PayrollError('exact_notice_custody_consent_required',409)
     // Immutable association: a shared notice and all its versions are one
     // retained dependency, never inferred from a name in free text.
-    return new WorkspaceStore(this.records).append(actor,'notice-worker-link',id,0,
+    const association='notice-person-'+(await digest(JSON.stringify([id,personId]))).slice(0,40)
+    return new WorkspaceStore(this.records).append(actor,'notice-worker-link',association,0,
       {noticeId:id,noticeDigest:notice.digest},personId,false,{freshProof:true})
   }
   async details(actor:Actor,id:string) {
