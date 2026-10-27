@@ -4,6 +4,11 @@ import { PayrollError, text } from './security'
 import { WorkerPrivacy } from './worker-privacy'
 import { WorkspaceStore, choice, revision } from './workspace/store'
 
+const manualChannels = {
+  'openai-privacy-portal': {provider: 'openai', destination: 'https://privacy.openai.com/'},
+  'resend-privacy-support': {provider: 'resend', destination: 'mailto:support@resend.com'},
+} as const
+
 interface ProviderRequest {
   requestId: string
   provider: string
@@ -13,7 +18,7 @@ interface ProviderRequest {
   provenance: 'owner-attested'
   externalDeletionVerified: false
   scope?: { fingerprint: string; records: string[] }
-  channel?: 'openai-privacy-portal'
+  channel?: keyof typeof manualChannels
 }
 
 /** Private manual follow-up. Recording a receipt never performs destruction. */
@@ -26,12 +31,13 @@ export class ProviderPrivacy {
   async packet(actor: Actor, id: string) {
     const row = (await this.read(actor)).find(row => row.id === id)
     if (!row) throw new PayrollError('provider_request_unavailable', 404)
-    if (!row.data.scope || row.data.channel !== 'openai-privacy-portal')
+    const channel = row.data.channel && manualChannels[row.data.channel]
+    if (!row.data.scope || !channel || channel.provider !== row.data.provider)
       throw new PayrollError('provider_request_scope_required', 409)
     return {
       id, version: row.version, provider: row.data.provider, reference: row.data.reference,
       scope: row.data.scope, channel: row.data.channel,
-      officialChannel: 'https://privacy.openai.com/',
+      officialChannel: channel.destination,
       transport: 'owner-manual', provenance: 'owner-attested',
       requestSent: false, externalDeletionVerified: false,
       boundary: 'A prepared request is not submission, deletion authority or completion. The provider must resolve its retention obligations. Downloaded copies and filed agency records remain outside local recall.',
@@ -62,10 +68,11 @@ export class ProviderPrivacy {
       if (input.fingerprint !== inventory.fingerprint) throw new PayrollError('privacy_scope_changed', 409)
       if (!Array.isArray(input.records) || !input.records.length || input.records.some(record => typeof record !== 'string' || !inventory.entries.some(row => row.id === record && row.table !== 'env_people')) || new Set(input.records).size !== input.records.length)
         throw new PayrollError('provider_request_scope_required', 409)
-      if (input.provider !== 'openai' || input.channel !== 'openai-privacy-portal')
+      const selectedChannel = typeof input.channel === 'string' && Object.hasOwn(manualChannels, input.channel) ? input.channel as keyof typeof manualChannels : undefined
+      if (!selectedChannel || input.provider !== manualChannels[selectedChannel].provider)
         throw new PayrollError('provider_request_channel_unavailable', 409)
       scope = {fingerprint: inventory.fingerprint, records: [...input.records as string[]].sort()}
-      channel = 'openai-privacy-portal'
+      channel = selectedChannel
       condition = {
         sql: 'COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0)=? AND EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND id=? AND status=\'held\')',
         args: [actor.company, inventory.epoch, actor.company, requestId],
