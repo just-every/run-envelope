@@ -54,7 +54,7 @@ group allocates proportionally to the Social Security obligation, rounds that
 share to cents, then assigns the residual to Medicare and Additional Medicare.
 This is a disclosed convention, not a claim that IRS specifies that cent-allocation
 algorithm. Owner-only recording of received funds adds no banking authority.
-This pending policy and all remaining legal and provider boundaries keep ENV-009
+This pending policy and all remaining legal and provider boundaries keep ENV-082
 PARTIAL.
 
 The returned reporting basis includes full tip wages and both shares on 941 line

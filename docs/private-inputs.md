@@ -72,9 +72,9 @@ The claims browser journey records automated findings and accessibility trees
 for empty, loaded, held, prepared, signed, handoff, confirmed and follow-up
 screens. It checks visible focus, keyboard checkbox state and native keyboard
 submission. This is bounded interaction evidence, with contrast findings kept
-visible. ENV-057 remains partial. ENV-074 preserves the approved split’s scripted
-accessibility-tree announcement assertions and the owner’s recorded VoiceOver
-or NVDA pre-release pass. No human screen-reader pass is claimed here.
+visible. ENV-057 remains partial. Base BASE-ACCESSIBILITY-001 carries the scripted
+accessibility-tree announcement assertions, and the owner’s VoiceOver or NVDA
+pass is Field proof register row R-6. No human screen-reader pass is claimed here.
 
 Notice-reply text remains plain text through exact human review and dispatch;
 stale edits cannot replace the current reply. Protected-response requesters

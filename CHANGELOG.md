@@ -1,5 +1,24 @@
 # Changelog
 
+## 28 October 2026 — contract cleanup to the RER contract standard
+
+CONTRACT.md was rewritten to the RER contract standard from main `afbd924a79703bbea88808a6881525245783e77c`. Nothing was cut and no status was promoted; `docs/contract/COVERAGE.json` places every old sentence and `docs/contract/ID-MAP.json` maps every old id.
+
+- Oversized clauses were split into one-capability parts: ENV-006, ENV-008, ENV-009, ENV-011, ENV-013, ENV-014, ENV-015, ENV-019, ENV-021, ENV-024, ENV-026, ENV-033, ENV-036, ENV-065, ENV-066 and ENV-070 (new parts ENV-076 to ENV-106).
+- ENV-066 became a coverage ledger with a fail-closed location rule (ENV-066), a gating set of federal, all states, DC and the large-local file (ENV-097, ENV-098) and a published long tail (ENV-099). The large-local list, its sources and its scripts are in `docs/contract/large-local/`. The licensed vendor catalogue became register row R-5.
+- Repeated rules became door rules D-1 to D-7; rulings moved to RULINGS.md (RL-1 to RL-15); sources moved to `docs/contract/sources.md`; adopted defaults awaiting ct moved to `docs/contract/adopted-defaults.md`; the hand-written ACCEPTANCE.md is kept as `docs/contract/acceptance-before-cleanup.md`.
+- Later: ENV-068, ENV-071, ENV-075, ENV-087 (international contractors), ENV-088 (earned-wage access), ENV-092 (403(b), 457(b) and SEP) and ENV-104 (certified payroll).
+- ENV-074 moved to Base BASE-ACCESSIBILITY-001; its human screen-reader pass is register row R-6.
+- The Agent surface (SURFACE-001 to SURFACE-007) was added, and sentences that preset approval for an agent were reworded as the risk class the step carries.
+
+### Status notes moved from done rows
+
+- ENV-055: None for the implemented journeys. Complete recipient declarations and the complete non-agent payroll journey remain ENV-073 under the ct REST split.
+- ENV-031: None for this clause. The implemented semantics are reviewed federal regular-wage checks and unsigned official form data. Complete state and local gross-to-net, payment, agency submission and W-2 delivery remain ENV-006, ENV-011, ENV-014, ENV-015 and ENV-016; certified payroll remains ENV-024. Final 2026 Form 943 is unpublished and cannot be exported as final; the official 2025 edition is supported.
+- ENV-069: None for the clause acceptance journey. Human portal transfer is the implemented channel; imported reviewed confirmation is distinct from independent live agency verification. Production activation still requires legitimate state access, employer mandate and actual authorized submission under the acceptance conventions.
+- ENV-029: None for this clause. Preparation retains current earnings-run versions; complete tax calculation and payable release remain ENV-006, ENV-011, ENV-034 and ENV-035. The human-recorded native Blotter handoff grants no payroll authority; automated outbound delivery remains ENV-044.
+- ENV-052: None for this clause. Preparing calculated payroll, refusing forged signed filing and approved payroll execution inherit into ENV-072 under the ct REST ruling of 23 Oct 2026.
+
 ## Contract source before afbd924a79703bbea88808a6881525245783e77c
 
 # Envelope — product contract

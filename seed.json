@@ -111,7 +111,7 @@
       "id": "payroll-rails",
       "required": false,
       "availability": "unavailable",
-      "why": "Banking, verification and payroll rails: Check or Gusto Embedded; an owner-selected bank verification service; separately authorized international payout, payroll card, instant pay and earned wage access partners. Intended purpose and minimum fields are prospective obligations under ENV-004, ENV-011, ENV-013, ENV-035, ENV-036 and ENV-065; this declaration enables no request. Owner-signed operator and rail agreements, employer mandates, authorized tenant and separately scoped bank credentials. No partner is selected or credential accepted by the current payroll controls.",
+      "why": "Banking, verification and payroll rails: Check or Gusto Embedded; an owner-selected bank verification service; separately authorized international payout, payroll card, instant pay and earned wage access partners. Intended purpose and minimum fields are prospective obligations under ENV-004, ENV-011, ENV-013, ENV-035, ENV-036, ENV-065, ENV-087 and ENV-088; this declaration enables no request. Owner-signed operator and rail agreements, employer mandates, authorized tenant and separately scoped bank credentials. No partner is selected or credential accepted by the current payroll controls.",
       "data": [
         "No data is sent by this unavailable connection. Planned minimum: Exact approved employer and worker payment instructions, verified destinations, amounts, dates, idempotency identities and reconciliation receipts."
       ],

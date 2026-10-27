@@ -306,7 +306,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "3822014dd9680d0d6fe4c65aec6f00c70941c8dbbd8c07811ae1f18527df80cd",
+      "sha256": "12912bc8dc20570c30d4a8aa0844f0c17ec9867f949b2998454428d6d5841b11",
       "executable": false
     },
     ".gitignore": {
@@ -318,15 +318,19 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "4763f2c9c020227c844832851824d9af79cf3c6324246e0168b3265c88808cea",
+      "sha256": "9b76d3ff50538ecc2b51c74c6d16b2c69b8d93961c8512d4a5c6974bcd144d4e",
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "ed4a865c0ff9c82fade48c8aaeec729a172788ed342a2bcf39fa5bf13599a490",
+      "sha256": "bb5055a9eacd2d2600136360dd23ef3d2cbe8fa6f598552034c97a8208940d7e",
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "5c625c4d8291cb9943e4a544ac04fadb4e9f1ba7214d700951281a6f64cc3073",
+      "sha256": "dc6afb76b3c3ee92f466ee34c77ec81939fae97c2e87119b2703395336168725",
+      "executable": false
+    },
+    "CHANGELOG.md": {
+      "sha256": "36819c55753678719fb83ed64fe85d378db060c6f22831a0830565006425ced9",
       "executable": false
     },
     "CLAUDE.md": {
@@ -338,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3f9da9acb1917aa1dec5afbcec889ca424d08c68cb18b3134fd7552e0b1e2ae5",
+      "sha256": "b86fe18f36ce9cd64ac0cbc16cfeeee2c14d08e1e8798a4eff0d8d435e7412fc",
       "executable": false
     },
     "deploy-demo.json": {
@@ -359,6 +363,110 @@
     },
     "docs/claims-follow-up.md": {
       "sha256": "8489fce8e46dad2c416d0ade69583d730baa36435d8fc88aca2c68e4742b735b",
+      "executable": false
+    },
+    "docs/CLAIMS.md": {
+      "sha256": "c97a8bf81447cee03c7631e4b8f3d538b2fa7602fbb83eb213803c311e0a1d53",
+      "executable": false
+    },
+    "docs/contract/acceptance-before-cleanup.md": {
+      "sha256": "4763f2c9c020227c844832851824d9af79cf3c6324246e0168b3265c88808cea",
+      "executable": false
+    },
+    "docs/contract/adopted-defaults.md": {
+      "sha256": "c9365f7b8b300b22d5e23e80831850d22244a2e3ce3d7c4426bfe39ff0c750b8",
+      "executable": false
+    },
+    "docs/contract/COVERAGE.json": {
+      "sha256": "abef1fac4cb08ad7eb2da6ee4a24b62d33ef39ff8700efe2c730b652f61867a4",
+      "executable": false
+    },
+    "docs/contract/ID-MAP.json": {
+      "sha256": "b50d96aa3aaca81dc6238dfc0463a60ca83916b50f9902eaa6310b35d28272b3",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-build.py": {
+      "sha256": "574d769820b057bb32d9a2cca3b8f04a383ca7f9d17ec886b56d26c3a6bbdc8b",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-extract.py": {
+      "sha256": "33734b48721adab7767e20f4776a9830bb62695b65d5c83bbb1f16f8a7f4b769",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/al_occupational.csv": {
+      "sha256": "a257e5802bd1e2f88c754377027b179cad1e781a5843f63a957ffb76c7db1efe",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/co_opt.csv": {
+      "sha256": "3381a93d95a766f6a6b02c193b974a00e91b405379dbdf6e2ce295c263912e96",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/de_wilmington.csv": {
+      "sha256": "c1f79fdfbaeee4a009f8880440eb716fd3fddbde8a05aa962631fc651d74ca1b",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/in_county.csv": {
+      "sha256": "b9d6fba60e7b728b58ab0344b7fecca31ed3a448e25703438ecfe13e0bd0ba13",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/ky_occupational.csv": {
+      "sha256": "e65e293e2c5d0b94f9aa440dc1fd3da398680ae8995b6463e42e0378e439df4e",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/md_county.csv": {
+      "sha256": "208fba30f0cc1fa6d199cd55c4a3b7bd63e0b657927c8939f0ccf73593a18a06",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/mi_city.csv": {
+      "sha256": "5f38c2b9c8e3fd3bb35ddebe966fd13937e1306610536258f721b41a06897b13",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/mo_city.csv": {
+      "sha256": "c7c05e726820bfec94c1e758ad21c6de35b8638c4bace1c7662b293a0566d961",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/ny_local.csv": {
+      "sha256": "2c2b318ca1e2a7eedaa7ff8c782134ad22c89afe9f9cf954ec0332c0d0c71a3d",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/oh_muni.csv": {
+      "sha256": "b3e3fbfe0e1994228ec441ecadb6eaa455f1ce04735629dd48ba6f70fc591442",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/oh_sdit.csv": {
+      "sha256": "7e7da64e3bd4d2396ec0c1c078ac0c35da63b7fa306e4ec91318e81ac0f0f4b2",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/or_local.csv": {
+      "sha256": "32aeb2816988ffeba0d1dbc7572b9e176f5e881c2a4b137b36e254168a551639",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/other_local.csv": {
+      "sha256": "bb289ae56f28243fb3d2f54ed9e7baedd487f2bf58315d4b7094ec70165f8fe2",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/pa_eit_lst.csv": {
+      "sha256": "c0df486205ae05389818e62e0955ec11c6e216552a1f071fe9bb0fad196e0261",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local-registers/wv_municipal.csv": {
+      "sha256": "d89807058363fcca3beadac0eb162ccc4e9da0d60817d4787856ef460aabca15",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local.csv": {
+      "sha256": "6a754f97be44f664194b4595f98936fcd983460b0e478c101e346a02aace9fd4",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local.md": {
+      "sha256": "d8feefdf9320d54269b03a34ab1d5920dc73a604ff40026a2799529cb88a03a8",
+      "executable": false
+    },
+    "docs/contract/large-local/envelope-large-local.py": {
+      "sha256": "d2de83c9a0e3020016738cd4235c4a480980e480dbf512dfd1cec93b6b43142d",
+      "executable": false
+    },
+    "docs/contract/sources.md": {
+      "sha256": "5e9debeed985046ecf46de1a4c0f1d9d1dc4d11ef43529ebfdeb608ccab85ee9",
       "executable": false
     },
     "docs/firm-work.md": {
@@ -394,7 +502,7 @@
       "executable": false
     },
     "docs/payroll-approvals.md": {
-      "sha256": "bb68374add1fd819eb736a96b71361f706ca0c2131ddfd340571d8cefac17a6d",
+      "sha256": "11eb40762431c07e3924c428eabca3a17e4ee44380336d6eb6771aca0ff5d222",
       "executable": false
     },
     "docs/payroll-automation.md": {
@@ -458,7 +566,7 @@
       "executable": false
     },
     "docs/private-inputs.md": {
-      "sha256": "38e2340a10e38b3271eea0eac1a98996f9900a64fc0821894b971ca9e0b0979f",
+      "sha256": "ec3bfea2f6377c922fee8c0db3a8de0b52d43782e672c00a9f16d4c39b3cb46b",
       "executable": false
     },
     "docs/run-earnings-intake.md": {
@@ -470,7 +578,7 @@
       "executable": false
     },
     "docs/tip-tax-previews.md": {
-      "sha256": "e0f5eab5de26b47c066d5c3dfa9898d21bafc9cb72e4d561ec6df56d90d06235",
+      "sha256": "7f68523829b76d72acb5f37ef6e7c3267d16ebef7fca6e346b42e712748ff181",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -977,6 +1085,10 @@
       "sha256": "f79544f12504f3a6305e0db2e54de22bc7b48c9ae789992bbf13bc713247ca75",
       "executable": false
     },
+    "RULINGS.md": {
+      "sha256": "8a3b17ac3c82f5f9304e3d433fecd3a2b0d57dad38c245134261b0bf740e6d14",
+      "executable": false
+    },
     "RUN-LOCALLY.md": {
       "sha256": "ab049a0eb1db086a99aff1627444eaa38de2fb1ca0d2532def42bb75ca83038e",
       "executable": false
@@ -1226,7 +1338,7 @@
       "executable": false
     },
     "seed.json": {
-      "sha256": "e4c1b040766d74185f784627dadb7ad188061e5e827b69a05df8cc4b673a9f85",
+      "sha256": "0ce98cdd5ef63a982db5db109aab0bd6f49aa78f6fb695787954c1a2846237d7",
       "executable": false
     },
     "src/auth.server.ts": {
@@ -1243,6 +1355,10 @@
     },
     "src/base/command-receipts.ts": {
       "sha256": "2f2411c94af00854c4d040ae74a8e6bd11da98308e7d5b0211473f46679d791a",
+      "executable": false
+    },
+    "src/base/contract-docs.mjs": {
+      "sha256": "9c1d8f38c42cd18539792f71bda94cbcd6ebe30e25c884eb6af51de1dccabdfd",
       "executable": false
     },
     "src/base/contract-filter.ts": {

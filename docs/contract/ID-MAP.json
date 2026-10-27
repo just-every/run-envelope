@@ -51,21 +51,29 @@
       ]
     },
     "ENV-006": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-006"
+        "ENV-006",
+        "ENV-076",
+        "ENV-077",
+        "ENV-078"
       ]
     },
     "ENV-008": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-008"
+        "ENV-008",
+        "ENV-079",
+        "ENV-080",
+        "ENV-081"
       ]
     },
     "ENV-009": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-009"
+        "ENV-009",
+        "ENV-082",
+        "ENV-083"
       ]
     },
     "ENV-010": {
@@ -87,9 +95,10 @@
       ]
     },
     "ENV-033": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-033"
+        "ENV-033",
+        "ENV-084"
       ]
     },
     "ENV-004": {
@@ -99,15 +108,18 @@
       ]
     },
     "ENV-011": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-011"
+        "ENV-011",
+        "ENV-085",
+        "ENV-086"
       ]
     },
     "ENV-013": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-013"
+        "ENV-013",
+        "ENV-087"
       ]
     },
     "ENV-034": {
@@ -123,9 +135,10 @@
       ]
     },
     "ENV-036": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-036"
+        "ENV-036",
+        "ENV-088"
       ]
     },
     "ENV-002": {
@@ -135,15 +148,17 @@
       ]
     },
     "ENV-014": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-014"
+        "ENV-014",
+        "ENV-089"
       ]
     },
     "ENV-015": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-015"
+        "ENV-015",
+        "ENV-090"
       ]
     },
     "ENV-016": {
@@ -165,9 +180,13 @@
       ]
     },
     "ENV-019": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-019"
+        "ENV-019",
+        "ENV-091",
+        "ENV-092",
+        "ENV-093",
+        "ENV-094"
       ]
     },
     "ENV-069": {
@@ -177,9 +196,11 @@
       ]
     },
     "ENV-021": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-021"
+        "ENV-021",
+        "ENV-095",
+        "ENV-096"
       ]
     },
     "ENV-025": {
@@ -189,9 +210,12 @@
       ]
     },
     "ENV-066": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-066"
+        "ENV-066",
+        "ENV-097",
+        "ENV-098",
+        "ENV-099"
       ]
     },
     "ENV-037": {
@@ -219,9 +243,13 @@
       ]
     },
     "ENV-026": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-026"
+        "ENV-026",
+        "ENV-100",
+        "ENV-101",
+        "ENV-102",
+        "ENV-103"
       ]
     },
     "ENV-030": {
@@ -273,9 +301,10 @@
       ]
     },
     "ENV-024": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-024"
+        "ENV-024",
+        "ENV-104"
       ]
     },
     "ENV-028": {
@@ -333,9 +362,10 @@
       ]
     },
     "ENV-065": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-065"
+        "ENV-065",
+        "ENV-105"
       ]
     },
     "ENV-051": {
@@ -393,10 +423,9 @@
       ]
     },
     "ENV-074": {
-      "how": "kept",
-      "to": [
-        "ENV-074"
-      ]
+      "how": "retired",
+      "to": [],
+      "now": "moved to Base BASE-ACCESSIBILITY-001"
     },
     "ENV-058": {
       "how": "kept",
@@ -441,9 +470,10 @@
       ]
     },
     "ENV-070": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "ENV-070"
+        "ENV-070",
+        "ENV-106"
       ]
     },
     "ENV-075": {

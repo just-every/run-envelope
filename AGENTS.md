@@ -15,8 +15,15 @@ https://runeditrun.com/install.sh.
 
 ## Scope and commands
 
-Read CONTRACT.md and ACCEPTANCE.md before changing behavior. ct owns their
-wording. This new seed contains only Base's technical foundation; every payroll
+Read CONTRACT.md before changing behavior; ct owns its wording. It follows the
+RER contract standard. ACCEPTANCE.md and docs/CLAIMS.md are generated from it:
+never edit them by hand. After any CONTRACT.md change run the generator, then
+`node src/base/contract-docs.mjs check`, and relock last. Rulings are in
+RULINGS.md, history in CHANGELOG.md and contract sources, the large-local list
+and the coverage and id maps in docs/contract/.
+
+Lander-Regenerate: node src/base/contract-docs.mjs write
+Lander-Regenerate: node scripts/edition-authoring/cli.mjs lock This new seed contains only Base's technical foundation; every payroll
 clause is missing. Do not add mock data, pretend features or provider fallbacks.
 The app wears the owner-approved look (app pick A): build every screen from the
 tokens and components named in docs/LOOK.md, and keep public/rer-theme.css

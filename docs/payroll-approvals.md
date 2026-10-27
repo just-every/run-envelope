@@ -25,7 +25,7 @@ POST `/people/{person}/allocations/tip` records one tip: `id`, prior `version`,
 gave the employer toward tax on tips (never more than the tip). Paycheck tips add
 to the known debit; cash tips do not. A run binds every tip version, so changing
 one tip's settlement type or furnished funds voids approval of the old version.
-Tax on tips and any uncollected tax are not calculated (ENV-009).
+Tax on tips and any uncollected tax are not calculated (ENV-082).
 
 ## Two-person threshold
 
@@ -53,7 +53,7 @@ POST `/earnings-run/{id}/release` with `version` checks, in order:
 
 | Refusal | Cause |
 | --- | --- |
-| `proration_preview_not_payable` | Salary proration preview (ENV-033 interim hold) |
+| `proration_preview_not_payable` | Salary proration preview (ENV-084 interim hold) |
 | `run_version_superseded` | A later version exists, for example a changed pay date |
 | `run_sources_changed` | Setup, rate, work entry or person changed or was withdrawn |
 | `run_rules_changed` | A rule edition for the run's states and period changed |
