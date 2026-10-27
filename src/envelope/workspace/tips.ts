@@ -13,6 +13,8 @@ export interface TipEntry {
   amountCents: number
   settlement: 'cash' | 'paycheck'
   furnishedCents: number
+  sourceItem?: string
+  settlementEvidence?: string
   sourceRef: string
   owner: string
   ownerId: string
@@ -22,6 +24,7 @@ const cents = (value: unknown) => (value === undefined || value === '' || value 
 export class Tips {
   constructor(public store: WorkspaceStore) {}
   async save(actor: Actor, personId: string, input: Input) {
+    if (String(input.id).startsWith('tip-source-')) throw new PayrollError('source_intake_required', 409)
     const amountCents = integer(input.amountCents),
       furnishedCents = cents(input.furnishedCents)
     if (furnishedCents > amountCents) throw new PayrollError('invalid_tip_funds')
