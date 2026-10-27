@@ -3002,7 +3002,7 @@
       "executable": false
     },
     "tests/multi-company-runtime.mjs": {
-      "sha256": "7681f4cabf6bda6847206282638df08596542f9f9a89eadb9b7369682657ab76",
+      "sha256": "53ccde20ab3dee65574de96c2f76e28a408b7946883735c2d52acf2252911500",
       "executable": false
     },
     "tests/new-hire-clock.mjs": {

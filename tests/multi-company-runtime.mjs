@@ -50,6 +50,7 @@ export async function multiCompanyJourney(context) {
   await assertCorrectedReport(27300)
   await approve(b,b.people[0],'industry-check',sameIdCorrection.id)
   await assertCorrectedReport(21300)
+  checks[1] = sameIdCorrection
   const duplicate = await preview(a,a.people[0])
   await approve(a,a.people[0],'industry-check',duplicate.id)
   const ambiguous = await call(reportDoor)
@@ -72,7 +73,7 @@ export async function multiCompanyJourney(context) {
     assert.ok(!JSON.stringify(visible).includes('accountReference'))
     plans.push(await data(c.base+'/funding-plans',{id:'synthetic-envelope-plan-'+index,version:0,runId:c.run.id,runVersion:1,accountId:account.id,accountVersion:1},201))
     await refused(() => call(c.base+'/funding-plans/'+plans[index].id+'/release',{version:1}),409)
-    const form = await data(c.base+'/industry-returns',{id:'synthetic-envelope-separate-return-'+index,version:0,form:'941',taxYear:2026,quarter:4,checks:[{personId:c.people[0].id,id:checks[index].id,version:1}],address:{street:'100 Main Street',city:'Austin',state:'TX',postalCode:'78701'},employeeCount:0,depositsCents:0,basis:'Separate reviewed employer payroll'},201)
+    const form = await data(c.base+'/industry-returns',{id:'synthetic-envelope-separate-return-'+index,version:0,form:'941',taxYear:2026,quarter:4,checks:[{personId:c.people[0].id,id:checks[index].id,version:checks[index].version}],address:{street:'100 Main Street',city:'Austin',state:'TX',postalCode:'78701'},employeeCount:0,depositsCents:0,basis:'Separate reviewed employer payroll'},201)
     const exact = await data(c.base+'/industry-returns/'+form.id+'/review')
     assert.equal(exact.data.company.legalName,c.name)
     assert.equal(exact.data.totals.incomeTaxWithheldCents,index?8808:7808)
