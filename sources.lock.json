@@ -1474,7 +1474,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "b9c73e0e7f882b8a99fa137001638beed12547d522dc721ffe627028855cfab9",
+      "sha256": "a88b34fd2106a0f055bd7e41ceaa992678c555342eb2cbb5408a83b944cf178c",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -1734,7 +1734,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "b8769f2a0c237f7a19f2457f1354833859a18e2c04912493fd10a7a86ce2aa24",
+      "sha256": "a392753d213c81b3b40e7d4ea53cddbc7924127c084066e511d62105aa236759",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -3078,7 +3078,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "3d7c089ac0f5a683515d9650d6b41088da038cbeba1b8b84035e268ac3f0bda2",
+      "sha256": "70dc6b021f15c70da6ddf2a625f35490e364c4930021c46c1bc1c25edcda92f6",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {

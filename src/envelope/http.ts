@@ -635,7 +635,7 @@ export async function payrollResponse(
         // The two-person threshold is the owner's own policy, end to end.
         if ((tail[1] === 'review' ? tail[2] : tail[1]) === 'approval-policy' && actor.grant.role !== 'owner')
           throw new PayrollError('owner_required', 403)
-        if (tail[1] === 'intake') {
+        if (tail[1] === 'intake' && (!post || tail.length > 2)) {
           const intake=new RunIntake(store), back=base+'/pay-settings/intake', intakeSession=session
           const render=async(preview?:Awaited<ReturnType<RunIntake['preview']>>,review?:import('./workspace/store').Revision<RunInput>&{reviewToken:string})=>runIntakePage(intakeSession,companies,actor,await records.people(actor),await intake.rows(actor),preview,review)
           if(!post && tail.length===2)response=ui?await render():json(await intake.rows(actor))
