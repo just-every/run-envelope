@@ -14,34 +14,39 @@ The same privacy routes are available as native forms from the worker screen's *
 
 While an explicit request is held, company reads and use are paused for other identities, including sponsored agents and previously issued protected responses. The configured native owner retains audited custody. This conservative company fence protects shared payroll derivatives; grants are not silently removed or expanded. A release does not reopen these transports before the separate erasure completes.
 
-The local inventory follows company-scoped person references, SQL relationships, encrypted workspace references, derivative source pins and mapped hire sources. All versions of a selected workspace object join the inventory, including an initial claim request recorded before a native worker was attached. Firm work follows its source reference; embedded claim originals disappear with their owning encrypted versions. Deletion, journal tombstones, source replay fences and action-target anonymization commit together. The permanent audit removes erased worker attribution while keeping independent administrative actors and shared native identities intact. Agent action targets are anonymized too; a denied read cannot recreate an erased claim target in the audit. A concurrent product edit, changed authority, failed constraint or still-held record rolls the transaction back. Existing export snapshots are invalidated. A redaction checkpoint prevents an older archive from restoring the previous action targets when a later journal is supplied. Source IDs retired by erasure cannot be reused through the workspace intake door; mapped hire identities are also fenced.
+The local inventory follows company-scoped person references, SQL relationships, encrypted workspace references, derivative source pins and mapped hire sources. An owner can explicitly associate a worker-bearing notice through `POST /api/envelope/companies/{company}/notices/{notice}/people`, supplying `personId`, the exact notice `digest` and `consent: true` after fresh native proof. The immutable association includes the notice body, analysis, all reply versions, review challenges, approvals, dispatch references and retained case originals in the worker inventory. A notice is never assigned by searching for a name in its text. Retired notice references cannot be imported again under a fresh random identifier. All versions of a selected workspace object join the inventory, including an initial claim request recorded before a native worker was attached. Firm work follows its source reference; embedded claim originals disappear with their owning encrypted versions. Deletion, journal tombstones, source replay fences and action-target anonymization commit together. The permanent audit removes erased worker attribution while keeping independent administrative actors and shared native identities intact. Agent action targets are anonymized too; a denied read cannot recreate an erased claim target in the audit. A concurrent product edit, changed authority, failed constraint or still-held record rolls the transaction back. Existing export snapshots are invalidated. A redaction checkpoint prevents an older archive from restoring the previous action targets when a later journal is supplied. Source IDs retired by erasure cannot be reused through the workspace intake door; mapped hire identities are also fenced.
 
 There is no automatic payroll erasure, hold release or external destructive request. Downloaded copies and already-filed agency records are outside local recall. External provider deletion is a separate authorized obligation and this API sends no request.
 
-ENV-054 remains partial. Native archive proof now includes mixed prepared payroll, claim originals and versions, documentary records, work allocations, rates, agent drafts and firm history; held native accountant and agent reads; and loaded, empty, held, failed and completed request screens at both required widths. The protected-response journey covers held and erased disclosure retrieval plus anonymized worker audit attribution. Exhaustive graph and restriction proof for every remaining notice, leave, intake and private-custody family remains owed. A separately tracked external-provider deletion-request lifecycle also remains to be built and proven. The wider custody obligation remains with ENV-028, ENV-051, ENV-053, ENV-054 and ENV-068 as their transports use these records.
+ENV-054 remains partial. The archive journey covers the native record families below, but it does not certify every present and future custody transport or an external provider's deletion. Complete source, response and transfer-authority custody for new-hire reporting, withholding-instruction originals and the remaining private transport and shared-record permutations still need explicit proof. Provider outcomes remain a separate obligation.
 
-## Bounded custody coverage
+## Native custody matrix
 
-The native archive journey now seeds separate sick, PTO and holiday accounts,
-with an opening review and later adjustment in each bank. It also seeds two
-revisions each of a Willow benefit input and a Gauge earning input. The inventory
-must name both encrypted revisions of all five objects. The same worker holds
-SSN, bank and tax attachments and a work allocation.
+The existing archive journey populates these records through their native API doors:
 
-`tests/archive-erasure.mjs` (`archiveErasure`) checks ordinary reads before the
-request, refusal on every corresponding leaf transport while held, explicit
-classification and release, absence after erasure, and refused intake replay
-under a new worker. `tests/archive-runtime.mjs` (`archiveJourney`) inspects the
-actual exported revisions and derivative rows and supplies the older-archive
-resurrection probe. The existing legal-basis, UTC-gate, stale-fingerprint and
-anonymous-audit assertions apply to this mixed retained set.
+- Separate sick, PTO and holiday banks, including a reviewed Willow leave handoff and its corrected source, a shared two-worker downstream run, and a later pending bank revision.
+- Every currently supported HRIS case: Willow hire, rate, location, leave, benefit and termination, plus the BambooHR, HiBob and Rippling hourly-rate schemas. Every case has two retained revisions. Unsupported event schemas remain refused by the adapters.
+- All six earning adapters: Gauge, Plinth, Glove, Mallet, Strap and Orbit, with two revisions each. The fixture includes job, commission and per-service earning shapes; it does not execute every combination of shape and adapter.
+- A mapped original Willow hire and its corrected source, with the mapping and both retained revisions.
+- A worker-associated notice, model analysis, two encrypted reply versions, exact review, approval, dispatch reference, retained PDF case and deposit evidence.
+- Two signed paper-election versions with federal and state originals, plus encrypted SSN, bank and tax attachments.
 
-This is bounded proof, not exhaustive custody certification. Remaining work
-includes mapping worker-bearing notice bodies and their analysis, reply, review,
-approval and dispatch records; mapped hire sources and every supported HRIS event
-and earning adapter; connected leave handoffs and their shared run derivatives;
-and the full private-document transport inventory. Notices currently have no
-explicit worker association, so a company notice must not be assumed to belong
-to an erasure scope merely because the worker belongs to that company. Separate
-external-provider deletion requests and their evidence remain unimplemented;
-local completion never claims external deletion.
+`tests/archive-erasure.mjs` (`archiveErasure`) explicitly enumerates the supported source set and required retained rows. It checks allowed owner reads and byte-exact originals, ordinary reads before a request, restricted held reads, signed-out and mixed-agent refusals on the exercised private doors, explicit legal classification and release, separate eligible erasure, anonymous action targets, unaffected coworker custody and refused original-source replay. Native privacy and selected source screens are captured at 1440 and 390. Controls have visible words and the existing hostile-evidence assertions remain active.
+
+`tests/archive-runtime.mjs` (`archiveJourney`) checks actual exported rows for absent erased source versions, notice derivatives, private histories and shared run derivatives. It preserves an unrelated employer notice and applies the later erasure journal to the real older archive, refusing resurrection before publishing business rows. These are local custody proofs. Accepted mail dispatch metadata does not establish recall or external deletion.
+
+## Separate provider follow-up
+
+`GET /api/envelope/companies/{company}/privacy-provider-requests` returns the configured native owner's encrypted, attributed request history. `POST` to that route creates a request with `version: 0`, `consent: true`, an existing local privacy `requestId`, a declared `provider`, a minimal opaque `reference`, `status: requested` and redacted `evidence`. Supply no worker names, identifiers, payroll facts or credentials in reference or evidence text.
+
+`POST` to the same route ending in `/{request}` appends an exact expected `version`, consent, evidence and the next status. Every mutation needs fresh native proof. The allowed transitions are:
+
+- Requested to submitted.
+- Submitted to unknown, rejected or confirmation-reported.
+- Unknown to rejected or confirmation-reported.
+- Rejected to submitted after separate human follow-up.
+- Confirmation-reported is terminal; replay and stale versions refuse.
+
+Provider, local request and original reference remain immutable. History records the native actor, time and version. Cross-company request binding, ordinary staff, signed-out and agent access refuse. The log is separate from the erased worker graph: local completion preserves an unresolved provider request and never changes its outcome. The fixture proves this separation and the ordered history through the native route.
+
+Every entry is labeled `owner-attested` and `externalDeletionVerified: false`, including a reported confirmation. No request is sent, no provider credential is used and no external destruction is performed by this log. Provider receipt authenticity, the official request and response edge, provider retention obligations and independently supported completion remain unproved. Downloaded copies and already-filed agency records remain outside local recall.

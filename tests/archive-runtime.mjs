@@ -180,6 +180,12 @@ export async function archiveJourney(context) {
       for (const table of ['env_workspace_people','env_workspace_dependencies','env_workspace_decisions','env_workspace_review_inputs'])
         assert.ok(!rows[table].some(row => row.object_id === id), 'export contains no erased leave or intake derivative')
     }
+    for(const [kind,id] of [['paper-onboarding',fixture.privateCustody.paperId],['tax-notice-case',fixture.privateCustody.caseId],['notice-worker-link',fixture.noticeCustody.id]])
+      assert.ok(!rows.env_workspace_versions.some(row=>row.kind===kind&&row.object_id===id),'actual export omits every erased private history version')
+    for(const [table,column,id] of [['env_notices','id',fixture.noticeCustody.id],['env_notice_analysis','id',fixture.noticeCustody.analysisId],
+      ['env_notice_replies','id',fixture.noticeCustody.replyId],['env_notice_approvals','reply_id',fixture.noticeCustody.replyId],['env_notice_dispatches','reply_id',fixture.noticeCustody.replyId]])
+      assert.ok(!rows[table].some(row=>row[column]===id),'actual export omits erased notice derivative '+table)
+    assert.ok(rows.env_notices.some(row=>row.id===fixture.noticeId),'unrelated employer notice custody remains intact')
     const damagedEditions = join(temporary, 'damaged-editions.rer')
     const editions = await archiveEditions(records, source, damagedEditions)
     const text = await readFile(archive, 'utf8')

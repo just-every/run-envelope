@@ -25,6 +25,10 @@ export async function withArchiveWorker(context, journey) {
             }
             return Response.json({ id });
           }
+          if (request.url === 'https://api.openai.com/v1/responses' && request.method === 'POST') {
+            const body=await request.json(); assert.equal(body.store,false)
+            return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({summary:'Synthetic retained worker notice analysis.',proposedReply:'Synthetic proposed response; human review required.'})}]}]})
+          }
           throw new Error('Unexpected archive outbound request');
         } },
     });
