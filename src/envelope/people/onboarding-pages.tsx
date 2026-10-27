@@ -26,6 +26,7 @@ export function paperOnboardingPage(session:Session,companies:Company[],actor:Ac
     <Card title="Signed paper, reviewed by a person">
       <p>No email, phone or bank account is required for this paper-check election. Retain the signed originals and transcribe their elections below.</p>
       <p>Paper review does not authorize payroll. TIN matching, bank verification and payment remain unavailable. Only the installation owner can enter, review and download these records.</p>
+      <p><a href={companyPath(actor.company)+'/people/'+person.id+'/withholding-instructions'}>IRS withholding instructions</a></p>
       <p><a href={companyPath(actor.company)+'/people/'+person.id}>Back to worker</a></p>
     </Card>
     {review && <Card title={'Review exact paper version '+review.version}>

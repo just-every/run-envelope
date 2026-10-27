@@ -2,7 +2,7 @@
 // Only synthetic identity sessions are fixtures. Every payroll record, grant,
 // review, read and denial uses the actual HTTP application and migrated D1.
 import assert from 'node:assert/strict'
-import { randomBytes } from 'node:crypto'
+import { randomBytes,createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -3399,6 +3399,8 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal(JSON.stringify(await sql('SELECT cipher FROM env_notices')).includes('000-00-0001'),false)
     const processed=await tool('notice.process',{companyId:company,noticeId},adminToken)
     assert.equal(processed.status,'untrusted-proposal')
+    // Native HTML form encoding preserves its canonical CRLF source text.
+    assert.equal(processed.sourceReference,'notice:'+noticeId+':'+createHash('sha256').update(hostile.replace(/\r?\n/g,'\r\n')).digest('hex'),'Model proposals cite the exact retained original, never a model-invented source')
     assert.equal(processed.approval,'not-approved')
     assert.equal(edge.calls.length,1)
     const request=edge.calls[0]

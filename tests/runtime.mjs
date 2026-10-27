@@ -37,6 +37,7 @@ import { newHireJourney } from './new-hire-runtime.mjs'
 import { newHireClockWorker } from './new-hire-clock.mjs'
 import { claimsJourney } from './claims-runtime.mjs'
 import { multiCompanyJourney } from './multi-company-runtime.mjs'
+import { taxNoticeJourney } from './tax-notice-runtime.mjs'
 import { industryJourney } from './industry-runtime.mjs'
 import { firmJourney } from './firm-runtime.mjs'
 
@@ -46,7 +47,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification',
-    'firm', 'industry', 'multi-company', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation',
+    'firm', 'industry', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -122,7 +123,7 @@ const settings = {
   SETUP_TOKEN: setupToken,
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
-const clockEntrypoint = ['new-hires','automation'].includes(process.env.ENVELOPE_JOURNEYS) ? await newHireClockWorker(process.env.ENVELOPE_JOURNEYS==='automation'?'2026-11-10T12:00:00Z':undefined) : undefined
+const clockEntrypoint = ['new-hires','automation','tax-notices'].includes(process.env.ENVELOPE_JOURNEYS) ? await newHireClockWorker(process.env.ENVELOPE_JOURNEYS==='automation'?'2026-11-10T12:00:00Z':undefined) : undefined
 let output = ''
 async function launch(bindings) {
   const instance = await unstable_startWorker({
@@ -246,7 +247,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -291,6 +292,7 @@ try {
       await waitForWorker()
     }
   }
+  if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})
   if (selected?.includes('automation')) await automationJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('new-hires')) await newHireJourney({ origin, cookie, advanceClock:async instant=>{assert.ok(clockEntrypoint,'New-hire journey requires its pinned clock');assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
   if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql,settings})
