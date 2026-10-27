@@ -1620,6 +1620,8 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     await data(custody + '/retain', { ...selection, earliestReleaseAt: '2000-01-01T00:00:00.000Z' })
     assert.equal((await data(custody)).status, 'held', 'elapsed time cannot release intake history')
     assert.equal((await data(custody + '/release', selection)).status, 'eligible')
+    // Keep exact erasure receipts newer than the preceding intake history in the bounded audit page.
+    await advanceClock('2026-01-31T12:00:01Z')
     const erased = await data(api + '/people/' + people[0].id + '/erase', { ...selection, version: people[0].version })
     assert.equal(erased.erased, true)
     assert.ok(erased.recordsDeleted >= exactCustody.retained.length)
@@ -1658,6 +1660,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     await data(nonworkDoor + '/release', nonworkSelection, 409)
     await data(nonworkDoor + '/retain', nonworkSelection)
     await data(nonworkDoor + '/release', nonworkSelection)
+    await advanceClock('2026-01-31T12:00:02Z')
     const nonworkErased = await data(api + '/people/' + earningWorker.id + '/erase', { ...nonworkSelection, version: earningWorker.version })
     const afterNonwork = await data(door)
     assert.ok(!afterNonwork.some(row => earningRunIds.includes(row.id)), 'eligible erasure removes every retained non-work capture and job version')
