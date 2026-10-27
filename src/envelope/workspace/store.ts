@@ -5,6 +5,8 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'tip-tax-preview'
+  | 'tip-tax-funds'
   | 'company-funding'
   | 'company-funding-plan'
   | 'tax-notice-case'
