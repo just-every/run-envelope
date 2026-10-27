@@ -1,6 +1,6 @@
 import { WorkspaceStore } from '../workspace/store'
 import { PayItems } from '../workspace/pay-items'
-import { fence, auditStatement, type Actor } from '../access'
+import { fence, auditStatement, requireAction, type Actor } from '../access'
 import type { Input } from '../records'
 import { PayrollError, text, date, integer, recordKey, seal, unseal } from '../security'
 import { supportThreshold } from './clock'
@@ -12,7 +12,14 @@ export class Automation {
   owner(actor:Actor) {
     if(actor.grant.role!=='owner' || actor.session.kind!=='native' || actor.session.operator.email.toLowerCase()!==this.store.records.env.OWNER_EMAIL.toLowerCase()) throw new PayrollError('native_owner_required',403)
   }
-  async policies(actor:Actor) { this.owner(actor); const rows=await this.store.list<Policy>(actor,'automation-policy',undefined,true);return rows.filter((r,i)=>rows.findIndex(x=>x.id===r.id)===i) }
+  async authority(actor:Actor, action:'automation:inspect'|'automation:prepare'|'automation:dispose') {
+    if(actor.session.kind!=='native') throw new PayrollError('native_session_required',403)
+    if(actor.grant.role==='owner') this.owner(actor)
+    requireAction(actor,action)
+    // Company-wide policies and drafts cannot be safely narrowed to one location.
+    await this.store.authority(actor,'records:read',undefined,true)
+  }
+  async policies(actor:Actor) { await this.authority(actor,'automation:inspect'); const rows=await this.store.list<Policy>(actor,'automation-policy',undefined,true);return rows.filter((r,i)=>rows.findIndex(x=>x.id===r.id)===i) }
   async save(actor:Actor,input:Input) {
     this.owner(actor)
     const instant=(key:string)=>{const v=text(input[key],40);if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?(?:Z|[+-]\d\d:\d\d)$/.test(v)||!Number.isFinite(Date.parse(v))||Date.parse(v)%60000)throw new PayrollError('deadline_offset_required');return new Date(v).toISOString()}
@@ -22,13 +29,20 @@ export class Automation {
     return this.store.append(actor,'automation-policy',text(input.id),input.version===0||input.version==='0'?0:integer(input.version),data,undefined,true)
   }
   async tasks(actor:Actor) {
-    this.owner(actor);const f=fence(actor)
-    const rows=(await this.store.records.statement(`SELECT policy_id,occurrence,stage,recipient,due_at,delivery,disposed_by,disposed_at,disposition_cipher FROM env_automation_tasks WHERE company_id=? AND ${f.sql} ORDER BY due_at,stage`,[actor.company,...f.args]).all<Omit<Task,'reason'>&{disposition_cipher:string|null}>()).results
+    await this.authority(actor,'automation:inspect');const f=fence(actor),event=crypto.randomUUID()
+    const result=await this.store.records.env.DB.batch([
+      auditStatement(this.store.records.env,actor,event,'automation.inspected',actor.company,actor.grant.version),
+      this.store.records.statement(`SELECT policy_id,occurrence,stage,recipient,due_at,delivery,disposed_by,disposed_at,disposition_cipher FROM env_automation_tasks WHERE company_id=? AND ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) ORDER BY due_at,stage`,[actor.company,...f.args,event]),
+    ])
+    if(!result[0].meta.changes) throw new PayrollError('authority_changed',409)
+    const rows=result[1].results as unknown as (Omit<Task,'reason'>&{disposition_cipher:string|null})[]
     const key=await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY)
     return Promise.all(rows.map(async({disposition_cipher,...task})=>({...task,reason:disposition_cipher?await unseal(key,JSON.stringify([actor.company,task.policy_id,task.occurrence,task.stage]),disposition_cipher):null})))
   }
   async tick(actor:Actor) {
-    this.owner(actor);const policies=await this.policies(actor),pay=new PayItems(this.store)
+    await this.authority(actor,'automation:prepare')
+    await this.store.authority(actor,'rates:propose',undefined,true)
+    const policies=await this.policies(actor),pay=new PayItems(this.store)
     for(const row of policies) {
       const p=row.data,now=Date.now()
       // Refuse oversized catch-up explicitly rather than dropping old obligations.
@@ -41,7 +55,7 @@ export class Automation {
         if(!run) {
           try { await pay.preview(actor,{id,version:0,groupId:p.groupId,periodStart:occurrence,periodEnd:shift(p.periodEnd,days),payDate:shift(p.payDate,days),frequency:'weekly'},true) }
           catch(error) {
-            // Another current owner pass may have won the immutable version insert.
+            // Another currently authorized pass may have won the immutable version insert.
             run=(await this.store.list(actor,'earnings-run',undefined,true,false)).find(r=>r.id===id)
             if(!run) throw error
           }
@@ -57,10 +71,10 @@ export class Automation {
         }
       }
     }
-    return {tasks:await this.tasks(actor),dispatchAuthority:false,delivery:'unavailable',scheduler:'explicit owner pass required',serviceCoverage:'unverified'}
+    return {tasks:await this.tasks(actor),dispatchAuthority:false,delivery:'unavailable',scheduler:'explicit authorized pass required',serviceCoverage:'unverified'}
   }
   async dispose(actor:Actor,input:Input) {
-    this.owner(actor)
+    await this.authority(actor,'automation:dispose')
     const policy=text(input.policyId),occurrence=date(input.occurrence),stage=text(input.stage),reason=text(input.reason,1000),f=fence(actor),event=crypto.randomUUID(),now=Date.now()
     const cipher=await seal(await recordKey(this.store.records.env.ENVELOPE_RECORD_KEY),JSON.stringify([actor.company,policy,occurrence,stage]),reason)
     const results=await this.store.records.env.DB.batch([

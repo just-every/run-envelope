@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "b7e77a1c81ac85e46f0e61e169bbb9d305c0b20ce72b16e0c0582b1fda0b1293",
+      "sha256": "8ea8abbd86ba21584c5e5c608ab504dfb3c142b2387bf65f75dae16b9b7a00ef",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "765804bc5cfbaed4e754471200224b7e06314066f44d1c3aa58d30b7d7dc9b58",
+      "sha256": "004298bf92c04d7572372195fbf3f4dbe0834795615e35ff80928ecb8ad14d21",
       "executable": false
     },
     "deploy-demo.json": {
@@ -394,7 +394,7 @@
       "executable": false
     },
     "docs/payroll-automation.md": {
-      "sha256": "a286fc9a1542c37ca07179eaf3b20179330289c760c68a655cdde09cc2f83b32",
+      "sha256": "e9f82bd24c283917a7a4a120f21097fe2b0a12f294a7b55e85ef034524ec5108",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -1338,7 +1338,7 @@
       "executable": false
     },
     "src/envelope/access.ts": {
-      "sha256": "136ce605b3e8937c27e8343d751a85507d146c1809c4f137d613d82b50594c3e",
+      "sha256": "223a0d9d5a2276b05c731612ef6eff1f39bae17056116604278711055b56c5f5",
       "executable": false
     },
     "src/envelope/agent-pages.tsx": {
@@ -1358,11 +1358,11 @@
       "executable": false
     },
     "src/envelope/automation/http.tsx": {
-      "sha256": "4b85c667309654d8bedce6f0c7c24c0d6866332233c9b6ea38da2ffc26a3f0fc",
+      "sha256": "0e995aeaaee116ea8df59da117c081b96795ab7b4e77a383186c58e92ec8255d",
       "executable": false
     },
     "src/envelope/automation/work.ts": {
-      "sha256": "4c9c1dd4e1bcea3f4674df979127cf0642ace51c1ce6c4495ed07d8fa0772fe0",
+      "sha256": "a7c6e9ae6eeee359e3be8cb492698f41e9d1675b2b70edb5ac9b949a8cef6df3",
       "executable": false
     },
     "src/envelope/bonus-runs.ts": {
@@ -2842,7 +2842,7 @@
       "executable": false
     },
     "tests/automation-runtime.mjs": {
-      "sha256": "d21e41b94f6457d54f471a7af87293480402c40e301ac61489c59ebcdbcae06c",
+      "sha256": "decc20183997111b58f9def464f143041160d6cefd9eed8d890ce1f5f55b205d",
       "executable": false
     },
     "tests/claims-browser.mjs": {
