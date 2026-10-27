@@ -280,6 +280,7 @@ export async function archiveErasure(context, fixture) {
   const localRequest=requestHistory.find(r=>r.personId===fixture.privacyPersonId)
   assert.ok(localRequest,'external follow-up must name a real separate local erasure request')
   const externalOutboundBefore=context.edge.mails.length
+  Object.assign(held,await getPrivacy())
   const followup={version:0,consent:true,requestId:localRequest.id,provider:'openai',channel:'openai-privacy-portal',fingerprint:held.fingerprint,records:held.retained.map(row=>row.id),reference:'synthetic-envelope-provider-request',status:'requested',evidence:'Synthetic owner requests provider follow-up; no remote deletion is asserted.'}
   assert.equal((await call(providerDoor,{...followup,requestId:'synthetic-envelope-foreign-request'})).status,409)
   assert.equal((await call('/api/envelope/companies/'+fixture.companies[1]+'/privacy-provider-requests',followup)).status,409,'another company cannot bind the local erasure request')
