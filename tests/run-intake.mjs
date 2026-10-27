@@ -10,6 +10,7 @@ import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 
 /** Run intake through the same native HTTP and built screens used by employers. */
 export async function runIntakeCases({ origin, cookie, sql, settings, advanceClock }) {
+  await advanceClock('2026-01-31T12:00:00Z')
   const call = (path, body, who = cookie) =>
     fetch(origin + path, {
       method: body === undefined ? 'GET' : 'POST',
