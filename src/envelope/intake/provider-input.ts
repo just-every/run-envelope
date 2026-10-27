@@ -24,6 +24,11 @@ function identity(value: unknown) {
     throw new PayrollError('invalid_provider_identity')
   return String(value)
 }
+function requireWorkerMapping(worker: unknown, mapping: Input) {
+  if (typeof worker !== 'string' || !worker.trim() || worker !== worker.trim() ||
+    worker.length > 120 || /[\u0000-\u001f]/.test(worker) || mapping.sourcePersonId !== worker)
+    throw new PayrollError('provider_worker_mapping_required', 409)
+}
 function closedMinutes(start: number, end: number, values: unknown, keys: [string, string, string]) {
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 86400000)
     throw new PayrollError('closed_provider_time_required', 409)
@@ -84,8 +89,12 @@ export async function providerInput(value: unknown) {
     const homebase = provider === 'homebase', envelope = homebase ? undefined : object(payload)
     const entries = homebase ? payload : envelope!.data
     if (!Array.isArray(entries)) throw new PayrollError('invalid_provider_export')
-    if (envelope && (envelope.object !== 'time_punches' || object(object(envelope.meta).cursor).next !== null))
-      throw new PayrollError('complete_provider_capture_required', 409)
+    if (envelope) {
+      const cursor = object(object(envelope.meta).cursor)
+      // A final page can still advertise omitted earlier punches.
+      if (envelope.object !== 'time_punches' || cursor.prev !== null || cursor.next !== null)
+        throw new PayrollError('complete_provider_capture_required', 409)
+    }
     for (const value of entries) {
       const entry = object(value), id = identity(entry.id), worker = identity(entry.user_id), mapping = object(mappings[id])
       if (mapping.sourcePersonId !== worker || (!homebase && String(entry.company_id) !== account))
@@ -140,7 +149,7 @@ export async function providerInput(value: unknown) {
     if (!Array.isArray(entries) || input.currency !== 'USD') throw new PayrollError('invalid_provider_export')
     for (const value of entries) {
       const entry = object(value), id = text(entry.id, 100), mapping = object(mappings[id])
-      if (mapping.sourcePersonId !== object(entry.employee).id) throw new PayrollError('provider_worker_mapping_required', 409)
+      requireWorkerMapping(object(entry.employee).id, mapping)
       if (entry.deletedTime || (entry.overrideInTime && (!entry.overrideInEmployee || !object(entry.overrideInEmployee).id)) || (entry.overrideOutTime && (!entry.overrideOutEmployee || !object(entry.overrideOutEmployee).id)))
         throw new PayrollError('provider_pay_code_review_required', 409)
       const start = entry.overrideInTime || entry.inTime, end = entry.overrideOutTime || entry.outTime
@@ -189,8 +198,8 @@ export async function providerInput(value: unknown) {
     if (!Array.isArray(payload)) throw new PayrollError('invalid_provider_export')
     for (const value of payload) {
       const entry = object(value), id = text(entry.id, 100), mapping = object(mappings[id])
-      if (entry.location_id !== account || mapping.sourcePersonId !== entry.team_member_id)
-        throw new PayrollError('provider_worker_mapping_required', 409)
+      requireWorkerMapping(entry.team_member_id, mapping)
+      if (entry.location_id !== account) throw new PayrollError('provider_worker_mapping_required', 409)
       const start = Date.parse(String(entry.start_at)), end = Date.parse(String(entry.end_at))
       if (entry.status !== 'CLOSED' || !Number.isFinite(start) || !Number.isFinite(end) || end <= start)
         throw new PayrollError('closed_provider_time_required', 409)

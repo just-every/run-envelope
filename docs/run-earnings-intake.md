@@ -179,7 +179,9 @@ using API version 2026-09-16. Each supplies `id`, `version`, `location_id`,
 marked unpaid are deducted; paid breaks remain worked time. Open, overlapping
 or out-of-shift breaks refuse the entire capture. The source location must
 match `account`; mappings retain worker identity, local day, actual workweek
-and explicit declared-tip settlement. Other POS earnings and tender types
+and explicit declared-tip settlement. Both source and mapping worker identifiers
+must be exact, nonempty strings; missing, blank, malformed or different identities
+refuse preview and apply before any intake version is written. Other POS earnings and tender types
 remain unimplemented. Source wages do not override the native reviewed rate.
 
 Deputy accepts a reviewed array of the official
@@ -225,7 +227,7 @@ documents that individual timecard labor cannot supply complete leave totals;
 this adapter does not claim leave coverage from those records.
 
 7shifts accepts a complete reviewed `time_punches` response with `data` and
-`meta.cursor.next: null`, following its official
+`meta.cursor.prev: null` and `meta.cursor.next: null`, following its official
 [payroll integration guide](https://developers.7shifts.com/docs/read-time-punch-data)
 and [time punch schema](https://developers.7shifts.com/reference/gettimepunches).
 Each positive `id` and `user_id` maps explicitly; `company_id` must match the
@@ -233,8 +235,13 @@ declared source account. Punches must be approved, undeleted and closed without
 automatic clock-out. Paid breaks remain worked time; unpaid, closed,
 nonoverlapping break intervals are subtracted. `tips` uses integer cents, as
 specified by the [tip update guide](https://developers.7shifts.com/docs/update-time-punch-data),
-and requires explicit settlement. An outstanding next-page cursor is refused;
-the current path does not fetch additional pages or synchronize webhooks.
+and requires explicit settlement. Both cursor pointers must be explicitly null.
+A pointer to an earlier page means a final page alone omits earlier punches;
+a pointer to a later page means more punches remain. Either pointer, a missing
+pointer or an empty string refuses the entire capture. This bounded path accepts
+only a single complete page and does not aggregate pages, fetch additional pages
+or synchronize webhooks. See the official
+[pagination semantics](https://developers.7shifts.com/reference/pagination).
 
 QuickBooks Time accepts a complete reviewed response using the official
 [timesheet, user and job-code schemas](https://tsheetsteam.github.io/api_docs/).
@@ -253,7 +260,9 @@ with `id`, `employee.id`, closed millisecond `inTime` and `outTime`, and integer
 `cashTipsCollected` in merchant currency units. The capture must explicitly
 declare `currency: USD`. An overridden interval requires its corresponding
 `overrideInEmployee` or `overrideOutEmployee` attribution. Source employee
-mapping and explicit tip settlement are mandatory; `serverBanking` does not
+mapping and explicit tip settlement are mandatory. Both source and mapping worker
+identifiers must be exact, nonempty strings; missing, blank, malformed or different
+identities refuse preview and apply before any intake version is written; `serverBanking` does not
 decide whether payroll owes the money. Clover shifts carry no manager-approval
 field here; native exact human review remains required. Break policy, payment
 tip allocation, service charges and authenticated merchant approval remain

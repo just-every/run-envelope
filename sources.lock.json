@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "7032ba092634973a5be92d7ae627c78e795406068b98d7fb2beb63723191f2f3",
+      "sha256": "547448432e29994a8f1c627fc74081405415ae705e4320b8b38381b6fcc10eee",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "0b9035fa523aadbb25cd806d0918bb14709b62c220bbd6fa8b3f0eaf67445d45",
+      "sha256": "84de173ae817692561bf7e8a06d48d3b59fda2dcd7dd38a1936dd0640e07161d",
       "executable": false
     },
     "deploy-demo.json": {
@@ -458,7 +458,7 @@
       "executable": false
     },
     "docs/run-earnings-intake.md": {
-      "sha256": "6427a08b79a282a27808e1d9cb70c447934954c9b3308cabc53e463ec6cee2e8",
+      "sha256": "979347f0b78b47751324a9ad7d2f6611443107776eb3eca2437a489213862c59",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -1542,7 +1542,7 @@
       "executable": false
     },
     "src/envelope/intake/provider-input.ts": {
-      "sha256": "9a8ca9215191b87a13e9ea02549278ff28917a008457a2fe1bbca8909157de39",
+      "sha256": "2adf35b41563bf97bc968c22b0d68d1835d0c67f0cca24311b2e97356ec41596",
       "executable": false
     },
     "src/envelope/intake/run-input.ts": {
@@ -3062,7 +3062,7 @@
       "executable": false
     },
     "tests/run-intake.mjs": {
-      "sha256": "d12376d1b70d220c2b94adfbc70636424386f9e3ecc02b232b6db82af8d78fde",
+      "sha256": "3d212b6032d071e2928edddeae864e6aaefb65ed2d16cf02f666e39b04085a4f",
       "executable": false
     },
     "tests/runtime.mjs": {

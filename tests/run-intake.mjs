@@ -423,6 +423,40 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
       workweek: '2026-11-02', settlement: ['cash','paycheck'][i] }
   }
   const squareBody = { id: 'synthetic-envelope-square-run', version: 0, providerCapture: squareCapture }
+  const captureRefusals = [], browserRefusals = []
+  const refuseCapture = async (body, label, error, screen) => {
+    if (screen) browserRefusals.push({ body, error, screen })
+    const before = await data(door), observed = []
+    for (const route of ['preview', 'apply']) {
+      const response = await call(door + '/' + route, { ...body, digest: 'synthetic-envelope-invalid-preview' })
+      const result = await response.json()
+      observed.push([route, response.status, result.error ?? null])
+    }
+    captureRefusals.push({ label, observed, expected: [['preview',409,error],['apply',409,error]] })
+    assert.deepEqual(await data(door), before, label + ' writes no intake version')
+  }
+  const refuseWorkerIdentity = async (capture, entry, field, label) => {
+    for (const value of [undefined, null, '', '   ', 42, {}, 'synthetic-envelope-'.repeat(10), 'synthetic-envelope-\u0001']) {
+      const malformed = structuredClone(capture), [id, source] = entry(malformed)
+      source[field] = value
+      malformed.mappings[id].sourcePersonId = value
+      await refuseCapture({ id: 'synthetic-envelope-invalid-worker', version: 0, providerCapture: malformed },
+        label + ' refuses matched malformed identity ' + JSON.stringify(value), 'provider_worker_mapping_required',
+        value === undefined ? label.toLowerCase() + '-missing-worker' : undefined)
+    }
+    for (const side of ['source', 'mapping']) {
+      const malformed = structuredClone(capture), [id, source] = entry(malformed)
+      if (side === 'source') delete source[field]
+      else delete malformed.mappings[id].sourcePersonId
+      await refuseCapture({ id: 'synthetic-envelope-invalid-worker', version: 0, providerCapture: malformed },
+        label + ' refuses missing ' + side + ' identity', 'provider_worker_mapping_required')
+    }
+    const mismatch = structuredClone(capture), [id] = entry(mismatch)
+    mismatch.mappings[id].sourcePersonId = 'synthetic-envelope-other-worker'
+    await refuseCapture({ id: 'synthetic-envelope-invalid-worker', version: 0, providerCapture: mismatch },
+      label + ' refuses a different source worker', 'provider_worker_mapping_required')
+  }
+  await refuseWorkerIdentity(squareCapture, c => [c.payload[0].id, c.payload[0]], 'team_member_id', 'Square')
   const squareDiff = await data(door + '/preview', squareBody)
   assert.deepEqual(squareDiff.data.rows.filter(r => r.code === 'regular').map(r => r.minutes), [450,480,450,480,450,480,450,480,450,480])
   await data(door + '/apply', { ...squareBody, digest: squareDiff.digest }, 201)
@@ -521,11 +555,28 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
       if (provider === 'clover') entries.push({ id: String(id), employee: { id: String(worker) },
         inTime: Date.parse(start), outTime: Date.parse(end), cashTipsCollected: tip, serverBanking: i === 0 })
     }
-    const payload = provider === '7shifts' ? { data: entries, object: 'time_punches', meta: { cursor: { next: null } } }
+    const payload = provider === '7shifts' ? { data: entries, object: 'time_punches', meta: { cursor: { prev: null, next: null } } }
       : provider === 'quickbooks-time' ? { results: { timesheets: Object.fromEntries(entries.map(e => [e.id,e])) },
         more: false, supplemental_data: { users, jobcodes } } : provider === 'clover' ? { elements: entries } : entries
     const source = { provider, account: '8900', currency: 'USD', evidence: 'synthetic-envelope-reviewed-' + provider, payload, mappings }
     const body = { id: 'synthetic-envelope-' + provider + '-run', version: 0, providerCapture: source }
+    if (provider === 'clover') await refuseWorkerIdentity(source,
+      c => [c.payload.elements[0].id, c.payload.elements[0].employee], 'id', 'Clover')
+    if (provider === '7shifts') {
+      for (const cursor of [
+        { current: 'synthetic-envelope-final', prev: 'synthetic-envelope-previous', next: null, count: 1 },
+        { prev: null, next: 'synthetic-envelope-next' },
+        { next: null }, { prev: null }, { prev: '', next: null }, { prev: null, next: '' },
+      ]) {
+        const incomplete = structuredClone(source)
+        incomplete.payload.data = [incomplete.payload.data.at(-1)]
+        incomplete.mappings = { [incomplete.payload.data[0].id]: incomplete.mappings[incomplete.payload.data[0].id] }
+        incomplete.payload.meta.cursor = cursor
+        await refuseCapture({ ...body, id: body.id + '-incomplete', providerCapture: incomplete },
+          '7shifts refuses incomplete cursor ' + JSON.stringify(cursor), 'complete_provider_capture_required',
+          cursor.prev ? '7shifts-final-page' : undefined)
+      }
+    }
     const preview = await data(door + '/preview', body)
     assert.deepEqual(preview.data.rows.filter(r => r.code === 'regular').map(r => [r.personId,r.minutes]),
       [2,3,4,5,6].flatMap(() => [[people[0].id,450],[people[1].id,480]]), provider + ' reconciles the explicit five-day workweek')
@@ -608,6 +659,9 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     await data(pay + '/earnings-run', { ...run, version: provider === 'quickbooks-time' ? 2 : 3 }, 409)
   }
 
+  assert.deepEqual(captureRefusals.map(({label,observed}) => [label,observed]),
+    captureRefusals.map(({label,expected}) => [label,expected]), 'malformed captures refuse at both public intake doors')
+
   const caLocation = await data(api + '/locations', { name: 'California premium workplace', state: 'CA' }, 201)
   const caWorker = await data(api + '/people', { name: 'Synthetic premium worker', locationId: caLocation.id }, 201)
   await setup('group', 'synthetic-envelope-premium-group', { name: 'Premium review', people: [caWorker.id] })
@@ -681,6 +735,19 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
           fullPage: true,
         })
       }
+    }
+    for (const { body, error, screen } of browserRefusals) {
+      await page.setViewportSize({ width: 1440, height: 1000 })
+      await page.goto(origin + door.replace('/api/', '/app/'))
+      const form = page.locator('form').filter({ has: page.getByRole('button', { name: 'Preview exact cell changes', exact: true }) })
+      await form.locator('[name="id"]').fill(body.id)
+      await page.getByText('Import reviewed provider data', { exact: true }).click()
+      await form.locator('[name="providerCapture"]').fill(JSON.stringify(body.providerCapture))
+      const response = page.waitForResponse(r => r.url().endsWith('/intake/preview') && r.request().method() === 'POST')
+      await page.getByRole('button', { name: 'Preview exact cell changes', exact: true }).click()
+      assert.equal((await response).status(), 409)
+      assert.match(await page.locator('main').innerText(), new RegExp(error.replaceAll('_', ' ')))
+      await capture('run-intake-refused-' + screen)
     }
     await page.goto(origin + door.replace('/api/', '/app/'))
     await capture('run-intake-entry')
