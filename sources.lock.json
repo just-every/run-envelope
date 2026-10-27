@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "cf4cfeaad9a241a7323433251c810eae02e17f935ac8f3aecd2e26e1021f04e1",
+      "sha256": "8deae871d53ebc6603a3f6239ab901e7d0342589c4c4fd7198710f109e4cc438",
       "executable": false
     },
     "deploy-demo.json": {
@@ -3078,7 +3078,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "70dc6b021f15c70da6ddf2a625f35490e364c4930021c46c1bc1c25edcda92f6",
+      "sha256": "4a6abe8fcc6047dbc7aae629a67b05ddb74a318efbeee8af0db0d79a8f9f789d",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {

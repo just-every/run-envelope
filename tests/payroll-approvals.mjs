@@ -652,23 +652,23 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await tip(373, 'cash', 60000, 1500, 1)
     await release(tipRun, tipVersion, 'run_sources_changed')
     // A spreadsheet correction and source withdrawal invalidate real human run approvals.
-    const intakeRun='synthetic-envelope-379'
-    const intakeBody={id:intakeRun,version:0,groupId:waSetup.group.id,periodStart:period.periodStart,periodEnd:period.periodEnd,
+    const preparedIntakeRun='synthetic-envelope-379'
+    const intakeBody={id:preparedIntakeRun,version:0,groupId:waSetup.group.id,periodStart:period.periodStart,periodEnd:period.periodEnd,
       rows:[{rowId:'synthetic-envelope-379-row',personId:w1.id,day:'2026-03-02',code:'bonus',amountCents:10000,sourceRef:'synthetic-envelope-379-source'}]}
     await data(door+'/intake',intakeBody,201)
-    await approveSetup('run-input',intakeRun)
-    const intakeVersion=await run(intakeRun,0,waSetup.group)
-    await approve(intakeRun,'owner');await approve(intakeRun,'approver-b')
-    await release(intakeRun,intakeVersion,'run_not_payable')
-    const oldIntakeRun=(await data(door)).runs.find(row=>row.id===intakeRun)
+    await approveSetup('run-input',preparedIntakeRun)
+    const preparedIntakeVersion=await run(preparedIntakeRun,0,waSetup.group)
+    await approve(preparedIntakeRun,'owner');await approve(preparedIntakeRun,'approver-b')
+    await release(preparedIntakeRun,preparedIntakeVersion,'run_not_payable')
+    const oldIntakeRun=(await data(door)).runs.find(row=>row.id===preparedIntakeRun)
     await data(door+'/intake',{...intakeBody,version:1,rows:[{...intakeBody.rows[0],amountCents:0}]},201)
-    await release(intakeRun,intakeVersion,'run_sources_changed')
-    assert.deepEqual((await data(door)).runs.find(row=>row.id===intakeRun).data,oldIntakeRun.data,'file correction preserves the exact approved run')
-    await approveSetup('run-input',intakeRun)
-    const refreshedIntakeVersion=await run(intakeRun,intakeVersion,waSetup.group)
-    await approve(intakeRun,'owner');await approve(intakeRun,'approver-b')
-    await data(door+'/run-input/'+intakeRun+'/withdraw',{version:2})
-    await release(intakeRun,refreshedIntakeVersion,'run_sources_changed')
+    await release(preparedIntakeRun,preparedIntakeVersion,'run_sources_changed')
+    assert.deepEqual((await data(door)).runs.find(row=>row.id===preparedIntakeRun).data,oldIntakeRun.data,'file correction preserves the exact approved run')
+    await approveSetup('run-input',preparedIntakeRun)
+    const refreshedIntakeVersion=await run(preparedIntakeRun,preparedIntakeVersion,waSetup.group)
+    await approve(preparedIntakeRun,'owner');await approve(preparedIntakeRun,'approver-b')
+    await data(door+'/run-input/'+preparedIntakeRun+'/withdraw',{version:2})
+    await release(preparedIntakeRun,refreshedIntakeVersion,'run_sources_changed')
     // Official OIDC ID-token schema edge: a pinned issuer signs fresh, nonce-bound MFA.
     const signing=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
     const jwk={...await crypto.subtle.exportKey('jwk',signing.publicKey),kid:'synthetic-envelope-822',alg:'ES256',use:'sig'}
