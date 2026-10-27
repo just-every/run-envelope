@@ -124,7 +124,7 @@ const settings = {
   SETUP_TOKEN: setupToken,
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
-const clockEntrypoint = ['new-hires','automation','tax-notices'].includes(process.env.ENVELOPE_JOURNEYS) ? await newHireClockWorker(process.env.ENVELOPE_JOURNEYS==='automation'?'2026-11-10T12:00:00Z':undefined) : undefined
+const clockEntrypoint = ['new-hires','automation','tax-notices','source-intake'].includes(process.env.ENVELOPE_JOURNEYS) ? await newHireClockWorker(process.env.ENVELOPE_JOURNEYS==='automation'?'2026-11-10T12:00:00Z':process.env.ENVELOPE_JOURNEYS==='source-intake'?'2026-01-31T12:00:00Z':undefined) : undefined
 let output = ''
 async function launch(bindings) {
   const instance = await unstable_startWorker({
@@ -302,7 +302,7 @@ try {
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })
   if (!selected || selected.includes('intake')) await earningsIntakeJourney({origin,cookie})
-  if (!selected || selected.includes('source-intake')) await sourceIntakeJourney({ origin, cookie, sql, settings })
+  if (!selected || selected.includes('source-intake')) await sourceIntakeJourney({ origin, cookie, sql, settings, advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
   if (!selected || selected.includes('leave')) await leaveJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('allocations'))
     await allocationJourney({ origin, cookie, sql, settings })
