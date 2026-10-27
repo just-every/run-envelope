@@ -159,6 +159,7 @@ export async function archiveJourney(context) {
     assert.equal(earlierExport.code, 0, 'a real earlier archive retains the soon-erased unused worker: ' + earlierExport.output)
     await context.withRestoredWorker(state(source), () => archiveErasure(context, fixture))
     before = await snapshot(state(source))
+    assert.ok(!before.env_new_hire_authority.some(row=>row.person_id===fixture.privacyPersonId),'eligible erasure removes pending and historical report transfer authority from the live database')
     assert.ok(!before.env_people.some(row => row.id === fixture.unusedId), 'only the unused worker was erased before the current archive')
     const exported = await rer(source, 'export', 'exports/custody.rer')
     assert.equal(exported.code, 0, 'the real rer export succeeds for populated native state')
@@ -185,7 +186,12 @@ export async function archiveJourney(context) {
     for(const [table,column,id] of [['env_notices','id',fixture.noticeCustody.id],['env_notice_analysis','id',fixture.noticeCustody.analysisId],
       ['env_notice_replies','id',fixture.noticeCustody.replyId],['env_notice_approvals','reply_id',fixture.noticeCustody.replyId],['env_notice_dispatches','reply_id',fixture.noticeCustody.replyId]])
       assert.ok(!rows[table].some(row=>row[column]===id),'actual export omits erased notice derivative '+table)
-    assert.ok(!rows.env_new_hire_authority.some(row=>row.person_id===fixture.privacyPersonId),'export contains no erased report transfer capability')
+    assert.ok(!(rows.env_new_hire_authority ?? []).some(row=>row.person_id===fixture.privacyPersonId),'export contains no erased report transfer capability')
+    const erasedTargets=[fixture.privacyPersonId,fixture.privacyWorkId,...fixture.custodyObjects,...fixture.noticeCustody.linkIds,
+      fixture.noticeCustody.id,fixture.noticeCustody.replyId,fixture.noticeCustody.analysisId,fixture.privateCustody.paperId,
+      fixture.reportingCustody.reportId,fixture.reportingCustody.activeReportId,fixture.reportingCustody.instructionId]
+    assert.ok(!rows.env_audit.some(row=>erasedTargets.includes(row.target_id)),'the entire exported permanent audit anonymizes erased targets beyond the bounded audit page')
+    assert.ok(rows.env_audit.some(row=>row.target_id===fixture.sharedCustody.coworkerId),'independent coworker audit history is retained')
     assert.ok(rows.env_notices.some(row=>row.id===fixture.noticeId),'unrelated employer notice custody remains intact')
     const damagedEditions = join(temporary, 'damaged-editions.rer')
     const editions = await archiveEditions(records, source, damagedEditions)
