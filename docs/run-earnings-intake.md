@@ -266,3 +266,14 @@ unchanged frozen history, replay, refusal of unknown workers and unsafe source
 states, local withdrawal and settlement-only changes. All ten named adapters
 now have a bounded capture path; this does not complete every provider code,
 jurisdiction, custody duty or the statutory tip-tax shortfall path.
+
+After an explicit native erasure request, the intake journey also refuses release
+and deletion of unclassified retained history. The current owner supplies fresh
+proof, reviews every retained record, classifies its lawful release gate and
+explicitly releases it before eligible erasure. Original and corrected intake
+versions are removed and the erasure audit uses an anonymous target. Hashed source
+identities remain fenced: reusing the same source under a different run ID or
+remapping its worker cannot restore erased captures. This covers all ten bounded
+adapter fixtures and the manual source. It does not establish real-world legal
+eligibility, every transport, external deletion or an intake-specific older
+archive recovery matrix. No timer releases a hold.

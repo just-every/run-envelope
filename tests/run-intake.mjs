@@ -1323,6 +1323,6 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     await browser.close()
   }
   console.log(
-    'RUN-INTAKE passed: native three-worker grid, mapped CSV XLS XLSX changes, blank and zero, source claims, replay, typed tips, retained history, current review and refusal; no calculated tax or payment claim'
+    'RUN-INTAKE passed: ten reviewed provider workweeks, native three-worker grid, mapped CSV XLS XLSX changes, blank and zero, source claims, replay, typed tips, exact corrections, frozen history, held custody, reviewed eligible erasure and source fencing after run renaming and worker remapping; no calculated tax or payment claim'
   )
 }
