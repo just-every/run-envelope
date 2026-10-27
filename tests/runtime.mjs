@@ -125,7 +125,7 @@ const settings = {
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
 const clockEntrypoint = clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
-  ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') && clockJourneys.length === 1 ? '2026-01-31T12:00:00Z' : undefined)
+  ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
 let output = ''
 async function launch(bindings) {
@@ -308,7 +308,7 @@ try {
     await sourceIntakeJourney({ origin, cookie, sql, settings, advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
     // Restore the synthetic owner's ordinary session and date after collection cases.
     for (const session of ownerSessions) await sql("UPDATE oa_sessions SET expires_at="+session.expires_at+" WHERE id='"+session.id+"'")
-    assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':'2026-10-27T23:59:30Z'}})).status,200)
+    assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':'2026-10-27T00:00:00Z'}})).status,200)
   }
   if (!selected || selected.includes('leave')) await leaveJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('allocations'))
