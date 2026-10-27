@@ -30,6 +30,11 @@ import { AgentSettings, AgentTools } from './agents'
 import { Lifecycle } from './lifecycle'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
+import { WithholdingInstructions } from './withholding-instructions'
+import { withholdingInstructionPage } from './withholding-instruction-pages'
+import { TaxNoticeCases } from './tax-notices'
+import { taxNoticeMultipart } from './tax-notice-input'
+import { taxNoticeCasePage } from './tax-notice-pages'
 import { providersPage, noticesPage, noticePage, replyReviewPage } from './notice-pages'
 import { agentsPage, issuedAgentPage, draftsPage } from './agent-pages'
 import { CompanySetup } from './setup'
@@ -78,6 +83,8 @@ const json = (value: unknown, status = 200) => Response.json(value, { status, he
 const redirect = (location: string) =>
   new Response(null, { status: 303, headers: { ...headers, location } })
 async function input(request: Request): Promise<Input> {
+  if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/withholding-instructions$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
+  if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/notices\/[-a-zA-Z0-9]+\/case(?:\/evidence)?$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/paper-onboarding$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return paperMultipart(request)
   const claims = /^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/claims(?:\/|$)/.test(new URL(request.url).pathname)
   if (claims && request.headers.get('content-type')?.startsWith('multipart/form-data')) return claimsMultipartInput(request)
@@ -478,6 +485,23 @@ export async function payrollResponse(
         else if(tail.length===3 && tail[2]==='approve' && post) {const result=await store.decide(actor,'new-hire-election',tail[1],value);response=ui?redirect(base+'/new-hire-elections'):json(result)}
         else if(tail.length===1 && !post) response=ui?electionContent(session,companies,actor,await reporting.elections(actor)):json(await reporting.elections(actor))
         else throw new PayrollError('not_found',404)
+      } else if (tail[0]==='people' && tail[2]==='withholding-instructions') {
+        const instructions=new WithholdingInstructions(new WorkspaceStore(records)),person=tail[1],door=base+'/people/'+person+'/withholding-instructions'
+        if(tail.length===3 && !post) {
+          const history=await instructions.history(actor,person)
+          response=ui?withholdingInstructionPage(session,companies,actor,person,history):json(history)
+        } else if(tail.length===3 && post) {
+          const result=await instructions.save(actor,person,value)
+          response=ui?redirect(door):json(result,201)
+        } else if(tail.length===4 && !post && tail[3]==='review') {
+          const review=await instructions.review(actor,person)
+          response=ui?withholdingInstructionPage(session,companies,actor,person,review.history,review):json(review)
+        } else if(tail.length===4 && post && tail[3]==='approve') {
+          const result=await instructions.approve(actor,person,value)
+          response=ui?redirect(door):json(result)
+        } else if(tail.length===5 && !post && tail[3]==='original' && /^\d+$/.test(tail[4])) {
+          response=new Response(await instructions.original(actor,person,Number(tail[4])),{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="withholding-instruction.pdf"','x-content-type-options':'nosniff'}})
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='new-hire-reports') {
         const reporting=new NewHireReporting(new WorkspaceStore(records)),person=await records.person(actor,tail[1]),id=tail[3], action=tail[4],back=base+'/people/'+person.id+'/new-hire-reports'
         if(tail.length===3 && !post) response=ui?newHirePage(session,companies,actor,person,await reporting.reports(actor,person.id),undefined,undefined,url.searchParams.get('directory') ?? 'OH',url.searchParams.get('repair') ?? undefined):json(await reporting.reports(actor,person.id))
@@ -692,6 +716,23 @@ export async function payrollResponse(
         } else if (tail.length===2 && !post) {
           const result = await notices.details(actor,tail[1])
           response = ui ? noticePage(session,companies,actor,result) : json(result)
+        } else if (tail[2]==='case' && tail.length>=3) {
+          const cases=new TaxNoticeCases(new WorkspaceStore(records)),id=tail[1],action=tail[3]
+          if(!post && tail.length===3) {
+            const history=await cases.history(actor,id)
+            response=ui?taxNoticeCasePage(session,companies,actor,id,history):json(history)
+          } else if(post && tail.length===3) {
+            const result=await cases.save(actor,id,value)
+            response=ui?redirect(base+'/notices/'+id+'/case'):json(result,201)
+          } else if(!post && tail.length===4 && action==='review') {
+            const review=await cases.review(actor,id)
+            response=ui?taxNoticeCasePage(session,companies,actor,id,review.history,review):json(review)
+          } else if(post && tail.length===4 && ['approve','evidence','link-rate'].includes(action)) {
+            const result=await (action==='approve'?cases.approve(actor,id,value):action==='evidence'?cases.evidence(actor,id,value):cases.linkRate(actor,id,value))
+            response=ui?redirect(base+'/notices/'+id+'/case'):json(result)
+          } else if(!post && tail.length===6 && action==='original' && /^\d+$/.test(tail[4]) && /^\d+$/.test(tail[5])) {
+            response=new Response(await cases.original(actor,id,Number(tail[4]),Number(tail[5])),{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="tax-notice.pdf"','x-content-type-options':'nosniff'}})
+          } else throw new PayrollError('not_found',404)
         } else if (tail.length===3 && tail[2]==='replies' && post) {
           const result = await notices.saveReply(actor,tail[1],value)
           response = ui ? redirect(base+'/notices/'+tail[1]) : json(result,201)

@@ -68,7 +68,8 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=claims pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=claims pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=tax-notices pnpm run test:runtime"
       ]
     },
     {

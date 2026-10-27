@@ -4,6 +4,8 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'tax-notice-case'
+  | 'withholding-instruction'
   | 'paper-onboarding'
   | 'automation-policy'
   | 'new-hire-report'
