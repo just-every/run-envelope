@@ -2,6 +2,7 @@ import type { Actor } from '../access'
 import type { Input } from '../records'
 import { date, integer, text, PayrollError } from '../security'
 import { WorkspaceStore, objectId, revision, choice } from './store'
+import { collectionPins } from './review-inputs'
 
 /**
  * One recorded tip for one worker and day. Cash tips were already received by the
@@ -22,7 +23,15 @@ const cents = (value: unknown) => (value === undefined || value === '' || value 
 export class Tips {
   constructor(public store: WorkspaceStore) {}
   async save(actor: Actor, personId: string, input: Input) {
-    const amountCents = integer(input.amountCents),
+    await this.store.authority(actor, 'rates:propose', personId, true)
+    const pins = await collectionPins(this.store, actor, [{kind:'tip',personId,exceptId:''}])
+    const rows = await this.store.list<TipEntry>(actor, 'tip', personId, true, false)
+    const id = objectId(input.id), sourceRef = text(input.sourceRef, 240)
+    if (rows.some(row => row.id !== id && row.data.sourceRef === sourceRef))
+      throw new PayrollError('tip_source_already_recorded', 409)
+    if (rows.some(row => row.id === id && row.data.sourceRef !== sourceRef))
+      throw new PayrollError('tip_source_identity_changed', 409)
+    const amountCents = input.amountCents === 0 || input.amountCents === '0' ? 0 : integer(input.amountCents),
       furnishedCents = cents(input.furnishedCents)
     if (furnishedCents > amountCents) throw new PayrollError('invalid_tip_funds')
     const data: TipEntry = {
@@ -30,10 +39,10 @@ export class Tips {
       amountCents,
       settlement: choice(input.settlement, ['cash', 'paycheck']) as TipEntry['settlement'],
       furnishedCents,
-      sourceRef: text(input.sourceRef, 240),
+      sourceRef,
       owner: actor.session.operator.displayName,
       ownerId: actor.session.operator.id,
     }
-    return this.store.append(actor, 'tip', objectId(input.id), revision(input.version), data, personId, true)
+    return this.store.append(actor, 'tip', id, revision(input.version), data, personId, true, {reviewSets:pins})
   }
 }
