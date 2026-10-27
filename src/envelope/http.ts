@@ -13,6 +13,9 @@ import { claimsResponse } from './claims/http'
 import { claimsMultipartInput } from './claims/form-input'
 import { NewHireReporting, coverage as newHireCoverage } from './people/new-hire-reporting'
 import { newHirePage, coveragePage, electionContent } from './people/new-hire-pages'
+import { PaperOnboarding } from './people/onboarding'
+import { paperMultipart } from './people/onboarding-input'
+import { paperOnboardingPage } from './people/onboarding-pages'
 import { HrisHires } from './people/hris-hires'
 import { hirePage } from './people/hire-pages'
 import { VerificationRequests, ownerOnly, retentionDeadline } from './income-verification/requests'
@@ -74,12 +77,13 @@ const json = (value: unknown, status = 200) => Response.json(value, { status, he
 const redirect = (location: string) =>
   new Response(null, { status: 303, headers: { ...headers, location } })
 async function input(request: Request): Promise<Input> {
+  if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/paper-onboarding$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return paperMultipart(request)
   const claims = /^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/claims(?:\/|$)/.test(new URL(request.url).pathname)
   if (claims && request.headers.get('content-type')?.startsWith('multipart/form-data')) return claimsMultipartInput(request)
   if (!request.body) throw new PayrollError('invalid_input')
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = [],
-    limit = claims ? 3 * 1024 * 1024 : 64000
+    limit = claims ? 3 * 1024 * 1024 : new URL(request.url).pathname.endsWith('/paper-onboarding') ? 1100000 : 64000
   let size = 0
   while (true) {
     const { done, value } = await reader.read()
@@ -777,6 +781,26 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'people' && post) {
         const person = await records.createPerson(actor, value)
         response = ui ? redirect(`${base}/people/${person.id}`) : json(person, 201)
+      } else if (tail[0]==='people' && tail[2]==='paper-onboarding') {
+        const onboarding=new PaperOnboarding(new WorkspaceStore(records)), personId=tail[1]
+        const back=base+'/people/'+personId+'/paper-onboarding',viewer=session
+        const screen=async(review?:Awaited<ReturnType<PaperOnboarding['review']>>)=>{
+          const rows=await onboarding.history(actor,personId),person=await records.person(actor,personId)
+          const workerType=url.searchParams.get('workerType')==='contractor'?'contractor':url.searchParams.has('workerType')?'employee':rows[0]?.data.workerType ?? 'employee'
+          const federalForm=workerType==='contractor'?'W-9':url.searchParams.get('federalForm')==='W-4-pre2020'?'W-4-pre2020':'W-4'
+          const stateForm=workerType==='contractor'?'none':url.searchParams.get('stateForm')==='PA-residency'?'PA-residency':'OH-IT-4'
+          return paperOnboardingPage(viewer,companies,actor,person,rows,{workerType,federalForm,stateForm},review)
+        }
+        if (tail.length===3) {
+          if (post) {const result=await onboarding.save(actor,personId,value);response=ui?redirect(back):json(result,201)}
+          else response=ui?await screen():json(await onboarding.history(actor,personId))
+        }
+        else if (tail.length===4 && tail[3]==='review' && !post) {const result=await onboarding.review(actor,personId);response=ui?await screen(result):json(result)}
+        else if (tail.length===4 && ['approve','withdraw'].includes(tail[3]) && post) {const result=await onboarding.decide(actor,personId,value,tail[3]==='withdraw');response=ui?redirect(back):json(result)}
+        else if (tail.length===6 && tail[3]==='original' && !post) {
+          const original=await onboarding.original(actor,personId,tail[4],tail[5])
+          response=new Response(original,{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"'}})
+        } else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='verification') {
         const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'+(verificationLanguage==='es'?'?lang=es':'')
         const view=async()=>{

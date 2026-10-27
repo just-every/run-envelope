@@ -86,7 +86,8 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=new-hires pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=new-hires pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=paper-onboarding pnpm run test:runtime"
       ]
     }
   ],

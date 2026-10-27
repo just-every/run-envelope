@@ -25,7 +25,7 @@ export async function seal(key: CryptoKey, context: string, value: string) {
   return JSON.stringify({
     v: 1,
     iv: btoa(String.fromCharCode(...iv)),
-    data: btoa(String.fromCharCode(...new Uint8Array(bytes))),
+    data: btoa(Array.from(new Uint8Array(bytes), byte => String.fromCharCode(byte)).join('')),
   })
 }
 export async function unseal(key: CryptoKey, context: string, cipher: string) {

@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "74dde195b2960f0ad94ca2488168efdb7867c6e40b5ef049d4c2aa5c68257159",
+      "sha256": "6018e4167d74f6bb2f510e2f837a8b03c843c2eb7f2755b872ac3e055074dd01",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "89696eb5defea6607bb177c0c1fea9efcd830978ad11db319fce33dfa0ebec6f",
+      "sha256": "02b280929f4dacfec0079e268ec17feaf0d798055bdd198ce785bbe70c93a960",
       "executable": false
     },
     "deploy-demo.json": {
@@ -375,6 +375,10 @@
     },
     "docs/LOOK.md": {
       "sha256": "3e98e12b6b34f3a99d483f05b9aed4f90fec3f13a3d405bf18687d4167720f81",
+      "executable": false
+    },
+    "docs/paper-onboarding.md": {
+      "sha256": "f4b35068ad1089d77632e81035ce2934fe8fcccac5111977c9bee9f112f13725",
       "executable": false
     },
     "docs/payroll-agents.md": {
@@ -1430,7 +1434,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "c61027283f6e840740cf79b7a545dc551d97fe44ded6fd3d33d2f0a8edbfd0ec",
+      "sha256": "ab4147bb3fd724dd96ad1826bf12b02c0a10f3d50eb113e3f89fb640af022ba4",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -1530,7 +1534,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "8b3a3aba8e9a1fba1a734c8962537c14c7edd1e2e4da18795de60200592508bf",
+      "sha256": "ffc426966a8bd53f079dd32b8f68008856634bd248692cffc8e709ab5e2f1f13",
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
@@ -1553,6 +1557,18 @@
       "sha256": "8250913645f47627d0a073f03a5e3510522476f91e488da53c1015c400fc3c7a",
       "executable": false
     },
+    "src/envelope/people/onboarding-input.ts": {
+      "sha256": "45b7ea6b4ecfe9ff16c0ded449cfc81ee995388f64f77c2f5b62c1c595ab195f",
+      "executable": false
+    },
+    "src/envelope/people/onboarding-pages.tsx": {
+      "sha256": "15e907764a4a37372332b56a670ae524da207d86651443377caa5a3ad7b950e4",
+      "executable": false
+    },
+    "src/envelope/people/onboarding.ts": {
+      "sha256": "42d5b591737a7d78e472e6849da04fb19845a86dbb23af7065d48b011fb49b76",
+      "executable": false
+    },
     "src/envelope/privacy-pages.tsx": {
       "sha256": "c547d593be70d998be117064ced0c99d2964d932f5b357460bc8bfaa7333e7c9",
       "executable": false
@@ -1570,7 +1586,7 @@
       "executable": false
     },
     "src/envelope/security.ts": {
-      "sha256": "592d5f2976964e9edc947290a81ff9326e4e1cef465a483d14e5c54ab7c041ce",
+      "sha256": "30e0d5677a7ba369741517ac156a989b7ea9302d4c667ac87cd02bb98b037fa7",
       "executable": false
     },
     "src/envelope/setup.ts": {
@@ -1674,7 +1690,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "c1b1c5740d7c06aa6e6c1959062fec82a8d3f46a5e9c5cf02195555450715917",
+      "sha256": "15ba64045749ab10c283c96018f2352bd963f98b007b7e2909adc55b810b6d58",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2966,7 +2982,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "e25a35f23f80bb74cdd49c6f27bdce0034bfc0252a6cb0003794cd50f5d4940a",
+      "sha256": "54addd32e3ac0169bbbc6d425f2d5051e0005af2e88310737fefa9e7afaec035",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
@@ -2974,7 +2990,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "efde157451cbe555e2aa405c7e39fce079e0db85e78a507c1106ce8d419108c2",
+      "sha256": "d2f116b3087c84c27f083bdcc0f9a230f23079b6b68a7f22545a25f8cad8a864",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
@@ -2986,7 +3002,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "ffbada0a2adf9a19f072f5f5c7b60c42e9191e87b56bb8f4bd972b96353ce6c2",
+      "sha256": "e31de580104c559a75c8a737e9b9fc8cea3a11af83601a1e0ceb385bd4a1f99b",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

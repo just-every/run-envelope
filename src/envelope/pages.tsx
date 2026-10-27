@@ -444,6 +444,7 @@ export function personPage(
     actor.company,
     <>
       <p><a className="btn" href={base + '/new-hire-reports'}>New-hire reporting</a></p>
+      {actor.grant.role==='owner' && <p><a className="btn" href={base + '/paper-onboarding'}>Signed paper onboarding</a></p>}
       <p><a className="btn" href={companyPath(actor.company) + '/people/' + person.id + '/leave'}>Leave ledger</a></p>
       <p><a className="btn" href={base + '/hris'}>HR changes and source history</a> <a className="btn" href={base + '/earnings-sources'}>Job and commission earnings</a> <a className="btn" href={base + '/verification'}>Employment and income verification</a></p>
       {can(actor,'private:read','tax') && can(actor,'records:read','compensation') && <p><a className="btn" href={base + '/industry'}>Industry payroll treatment</a></p>}

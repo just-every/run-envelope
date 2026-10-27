@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
 import { startRecordedWorker as unstable_startWorker, finishPrivacyRecording, recordPrivateInput } from './privacy-recorder.mjs'
 import {
+  paperOnboardingJourney,
   incomeVerificationJourney,
   sourceIntakeJourney,
   leaveJourney,
@@ -43,7 +44,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification',
-    'firm', 'industry', 'claims', 'archive', 'new-hires',
+    'firm', 'industry', 'claims', 'archive', 'new-hires', 'paper-onboarding',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -243,7 +244,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['new-hires', 'archive', 'claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['paper-onboarding', 'new-hires', 'archive', 'claims', 'industry', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -289,6 +290,7 @@ try {
     }
   }
   if (!selected || selected.includes('new-hires')) await newHireJourney({ origin, cookie, advanceClock:async instant=>{assert.ok(clockEntrypoint,'New-hire journey requires its pinned clock');assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
+  if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql,settings})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })

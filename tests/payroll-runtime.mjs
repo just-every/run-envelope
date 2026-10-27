@@ -4695,3 +4695,141 @@ export async function incomeVerificationJourney(runtime) {
     console.log('INCOME-VERIFICATION passed: former-worker native return with retained history and termination provenance, native worker and requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction and history, linked source correction, revocation, actual expiry and selected retention boundary; native screens 1440 and 390. Consent-bound legal-authority review, linked correction, exact archive history, older-archive erasure fence, retained API and HTML transports and Spanish empty, held, failed and completed states proved.')
   }finally{await browser.close();await archiveCleanup()}
 }
+
+export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
+  const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':['application','json'].join('/')},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,path+' '+await r.clone().text());return r.json()}
+  const company=await data('/api/envelope/companies',{name:'Synthetic paper employer',ein:'00-0001925'},201),base='/api/envelope/companies/'+company.id
+  const location=await data(base+'/locations',{name:'Synthetic Ohio workplace',state:'OH'},201)
+  // There is deliberately no contact field and no portal operator for this worker.
+  const person=await data(base+'/people',{name:'Synthetic paper employee',locationId:location.id},201),door=base+'/people/'+person.id+'/paper-onboarding'
+  assert.deepEqual(await data(door),[])
+  const emptyBrowser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+  try {
+    const context=await emptyBrowser.newContext(),parts=cookie.split('=');await context.addCookies([{name:parts[0],value:parts[1],url:origin}]);const page=await context.newPage(),folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope';await mkdir(folder,{recursive:true})
+    for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+door.replace('/api/','/app/'));assert.match(await page.locator('main').innerText(),/No signed paper elections recorded/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(folder,'paper-empty-'+width+'.png'),fullPage:true})}
+  } finally {await emptyBrowser.close()}
+  const pdf=Buffer.from('%PDF-1.4\nSynthetic signed paper original for fixture 1925\n%%EOF').toString('base64')
+  const original={signed:true,signedBy:'Synthetic paper employee',signedOn:'2026-01-01',pdf}
+  const input={version:0,attestTranscription:true,workerType:'employee',hiredOn:'2026-01-02',paymentMethod:'paper-check',tin:'900001925',address:'1 Synthetic Street, Columbus OH 43215',
+    federal:{form:'W-4',effectiveFrom:'2026-01-02',original,fields:{filingStatus:'single',multipleJobs:'no',dependentCreditCents:200000,otherIncomeCents:0,deductionsCents:0,additionalCents:2500,exempt:'no'}},
+    state:{form:'OH-IT-4',effectiveFrom:'2026-01-02',original,fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:1000,localExemption:'none'}}}
+  privateValue(input.tin);privateValue(pdf)
+  const snapshot=()=>sql(`SELECT (SELECT COUNT(*) FROM env_people) AS people,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_workspace_reviews) AS reviews,(SELECT COUNT(*) FROM env_audit) AS audit`)
+  const noWrite=async task=>{const before=await snapshot();await task();assert.deepEqual(await snapshot(),before,'refused onboarding creates no records, decisions, review tokens or audit')}
+  await noWrite(async()=>{
+    await data(door,{...input,attestTranscription:false},400)
+    await data(door,{...input,federal:{...input.federal,original:{...original,signed:false}}},400)
+    await data(door,{...input,state:{...input.state,original:{...original,signed:false}}},400)
+    await data(door,{...input,state:{...input.state,fields:{...input.state.fields,schoolDistrictNumber:''}}},400)
+    await data(door,{...input,paymentMethod:'direct-deposit'},400)
+  })
+  await data(door,input,201)
+  let rows=await data(door),row=rows[0]
+  assert.equal(rows.length,1);assert.equal(row.data.tin,'•••••1925');assert.equal(row.data.paymentMethod,'paper-check')
+  assert.equal(row.data.federal.fields.dependentCreditCents,200000);assert.equal(row.data.federal.fields.additionalCents,2500)
+  assert.equal(row.data.state.fields.schoolDistrictNumber,'2503');assert.equal(row.data.state.fields.additionalCents,1000)
+  assert.equal(row.data.state.original.attached,true);assert.equal(row.data.state.original.signedBy,original.signedBy)
+  assert.equal(row.paperworkReviewed,false);assert.equal(row.payable,false)
+  assert.equal(JSON.stringify(rows).includes(input.tin),false);assert.equal(JSON.stringify(rows).includes(pdf),false)
+  await noWrite(async()=>{await data(door,input,409);await data(door+'/approve',{version:1,reviewToken:'synthetic-envelope-unreviewed'},409)})
+  const review=await data(door+'/review')
+  assert.equal(review.data.tin,'•••••1925');assert.equal(JSON.stringify(review).includes(pdf),false)
+  await data(door+'/approve',{version:1,reviewToken:review.reviewToken})
+  row=(await data(door))[0];assert.equal(row.paperworkReviewed,true);assert.equal(row.payable,false)
+  assert.equal(row.createdBy,row.approvedBy);assert.ok(row.createdBy);assert.ok(row.createdAt);assert.ok(row.approvedAt)
+  const bytes=await call(door+'/original/1/federal');assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),['application','pdf'].join('/'));assert.match(bytes.headers.get('content-disposition'),/^attachment/);assert.equal(Buffer.from(await bytes.arrayBuffer()).toString('base64'),pdf)
+  // A district move appends rather than replacing the signed source and decision.
+  const moved={...input,version:1,state:{...input.state,effectiveFrom:'2026-07-01',original:{...original,signedOn:'2026-06-30'},fields:{...input.state.fields,schoolDistrictName:'Synthetic Worthington',schoolDistrictNumber:'2516'}}}
+  await data(door,moved,201)
+  rows=await data(door);assert.deepEqual(rows.map(r=>r.version),[2,1]);assert.deepEqual(rows.map(r=>r.data.state.fields.schoolDistrictNumber),['2516','2503'])
+  assert.equal(rows[0].paperworkReviewed,false);assert.equal(rows[1].paperworkReviewed,true)
+  await noWrite(async()=>{await data(door+'/approve',{version:1,reviewToken:review.reviewToken},409)})
+  const movedReview=await data(door+'/review');await data(door+'/approve',{version:2,reviewToken:movedReview.reviewToken})
+  await data(door+'/withdraw',{version:2});assert.equal((await data(door))[0].paperworkReviewed,false)
+  const legacy={...input,version:2,federal:{form:'W-4-pre2020',effectiveFrom:'2019-01-01',original:{...original,signedOn:'2018-12-31'},fields:{filingStatus:'married',allowances:3,additionalCents:1234,exempt:'no'}},state:{form:'PA-residency',effectiveFrom:'2026-08-01',original,fields:{residenceAddress:'2 Synthetic Street, Pittsburgh PA',residencePsd:'700102',workAddress:'3 Synthetic Street, Pittsburgh PA',workPsd:'700102',localExemption:'claimed',exemptionEvidence:'Synthetic signed local exemption original attached'}}}
+  await data(door,legacy,201)
+  row=(await data(door))[0];assert.equal(row.data.federal.fields.allowances,3);assert.equal(row.data.federal.fields.additionalCents,1234);assert.equal(row.data.state.fields.residencePsd,'700102');assert.equal(row.data.state.fields.workPsd,'700102');assert.equal(row.data.state.fields.localExemption,'claimed')
+  const contractor=await data(base+'/people',{name:'Synthetic paper contractor',locationId:location.id},201),contractDoor=base+'/people/'+contractor.id+'/paper-onboarding'
+  await data(contractDoor,{...input,workerType:'contractor',federal:{form:'W-9',effectiveFrom:'2026-01-02',original,fields:{taxClassification:'individual',exemptPayeeCode:''}},state:null},201)
+  const cr=await data(contractDoor+'/review');await data(contractDoor+'/approve',{version:1,reviewToken:cr.reviewToken})
+  const contractorRow=(await data(contractDoor))[0];assert.equal(contractorRow.paperworkReviewed,true);assert.equal(contractorRow.payable,false);assert.match(contractorRow.holds.join(' '),/TIN matching and backup withholding remain unavailable/)
+  const foreign=await data('/api/envelope/companies',{name:'Synthetic foreign paper employer',ein:'00-0001926'},201)
+  await noWrite(async()=>{await data('/api/envelope/companies/'+foreign.id+'/people/'+person.id+'/paper-onboarding',undefined,404)})
+  const outsiderId='synthetic-envelope-paper-outsider',token=randomBytes(32).toString('base64url'),hash=await hashToken(settings.SESSION_SECRET,'session',token)
+  await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${outsiderId}','paper-outsider@example.com','Synthetic outsider','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-paper-session','${hash}','${outsiderId}',1,'native',${Date.now()},${Date.now()+3600000})`)
+  await data(base+'/grants',{operatorId:outsiderId,version:0,role:'payroll-admin',locations:['*'],fields:['tax','ssn','compensation'],actions:['records:read','records:write','private:read','private:write','rates:approve']})
+  const outsider=localCookieName('operator_session_local',origin)+'='+token
+  await noWrite(async()=>{
+    for(const path of [door,door+'/review',door+'/original/1/federal']) await data(path,undefined,403,outsider)
+    await data(door,{...input,version:3},403,outsider)
+    await data(door+'/approve',{version:3,reviewToken:cr.reviewToken},403,outsider)
+  })
+  const audit=await data(base+'/audit');assert.ok(audit.some(r=>r.action==='onboarding.original.read'));assert.ok(audit.some(r=>r.action==='workspace.paper-onboarding.approved'));assert.ok(audit.some(r=>r.action==='workspace.paper-onboarding.withdrawn'))
+  const reviewOwner=await data(door+'/review')
+  const originalOwnerHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1]),otherOwnerToken=randomBytes(32).toString('base64url'),otherOwnerHash=await hashToken(settings.SESSION_SECRET,'session',otherOwnerToken)
+  await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) SELECT 'synthetic-envelope-paper-other-owner','${otherOwnerHash}',operator_id,operator_version,'native',${Date.now()},${Date.now()+3600000} FROM oa_sessions WHERE token_hash='${originalOwnerHash}'`)
+  const otherOwnerCookie=localCookieName('operator_session_local',origin)+'='+otherOwnerToken
+  await noWrite(async()=>{await data(door+'/approve',{version:3,reviewToken:reviewOwner.reviewToken},409,otherOwnerCookie)})
+  await sql(`UPDATE env_workspace_reviews SET expires_at=1 WHERE kind='paper-onboarding' AND object_id='paper-${person.id}' AND version=3`)
+  await noWrite(async()=>{await data(door+'/approve',{version:3,reviewToken:reviewOwner.reviewToken},409)})
+  await noWrite(async()=>{await data(door,{...legacy,version:3,federal:{...legacy.federal,original:{...original,signedOn:'2026-01-01'}}},400)})
+  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+  try {
+    const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}])
+    const page=await context.newPage(),screen=door.replace('/api/','/app/'),folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
+    const uploadedPdf=Buffer.from('%PDF-1.4\n'+'% Synthetic signed paper 1925\n'.repeat(6000)+'%%EOF')
+    privateValue(uploadedPdf.toString('base64').slice(0,128))
+    await mkdir(folder,{recursive:true})
+    const capture=async(label,path=screen,status=200)=>{
+      for(const width of [1440,390]) {
+        await page.setViewportSize({width,height:1000})
+        const reply=await page.goto(origin+path);assert.equal(reply.status(),status)
+        await page.locator('h1').waitFor();await page.evaluate(()=>document.fonts.ready)
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+        await page.locator('details').evaluateAll(elements=>elements.forEach(element=>element.open=true))
+        for(const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim().length>1,'paper controls have visible words and no icon-only action')
+        assert.equal((await page.content()).includes(input.tin),false);assert.equal((await page.content()).includes(pdf),false)
+        await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement?.tagName==='A'),true)
+        await page.locator('details').evaluateAll(elements=>elements.forEach(element=>element.open=true))
+        await page.screenshot({path:join(folder,'paper-'+label+'-'+width+'.png'),fullPage:true})
+      }
+    }
+    await capture('history')
+    await capture('employee-record',base.replace('/api/','/app/')+'/people/'+person.id)
+    await capture('contractor',contractDoor.replace('/api/','/app/'))
+    await capture('pa-certificate',screen+'?stateForm=PA-residency')
+    await capture('legacy-certificate',screen+'?federalForm=W-4-pre2020')
+    await capture('w9-certificate',screen+'?workerType=contractor')
+    await page.setViewportSize({width:1440,height:1000});await page.goto(origin+screen)
+    const fields={'hiredOn':'2026-01-02','tin':input.tin,'address':input.address,'federal.effectiveFrom':'2026-09-01','federal.signedBy':'Synthetic paper employee','federal.signedOn':'2026-08-31','federal.fields.additionalCents':'666','state.effectiveFrom':'2026-09-01','state.signedBy':'Synthetic paper employee','state.signedOn':'2026-08-31','state.fields.residenceAddress':'4 Synthetic Street, Columbus OH','state.fields.schoolDistrictName':'Synthetic Columbus','state.fields.schoolDistrictNumber':'2503'}
+    for(const [key,value] of Object.entries(fields)) await page.locator('[name="'+key+'"]').fill(value)
+    for(const prefix of ['federal','state']) {
+      await page.locator('[name="'+prefix+'.pdf"]').setInputFiles({name:'synthetic-envelope-1925.pdf',mimeType:['application','pdf'].join('/'),buffer:uploadedPdf})
+      await page.locator('[name="'+prefix+'.signed"]').check()
+    }
+    await page.locator('[name="attestTranscription"]').check()
+    const submit=page.getByRole('button',{name:'Record signed paper version',exact:true});await submit.focus()
+    const submitted=await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.keyboard.press('Enter')])
+    assert.equal(submitted[0].status(),200,await page.locator('main').innerText())
+    assert.equal((await data(door))[0].version,4);assert.equal((await data(door))[0].data.federal.fields.additionalCents,666)
+    const uploadedOriginal=await call(door+'/original/4/federal');assert.equal(uploadedOriginal.status,200);assert.deepEqual(Buffer.from(await uploadedOriginal.arrayBuffer()),uploadedPdf)
+    await capture('pending')
+    await capture('review',screen+'/review')
+    await page.getByRole('button',{name:'Confirm exact paper review',exact:true}).focus()
+    await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.keyboard.press('Enter')])
+    assert.equal((await data(door))[0].paperworkReviewed,true);assert.equal((await data(door))[0].payable,false)
+    await capture('reviewed')
+    await page.getByRole('button',{name:'Withdraw paper review',exact:true}).focus()
+    await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.keyboard.press('Enter')])
+    assert.equal((await data(door))[0].paperworkReviewed,false)
+    await capture('withdrawn')
+    const outsiderContext=await browser.newContext(),parts=outsider.split('=');await outsiderContext.addCookies([{name:parts[0],value:parts[1],url:origin}])
+    const deniedPage=await outsiderContext.newPage()
+    for(const width of [1440,390]) {await deniedPage.setViewportSize({width,height:1000});const reply=await deniedPage.goto(origin+screen);assert.equal(reply.status(),403);assert.equal((await deniedPage.content()).includes('1925'),false);await deniedPage.screenshot({path:join(folder,'paper-refused-'+width+'.png'),fullPage:true})}
+  } finally {await browser.close()}
+  const stored=JSON.stringify(await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}'`));assert.equal(stored.includes(input.tin),false);assert.equal(stored.includes(pdf),false)
+  const custody=await data(base+'/people/'+person.id+'/privacy');assert.equal(custody.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='paper-onboarding').length,4)
+  assert.equal((await data(base)).people.length,2,'updates never create another worker')
+  console.log('PAPER-ONBOARDING passed: no-contact employee and contractor paper intake, signed originals, exact review, masked reads, historical federal elections, PA and Ohio certificates, district move, encrypted custody, unsigned and foreign refusals; no payable or IRS authority claimed')
+}
