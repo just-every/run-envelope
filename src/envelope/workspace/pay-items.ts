@@ -1,5 +1,6 @@
 import type { BonusPreparation } from '../bonus-runs'
 import { SourceIntake, reviewedRate, currentEvents } from '../intake/sources'
+import type { RunInput } from '../intake/run-input'
 import { LeaveLedger } from '../leave/ledger'
 import type { Actor } from '../access'
 import type { Input } from '../records'
@@ -402,6 +403,15 @@ export class PayItems {
       objects: NonNullable<Sources['objects']> = [
         { kind: 'group', id: group.id, version: group.version, approved: true },
       ]
+    const runInputId = input.intakeRunId || input.id
+    const runInput = runInputId ? (await this.store.list<RunInput>(actor,'run-intake',undefined,true,false)).find(r=>r.id===runInputId) : undefined
+    if(runInput && runInput.data.rows.some(r=>!group.data.people.some(p=>p.id===r.personId) || r.day<periodStart || r.day>periodEnd))
+      throw new PayrollError('intake_outside_run_scope',409)
+    if(persist && input.intakeRunId && input.intakeRunId!==input.id)throw new PayrollError('intake_run_identity_conflict',409)
+    if(runInput)objects.push({kind:'run-intake',id:runInput.id,version:runInput.version,approved:true})
+    if(runInput){
+      if(!runInput.approvedBy || runInput.withdrawnBy || !runInput.sourcesCurrent)throw new PayrollError('intake_review_required',409)
+    }
     const assigned = (
       await this.store.records
         .statement(
@@ -413,6 +423,8 @@ export class PayItems {
     for (const member of group.data.people) {
       const intake = new SourceIntake(this.store), hr = await intake.timeline(actor, member.id, 'hris-event')
       const sourceEarnings = await intake.timeline(actor, member.id, 'source-earning')
+      const inputLines=runInput?.data.rows.filter(r=>r.personId===member.id) ?? []
+      const intakeWeeks=new Map<string,{microMinutes:bigint;straightNumerator:bigint;nonexempt:boolean}>()
       for(const hire of hr.filter(r=>r.kind==='hris-hire')) objects.push({kind:hire.kind,id:hire.id,version:hire.version,approved:true})
       const firstHire=hr.filter(r=>r.data.type==='hire' && r.approvedBy && !r.withdrawnBy && r.sourcesCurrent).sort((a,b)=>a.data.effectiveDate.localeCompare(b.data.effectiveDate))[0]
       const work = latest(
@@ -525,7 +537,9 @@ export class PayItems {
         } else {
           if (day < setup.employmentFrom || day > setup.employmentThrough || setup.unpaidDates.includes(day)) continue
           const entries = work.filter((w) => w.data.day === day)
-          const minutes = entries.reduce((s, w) => s + w.data.minutes, 0)
+          const entered=inputLines.filter(r=>r.code==='regular' && r.day===day)
+          if(entries.length && entered.length)throw new PayrollError('intake_work_source_conflict',409)
+          const minutes = entries.reduce((s, w) => s + w.data.minutes, 0)+entered.reduce((s,r)=>s+r.minutes,0)
           if (minutes > 1440) {
             holds.push({
               personId: member.id,
@@ -534,7 +548,14 @@ export class PayItems {
             continue
           }
           // Hourly regular earnings only: overtime and premium coverage remain a hold.
-          add(BigInt(minutes) * BigInt(setup.rateCents), 60n)
+          add(BigInt(Math.round(minutes*1000000)) * BigInt(setup.rateCents), 60000000n)
+          for(const row of entered){
+            const week=intakeWeeks.get(row.workweek) ?? {microMinutes:0n,straightNumerator:0n,nonexempt:true}
+            const micro=BigInt(Math.round(row.minutes*1000000))
+            week.microMinutes+=micro;week.straightNumerator+=micro*BigInt(setup.rateCents)
+            week.nonexempt=week.nonexempt && setup.salaryType==='nonexempt'
+            intakeWeeks.set(row.workweek,week)
+          }
           for (const w of entries)
             objects.push({ kind: 'work', id: w.id, version: w.version })
         }
@@ -549,6 +570,30 @@ export class PayItems {
       const tips = latest(await this.store.list<TipEntry>(actor, 'tip', member.id, true, false))
         .filter((t) => t.data.day >= periodStart && t.data.day <= periodEnd)
       const tipped = { cash: 0, paycheck: 0, funds: 0 }
+      for(const line of inputLines){
+        details.push(`Run intake ${runInput!.id} v${runInput!.version}, source ${runInput!.data.namespace} row ${line.sourceId}, ${line.day}, workweek ${line.workweek}, ${line.code}: ${line.minutes} minutes, ${line.amountCents} cents, ${line.settlement || 'no tip settlement'}, ${line.state} ${line.riskClass}; evidence ${line.evidence}`)
+        if(line.code==='tip')tipped[line.settlement as 'cash'|'paycheck']+=line.amountCents
+        else if(line.code==='reimbursement'){
+          reimbursement+=line.amountCents
+          if(line.amountCents)holds.push({personId:member.id,reason:'Run reimbursement requires substantiation and return-of-excess review before tax exclusion.'})
+        } else if(['bonus','nondiscretionary-bonus','commission','other-earning','meal-premium','rest-premium'].includes(line.code)){
+          earnings+=line.amountCents;taxable+=line.amountCents
+        }
+      }
+      // 29 CFR 778.109, 778.110 and 778.209: allocate remuneration to its
+      // actual workweek and add the half-time component to straight-time pay.
+      // This bounded component never claims complete state or tipped overtime.
+      for(const [weekStart,week] of intakeWeeks){
+        const overtime=week.microMinutes>2400000000n?week.microMinutes-2400000000n:0n
+        if(!overtime)continue
+        const scoped=inputLines.filter(r=>r.workweek===weekStart)
+        const unsupported=!week.nonexempt || periodStart>weekStart || periodEnd<addDays(weekStart,6) || work.some(w=>w.data.day>=weekStart && w.data.day<=addDays(weekStart,6)) || scoped.some(r=>['tip','bonus','other-earning','meal-premium','rest-premium'].includes(r.code)) || tips.some(t=>t.data.day>=weekStart && t.data.day<=addDays(weekStart,6)) || sourceEarnings.some(e=>e.data.effectiveDate>=weekStart&&e.data.effectiveDate<=addDays(weekStart,6)) || items.some(i=>i.data.taxCode!=='accountable-reimbursement'&&i.data.taxCode!=='after-tax-deduction')
+        if(unsupported){holds.push({personId:member.id,reason:`${weekStart}: complete workweek remuneration, nonexempt classification and tipped or premium overtime require review; no partial regular-rate result is substituted.`});continue}
+        const allocated=scoped.filter(r=>['nondiscretionary-bonus','commission'].includes(r.code)).reduce((sum,r)=>sum+BigInt(r.amountCents),0n)
+        const premium=money((week.straightNumerator+allocated*60000000n)*overtime,60000000n*2n*week.microMinutes)
+        earnings+=premium;taxable+=premium
+        details.push(`Federal weekly overtime component for ${weekStart}: ${Number(week.microMinutes)/60000000} hours, ${Number(overtime)/60000000} overtime hours, ${Number(allocated)} cents allocated remuneration, ${premium} cents additional half-time. Complete jurisdiction and tax calculation remains held.`)
+      }
       for (const t of tips) {
         tipped[t.data.settlement] += t.data.amountCents
         tipped.funds += t.data.furnishedCents
@@ -574,7 +619,7 @@ export class PayItems {
           details.push(`Leave bank ${line.bucket}: ${line.code} ${line.day}: ${line.minutes} minutes, ${line.amountCents} cents; ${line.owner} source ${line.sourceId} v${line.sourceVersion}. Reserved only; no payment or consumption receipt.`)
       }
       taxable += tipped.paycheck
-      if (tips.length)
+      if (tips.length || inputLines.some(r=>r.code==='tip'))
         holds.push({ personId: member.id,
           reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-009).' })
       // A reviewed source can describe one exact period's after-tax deduction.

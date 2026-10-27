@@ -11,6 +11,7 @@ import { privateValue } from './privacy-recorder.mjs'
 import { payrollWithoutAiJourney } from './industry-runtime.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
+import { runIntakeCases } from './run-intake.mjs'
 
 // UUID references are public identifiers, not private numeric pay values.
 const withoutUuidReferences = text => text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, '')
@@ -3990,6 +3991,7 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
 
 /** SOURCE-INTAKE: effective HR facts and named earning sources through real doors. */
 export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
+  await runIntakeCases({origin,cookie,sql,settings})
   const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
   const company=await data('/api/envelope/companies',{name:'Synthetic source handoff employer',ein:'00-0000900'},201), api='/api/envelope/companies/'+company.id
