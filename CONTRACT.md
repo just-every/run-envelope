@@ -406,6 +406,8 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
+Judged from the code and tests at commit `8e3f77814b328f25ca7709b3f05f4ae6a0dc8fdf` (27 October 2026).
+
 Status rows retain their individually cited implementation evidence. The native run-intake and typed-tip increment is partial; it supplies no completed payroll, provider, legal or production-readiness proof.
 
 Status rows retain their cited implementation evidence. The ENV-017 increment remains partial: 102 native employee hire and rehire field-transfer cases execute across all 51 directories, and selected reporting screens are checked at 1440 and 390. The CT scope ruling of 26 October 2026 changes no clause status and supplies no implementation or release-readiness proof.
