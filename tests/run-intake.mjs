@@ -1147,6 +1147,35 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     assert.deepEqual(await refusedFile.json(), {
       error: 'intake_formula_or_link_refused',
     })
+    const custody = api + '/people/' + people[0].id + '/privacy'
+    const inventory = await data(custody)
+    for (const id of [runId, 'synthetic-envelope-lanyard-run', 'synthetic-envelope-toast-run',
+      'synthetic-envelope-deputy-run', 'synthetic-envelope-when-i-work-run',
+      'synthetic-envelope-clockify-run', 'synthetic-envelope-square-run']) {
+      assert.ok(inventory.retained.filter(r => r.table === 'env_workspace_versions' && r.key.kind === 'run-intake' && r.key.object_id === id).length >= 2,
+        'custody explicitly includes original and corrected intake: ' + id)
+    }
+    const ciphers = await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}' AND kind='run-intake'`)
+    assert.ok(ciphers.length >= 14)
+    for (const row of ciphers) {
+      assert.ok(!row.cipher.includes('synthetic-envelope-source-worker-0'))
+      assert.ok(!row.cipher.includes('synthetic-envelope-reviewed-export'))
+    }
+    assert.equal((await call(door, undefined, staff.reviewer.cookie)).status, 200)
+    const ownerHash = await hashToken(settings.SESSION_SECRET, 'session', cookie.slice(cookie.indexOf('=') + 1))
+    const now = Date.now(), proofId = randomBytes(16).toString('hex')
+    // Seed Base's independently tested fresh native step-up; custody actions use the public doors.
+    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
+      SELECT '${proofId}','${proofId}',id,operator_id,operator_version,'payroll:sensitive','/app',${now},${now + 600000},${now}
+      FROM oa_sessions WHERE token_hash='${ownerHash}'`)
+    await data(custody + '/request', { consent: true, fingerprint: inventory.fingerprint })
+    await data(door, undefined, 403, staff.reviewer.cookie)
+    const heldRead = await data(door)
+    assert.equal(heldRead.filter(r => r.id === 'synthetic-envelope-lanyard-run').length, 2)
+    const owner = (await data('/auth/session')).operator.id
+    const reads = (await data(api + '/audit')).filter(e => e.action === 'workspace.run-intake.read')
+    assert.ok(reads.some(e => e.actorId === owner && e.targetId === company.id && e.occurredAt > 0), 'owner held reads are attributed')
+
   } finally {
     await browser.close()
   }
