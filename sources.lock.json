@@ -2814,7 +2814,7 @@
       "executable": false
     },
     "tests/accounting-runtime.mjs": {
-      "sha256": "098a48f2ac58799ab3c306ea86807f2e08d16afdf0177f7800ef05c08af0201a",
+      "sha256": "d1aed188164cc25d00a90db4d91b661c4e94a34b4dbc39a3fd84036f467213fd",
       "executable": false
     },
     "tests/archive-adoption.mjs": {
