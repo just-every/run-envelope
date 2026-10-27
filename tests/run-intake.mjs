@@ -5,10 +5,11 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomBytes, createHash } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
+import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 
 /** Run intake through the same native HTTP and built screens used by employers. */
-export async function runIntakeCases({ origin, cookie, sql, settings }) {
+export async function runIntakeCases({ origin, cookie, sql, settings, advanceClock }) {
   const call = (path, body, who = cookie) =>
     fetch(origin + path, {
       method: body === undefined ? 'GET' : 'POST',
@@ -21,6 +22,76 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     assert.equal(r.status, status, await r.clone().text())
     return r.json()
   }
+  // Independent Pub 15 shortfall fixture: $42.60 wages and $600 held tips.
+  const fixture = industryFixture({origin,cookie})
+  const tipped = await fixture.company('Synthetic tip-tax employer',['Synthetic held-tip server','Synthetic paycheck-tip server'])
+  const groupId = 'synthetic-envelope-tip-group', rateId = 'synthetic-envelope-tip-rate', taxRunId = 'synthetic-envelope-tip-run'
+  const taxPay = tipped.base+'/pay-settings', taxDoor = taxPay+'/intake'
+  const setupTax = async (kind,id,body) => {
+    await data(taxPay+'/'+kind,{id,version:0,...body},201)
+    const review=await data(taxPay+'/review/'+kind+'/'+id)
+    await data(taxPay+'/'+kind+'/'+id+'/approve',{version:review.version,reviewToken:review.reviewToken})
+  }
+  await setupTax('group',groupId,{name:'Tip-tax fixture',people:tipped.people.map(p=>p.id)})
+  await setupTax('pay-change',rateId,{name:'Reviewed federal tip-credit wage',groupId,effectiveDate:'2026-01-01',items:tipped.people.map(p=>({personId:p.id,personVersion:p.version,rateCents:213,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2026-12-31',unpaidDates:[]}))})
+  const taxRows=tipped.people.flatMap((p,i)=>[
+    {sourceId:'synthetic-envelope-tip-hours-'+i,personId:p.id,day:'2026-01-19',workweek:'2026-01-19',code:'regular',minutes:1200,amountCents:0,settlement:'',evidence:'synthetic-envelope-901',state:'',riskClass:''},
+    {sourceId:'synthetic-envelope-tip-money-'+i,personId:p.id,day:'2026-01-19',workweek:'2026-01-19',code:'tip',minutes:0,amountCents:i?30000:60000,settlement:i?'paycheck':'cash',evidence:'synthetic-envelope-902',state:'',riskClass:''}])
+  const taxPreview=await data(taxDoor+'/preview',{id:taxRunId,version:0,namespace:'synthetic-envelope-tip-reports',rows:taxRows})
+  await data(taxDoor+'/apply',{id:taxRunId,version:0,namespace:taxPreview.data.namespace,rows:taxPreview.data.rows,digest:taxPreview.digest,format:'grid'},201)
+  const intakeReview=await data(taxDoor+'/'+taxRunId+'/review')
+  await data(taxDoor+'/'+taxRunId+'/approve',{version:1,reviewToken:intakeReview.reviewToken})
+  await data(taxPay+'/earnings-run',{id:taxRunId,version:0,groupId,periodStart:'2026-01-19',periodEnd:'2026-01-25',payDate:'2026-01-30',frequency:'weekly'},201)
+  for(const p of tipped.people)await fixture.classify(tipped,p,ordinaryFacts)
+  const tipApi=fixture.path(tipped,tipped.people[0]), secondTipApi=fixture.path(tipped,tipped.people[1])
+  const taxBody={runId:taxRunId,runVersion:1,reportReceivedOn:'2026-01-31',reportEvidence:'Signed January tip report received January 31',yearToDateEvidence:'Reviewed opening register, no earlier wages',socialSecurityBeforeCents:0,medicareBeforeCents:0,version:0}
+  const shortage=await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-before'},201)
+  const result=shortage.data.result
+  assert.equal(result.newCashBeforeTaxCents,4260);assert.equal(result.reportedTipsCents,60000);assert.equal(result.netCashCents,0)
+  assert.deepEqual(result.regular,{socialSecurityCents:264,medicareCents:62,additionalMedicareCents:0,incomeTaxCents:0})
+  assert.deepEqual(result.order,[{kind:'regular-wage-taxes',dueCents:326,collectedCents:326},{kind:'tip-social-security-and-medicare',dueCents:4590,collectedCents:3934},{kind:'tip-income-tax',dueCents:3519,collectedCents:0}])
+  assert.deepEqual(result.uncollected,{socialSecurityCents:532,medicareCents:124,additionalMedicareCents:0,incomeTaxCents:3519})
+  assert.deepEqual(result.employer,{socialSecurityCents:3984,medicareCents:932})
+  assert.deepEqual(result.reportingBasis,{form941:{line5bTipWagesCents:60000,line5bTaxCents:7440,line5cWagesCents:64260,line5cTaxCents:1864,line5dWagesCents:0,line5dTaxCents:0,line9AdjustmentCents:-656},form944:{line6AdjustmentCents:-656},w2Box12:{A:532,B:124}})
+  assert.equal(shortage.data.collectionDeadline,'2026-02-10');assert.equal(shortage.data.collectionState,'open-collection-window');assert.equal(result.paymentReady,false)
+  const paidTips=await data(secondTipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-paycheck-preview'},201)
+  assert.equal(paidTips.data.result.newCashBeforeTaxCents,34260);assert.equal(paidTips.data.result.netCashCents,31309)
+  assert.equal(paidTips.data.result.uncollected.socialSecurityCents,0)
+  const capped=await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-cap',socialSecurityBeforeCents:18450000,medicareBeforeCents:20000000},201)
+  assert.equal(capped.data.result.employer.socialSecurityCents,0)
+  assert.equal(capped.data.result.reportingBasis.form941.line5dWagesCents,64260)
+  assert.equal(capped.data.result.reportingBasis.form941.line5dTaxCents,578)
+  assert.deepEqual(capped.data.result.reportingBasis.w2Box12,{A:0,B:0})
+  await data(tipApi+'/tip-tax-funds',{...taxBody,id:'synthetic-envelope-tip-promise',amountCents:500,status:'promised',receiptRef:'Unreceived offer'},409)
+  // Keep the synthetic owner's native session valid across the fixed collection window.
+  await sql("UPDATE oa_sessions SET expires_at=1771545600000 WHERE operator_id IN (SELECT id FROM oa_operators WHERE role='owner')")
+  await advanceClock('2026-02-09T12:00:00Z')
+  const receiptBody={...taxBody,id:'synthetic-envelope-tip-receipt',amountCents:500,status:'received',receiptRef:'Employer-attested cash receipt synthetic-envelope-903'}
+  const receipt=await data(tipApi+'/tip-tax-funds',receiptBody,201)
+  assert.equal(receipt.data.receivedOn,'2026-02-09');assert.equal(receipt.data.provenance,'human-attested-received-funds')
+  await data(tipApi+'/tip-tax-funds',receiptBody,409)
+  await data(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-tip-alias'},409)
+  await data(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-tip-excess',receiptRef:'synthetic-envelope-excess',amountCents:100000},409)
+  const reduced=await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-after'},201)
+  assert.equal(reduced.data.result.furnishedCents,500);assert.equal(reduced.data.result.uncollected.socialSecurityCents,126);assert.equal(reduced.data.result.uncollected.medicareCents,30)
+  assert.equal(reduced.data.result.reportingBasis.form941.line9AdjustmentCents,-156);assert.equal(reduced.data.result.netCashCents,0)
+  assert.deepEqual(reduced.data.result.employer,{socialSecurityCents:3984,medicareCents:932})
+  const raced=await Promise.all(['a','b'].map(suffix=>call(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-tip-race-'+suffix,receiptRef:'synthetic-envelope-race-'+suffix,amountCents:3000})))
+  assert.deepEqual(raced.map(r=>r.status).sort(),[201,409],'Concurrent receipts cannot allocate the same remaining shortage twice')
+  const afterRace=await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-after-race'},201)
+  assert.equal(afterRace.data.result.furnishedCents,3500);assert.equal(afterRace.data.result.uncollected.incomeTaxCents,675)
+  await advanceClock('2026-02-11T00:00:01Z')
+  const closed=await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-closed'},201)
+  assert.equal(closed.data.collectionState,'closed-report-uncollected');assert.deepEqual(closed.data.result,afterRace.data.result)
+  await data(tipApi+'/tip-tax-funds',{...receiptBody,id:'synthetic-envelope-tip-late'},409)
+  const history=await data(tipApi+'/tip-tax-previews')
+  assert.deepEqual(history.find(r=>r.id===shortage.id).data.result,result,'Received funds never rewrite the prior snapshot')
+  await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-stale',runVersion:2},409)
+  await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-private'},401,'')
+  await setupTax('pay-item','synthetic-envelope-tip-deduction',{name:'Unreviewed legal deduction treatment',groupId,amountCents:10000,taxCode:'after-tax-deduction',effectiveDate:'2026-01-01',recurring:true})
+  await data(taxPay+'/earnings-run',{id:taxRunId,version:1,groupId,periodStart:'2026-01-19',periodEnd:'2026-01-25',payDate:'2026-01-30',frequency:'weekly'},201)
+  await data(tipApi+'/tip-tax-previews',{...taxBody,id:'synthetic-envelope-tip-deduction-preview',runVersion:2},409)
+  await advanceClock('2026-01-31T12:00:00Z')
   const company = await data(
       '/api/envelope/companies',
       { name: 'Synthetic run intake employer', ein: '00-0000800' },
@@ -846,6 +917,6 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     await browser.close()
   }
   console.log(
-    'RUN-INTAKE passed: native three-worker grid, mapped CSV XLS XLSX changes, blank and zero, source claims, replay, typed tips, retained history, current review and refusal; no calculated tax or payment claim'
+    'RUN-INTAKE passed: native three-worker grid, mapped CSV XLS XLSX changes, blank and zero, source claims, replay, typed tips, retained history, current review and refusal; bounded federal tip-tax preparations; no payment claim'
   )
 }

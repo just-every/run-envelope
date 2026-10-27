@@ -3990,8 +3990,8 @@ export async function leaveJourney({ origin, cookie, sql, settings }) {
 }
 
 /** SOURCE-INTAKE: effective HR facts and named earning sources through real doors. */
-export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
-  await runIntakeCases({origin,cookie,sql,settings})
+export async function sourceIntakeJourney({ origin, cookie, sql, settings, advanceClock }) {
+  await runIntakeCases({origin,cookie,sql,settings,advanceClock})
   const call=(path,body,who=cookie)=>fetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{cookie:who,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,status=200,who=cookie)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
   const company=await data('/api/envelope/companies',{name:'Synthetic source handoff employer',ein:'00-0000900'},201), api='/api/envelope/companies/'+company.id
@@ -4006,7 +4006,7 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings }) {
   await data(person+'/allocations/work',work,201)
   const preview=()=>data(pay+'/preview',{groupId:group,periodStart:'2026-11-01',periodEnd:'2026-11-01',payDate:'2026-11-02',frequency:'weekly'})
   const envelope=(type,sourceId,effectiveDate,values={})=>({provider:'willow',type,version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-905',sourceEvidence:'synthetic-envelope-906',sourceApprovedBy:'Synthetic HR reviewer',export:{schema:'envelope-willow-payroll@1',sourceId,effectiveDate,values}})
-  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   try {
     const context=await browser.newContext(), [name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
     const capture=async(path,label)=>{await mkdir(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const r=await page.goto(origin+path.replace('/api/','/app/'));assert.equal(r.status(),200);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label);await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement.tagName),'A');assert.equal(await page.locator('button,a').evaluateAll(bs=>bs.every(b=>b.textContent.trim().length>1)),true,'All source controls have visible words');await page.screenshot({path:join(process.env.ENVELOPE_PROOF_DIR??'test-results/envelope',label+'-'+width+'.png'),fullPage:true})}}

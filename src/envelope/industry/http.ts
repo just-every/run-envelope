@@ -4,6 +4,7 @@ import { PayrollError,integer } from '../security'
 import { companyPath } from '../pages'
 import { WorkspaceStore } from '../workspace/store'
 import { PayItems } from '../workspace/pay-items'
+import { TipTaxPreviews } from './tip-taxes'
 import { IndustryRecords } from './records'
 import { IndustryReturns } from './returns'
 import { classificationForm,checkForm } from './form-input'
@@ -32,6 +33,11 @@ export async function industryResponse({ui,post,parts,value,records,session,comp
  }
  const personId=parts[3],person=await industry.scope(actor,personId),base=companyPath(actor.company)+'/people/'+personId+'/industry'
  if(parts.length===5&&!post){const data=await industry.list(actor,personId);return ui?industryPersonPage(session,companies,actor,person,data,(await new PayItems(store).read(actor)).runs):json(data)}
+ if (!ui && parts.length===6 && parts[5]==='tip-tax-previews') {
+   if(post)return json(await new TipTaxPreviews(store).preview(actor,personId,value),201)
+   return json(await store.list(actor,'tip-tax-preview',personId,true))
+ }
+ if (!ui && parts.length===6 && parts[5]==='tip-tax-funds' && post) return json(await new TipTaxPreviews(store).funds(actor,personId,value),201)
  if(parts.length===6&&post){
   if(parts[5]==='classification'){const row=await industry.save(actor,personId,classificationForm(value));return ui?redirect(base):json(row,201)}
   if(parts[5]==='checks'){let body=checkForm(value);if(ui){const [runId,runVersion]=String(value.runSelection).split(':');body={...body,runId,runVersion:integer(runVersion)}}const row=await industry.preview(actor,personId,body);return ui?redirect(base):json(row,201)}
