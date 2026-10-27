@@ -5,8 +5,12 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'tip-tax-preview'
+  | 'tip-tax-funds'
   | 'company-funding'
   | 'company-funding-plan'
+  | 'run-intake'
+  | 'intake-source'
   | 'paper-onboarding'
   | 'automation-policy'
   | 'new-hire-report'
@@ -74,6 +78,8 @@ export const digest = async (value: string) =>
 
 export interface Sources {
   freshProof?: boolean
+  /** Permanent source claims prevent one earning from entering two runs. */
+  exclusiveSourceIds?: string[]
   noPrivacyHold?: string
   reviewSets?: ReviewInputSet[]
   people?: { id: string; version: number }[]
@@ -83,6 +89,8 @@ export const currentSources = (
   alias: string,
 ) => `NOT EXISTS(SELECT 1 FROM env_workspace_people sp WHERE sp.company_id=${alias}.company_id AND sp.kind=${alias}.kind AND sp.object_id=${alias}.object_id AND sp.version=${alias}.version
   AND NOT EXISTS(SELECT 1 FROM env_people p WHERE p.company_id=sp.company_id AND p.id=sp.person_id AND p.version=sp.person_version))
+  AND (${alias}.kind!='earnings-run' OR COALESCE((SELECT MAX(ri.version) FROM env_workspace_versions ri WHERE ri.company_id=${alias}.company_id AND ri.kind='run-intake' AND ri.object_id=${alias}.object_id),0)
+    =COALESCE((SELECT rd.source_version FROM env_workspace_dependencies rd WHERE rd.company_id=${alias}.company_id AND rd.kind=${alias}.kind AND rd.object_id=${alias}.object_id AND rd.version=${alias}.version AND rd.source_kind='run-intake' AND rd.source_id=${alias}.object_id),0))
   AND (EXISTS(SELECT 1 FROM env_workspace_decisions approved WHERE approved.company_id=${alias}.company_id AND approved.kind=${alias}.kind AND approved.object_id=${alias}.object_id AND approved.version=${alias}.version AND approved.decision='approved') OR ${currentReviewInputs(alias)})
   AND NOT EXISTS(SELECT 1 FROM env_workspace_dependencies dep WHERE dep.company_id=${alias}.company_id AND dep.kind=${alias}.kind AND dep.object_id=${alias}.object_id AND dep.version=${alias}.version
   AND ((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=dep.company_id AND sv.kind=dep.source_kind AND sv.object_id=dep.source_id)!=dep.source_version
@@ -204,17 +212,23 @@ export class WorkspaceStore {
     if (new Set(pins.map((p) => p.id)).size !== pins.length)
       throw new PayrollError('duplicate_source')
     const deps = sources.objects ?? []
+    // Source-identity markers share the immutable collection-pin custody. No
+    // workspace version is invented for an external source or an absent input.
+    const reviewSets=[...(sources.reviewSets ?? []),...(sources.exclusiveSourceIds ?? []).map(id=>({kind:'intake-source' as Kind,personId:id,exceptId:'',versions:0,decisions:0}))]
     // Constant-size binding sets avoid D1's per-statement variable limit for
     // genuine 100-person groups and multi-day source collections.
-    const sourceSql = `${sources.noPrivacyHold ? "AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=? AND status='held')" : ''} AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
+    const sourceSql = `AND NOT EXISTS(SELECT 1 FROM json_each(?) claim JOIN env_workspace_review_inputs owned
+      ON owned.company_id=? AND owned.source_kind='intake-source' AND owned.source_person_id=claim.value
+      WHERE owned.kind!=? OR owned.object_id!=?) ${sources.noPrivacyHold ? "AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=? AND status='held')" : ''} AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
       SELECT 1 FROM env_people p WHERE p.company_id=? AND p.id=json_extract(pin.value,'$.id') AND p.version=json_extract(pin.value,'$.version')))
       AND NOT EXISTS(SELECT 1 FROM json_each(?) src WHERE
         COALESCE((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=? AND sv.kind=json_extract(src.value,'$.kind') AND sv.object_id=json_extract(src.value,'$.id')),0)!=json_extract(src.value,'$.version')
         OR (json_extract(src.value,'$.approved')=1 AND (
           NOT EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='approved')
           OR EXISTS(SELECT 1 FROM env_workspace_decisions d WHERE d.company_id=? AND d.kind=json_extract(src.value,'$.kind') AND d.object_id=json_extract(src.value,'$.id') AND d.version=json_extract(src.value,'$.version') AND d.decision='withdrawn'))))`
-    const reviewInputs = reviewInputFence(actor.company, sources.reviewSets ?? [])
+    const reviewInputs = reviewInputFence(actor.company, reviewSets)
     const sourceArgs = [
+      JSON.stringify(sources.exclusiveSourceIds ?? []), actor.company, kind, id,
       ...(sources.noPrivacyHold ? [actor.company,sources.noPrivacyHold] : []),
       JSON.stringify(pins),
       actor.company,
@@ -279,7 +293,7 @@ export class WorkspaceStore {
       this.records.statement(
         `INSERT INTO env_workspace_review_inputs(company_id,kind,object_id,version,source_kind,source_person_id,except_id,versions,decisions)
         SELECT ?,?,?,?,json_extract(value,'$.kind'),json_extract(value,'$.personId'),json_extract(value,'$.exceptId'),json_extract(value,'$.versions'),json_extract(value,'$.decisions') FROM json_each(?) WHERE EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)`,
-        [actor.company,kind,id,version,JSON.stringify(sources.reviewSets ?? []),event],
+        [actor.company,kind,id,version,JSON.stringify(reviewSets),event],
       ),
       auditStatement(
         this.records.env,
