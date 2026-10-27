@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { fileRecords } from '@runeditrun/rer/modules/portability/files'
 import { archiveFixture } from './archive-fixture.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
-import { unrelatedPersonArchive, unrelatedCorrectionArchive, rewrittenArchive } from './archive-relationships.mjs'
+import { unrelatedPersonArchive, unrelatedCorrectionArchive, foreignFundingArchive, rewrittenArchive } from './archive-relationships.mjs'
 import { archiveEditions } from './archive-editions.mjs'
 import { archiveAdoption } from './archive-adoption.mjs'
 import { archiveErasure } from './archive-erasure.mjs'
@@ -226,6 +226,14 @@ export async function archiveJourney(context) {
     assert.notEqual(relation.code, 0, 'a checksummed archive with a foreign person reference refuses import')
     assert.ok(relation.output.includes('archive_relationship_invalid'), 'staged business relationships are checked beyond transport checksums')
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'relationship refusal publishes no business or identity rows')
+    for (const field of ['runId','accountId']) {
+      const foreign = join(temporary, 'foreign-funding-' + field + '.rer')
+      await foreignFundingArchive(records, foreign, settings.ENVELOPE_RECORD_KEY, field)
+      const refused = await rer(target, 'import', foreign)
+      assert.notEqual(refused.code, 0, 'a foreign employer funding reference refuses native import')
+      assert.ok(refused.output.includes('archive_relationship_invalid'))
+      assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'foreign funding import publishes no rows')
+    }
     const unrelatedCorrection = join(temporary, 'unrelated-correction.rer')
     await unrelatedCorrectionArchive(records, unrelatedCorrection, settings.ENVELOPE_RECORD_KEY, fixture.years[0].correctionId)
     const correctionRefusal = await rer(target, 'import', unrelatedCorrection)

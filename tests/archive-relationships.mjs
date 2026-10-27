@@ -48,3 +48,19 @@ export async function unrelatedCorrectionArchive(records, destination, recordKey
   row.cipher = JSON.stringify({ v: 1, iv: Buffer.from(iv).toString('base64'), data: Buffer.from(sealed).toString('base64') });
   await rewrittenArchive(changed, destination);
 }
+
+// Re-encrypt with the authentic context so only the foreign employer link is invalid.
+export async function foreignFundingArchive(records, destination, recordKey, field) {
+  const changed = structuredClone(records);
+  const items = changed.flatMap(record => record.items ?? []);
+  const plans = items.filter(item => item.table === 'env_workspace_versions' && item.row.kind === 'company-funding-plan');
+  assert.equal(plans.length, 2);
+  const key = await crypto.subtle.importKey('raw', Buffer.from(recordKey, 'base64'), 'AES-GCM', false, ['encrypt','decrypt']);
+  const unpack = async row => { const cipher=JSON.parse(row.cipher); return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:Buffer.from(cipher.iv,'base64'),additionalData:new TextEncoder().encode(JSON.stringify(encryptedContext('env_workspace_versions',row,'cipher')))},key,Buffer.from(cipher.data,'base64')))); };
+  const row=plans[0].row, data=await unpack(row), foreign=await unpack(plans[1].row);
+  data[field]=foreign[field];
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const sealed=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:new TextEncoder().encode(JSON.stringify(encryptedContext('env_workspace_versions',row,'cipher')))},key,new TextEncoder().encode(JSON.stringify(data)));
+  row.cipher=JSON.stringify({v:1,iv:Buffer.from(iv).toString('base64'),data:Buffer.from(sealed).toString('base64')});
+  await rewrittenArchive(changed,destination);
+}

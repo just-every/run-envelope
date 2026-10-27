@@ -39,6 +39,10 @@ export async function archiveFixture(context) {
     body: 'Synthetic retained agency notice. Payroll officer must investigate the assessed period.',
   }, 201)
   const authority = await archiveAuthority(context, company, notice)
+  for (const [index, employer] of [company, second].entries()) {
+    const account = await payroll.data(employer.base + '/funding-accounts', {id:'synthetic-envelope-archive-funding-'+index,version:0,name:'Retained operating account',lastFour:index?'0202':'0101',accountReference:'synthetic-envelope-archive-bank-'+index},201)
+    await payroll.data(employer.base + '/funding-plans', {id:'synthetic-envelope-archive-plan-'+index,version:0,runId:employer.run.id,runVersion:employer.run.version,accountId:account.id,accountVersion:account.version},201)
+  }
   const formerEmail = 'synthetic-creator@example.com'
   await payroll.data('/auth/invite', { email: formerEmail, displayName: 'Synthetic prior company creator', role: 'owner' }, 202)
   const invite = new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;', '&'))

@@ -1,9 +1,12 @@
+import { stepUpFence } from '../step-up'
 import type { Records, Input } from '../records'
 import { currentReviewInputs, reviewInputFence, type ReviewInputSet } from './review-inputs'
 import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'company-funding'
+  | 'company-funding-plan'
   | 'paper-onboarding'
   | 'automation-policy'
   | 'new-hire-report'
@@ -70,6 +73,7 @@ export const digest = async (value: string) =>
   ).join('')
 
 export interface Sources {
+  freshProof?: boolean
   noPrivacyHold?: string
   reviewSets?: ReviewInputSet[]
   people?: { id: string; version: number }[]
@@ -188,6 +192,11 @@ export class WorkspaceStore {
     const f = fence(actor),
       event = crypto.randomUUID(),
       version = expected + 1
+    if (sources.freshProof) {
+      const proof = stepUpFence(actor)
+      f.sql += ` AND ${proof.sql}`
+      f.args.push(...proof.args)
+    }
     const pins = [
       ...(sources.people ?? []),
       ...(person ? [{ id: person.id, version: person.version }] : []),

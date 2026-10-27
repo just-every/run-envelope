@@ -4,6 +4,7 @@ import { prepareBonus, readBonus, bonusReport } from './bonus-runs'
 import { presentReview } from './review-presentation'
 import { HumanProof } from './human-proof'
 import { Records, type Input } from './records'
+import { CompanyPayroll, combinedLaborReport } from './companies'
 import { ArchiveHistory } from './archive-history'
 import { privacyPage } from './privacy-pages'
 import { WorkerPrivacy } from './worker-privacy'
@@ -454,6 +455,7 @@ export async function payrollResponse(
       const history = new ArchiveHistory(records)
       return json(post ? await history.adopt(value) : await history.list(), post ? 201 : 200)
     }
+    if (!ui && parts.length === 2 && parts[0] === 'reports' && parts[1] === 'combined-labor' && !post) return json(await combinedLaborReport(records))
     if (parts[0] !== 'companies') throw new PayrollError('not_found', 404)
     if (parts.length === 1) {
       if (post) {
@@ -466,7 +468,15 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (tail.join('/') === 'new-hire-coverage' && !post) {
+      if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
+        const payroll = new CompanyPayroll(records)
+        response = json(post ? await payroll.account(actor, value) : await payroll.accounts(actor), post ? 201 : 200)
+      } else if (!ui && tail[0] === 'funding-plans') {
+        const payroll = new CompanyPayroll(records)
+        if (tail.length === 1) response = json(post ? await payroll.plan(actor, value) : await payroll.plans(actor), post ? 201 : 200)
+        else if (tail.length === 3 && tail[2] === 'release' && post) response = json(await payroll.release(actor, tail[1], value))
+        else throw new PayrollError('not_found', 404)
+      } else if (tail.join('/') === 'new-hire-coverage' && !post) {
         const reporting=new NewHireReporting(new WorkspaceStore(records));reporting.owner(actor)
         const result=newHireCoverage()
         response=ui?coveragePage(session,companies,actor,result):json(result)

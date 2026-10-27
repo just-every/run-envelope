@@ -1,0 +1,16 @@
+# Separate employer payroll preparations
+
+Each company has its own encrypted EIN, people, locations, grants, effective inputs, run versions, federal calculations and prepared returns. Enter the same worker separately in each employing company; no identity match pools wages, tax bases or permissions. Reviewed shared-paymaster and successor treatment remains unimplemented.
+
+The native company API supports these preparations:
+
+- `POST /api/envelope/companies` creates a company and its owner grant.
+- `POST /api/envelope/companies/<company>/funding-accounts` records `id`, `version`, `name`, `accountReference` and a four-digit `lastFour`. The reference is a private descriptive identifier, never a password, bank credential or mandate. Native company ownership, bank-edit permission and fresh session-bound identity proof are required; proof is checked again atomically at persistence. Account history is encrypted. Reads return names and suffixes, without the reference.
+- `POST /api/envelope/companies/<company>/funding-plans` binds `id` and `version` to exact `runId`, `runVersion`, `accountId` and `accountVersion` from that company. Both references are checked before persistence and pinned as source dependencies. Changing either source invalidates the plan.
+- `GET` on either collection returns its retained history. Every account is unverified, and every plan has `paymentAuthority: false`.
+- `POST /api/envelope/companies/<company>/funding-plans/<id>/release` validates company-local references, then refuses with `payment_rail_unavailable`. A stale source refuses with `funding_sources_changed`. Neither response writes a payment, receipt or audit event. This is an explicit refusal for a retained preparation, not a payment implementation.
+- `GET /api/envelope/reports/combined-labor` returns current reviewed federal check preparations for permitted companies and locations only. Both compensation and tax visibility, record reads and private reads are required. Corrections replace their original check; ambiguous concurrent preparations refuse rather than double-count. The response supplies separate employer and worker identifiers, gross, net and tax amounts, plus totals over those permitted rows. Its basis is prepared federal calculations and its payment status is `not-paid`. It contains no account reference or EIN. Current authority is checked again after assembling the report.
+
+Existing company, run and prepared-return screens remain the review surfaces. Entity switching changes the company route; review tokens and source references remain bound to their original employer. Archive import validates funding references within the owning company before publishing any rows. Retained funding history never establishes bank verification or transferable debit authority.
+
+ENV-032 remains partial. Actual bank verification and mandates, separately funded payments and deposits, complete tax registers and year-end forms, shared-paymaster and successor treatment, and the full authorized multi-company payroll outcome remain unproved. The owner-authorized rail and employer agreement required by ENV-011 and ENV-065 are unavailable. No production payment, agency filing or provider relationship is claimed.

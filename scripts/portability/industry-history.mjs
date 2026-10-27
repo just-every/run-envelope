@@ -9,7 +9,7 @@ const object = value => value && typeof value === 'object' && !Array.isArray(val
 
 /** Check historical references without requiring their sources to remain active today. */
 export async function validateIndustryHistory(staged, row, data, key) {
-  if (!['industry-check', 'industry-return'].includes(row.kind)) return;
+  if (!['industry-check', 'industry-return', 'company-funding', 'company-funding-plan'].includes(row.kind)) return;
   if (!object(data) || !staged.tables.env_workspace_versions || !staged.tables.env_workspace_decisions) refuse();
   const versions = quote(staged.tables.env_workspace_versions), decisions = quote(staged.tables.env_workspace_decisions);
   const find = async (kind, reference, revision, person, before, earlierRevision) => {
@@ -37,6 +37,18 @@ export async function validateIndustryHistory(staged, row, data, key) {
       target.company_id, target.kind, target.object_id, target.version, before).first();
     if (!approval || withdrawal) refuse();
   };
+  if (row.kind === 'company-funding' || row.kind === 'company-funding-plan') {
+    if (data.paymentAuthority !== false || row.person_id !== null) refuse();
+    if (row.kind === 'company-funding') {
+      if (data.status !== 'unverified' || !/^\d{4}$/.test(data.lastFour) || typeof data.accountReference !== 'string') refuse();
+    } else {
+      if (!version(data.runVersion) || !version(data.accountVersion)) refuse();
+      await find('earnings-run', data.runId, data.runVersion, undefined, row.created_at);
+      const account = await find('company-funding', data.accountId, data.accountVersion, undefined, row.created_at);
+      if ((await unpack(account)).paymentAuthority !== false) refuse();
+    }
+    return;
+  }
   if (row.kind === 'industry-check') {
     if (data.personId !== row.person_id || !id(row.person_id)
       || !version(data.runVersion) || !version(data.classificationVersion)) refuse();
