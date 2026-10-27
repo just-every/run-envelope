@@ -82,7 +82,8 @@ export async function automationJourney({origin,cookie,sql,advanceClock,restart,
     const hashed=await hashToken(settings.SESSION_SECRET,'session',token)
     await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${member}','synthetic-envelope-465@example.com','Synthetic preparer','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('${member}','${hashed}','${member}',1,'native',${now},${now+3600000})`)
     await data(base+'/grants',{operatorId:member,version:0,role:'payroll-admin',locations:['*'],fields:['compensation'],actions:['records:read','records:write','rates:propose']})
-    const memberCookie=cookie.split('=')[0]+'='+token,before=(await data(door)).tasks
+    let memberCookie=cookie.split('=')[0]+'='+token
+    const before=(await data(door)).tasks
     for(const [path,body] of [[door,undefined],[door,{...policy,id:'synthetic-envelope-466'}],[door+'/process',{}],[door+'/disposition',{policyId:policy.id,occurrence:policy.periodStart,stage:'approval',reason:'Synthetic refusal'}]])assert.equal((await call(path,body,memberCookie)).status,403,'non-owner has no automation authority')
     assert.deepEqual((await data(door)).tasks,before)
     assert.equal((await sql('SELECT COUNT(*) AS count FROM env_run_approvals'))[0].count,0,'escalation never grants approval')
@@ -90,7 +91,14 @@ export async function automationJourney({origin,cookie,sql,advanceClock,restart,
     const delegated=async(path,body,who=memberCookie,status=200)=>{const r=await call(path,body,who);assert.equal(r.status,status,await r.clone().text());return r.json()}
     const preparerActions=['records:read','rates:propose','automation:inspect','automation:prepare']
     let grantVersion=1
-    const grant=async(locations,fields,actions)=>data(base+'/grants',{operatorId:member,version:grantVersion++,role:'preparer',locations,fields,actions})
+    const grant=async(locations,fields,actions)=>{
+      const oldCookie=memberCookie
+      await data(base+'/grants',{operatorId:member,version:grantVersion++,role:'preparer',locations,fields,actions})
+      assert.equal((await call(door,undefined,oldCookie)).status,401,'grant changes revoke the previous native session')
+      const fresh=randomBytes(32).toString('base64url'),freshHash=await hashToken(settings.SESSION_SECRET,'session',fresh)
+      await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('${member}-${grantVersion}','${freshHash}','${member}',1,'native',${now},${now+3600000})`)
+      memberCookie=cookie.split('=')[0]+'='+fresh
+    }
     await grant([location.id],['compensation'],preparerActions)
     for(const [path,body] of [[door,undefined],[door+'/process',{}]])await delegated(path,body,memberCookie,403)
     await grant(['*'],[],preparerActions)
@@ -132,11 +140,24 @@ export async function automationJourney({origin,cookie,sql,advanceClock,restart,
     await delegated('/api/envelope/companies/'+foreign.id+'/automation',undefined,memberCookie,403)
     await delegated('/api/envelope/companies/'+foreign.id+'/automation/process',{},memberCookie,403)
     await delegated(pay+'/earnings-run/'+draft.id+'/release',{version:draft.version},memberCookie,403)
+    // The same existing screen exposes only each person's explicit actions.
+    const browserIdentity=async who=>context.addCookies([{name:who.split('=')[0],value:who.split('=')[1],url:origin}])
+    await browserIdentity(memberCookie);await capture('preparer')
+    await page.setViewportSize({width:1440,height:1000})
+    assert.equal(await page.getByRole('button',{name:'Process due work',exact:true}).count(),1)
+    assert.equal(await page.getByRole('button',{name:'Record disposition',exact:true}).count(),0)
+    assert.equal(await page.getByRole('button',{name:'Save weekly preparation',exact:true}).count(),0)
+    await browserIdentity(reviewerCookie);await capture('reviewer')
+    await page.setViewportSize({width:1440,height:1000})
+    assert.equal(await page.getByRole('button',{name:'Process due work',exact:true}).count(),0)
+    assert.ok(await page.getByRole('button',{name:'Record disposition',exact:true}).count()>0)
+    assert.equal(await page.getByRole('button',{name:'Save weekly preparation',exact:true}).count(),0)
+    await browserIdentity(cookie)
     await data(base+'/grants',{operatorId:member,version:grantVersion,revoke:true})
     await data(base+'/grants',{operatorId:reviewer,version:1,revoke:true})
     const retained=(await data(door)).tasks
     const rowCounts=await sql("SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_automation_tasks) AS tasks,(SELECT COUNT(*) FROM env_run_approvals) AS approvals")
-    for(const who of [memberCookie,reviewerCookie])for(const [path,body] of [[door,undefined],[door+'/process',{}],[door+'/disposition',{...disposition,stage:'approval'}]])await delegated(path,body,who,403)
+    for(const who of [memberCookie,reviewerCookie])for(const [path,body] of [[door,undefined],[door+'/process',{}],[door+'/disposition',{...disposition,stage:'approval'}]])await delegated(path,body,who,401)
     assert.deepEqual((await data(door)).tasks,retained,'old sessions cannot read or change tasks after grant revocation')
     assert.deepEqual(await sql("SELECT (SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_automation_tasks) AS tasks,(SELECT COUNT(*) FROM env_run_approvals) AS approvals"),rowCounts)
     assert.equal(rowCounts[0].approvals,0)

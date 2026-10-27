@@ -410,6 +410,8 @@ The homepage (`src/site/landing/`, built 21 October 2026 from the owner-approved
 
 ## Status
 
+Judged from the code and tests at commit `3a5503c13a2d6826bc918a9085fff1d0ff31f3f3` (27 October 2026).
+
 Status rows retain their individually cited implementation evidence. This snapshot adds bounded automation delegation evidence while preserving every unproved outcome. CT policy rulings establish no implementation completion or production readiness.
 
 Status rows retain their cited implementation evidence. The ENV-017 increment remains partial: 102 native employee hire and rehire field-transfer cases execute across all 51 directories, and selected reporting screens are checked at 1440 and 390. The CT scope ruling of 26 October 2026 changes no clause status and supplies no implementation or release-readiness proof.
