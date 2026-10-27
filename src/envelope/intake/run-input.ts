@@ -377,6 +377,10 @@ export class RunIntake {
     const claims = await Promise.all(
       rows.map((r) => digest(JSON.stringify([namespace, r.sourceId])))
     )
+    if (await this.store.records.statement(
+      'SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash IN(SELECT value FROM json_each(?))',
+      [actor.company, JSON.stringify(claims)]
+    ).first()) throw new PayrollError('erased_source', 409)
     const collision = await this.store.records
       .statement(
         `SELECT source_person_id FROM env_workspace_review_inputs WHERE company_id=? AND source_kind='intake-source' AND object_id!=? AND source_person_id IN(SELECT value FROM json_each(?))`,

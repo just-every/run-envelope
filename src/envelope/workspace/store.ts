@@ -225,7 +225,10 @@ export class WorkspaceStore {
     // genuine 100-person groups and multi-day source collections.
     const sourceSql = `AND NOT EXISTS(SELECT 1 FROM json_each(?) claim JOIN env_workspace_review_inputs owned
       ON owned.company_id=? AND owned.source_kind='intake-source' AND owned.source_person_id=claim.value
-      WHERE owned.kind!=? OR owned.object_id!=?) ${sources.noPrivacyHold ? "AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=? AND status='held')" : ''} AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
+      WHERE owned.kind!=? OR owned.object_id!=?)
+      AND NOT EXISTS(SELECT 1 FROM json_each(?) claim JOIN env_privacy_source_fences erased
+        ON erased.company_id=? AND erased.source_hash=claim.value)
+      ${sources.noPrivacyHold ? "AND NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=? AND status='held')" : ''} AND NOT EXISTS(SELECT 1 FROM json_each(?) pin WHERE NOT EXISTS(
       SELECT 1 FROM env_people p WHERE p.company_id=? AND p.id=json_extract(pin.value,'$.id') AND p.version=json_extract(pin.value,'$.version')))
       AND NOT EXISTS(SELECT 1 FROM json_each(?) src WHERE
         COALESCE((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=? AND sv.kind=json_extract(src.value,'$.kind') AND sv.object_id=json_extract(src.value,'$.id')),0)!=json_extract(src.value,'$.version')
@@ -235,6 +238,7 @@ export class WorkspaceStore {
     const reviewInputs = reviewInputFence(actor.company, reviewSets)
     const sourceArgs = [
       JSON.stringify(sources.exclusiveSourceIds ?? []), actor.company, kind, id,
+      JSON.stringify(sources.exclusiveSourceIds ?? []), actor.company,
       ...(sources.noPrivacyHold ? [actor.company,sources.noPrivacyHold] : []),
       JSON.stringify(pins),
       actor.company,

@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "cf768b5ea20a89c5134bf1368bbb30d243d1f6971153c9d5c1fd11bf50a6a9e8",
+      "sha256": "c9fe8eba0053e5d5182f97a030720c5807da45acedb0fe17ebc7451785fba953",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "a0ca9460f4810e1daee81f655691c66363929acdcaacdfdd347ddbae851efe80",
+      "sha256": "7af58e955895f85c7028a4c9d8843f085680b9dd4969a372bc3bdecdd48e48f5",
       "executable": false
     },
     "deploy-demo.json": {
@@ -458,7 +458,7 @@
       "executable": false
     },
     "docs/run-earnings-intake.md": {
-      "sha256": "33c121a5cdce7310892d79ff6779ae91b72c8cad7bd0dadda091d81ac320fc8c",
+      "sha256": "4bd549b3309750e1dcdcdeb1b46306a60ad6757c2288fcf28566d9e9d3afed65",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -1546,7 +1546,7 @@
       "executable": false
     },
     "src/envelope/intake/run-input.ts": {
-      "sha256": "f096c826dfb288f32af3fa839d2cc0391b96ae374cfb68ef23ef9aa09f73f95c",
+      "sha256": "efa366c64213bb78a84e513652b4a324936fb5f5078e62b173896593d424cd05",
       "executable": false
     },
     "src/envelope/intake/run-pages.tsx": {
@@ -1662,7 +1662,7 @@
       "executable": false
     },
     "src/envelope/worker-privacy.ts": {
-      "sha256": "d65c7ebb5ff1ac1478f7f8b9413024bfcb5267a05b29c8c39731ce2261847d64",
+      "sha256": "63669e056dd73593e3f67babeac1b71b19ff72c9cf1e4dd91a450f54c46a9c78",
       "executable": false
     },
     "src/envelope/workspace/allocation-tax.ts": {
@@ -1754,7 +1754,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "1705bb228d4f9278ad027179dabca8fb0af584e624d10f4d0efce2ded3f969c1",
+      "sha256": "29778db4f8e3bf4871c7165522a5a0cbc9078e6137031c2a7bc6f23746977b15",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3062,7 +3062,7 @@
       "executable": false
     },
     "tests/run-intake.mjs": {
-      "sha256": "154799c20e220c01173f7042b8223ed8cce2e660f5a36356431311cf84fb1e66",
+      "sha256": "14062e440725d06fa79eaefc7f738fa4994ebab3cac2cc32dc7a92e034769c72",
       "executable": false
     },
     "tests/runtime.mjs": {

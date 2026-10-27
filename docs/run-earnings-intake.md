@@ -99,7 +99,7 @@ regular-rate result.
 
 ## Current boundaries
 
-This is native preparation with bounded reviewed Lanyard and Toast captures.
+This is native preparation with bounded reviewed captures from all ten named time and POS providers.
 It does not establish authenticated source synchronization or provider approval.
 Source names and evidence references are reviewed declarations. Complete provider intake,
 approved tip pools, minimum-wage top-ups, tax ordering and voluntary funds,
@@ -154,8 +154,8 @@ previously active source row is refused; submit an explicit zero correction.
 Reviewed capture imports have no outbound connection or automatic revocation
 feed. Withdraw the local source approval when its external approval changes;
 affected earnings require fresh review and earlier frozen versions remain
-unchanged. The Lanyard and Toast tests execute a reviewed five-day source workweek.
-Clockify and Square tests execute bounded time-entry cases. These do not prove
+unchanged. All ten named adapter cases execute reviewed five-day source workweeks.
+These cover bounded ordinary-time records and the explicitly supported tip fields. These do not prove
 authenticated provider approval, every official schema field or actual payment. Complete
 adapter coverage, source-specific custody proof and full jurisdiction calculation remain
 open. No provider relationship, settlement or agency outcome is fabricated.

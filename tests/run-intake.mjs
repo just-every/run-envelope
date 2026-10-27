@@ -1290,6 +1290,35 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     const reads = (await data(api + '/audit')).filter(e => e.action === 'workspace.run-intake.read')
     assert.ok(reads.some(e => e.actorId === owner && e.targetId === company.id && e.occurredAt > 0), 'owner held reads are attributed')
 
+    const exactCustody = await data(custody)
+    const selection = { consent: true, fingerprint: exactCustody.fingerprint, records: exactCustody.retained.map(r => r.id),
+      legalBasis: 'Synthetic reviewed record-specific release; no active statutory hold remains.', custodian: 'Native payroll owner' }
+    await data(custody + '/release', selection, 409)
+    await data(api + '/people/' + people[0].id + '/erase', { ...selection, version: people[0].version }, 409)
+    assert.deepEqual(await data(door), heldRead, 'unclassified retention refuses erasure without deleting original or corrected input')
+    await data(custody + '/retain', { ...selection, earliestReleaseAt: '2000-01-01T00:00:00.000Z' })
+    assert.equal((await data(custody)).status, 'held', 'elapsed time cannot release intake history')
+    assert.equal((await data(custody + '/release', selection)).status, 'eligible')
+    const erased = await data(api + '/people/' + people[0].id + '/erase', { ...selection, version: people[0].version })
+    assert.equal(erased.erased, true)
+    assert.ok(erased.recordsDeleted >= exactCustody.retained.length)
+    const remaining = await data(door)
+    for (const id of [runId, ...['lanyard','toast','deputy','when-i-work','clockify','square','homebase','7shifts','quickbooks-time','clover'].map(provider => 'synthetic-envelope-' + provider + '-run')])
+      assert.equal(remaining.filter(r => r.id === id).length, 0, 'eligible erasure removes every retained intake version: ' + id)
+    assert.equal((await call(api + '/people/' + people[0].id)).status, 404)
+    const replayRows = rows.map(row => ({ ...row, personId: people[1].id }))
+    await data(door + '/preview', { id: runId + '-replay', namespace, version: 0, rows: replayRows }, 409)
+    for (const provider of ['lanyard','toast','deputy','when-i-work','clockify','square','homebase','7shifts','quickbooks-time','clover']) {
+      const source = structuredClone(heldRead.find(r => r.id === 'synthetic-envelope-' + provider + '-run' && r.version === 1).data.providerCapture)
+      for (const mapping of Object.values(source.mappings)) mapping.personId = people[1].id
+      const response = await data(door + '/preview', { id: 'synthetic-envelope-' + provider + '-replay', version: 0, providerCapture: source }, 409)
+      assert.equal(response.error, 'erased_source', provider + ' erasure fences source identity after run renaming and worker remapping')
+    }
+    assert.deepEqual(await data(door), remaining, 'stale source replay restores no private version')
+    const erasureAudit = (await data(api + '/audit')).filter(e => e.action === 'privacy.worker.erased')
+    assert.equal(erasureAudit.length, 1)
+    assert.notEqual(erasureAudit[0].targetId, people[0].id)
+
   } finally {
     await browser.close()
   }

@@ -199,6 +199,8 @@ export class WorkerPrivacy {
     statements.push(this.records.statement(`UPDATE env_agent_access SET target_id=? WHERE company_id=? AND target_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`, [anonymous, actor.company, actor.company]))
     statements.push(this.records.statement(`UPDATE env_audit SET target_id=? WHERE company_id=? AND target_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`, [anonymous, actor.company, actor.company]))
     for (const entry of scope.entries.filter(e => e.table === 'env_hris_people')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, entry.row.source_key]))
+    for (const entry of scope.entries.filter(e => e.table === 'env_workspace_review_inputs' && e.row.source_kind === 'intake-source'))
+      statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, entry.row.source_person_id]))
     for (const entry of scope.entries.filter(e => e.table === 'env_workspace_versions')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, await digest(JSON.stringify([entry.row.kind, entry.row.object_id]))]))
     const ordered: Table[] = [], pending = scope.tables.filter(t => scope.entries.some(e => e.table === t.name))
     while (pending.length) {
