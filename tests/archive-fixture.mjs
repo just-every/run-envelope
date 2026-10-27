@@ -55,6 +55,12 @@ export async function archiveFixture(context) {
   const creator = await payroll.data('/auth/session', undefined, 200, creatorCookie)
   await payroll.data('/auth/operator/role', { operatorId: creator.operator.id, role: 'member' })
 
+  const heldSharedPeople=[]
+  for(const name of ['Synthetic shared hold worker','Synthetic other held worker']) heldSharedPeople.push(await payroll.data(second.base+'/people',{name,locationId:second.location.id},201))
+  const heldSharedNotice=await payroll.data(second.base+'/notices',{reference:'synthetic-envelope-shared-held-notice',locationId:second.location.id,body:'Synthetic jointly held payroll evidence.'},201)
+  const heldSharedDetails=await payroll.data(second.base+'/notices/'+heldSharedNotice.id)
+  for(const member of heldSharedPeople) await payroll.data(second.base+'/notices/'+heldSharedNotice.id+'/people',{personId:member.id,digest:heldSharedDetails.digest,consent:true},201)
+  const heldShared={companyId:second.id,people:heldSharedPeople.map(p=>p.id),noticeId:heldSharedNotice.id}
   const unused = await payroll.data(company.base + '/people', { name: 'Synthetic unused archive worker', locationId: company.location.id }, 201)
   const hireInput={provider:'willow',version:0,sourceVersion:1,sourcePersonId:'synthetic-envelope-privacy-hire-worker',sourceEvidence:'Synthetic reviewed original hire',sourceApprovedBy:'Synthetic HR reviewer',
     export:{schema:'envelope-willow-payroll@1',sourceId:'synthetic-envelope-privacy-hire',effectiveDate:'2026-01-02',values:{name:'Synthetic local custody worker',locationId:company.location.id}}}
@@ -74,7 +80,7 @@ export async function archiveFixture(context) {
   const custodyObjects = []
   for (const bucket of ['sick', 'pto', 'holiday']) {
     const account = await payroll.data(custodyBase + '/leave', {
-      bucket, owner:bucket==='sick'?'willow':'payroll', hireDate:'2026-01-01', effectiveDate:'2026-01-01',
+      bucket, owner:'willow', hireDate:'2026-01-01', effectiveDate:'2026-01-01',
       capMinutes:4800, carryoverMinutes:2400, openingMinutes:480,
       tiers:[{years:0,earnedMinutes:1,workedMinutes:30}], policyEvidence:hostileCustody,
     }, 201)
@@ -123,21 +129,22 @@ export async function archiveFixture(context) {
     const source = await payroll.data(custodyBase + '/' + input.door, input.body, 201)
     input.id = source.id
     custodyObjects.push(source.id)
-    if(input.body.type==='leave' && input.body.export.values.code==='sick') {
+    const handoffBucket=input.body.type==='leave'?(input.body.export.values.code==='termination'?'sick':input.body.export.values.code):null
+    if(handoffBucket) {
       const first=await payroll.data(custodyBase+'/hris/'+source.id+'/review')
       await payroll.data(custodyBase+'/hris/'+source.id+'/approve',{version:first.version,reviewToken:first.reviewToken})
-      await payroll.data(custodyBase+'/hris/'+source.id+'/leave-handoff',{bucket:'sick',ledgerVersion:1},201)
-      const bank=await payroll.data(custodyBase+'/leave/review?bucket=sick')
-      await payroll.data(custodyBase+'/leave/approve',{bucket:'sick',version:bank.version,reviewToken:bank.reviewToken})
+      await payroll.data(custodyBase+'/hris/'+source.id+'/leave-handoff',{bucket:handoffBucket,ledgerVersion:(await payroll.data(custodyBase+'/leave')).find(r=>r.data.bucket===handoffBucket).version},201)
+      const bank=await payroll.data(custodyBase+'/leave/review?bucket='+handoffBucket)
+      await payroll.data(custodyBase+'/leave/approve',{bucket:handoffBucket,version:bank.version,reviewToken:bank.reviewToken})
     }
     await payroll.data(custodyBase + '/' + input.door, {...input.body, version:1, sourceVersion:2}, 201)
     const review=await payroll.data(custodyBase+'/'+input.door+'/'+source.id+'/review')
-    if(input.body.type==='leave' && input.body.export.values.code==='sick') {
+    if(handoffBucket) {
       await payroll.data(custodyBase+'/hris/'+source.id+'/approve',{version:review.version,reviewToken:review.reviewToken})
-      await payroll.data(custodyBase+'/hris/'+source.id+'/leave-handoff',{bucket:'sick',ledgerVersion:2},201)
-      const handed=await payroll.data(custodyBase+'/leave/review?bucket=sick')
-      assert.equal(handed.data.balanceMinutes,420,'connected leave consumes the reviewed 60 minutes exactly once')
-      await payroll.data(custodyBase+'/leave/approve',{bucket:'sick',version:handed.version,reviewToken:handed.reviewToken})
+      await payroll.data(custodyBase+'/hris/'+source.id+'/leave-handoff',{bucket:handoffBucket,ledgerVersion:(await payroll.data(custodyBase+'/leave')).find(r=>r.data.bucket===handoffBucket).version},201)
+      const handed=await payroll.data(custodyBase+'/leave/review?bucket='+handoffBucket)
+      assert.equal(handed.data.balanceMinutes,{sick:420,pto:480,holiday:480,termination:360}[input.body.export.values.code],'each connected leave code consumes the reviewed source exactly once')
+      await payroll.data(custodyBase+'/leave/approve',{bucket:handoffBucket,version:handed.version,reviewToken:handed.reviewToken})
     }
   }
   const custodyNoticeInput={reference:'synthetic-envelope-custody-notice',locationId:company.location.id,body:'Synthetic worker-bearing notice retained for explicit custody.'}
@@ -212,7 +219,7 @@ export async function archiveFixture(context) {
   await payroll.data(company.base+'/pay-settings/group/'+custodyGroup+'/approve',{version:groupReview.version,reviewToken:groupReview.reviewToken})
   const sharedRun=await payroll.data(company.base+'/pay-settings/earnings-run',{id:custodyRun,version:0,groupId:custodyGroup,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',frequency:'weekly'},201)
   assert.deepEqual(sharedRun.preview.people.map(p=>p.id).sort(),[privacyPerson.id,coworker.id].sort())
-  await payroll.data(custodyBase+'/leave/entries',{bucket:'holiday',version:2,sourceId:'synthetic-envelope-custody-holiday-review',sourceVersion:1,
+  await payroll.data(custodyBase+'/leave/entries',{bucket:'holiday',version:4,sourceId:'synthetic-envelope-custody-holiday-review',sourceVersion:1,
     day:'2026-10-20',operation:'adjustment',direction:'credit',minutes:1,evidence:hostileCustody},201)
   custodyObjects.push(custodyGroup,custodyRun)
   const sharedCustody={coworkerId:coworker.id,groupId:custodyGroup,runId:custodyRun}
@@ -252,5 +259,5 @@ export async function archiveFixture(context) {
     {companyId:privacyClaims.company.id,personId:privacyClaims.person.id,objects:[privacyClaim.id],kind:'claim',
      claimId:privacyClaim.id,request:privacyClaims.validRequest(),artifactIds:privacyClaimRow.data.artifacts.map(a=>a.id)}]
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, custodyObjects, custodyInputs, noticeCustody, reportingCustody, sharedCustody, privateCustody, hireCustody, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, heldShared, custodyObjects, custodyInputs, noticeCustody, reportingCustody, sharedCustody, privateCustody, hireCustody, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }
