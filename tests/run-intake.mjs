@@ -688,7 +688,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     await page.setViewportSize({ width: 1440, height: 1000 })
     const browserCapture = structuredClone(clockifyCapture), browserSource = 'synthetic-envelope-clockify-browser'
     browserCapture.payload = [{ ...browserCapture.payload[0], id: browserSource }]
-    browserCapture.mappings = { [browserSource]: browserCapture.mappings['synthetic-envelope-clockify-0'] }
+    browserCapture.mappings = { [browserSource]: browserCapture.mappings['synthetic-envelope-clockify-0-0'] }
     const providerForm = page.locator('form').filter({ has: page.getByRole('button', { name: 'Preview exact cell changes', exact: true }) })
     await providerForm.locator('[name="id"]').fill('synthetic-envelope-provider-browser')
     await page.getByText('Import reviewed provider data', { exact: true }).click()
