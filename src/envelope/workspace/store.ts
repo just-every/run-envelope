@@ -5,6 +5,7 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 
 export type Kind =
   | 'paper-onboarding'
+  | 'automation-policy'
   | 'new-hire-report'
   | 'new-hire-election'
   | 'ui-claim'

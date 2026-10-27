@@ -7,6 +7,7 @@ import { Records, type Input } from './records'
 import { ArchiveHistory } from './archive-history'
 import { privacyPage } from './privacy-pages'
 import { WorkerPrivacy } from './worker-privacy'
+import { automationResponse } from './automation/http'
 import { firmResponse } from './firm/http'
 import { industryResponse } from './industry/http'
 import { claimsResponse } from './claims/http'
@@ -430,6 +431,8 @@ export async function payrollResponse(
     if (claim) return claim
     const industry = await industryResponse({ ui, post, parts, value, records, session, companies })
     if (industry) return industry
+    const automation = await automationResponse({ ui, post, parts, value, records, session, companies })
+    if (automation) return automation
     const firm = await firmResponse({ url, ui, post, parts, value, records, session, companies })
     if (firm) return firm
     let response: Response

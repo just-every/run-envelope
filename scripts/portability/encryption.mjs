@@ -18,6 +18,7 @@ const version = value => {
 export function encryptedContext(table, row, column) {
   const company = row.company_id;
   if (table === 'env_companies' && column === 'ein_cipher') return [row.id, 'ein'];
+  if (table === 'env_automation_tasks' && column === 'disposition_cipher') return [company, row.policy_id, row.occurrence, row.stage];
   if (column !== 'cipher') fail('archive_cipher_context');
   switch (table) {
     case 'env_private_records': return [company, row.person_id, row.kind];
