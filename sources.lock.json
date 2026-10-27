@@ -1690,7 +1690,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "4a7f7e66f07db63bc2b1e604c189d95834b3528bb9620a1e3a6ccc7b979f10a1",
+      "sha256": "17e27010ea2137ee581b32e8e28ed48f8afdf54dd70cd107d7aa8f1b2e377d4b",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2982,7 +2982,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "8c4c940d40ad0944b248b175ac717b68578393ec5e7823583f61ef6419985b0f",
+      "sha256": "3b838bac0f2d3523257bf9e3c5af1e320709d564b829c4ea3b02ed53bfce5e6f",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {

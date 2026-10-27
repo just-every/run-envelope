@@ -111,6 +111,8 @@ export class WorkspaceStore {
   }
   async paperAuthority(actor: Actor, action: string, personId?: string) {
     if (actor.session.kind !== 'native') throw new PayrollError('native_paper_session_required', 403)
+    if (actor.grant.role==='owner' && (actor.session.operator.role!=='owner' || actor.session.operator.email.trim().toLowerCase()!==this.records.env.OWNER_EMAIL.trim().toLowerCase()))
+      throw new PayrollError('owner_required',403)
     const person = await this.records.person(actor, personId!)
     requireAction(actor, action, person.locationId, 'tax')
     requireAction(actor, action, person.locationId, 'ssn')
