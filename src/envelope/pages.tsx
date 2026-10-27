@@ -329,7 +329,7 @@ export function grantsPage(
       <Card title="Paper review separation">
         <form method="post" action={base+'/paper-policy'} className="field">
           <Hidden name="version" value={paperPolicy.version}/>
-          <Select name="requireSeparateReviewer" label="Require different entering and reviewing people" choices={['false','true']} value={String(paperPolicy.requireSeparateReviewer)}/>
+          <label className="field"><span>Paper review separation</span><select name="requireSeparateReviewer" defaultValue={String(paperPolicy.requireSeparateReviewer)}><option value="false">Same person may enter and review</option><option value="true">Different people must enter and review</option></select></label>
           <p>Changing this policy invalidates pending paper reviews. Paper powers require tax and SSN access at the worker’s location and confer no other payroll power.</p>
           <Submit>Save paper review policy</Submit>
         </form>
