@@ -8,6 +8,8 @@ export type Kind =
   | 'provider-deletion-request'
   | 'notice-worker-link'
   | 'run-input'
+  | 'tip-tax-preview'
+  | 'tip-tax-funds'
   | 'company-funding'
   | 'company-funding-plan'
   | 'tax-notice-case'

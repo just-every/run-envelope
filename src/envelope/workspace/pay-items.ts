@@ -686,7 +686,7 @@ export class PayItems {
       }
       taxable += tipped.paycheck
       if (tips.length || inputLines.some(r=>r.code==='tip') || intakeRows.some(row => row.code === 'tip'))
-        holds.push({ personId: member.id,
+        holds.push({ personId: member.id, code:'tip-tax-calculation-unavailable',
           reason: 'Tax on tips, the employee-furnished funds applied and any uncollected tax are not calculated (ENV-009).' })
       // A reviewed source can describe one exact period's after-tax deduction.
       // No enrollment, pretax treatment, remittance or paid result is inferred.
@@ -772,6 +772,7 @@ export class PayItems {
       }
       holds.push({
         personId: member.id,
+        code:'payroll-calculation-unavailable',
         reason:
           'Gross-to-net, overtime/premiums, legal deduction limits and complete jurisdiction tax treatment are not implemented, so this version cannot be released, paid or dispatched as payroll.',
       })
