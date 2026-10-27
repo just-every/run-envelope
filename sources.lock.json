@@ -1466,7 +1466,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "d994e9a8f0bde124e1fc64ce49a8e43d1c07478eff6c47440ea0954dd8e7003b",
+      "sha256": "758bc1eb7d755a965e83b75c58e520246bf267872aec958f0496775485a06eb8",
       "executable": false
     },
     "src/envelope/human-proof.ts": {

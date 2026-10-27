@@ -95,7 +95,7 @@ async function input(request: Request): Promise<Input> {
   if (!request.body) throw new PayrollError('invalid_input')
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = [],
-    limit = claims ? 3 * 1024 * 1024 : /\/pay-settings\/intake\/(apply|preview)$/.test(new URL(request.url).pathname) ? 2 * 1024 * 1024 : new URL(request.url).pathname.endsWith('/paper-onboarding') ? 1100000 : 64000
+    limit = claims ? 3 * 1024 * 1024 : /(?:\/pay-settings\/intake\/(?:apply|preview)|\/people\/[-a-zA-Z0-9]+\/(?:privacy\/(?:retain|release)|erase))$/.test(new URL(request.url).pathname) ? 2 * 1024 * 1024 : new URL(request.url).pathname.endsWith('/paper-onboarding') ? 1100000 : 64000
   let size = 0
   while (true) {
     const { done, value } = await reader.read()
