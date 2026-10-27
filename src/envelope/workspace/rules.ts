@@ -148,7 +148,11 @@ export class Rules {
     if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied))
       throw new PayrollError('invalid_rule_details')
     const d = supplied as Input
-    if (family === 'wa-li') {
+    if (family === 'sui' && d.wageBaseCents !== undefined) {
+      details.wageBaseCents = String(integer(d.wageBaseCents))
+      details.wageBaseSourceUrl = officialSource(d.wageBaseSourceUrl)
+      details.wageBaseReference = text(d.wageBaseReference, 500)
+    } else if (family === 'wa-li') {
       if (state !== 'WA') throw new PayrollError('rule_jurisdiction_conflict')
       details.riskClass = text(d.riskClass, 80)
       details.totalRate = decimal(d.totalRate)

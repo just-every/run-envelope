@@ -77,3 +77,13 @@ new signed version and requires another review. Every response keeps `payable:
 false`; `paperworkReviewed` means only that this source version was reviewed,
 not that a wage run or contractor payment is authorized. No receipt of payment,
 IRS matching or 1099 withholding report is generated.
+
+## Retained IRS instructions
+
+The worker screen links to the private IRS withholding-instruction record.
+Supported reviewed legacy instructions constrain retained paper election entry:
+conflicting lower withholding refuses, compatible higher legacy withholding is
+retained, and an unapproved release does not remove the restriction. Source or
+identity changes require reconciliation. This does not calculate withholding,
+implement current-form comparisons, make a worker payable or prove first-check
+application. See [notice custody and instruction boundaries](./payroll-notices.md).

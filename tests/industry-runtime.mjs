@@ -51,7 +51,7 @@ export async function industryJourney(context) {
  await approve(scorp,scorp.people[0],'industry-classification',proposed.id)
  const corrected=await preview(scorp,scorp.people[0],{shareholderHealthInsuranceCents:20000,corrects:ownerCheck.id,correctionReason:'Reviewed attribution shows exactly two percent for the tax year.'});assert.equal(corrected.data.result.wages.w2Box1WagesCents,100000);assert.equal(corrected.data.amendment.wages.w2Box1WagesCents,-20000);assert.equal((await data(path(scorp,scorp.people[0]))).checks.find(c=>c.id===ownerCheck.id).data.result.wages.w2Box1WagesCents,120000)
  const proof=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope';await mkdir(proof,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
  try{
   const ctx=await browser.newContext({ignoreHTTPSErrors:true});const [name,value]=context.cookie.split('=');await ctx.addCookies([{name,value,url:context.origin}]);const page=await ctx.newPage()
   const capture=async(label,url,open)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(context.origin+url);await page.evaluate(()=>document.fonts.ready);if(open)await page.getByText(open,{exact:true}).click();await page.screenshot({path:join(proof,`${label}-${width}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label);for(const el of await page.locator('button,a,summary').all())if(await el.isVisible())assert.ok((await el.innerText()).trim(),label+' unnamed control')};return page}
@@ -85,7 +85,7 @@ export async function payrollWithoutAiJourney(context, companyId, capture) {
  await approve(c,p,'industry-check',check.id)
  const runDoor=c.base+'/pay-settings/earnings-run/'+c.run.id
  const review=await data(runDoor+'/review')
- const proofBrowser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+ const proofBrowser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
  try {
   const proofContext=await proofBrowser.newContext(), proofPage=await proofContext.newPage()
   await proofContext.addCookies([{name:context.cookie.split('=')[0],value:context.cookie.split('=')[1],url:context.origin}])

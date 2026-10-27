@@ -7,6 +7,8 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind =
   | 'company-funding'
   | 'company-funding-plan'
+  | 'tax-notice-case'
+  | 'withholding-instruction'
   | 'paper-onboarding'
   | 'automation-policy'
   | 'new-hire-report'
@@ -84,6 +86,7 @@ export const currentSources = (
 ) => `NOT EXISTS(SELECT 1 FROM env_workspace_people sp WHERE sp.company_id=${alias}.company_id AND sp.kind=${alias}.kind AND sp.object_id=${alias}.object_id AND sp.version=${alias}.version
   AND NOT EXISTS(SELECT 1 FROM env_people p WHERE p.company_id=sp.company_id AND p.id=sp.person_id AND p.version=sp.person_version))
   AND (EXISTS(SELECT 1 FROM env_workspace_decisions approved WHERE approved.company_id=${alias}.company_id AND approved.kind=${alias}.kind AND approved.object_id=${alias}.object_id AND approved.version=${alias}.version AND approved.decision='approved') OR ${currentReviewInputs(alias)})
+  AND (${alias}.kind!='industry-check' OR ${currentReviewInputs(alias, ['withholding-instruction','tax-notice-case','rule'])})
   AND NOT EXISTS(SELECT 1 FROM env_workspace_dependencies dep WHERE dep.company_id=${alias}.company_id AND dep.kind=${alias}.kind AND dep.object_id=${alias}.object_id AND dep.version=${alias}.version
   AND ((SELECT MAX(version) FROM env_workspace_versions sv WHERE sv.company_id=dep.company_id AND sv.kind=dep.source_kind AND sv.object_id=dep.source_id)!=dep.source_version
     OR (dep.needs_approval=1 AND NOT EXISTS(SELECT 1 FROM env_workspace_decisions sd WHERE sd.company_id=dep.company_id AND sd.kind=dep.source_kind AND sd.object_id=dep.source_id AND sd.version=dep.source_version AND sd.decision='approved'))
