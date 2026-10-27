@@ -202,3 +202,11 @@ different `rounded_length` requires review. Optional `cash_tips` decimal dollar
 strings convert to integer cents only with explicit settlement mapping. Each
 source ID maps to native worker, local day and actual workweek. Complete
 rounding policies, split-period handling and other earnings remain unproved.
+
+The intake journey inventories original and corrected versions from each
+implemented capture family through native privacy routes. An explicit worker
+hold restricts a previously authorized staff intake read; the current owner may
+inspect held history with attributed audit. Stored captures are encrypted.
+This bounded inventory and held-read proof does not establish complete statutory
+retention classification, eligible erasure, source replay fencing, shared-run
+erasure or inactive archive restore. Those remain explicit completion gaps.
