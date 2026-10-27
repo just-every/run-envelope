@@ -113,7 +113,7 @@ erasure and restore matrix.
 ## Reviewed provider captures
 
 The optional `providerCapture` field on the existing intake form and its preview
-and apply API accepts JSON containing `provider` (`lanyard` or `toast`),
+and apply API accepts JSON containing `provider` (`lanyard`, `toast`, `deputy`, `when-i-work`, `clockify` or `square`),
 `account` (the stable source workplace identifier), `payload`, `mappings` and
 `evidence` (the reviewed source reference). Applying uses that same capture and
 the exact preview digest. The source namespace is derived from provider and
@@ -154,7 +154,51 @@ previously active source row is refused; submit an explicit zero correction.
 Reviewed capture imports have no outbound connection or automatic revocation
 feed. Withdraw the local source approval when its external approval changes;
 affected earnings require fresh review and earlier frozen versions remain
-unchanged. The tests exercise one day's mapped inputs, not a complete approved
-provider workweek, every official schema field or actual payment. Other named
+unchanged. The Lanyard and Toast tests execute a reviewed five-day source workweek.
+Clockify and Square tests execute bounded time-entry cases. These do not prove
+authenticated provider approval, every official schema field or actual payment. Other named
 adapters, source-specific custody proof and full jurisdiction calculation remain
 open. No provider relationship, settlement or agency outcome is fabricated.
+
+Clockify accepts a reviewed array of locked `REGULAR` entries from the current
+[TimeEntryDtoImplV1 schema](https://docs.clockify.me/). Each entry includes
+`id`, `userId`, `workspaceId`, `isLocked`, `type` and `timeInterval` with
+`start`, `end` and numeric-seconds `duration` as a string. The duration must
+match the closed interval. Other duration encodings and nonregular entry types
+require source review rather than guessed conversion. The workspace must match
+`account`; map each entry identity to exact source and native worker identifiers,
+local day and actual workweek. A locked entry is not authenticated employer
+approval; native exact review remains mandatory.
+
+Square accepts a reviewed array of closed
+[Timecard objects](https://developer.squareup.com/reference/square/objects/Timecard)
+using API version 2026-09-16. Each supplies `id`, `version`, `location_id`,
+`team_member_id`, `start_at`, `end_at`, `status`, `breaks` and
+`declared_cash_tip_money` in USD cents. Closed, nonoverlapping
+[break intervals](https://developer.squareup.com/reference/square/objects/Break)
+marked unpaid are deducted; paid breaks remain worked time. Open, overlapping
+or out-of-shift breaks refuse the entire capture. The source location must
+match `account`; mappings retain worker identity, local day, actual workweek
+and explicit declared-tip settlement. Other POS earnings and tender types
+remain unimplemented. Source wages do not override the native reviewed rate.
+
+Deputy accepts a reviewed array of the official
+[Timesheet resource](https://developer.deputy.com/docs/timesheet). The bounded
+ordinary-time subset requires positive `Id` and `Employee` integers, `Date`,
+Unix-second `StartTime` and `EndTime`, `TotalTime` in hours, `TimeApproved` and
+`PayRuleApproved`, and an attributed `TimeApprover`. Discarded, in-progress,
+leave and validation-flagged entries are refused. Map the string form of each
+source ID to the exact string form of the source employee ID, native worker,
+local day and actual workweek. Source date and reviewed local day must agree.
+Total paid hours cannot exceed the closed interval; rates remain separately
+reviewed native payroll inputs. Other pay-return codes remain unimplemented.
+
+When I Work accepts a reviewed array of the `Time` schema in the official
+[API documentation](https://apidocs.wheniwork.com/external/index.html).
+Positive `id`, `user_id` and matching `account_id` identify each approved entry.
+`start_time`, `end_time` and `length` retain the closed interval and paid hours.
+`is_approved` must be true with no alert or payroll-period split; materially
+different `rounded_length` requires review. Optional `cash_tips` decimal dollar
+strings convert to integer cents only with explicit settlement mapping. Each
+source ID maps to native worker, local day and actual workweek. Complete
+rounding policies, split-period handling and other earnings remain unproved.
