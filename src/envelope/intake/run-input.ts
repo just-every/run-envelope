@@ -84,6 +84,11 @@ const amount = (v: unknown, fractional = false) => {
   return n
 }
 const empty = (v: unknown) => v === undefined || v === null || v === ''
+const fileHash = async (bytes: Uint8Array) =>
+  Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes).buffer)),
+    byte => byte.toString(16).padStart(2, '0')
+  ).join('')
 
 /** One bounded workbook, no formulas, inferred people, hidden worksheets or executable macros. */
 export function workbookRows(bytes: Uint8Array, mapping: Input = {}) {
@@ -229,11 +234,11 @@ export class RunIntake {
         mapping[key] = input['map.' + key]
     if (input.fileBytes instanceof Uint8Array) {
       patches = workbookRows(input.fileBytes, mapping)
-      fileDigest = await digest(Array.from(input.fileBytes).join(','))
+      fileDigest = await fileHash(input.fileBytes)
     } else if (typeof input.csv === 'string' && input.csv.trim()) {
       const bytes = new TextEncoder().encode(input.csv)
       patches = workbookRows(bytes, mapping)
-      fileDigest = await digest(input.csv)
+      fileDigest = await fileHash(bytes)
       format = 'csv'
     } else if (typeof patches === 'string') {
       try {

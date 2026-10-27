@@ -39,7 +39,8 @@ before a version is written. Resolve the worker mapping and resubmit.
 Preview shows the affected row, worker, workweek, code and each cell's prior and
 proposed values, with create, change and unchanged states. Applying requires the
 same preview digest, current input version, native session and grant. Retained
-versions include the editor identity, file digest, source rows and format.
+versions include the editor identity, SHA-256 digest of the exact uploaded bytes,
+source rows and format.
 Identical row replay keeps the existing version and contributes no extra pay.
 Changing the run's source name is refused. The same source identity cannot be
 claimed by another run, including concurrent submissions.
