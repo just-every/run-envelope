@@ -2862,11 +2862,11 @@
       "executable": false
     },
     "tests/archive-erasure.mjs": {
-      "sha256": "5b7d8f8287f104c9198e2cae1e952803c557f0019fbcf1194c655917c3739fcf",
+      "sha256": "88e8dff3847d31e02797b0b189dddd59faf367521ee1235760ba77f3b5fe2b3a",
       "executable": false
     },
     "tests/archive-fixture.mjs": {
-      "sha256": "601f28e253b2ea2d1a098569e5dfff3725c140fe6a140a39a4deebd572ef328f",
+      "sha256": "69bd45904c22d6cbf3b1e54a58b99389bc05fe4753df923838f40c8cbc1dff7d",
       "executable": false
     },
     "tests/archive-key-custody.mjs": {

@@ -107,6 +107,22 @@ export async function archiveErasure(context, fixture) {
     const events=await (await call(base+'/audit')).json()
     assert.ok(!events.some(e=>[graph.personId,...graph.objects].includes(e.targetId)),'all erased graph audit targets are anonymous')
   }
+  const sharedBase='/api/envelope/companies/'+fixture.heldShared.companyId
+  const sharedInventories=await Promise.all(fixture.heldShared.people.map(async person=>(await call(sharedBase+'/people/'+person+'/privacy')).json()))
+  const sharedRecord=sharedInventories[1].retained.find(r=>r.table==='env_notices'&&r.key.id===fixture.heldShared.noticeId)
+  assert.ok(sharedRecord,'the other worker can identify the exact jointly retained notice')
+  assert.ok(sharedInventories[0].retained.some(r=>r.id===sharedRecord.id),'both inventories identify the same shared statutory record')
+  const sharedGate={fingerprint:sharedInventories[1].fingerprint,records:[sharedRecord.id],consent:true,legalBasis:'Synthetic active statutory hold for the other worker',custodian:'Native owner',earliestReleaseAt:'9999-12-31T00:00:00.000Z'}
+  assert.equal((await call(sharedBase+'/people/'+fixture.heldShared.people[1]+'/privacy/retain',sharedGate)).status,200)
+  const sharedSelection={...sharedGate,fingerprint:sharedInventories[0].fingerprint,records:sharedInventories[0].retained.map(r=>r.id),earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
+  const sharedPrivacy=sharedBase+'/people/'+fixture.heldShared.people[0]+'/privacy'
+  assert.equal((await call(sharedPrivacy+'/retain',sharedSelection)).status,200)
+  assert.equal((await call(sharedPrivacy+'/release',sharedSelection)).status,409,'one worker cannot release the other worker statutory gate on shared notice evidence')
+  assert.equal((await call(sharedBase+'/people/'+fixture.heldShared.people[0]+'/erase',{version:1,...sharedSelection})).status,409,'shared held evidence prevents the complete deletion transaction')
+  const stillHeld=await (await call(sharedPrivacy)).json()
+  assert.equal(stillHeld.retained.find(r=>r.id===sharedRecord.id).earliestReleaseAt,'9999-12-31T00:00:00.000Z')
+  assert.equal((await call(sharedBase+'/notices/'+fixture.heldShared.noticeId)).status,200,'refused shared erasure preserves the original evidence')
+  for(const person of fixture.heldShared.people) assert.equal((await call(sharedBase+'/people/'+person)).status,200,'refused shared erasure preserves both worker identities')
   const initial = await audit()
   const door = company + '/people/' + fixture.unusedId + '/erase'
   assert.equal((await call(door, { version: 1 })).status, 400, 'unused-worker erasure requires explicit owner consent')
@@ -148,7 +164,7 @@ export async function archiveErasure(context, fixture) {
     assert.equal((await call(personBase+'/hris',{...input.body,type})).status,409,'unsupported provider event is refused without adding private custody')
   }
   for (const id of fixture.custodyObjects) {
-    const expected=id===fixture.sharedCustody.groupId||id===fixture.sharedCustody.runId?1:(id.endsWith('-sick')||id.endsWith('-holiday'))?3:2
+    const expected=id===fixture.sharedCustody.groupId||id===fixture.sharedCustody.runId?1:id.endsWith('-sick')||id.endsWith('-holiday')?5:id.endsWith('-pto')?4:2
     assert.equal(held.retained.filter(r => r.table === 'env_workspace_versions' && r.key.object_id === id).length, expected,
       'every source revision, connected bank, shared group and downstream run is retained: '+id)
   }
@@ -239,6 +255,21 @@ export async function archiveErasure(context, fixture) {
     'a held request withdraws ordinary access to each leave, intake and private attachment door')
   assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,403,'held mapped source history refuses ordinary access')
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'held private originals remain restricted')
+  const custodyBeforeDenied=await getPrivacy()
+  const mutationDoors=[
+    [personBase+'/new-hire-reports',reporting.reportInput],
+    [personBase+'/new-hire-reports/'+reporting.activeReportId+'/approve',{version:1,reviewToken:'synthetic-envelope-stale-review'}],
+    [personBase+'/new-hire-reports/'+reporting.activeReportId+'/transfer',{version:1}],
+    [personBase+'/new-hire-reports/'+reporting.reportId+'/response',{version:3,receiptId:'synthetic-envelope-denied-response',response:'accepted',reportingDate:'2026-02-03',agencyResponse:'Synthetic denied response'}],
+    [personBase+'/withholding-instructions',reporting.instructionInput],
+    [personBase+'/withholding-instructions/approve',{version:2,reviewToken:'synthetic-envelope-stale-review'}],
+    [company+'/notices/'+fixture.noticeCustody.id+'/people',{personId:fixture.sharedCustody.coworkerId,consent:true,digest:'synthetic-envelope-stale-digest'}],
+  ]
+  for(const [path,body] of mutationDoors) for(const [headers,status] of [[{cookie:viewerCookie},403],[{cookie:oldOwner},401],[{cookie:''},401],[{authorization:'Bearer '+fixture.authority.agentToken},403]]) {
+    assert.equal((await call(path,body,headers)).status,status,'private mutation cannot use denied authority: '+path)
+    assert.equal((await call(path.replace('/api/','/app/'),body,headers)).status,status,'native form cannot use denied authority: '+path)
+  }
+  assert.equal((await getPrivacy()).fingerprint,custodyBeforeDenied.fingerprint,'all denied private mutations leave the retained business graph unchanged')
   const scopedRead=await worker.fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+fixture.authority.agentToken},body:JSON.stringify({jsonrpc:'2.0',id:54,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0],personId:fixture.privacyPersonId}}})})
   assert.equal(scopedRead.status,403,'a previously usable sponsored bearer cannot read retained company data')
   await browserProof('loaded',privacyDoor.replace('/api/','/app/'),/Local inventory: held/)
