@@ -224,6 +224,7 @@ W-4 amount comparisons remain unavailable.
 Originals and source, actor and date history are retained by version at
 `GET /original/:version`. New sources never inherit approval. A changed worker
 identity cannot silently remove the instruction or authenticate a replacement.
+Instruction versions pin the private SSN revision when retained. Review and approval recheck that revision and worker match, with an atomic private-revision fence on record creation and each decision. Changing the SSN and then restoring its former value does not revive the old review token; fresh identity reconciliation is required.
 Historical source custody remains distinct from money or filing authority.
 
 The existing paper-election door checks applicable reviewed legacy instructions.
@@ -231,7 +232,7 @@ It refuses an exemption, a different status, more allowances or reduced required
 additional withholding. A retained compatible legacy election with fewer
 allowances or more additional withholding is accepted. A pending implementation
 or modification holds affected entry for a human; an unapproved release keeps
-the prior approved restriction. Only the exact approved release removes this
+the prior approved restriction. Every newer effective pending implementation or modification is checked, including one hidden beneath a later pending release. Only the exact approved release removes this
 entry restriction. Collection pins reject entry if an instruction or its decision
 changes concurrently. Elections effective before an instruction are historical
 records; the future payroll engine must still apply the binding instruction when
@@ -245,3 +246,5 @@ https://www.irs.gov/individuals/understanding-your-letter-2800c
 disregard of a decreasing W-4, permitted increases, and immediate modification
 on receipt of Letter 2808C. A synthetic matching-format PDF and a human-reported
 source check in a journey do not establish actual IRS authenticity or legal effect.
+
+Evidence appended to a linked SUI case carries the exact approved rule dependency. An edited or withdrawn rule refuses the append; it cannot make the retained link current again. Reopening explicitly clears the link and preserves the prior evidence.

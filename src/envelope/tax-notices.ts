@@ -113,7 +113,7 @@ export class TaxNoticeCases {
       data={...data,status:'closure-reported',...disposition!}
     } else if(kind==='reopening') data={...data,status:'reopened',residualCents:null,assessedPenaltyCents:null,abatedPenaltyCents:null,rate:null}
     else if(row.data.status==='closure-reported') throw new PayrollError('reopen_before_evidence',409)
-    return this.store.append(actor,'tax-notice-case',id,row.version,data)
+    return this.store.append(actor,'tax-notice-case',id,row.version,data,undefined,false,{objects:data.rate?[{kind:'rule',id:data.rate.id,version:data.rate.version,approved:true}]:[]})
   }
   async linkRate(actor:Actor,id:string,input:Input) {
     const row=await this.current(actor,id)

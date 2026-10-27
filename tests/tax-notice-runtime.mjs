@@ -18,12 +18,13 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
  const input={version:0,type:'deposit-mismatch',agency:'IRS',employerEin:'00-0002525',periodStart:'2026-07-01',periodEnd:'2026-09-30',dueOn:'2026-10-28',principalCents:123456,proposedPenaltyCents:4500,pdf,quote:'CP161: principal $1,234.56; proposed penalty $45.00.',rawExtraction:'OCR: principal 1234.56; period mistakenly read as Q2.',verifiedExtraction:true}
  const get=async()=> (await data(door))[0]
  const proof=process.env.ENVELOPE_PROOF_DIR ?? '/tmp/envelope-tax-notices';await mkdir(proof,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
  try {
   const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}]);const page=await context.newPage()
   const capture=async (label,target=screen)=>{
    for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000});await page.goto(origin+target);await page.locator('h1').waitFor()
+    if(label==='sui-review-ready') await page.getByText('Link an exact reviewed SUI edition',{exact:true}).click()
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,label+' has no page overflow')
     assert.equal(await page.locator('button').evaluateAll(nodes=>nodes.every(n=>n.textContent.trim().length>1)),true,'Notice controls have visible labels')
     await page.screenshot({path:join(proof,'notice-'+label+'-'+width+'.png'),fullPage:true})
@@ -41,7 +42,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await form.locator('[name="type"]').selectOption('deposit-mismatch')
   for(const key of ['agency','employerEin','periodStart','periodEnd','dueOn','principalCents','proposedPenaltyCents','quote','rawExtraction']) await form.locator('[name="'+key+'"]').fill(String(input[key]))
   await form.locator('[name="pdf"]').setInputFiles({name:'synthetic-envelope-2525.pdf',mimeType:['application','pdf'].join('/'),buffer:original})
-  await form.locator('[name="verifiedExtraction"]').check();await form.getByRole('button',{name:'Save verified case version',exact:true}).focus();const [submitted]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST' && r.url()===origin+screen),page.keyboard.press('Enter')]);assert.equal(submitted.status(),303);await page.waitForLoadState('load')
+  await form.locator('[name="verifiedExtraction"]').check();await form.getByRole('button',{name:'Save verified case version',exact:true}).focus();const [submitted]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST' && r.url()===origin+screen),page.waitForNavigation({waitUntil:'load'}),page.keyboard.press('Enter')]);assert.equal(submitted.status(),303);await page.waitForLoadState('load')
   let row=await get();assert.equal(row.version,1);assert.equal(row.data.residualCents,null);assert.equal(row.data.assessedPenaltyCents,null);assert.equal(row.resolved,false);assert.equal(row.overdue,false);assert.equal(row.payrollChanged,false)
   assert.equal(row.data.facts.principalCents,123456);assert.equal(row.data.facts.proposedPenaltyCents,4500);assert.ok(row.data.ownerId)
   const download=await call(door+'/original/1/0');assert.equal(download.status,200);assert.deepEqual(Buffer.from(await download.arrayBuffer()),original);assert.equal(download.headers.get('cache-control'),'no-store')
@@ -51,6 +52,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(door+'/approve',{version:staleReview.version,reviewToken:staleReview.reviewToken},409)
   await data(door,{...correction,version:2,pdf},409)
   row=await get();assert.equal(row.data.rawExtraction,input.rawExtraction);assert.equal(row.data.correctionReason,correction.correctionReason);assert.equal((await data(door)).length,2)
+  await capture('case-exact-review',screen+'/review')
   const review=await data(door+'/review');await data(door+'/approve',{version:review.version,reviewToken:review.reviewToken})
   assert.ok((await get()).approvedBy)
   const evidence={version:2,kind:'deposit',reference:'synthetic-envelope-deposit-2525',employerEin:input.employerEin,periodStart:input.periodStart,periodEnd:input.periodEnd,pdf,quote:'Synthetic deposit confirmation: Q3, $1,234.56.',amountCents:123456}
@@ -92,11 +94,23 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(suiDoor+'/link-rate',{version:1,ruleId:rule.id,ruleVersion:1},401,'')
   await data(suiDoor+'/link-rate',{version:1,ruleId:rule.id,ruleVersion:1},409)
   const ruleReview=await data(base+'/rules/review/'+rule.id);await data(base+'/rules/'+rule.id+'/approve',{version:ruleReview.version,reviewToken:ruleReview.reviewToken})
+  await capture('sui-review-ready',suiDoor.replace('/api/','/app/'))
   await data(suiDoor+'/link-rate',{version:1,ruleId:rule.id,ruleVersion:1})
   sr=(await data(suiDoor))[0];assert.deepEqual(sr.data.rate,{id:rule.id,version:1});assert.equal(sr.payrollChanged,false);assert.equal(sr.sourcesCurrent,1)
   await capture('sui-reviewed-link',suiDoor.replace('/api/','/app/'))
+  const linkedEvidence={...evidence,version:2,reference:'synthetic-envelope-current-rule'}
+  await data(suiDoor+'/evidence',linkedEvidence)
+  sr=(await data(suiDoor))[0];assert.equal(sr.version,3);assert.equal(sr.sourcesCurrent,1);assert.deepEqual(sr.data.rate,{id:rule.id,version:1})
+  await data(base+'/rules/'+rule.id+'/withdraw',{version:1})
+  assert.equal((await data(suiDoor))[0].sourcesCurrent,0)
+  await data(suiDoor+'/evidence',{...linkedEvidence,version:3,reference:'synthetic-envelope-withdrawn-rule'},409)
+  assert.equal((await data(suiDoor))[0].version,3)
   await data(base+'/rules',{...rule,version:1,value:'2.8'},201)
   assert.equal((await data(suiDoor))[0].sourcesCurrent,0,'Changed SUI rule cannot remain current on the case')
+  const staleEvidence={...evidence,version:3,reference:'synthetic-envelope-stale-rule'}
+  await data(suiDoor+'/evidence',staleEvidence,409)
+  assert.equal((await data(suiDoor))[0].version,3,'Stale linked evidence cannot manufacture a current version')
+  await data(suiDoor+'/review',undefined,409)
   // Worker-specific legacy lock-in settings constrain the existing public paper-election door.
   const person=await data(base+'/people',{name:'Synthetic lock-in employee',locationId:location.id},201),instructionDoor=base+'/people/'+person.id+'/withholding-instructions',paperDoor=base+'/people/'+person.id+'/paper-onboarding'
   await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:0,value:'900-25-2525'},201)
@@ -106,11 +120,45 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(instructionDoor,{...instruction,authenticated:false},409)
   await data(instructionDoor,{...instruction,workerSsn:'900-25-2526'},409)
   await data(instructionDoor,{...instruction,effectiveFrom:'2026-09-29'},400)
+  await capture('instruction-empty',instructionDoor.replace('/api/','/app/'))
   await data(instructionDoor,instruction,201)
+  await capture('instruction-pending',instructionDoor.replace('/api/','/app/'))
   const paperOriginal={signed:true,signedBy:'Synthetic lock-in employee',signedOn:'2019-12-01',pdf}
   const paper={version:0,attestTranscription:true,workerType:'employee',hiredOn:'2019-01-01',paymentMethod:'paper-check',tin:'900252525',address:'1 Synthetic Street, Columbus OH 43215',federal:{form:'W-4-pre2020',effectiveFrom:'2026-10-01',original:paperOriginal,fields:{filingStatus:'single',allowances:1,additionalCents:0,exempt:'no'}},state:{form:'OH-IT-4',effectiveFrom:'2026-10-01',original:{...paperOriginal,signedOn:'2026-10-01'},fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:0,localExemption:'none'}}}
   await data(paperDoor,paper,409)
+  // A pending stricter modification remains a hold beneath a pending release.
+  const pendingPerson=await data(base+'/people',{name:'Synthetic pending instruction employee',locationId:location.id},201)
+  const pendingDoor=base+'/people/'+pendingPerson.id+'/withholding-instructions',pendingPaper=base+'/people/'+pendingPerson.id+'/paper-onboarding'
+  await data(base+'/people/'+pendingPerson.id+'/private',{kind:'ssn',version:0,value:'900-25-2525'},201)
+  await data(pendingDoor,instruction,201)
+  const pr=await data(pendingDoor+'/review');await data(pendingDoor+'/approve',{version:pr.version,reviewToken:pr.reviewToken})
+  const pendingModification={...instruction,version:1,kind:'modification',letterOn:'2026-10-29',receivedOn:'2026-10-29',effectiveFrom:'2026-10-29',maximumAllowances:0}
+  await data(pendingDoor,pendingModification,201)
+  await data(pendingDoor,{...pendingModification,version:2,kind:'release'},201)
+  const pendingElection={...paper,federal:{...paper.federal,effectiveFrom:'2026-10-29'}}
+  await data(pendingPaper,pendingElection,409)
+  assert.deepEqual(await data(pendingPaper),[],'A pending release cannot hide a stricter pending instruction')
+  const pendingReleaseReview=await data(pendingDoor+'/review')
+  await data(pendingDoor+'/approve',{version:pendingReleaseReview.version,reviewToken:pendingReleaseReview.reviewToken})
+  await data(pendingPaper,pendingElection,201)
+  assert.equal((await data(pendingPaper))[0].data.federal.fields.allowances,1,'An exact approved release supersedes the pending modification')
+  assert.equal((await data(pendingPaper))[0].payable,false)
+  // Private identity changes invalidate both review preparation and an issued token.
+  const identityPerson=await data(base+'/people',{name:'Synthetic changed identity employee',locationId:location.id},201)
+  const identityDoor=base+'/people/'+identityPerson.id+'/withholding-instructions',privateDoor=base+'/people/'+identityPerson.id+'/private'
+  await data(privateDoor,{kind:'ssn',version:0,value:'900-25-2525'},201)
+  await data(identityDoor,instruction,201)
+  const identityReview=await data(identityDoor+'/review')
+  await data(privateDoor,{kind:'ssn',version:1,value:'900-25-2526'},201)
+  await data(identityDoor+'/approve',{version:identityReview.version,reviewToken:identityReview.reviewToken},409)
+  await data(identityDoor+'/review',undefined,409)
+  await data(privateDoor,{kind:'ssn',version:2,value:'900-25-2525'},201)
+  await data(identityDoor+'/approve',{version:identityReview.version,reviewToken:identityReview.reviewToken},409)
+  assert.equal((await data(identityDoor))[0].approvedBy,null,'Restoring the same SSN does not revive old review authority')
+  assert.equal((await data(identityDoor))[0].sourcesCurrent,0)
+  await capture('instruction-exact-review',instructionDoor.replace('/api/','/app/')+'/review')
   const ir=await data(instructionDoor+'/review');await data(instructionDoor+'/approve',{version:ir.version,reviewToken:ir.reviewToken})
+  await capture('instruction-approved',instructionDoor.replace('/api/','/app/'))
   const election=fields=>({...paper,federal:{...paper.federal,fields:{...paper.federal.fields,...fields}}})
   for(const fields of [{allowances:2},{filingStatus:'married'},{exempt:'yes'}]) await data(paperDoor,election(fields),409)
   await data(paperDoor,{...paper,tin:'900252526'},409)

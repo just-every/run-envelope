@@ -9,7 +9,7 @@ import { collectionPins } from './workspace/review-inputs'
 export interface WithholdingInstruction {
   kind:string; original:Document; receivedOn:string; letterOn:string; effectiveFrom:string
   filingStatus:string; maximumAllowances:number; minimumAdditionalCents:number
-  identityDigest:string; authenticationMethod:string; authenticationReference:string
+  identityVersion:number; identityDigest:string; authenticationMethod:string; authenticationReference:string
   priorVersion:number; recordedByName:string
 }
 const amount=(value:unknown,max:number)=>{
@@ -25,15 +25,31 @@ export class WithholdingInstructions {
   async identity(actor:Actor,person:string) {
     return digest((await this.store.records.readPrivate(actor,person,'ssn')).replaceAll('-',''))
   }
+  async identityVersion(actor:Actor,person:string) {
+    await this.store.records.person(actor,person)
+    const row=await this.store.records.statement("SELECT version FROM env_private_records WHERE company_id=? AND person_id=? AND kind='ssn'",[actor.company,person]).first<{version:number}>()
+    if(!row) throw new PayrollError('lock_in_identity_reconciliation_required',409)
+    return row.version
+  }
+  identityFence(actor:Actor,person:string,version:number) {
+    return {sql:"EXISTS(SELECT 1 FROM env_private_records WHERE company_id=? AND person_id=? AND kind='ssn' AND version=?)",args:[actor.company,person,version]}
+  }
+  async checkedIdentity(actor:Actor,person:string) {
+    const row=await this.store.find<WithholdingInstruction>(actor,'withholding-instruction',this.id(person),person)
+    if(row.data.identityVersion!==await this.identityVersion(actor,person) || row.data.identityDigest!==await this.identity(actor,person)) throw new PayrollError('lock_in_identity_reconciliation_required',409)
+    return this.identityFence(actor,person,row.data.identityVersion)
+  }
   async history(actor:Actor,person:string) {
     this.owner(actor)
-    return (await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person)).map(row=>({...row,data:{...row.data,identityDigest:undefined,original:{...row.data.original,pdf:undefined}}}))
+    const rows=await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person)
+    const identityVersion=rows.length?await this.identityVersion(actor,person):0
+    return rows.map(row=>({...row,sourcesCurrent:row.sourcesCurrent && row.data.identityVersion===identityVersion?1:0,data:{...row.data,identityVersion:undefined,identityDigest:undefined,original:{...row.data.original,pdf:undefined}}}))
   }
   async save(actor:Actor,person:string,input:Input) {
     this.owner(actor)
     await new TaxNoticeCases(this.store).employer(actor,input.employerEin)
     if(input.authenticated!==true && input.authenticated!=='true') throw new PayrollError('authenticated_irs_original_required',409)
-    const identityDigest=await this.identity(actor,person)
+    const identityVersion=await this.identityVersion(actor,person),identityDigest=await this.identity(actor,person)
     if(!/^\d{3}-?\d{2}-?\d{4}$/.test(text(input.workerSsn)) || await digest(text(input.workerSsn).replaceAll('-',''))!==identityDigest) throw new PayrollError('lock_in_worker_mismatch',409)
     const rows=await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person),expected=revision(input.version)
     if((rows[0]?.version ?? 0)!==expected) throw new PayrollError('lock_in_changed',409)
@@ -46,18 +62,20 @@ export class WithholdingInstructions {
     const data:WithholdingInstruction={kind,original:await noticeDocument(input),receivedOn,letterOn,effectiveFrom,
       filingStatus:kind==='release'?'':choice(input.filingStatus,['single','married','married-withhold-single']),
       maximumAllowances:kind==='release'?0:amount(input.maximumAllowances,99),minimumAdditionalCents:kind==='release'?0:amount(input.minimumAdditionalCents,100000000),
-      identityDigest,authenticationMethod:choice(input.authenticationMethod,['agency-portal','verified-agency-correspondence']),authenticationReference:text(input.authenticationReference,500),
+      identityVersion,identityDigest,authenticationMethod:choice(input.authenticationMethod,['agency-portal','verified-agency-correspondence']),authenticationReference:text(input.authenticationReference,500),
       priorVersion:prior?.version ?? 0,recordedByName:actor.session.operator.displayName}
-    return this.store.append(actor,'withholding-instruction',this.id(person),expected,data,person)
+    return this.store.append(actor,'withholding-instruction',this.id(person),expected,data,person,false,{condition:this.identityFence(actor,person,identityVersion)})
   }
   async review(actor:Actor,person:string) {
     this.owner(actor)
-    const row=await this.store.review<WithholdingInstruction>(actor,'withholding-instruction',this.id(person),person)
+    const condition=await this.checkedIdentity(actor,person)
+    const row=await this.store.review<WithholdingInstruction>(actor,'withholding-instruction',this.id(person),person,condition)
     return {version:row.version,reviewToken:row.reviewToken,history:await this.history(actor,person)}
   }
   async approve(actor:Actor,person:string,input:Input) {
     this.owner(actor)
-    return this.store.decide(actor,'withholding-instruction',this.id(person),input,person)
+    const condition=await this.checkedIdentity(actor,person)
+    return this.store.decide(actor,'withholding-instruction',this.id(person),input,person,false,condition)
   }
   async original(actor:Actor,person:string,version:number) {
     this.owner(actor)
@@ -70,11 +88,10 @@ export class WithholdingInstructions {
     const reviewSets=await collectionPins(this.store,actor,[{kind:'withholding-instruction',personId:person,exceptId:''}])
     const rows=await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person,false,false)
     const relevant=rows.filter(r=>r.data.effectiveFrom<=form.effectiveFrom)
-    const pending=relevant[0]
     const active=relevant.find(r=>r.approvedBy && !r.withdrawnBy)
-    if(pending && (!active || pending.version>active.version) && pending.data.kind!=='release') throw new PayrollError('lock_in_human_implementation_required',409)
+    if(relevant.some(pending=>(!active || pending.version>active.version) && pending.data.kind!=='release' && !pending.withdrawnBy)) throw new PayrollError('lock_in_human_implementation_required',409)
     if(active) {
-      if(await this.identity(actor,person)!==active.data.identityDigest || await digest(tin.replaceAll('-',''))!==active.data.identityDigest) throw new PayrollError('lock_in_identity_reconciliation_required',409)
+      if(await this.identityVersion(actor,person)!==active.data.identityVersion || await this.identity(actor,person)!==active.data.identityDigest || await digest(tin.replaceAll('-',''))!==active.data.identityDigest) throw new PayrollError('lock_in_identity_reconciliation_required',409)
       if(active.data.kind!=='release') {
         const f=form.fields,d=active.data
         if(form.form!=='W-4-pre2020') throw new PayrollError('lock_in_amount_comparison_unavailable',409)
