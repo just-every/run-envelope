@@ -2,6 +2,7 @@ import type { Actor } from '../access'
 import { auditStatement } from '../access'
 import type { Input } from '../records'
 import { PayrollError, date, text } from '../security'
+import { WithholdingInstructions } from '../withholding-instructions'
 import { WorkerPrivacy } from '../worker-privacy'
 import { WorkspaceStore, choice, revision, type Revision } from '../workspace/store'
 
@@ -88,7 +89,8 @@ export class PaperOnboarding {
     choice(input.paymentMethod,['paper-check'])
     const data: Packet={enteredByName:actor.session.operator.displayName,workerType,hiredOn:date(input.hiredOn),paymentMethod:'paper-check',tin,address:text(input.address,500),
       federal:paper(input.federal,true,workerType),state:workerType==='contractor' && input.state==null?null:paper(input.state,false,workerType)}
-    return this.store.append(actor,'paper-onboarding',this.id(personId),revision(input.version),data,personId)
+    const reviewSets=workerType==='employee'?await new WithholdingInstructions(this.store).checkElection(actor,personId,data.federal,data.tin):[]
+    return this.store.append(actor,'paper-onboarding',this.id(personId),revision(input.version),data,personId,false,{reviewSets})
   }
   masked(row: Revision<Packet>) {
     const {data,...meta}=row

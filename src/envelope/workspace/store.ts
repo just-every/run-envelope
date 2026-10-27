@@ -7,6 +7,8 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind =
   | 'company-funding'
   | 'company-funding-plan'
+  | 'tax-notice-case'
+  | 'withholding-instruction'
   | 'paper-onboarding'
   | 'automation-policy'
   | 'new-hire-report'
