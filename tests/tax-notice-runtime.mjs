@@ -193,6 +193,70 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(paperDoor,{...election({allowances:5}),version:2,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:5}}},201)
   await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-released-check'},201)
   const releasedCheck=(await data(industryDoor)).checks.find(r=>r.id==='synthetic-envelope-released-check');assert.equal(releasedCheck.data.withholdingInstruction.decision,'reviewed-irs-release');assert.equal(releasedCheck.data.withholdingInstruction.version,3);assert.equal(releasedCheck.data.result.employeeTaxes.incomeTaxCents,10308)
+  // Current-form instructions retain all monetary settings and use the same public check door.
+  const modernPerson=await data(base+'/people',{name:'Synthetic current-form employee',locationId:location.id},201),modernDoor=base+'/people/'+modernPerson.id+'/withholding-instructions',modernPaperDoor=base+'/people/'+modernPerson.id+'/paper-onboarding'
+  await data(base+'/people/'+modernPerson.id+'/private',{kind:'ssn',version:0,value:'900-25-2528'},201)
+  privateValue('900-25-2528');privateValue('900252528')
+  const modernGroup='synthetic-envelope-modern-group',modernChange='synthetic-envelope-modern-pay',modernRun='synthetic-envelope-modern-run'
+  await data(base+'/pay-settings/group',{id:modernGroup,version:0,name:'Current-form payroll',people:[modernPerson.id]},201);await approveSetting('group',modernGroup)
+  await data(base+'/pay-settings/pay-change',{id:modernChange,version:0,name:'Reviewed ordinary current-form wages',groupId:modernGroup,effectiveDate:'2026-01-01',items:[{personId:modernPerson.id,personVersion:modernPerson.version,rateCents:12500,basis:'hourly',employmentFrom:'2026-01-01',employmentThrough:'2026-12-31',unpaidDates:[]}]},201);await approveSetting('pay-change',modernChange)
+  await data(base+'/people/'+modernPerson.id+'/allocations/work',{id:'synthetic-envelope-modern-work',version:0,day:'2026-09-28',state:'OH',locality:'Columbus',minutes:480,earnedCents:100000,officeState:'OH',nyReason:'not-applicable',sourceRef:'Signed Ohio register at lock-in boundary'},201)
+  await data(base+'/pay-settings/earnings-run',{id:modernRun,version:0,groupId:modernGroup,periodStart:'2026-09-28',periodEnd:'2026-09-30',payDate:'2026-09-30',frequency:'weekly'},201)
+  const modernIndustry=base+'/people/'+modernPerson.id+'/industry'
+  const currentClassification={version:0,effectiveFrom:'2026-01-01',effectiveThrough:'2026-12-31',facts:ordinaryFacts,w4:ordinaryW4,evidenceTitle:'Signed current-form employee W-4',evidenceIssuer:'Employee',evidenceReference:'synthetic-envelope-2528',evidenceText:'Ordinary employee W-4, subject to independently reviewed IRS instruction.'}
+  const modernClass=await data(modernIndustry+'/classification',currentClassification,201),mc=await data(modernIndustry+'/review/industry-classification/'+modernClass.id);await data(modernIndustry+'/decision/industry-classification/'+modernClass.id,{version:mc.version,reviewToken:mc.reviewToken})
+  const modernCheck={...checkInput,id:'synthetic-envelope-current-check',runId:modernRun,runVersion:1}
+  await data(modernIndustry+'/checks',{...modernCheck,id:'synthetic-envelope-before-instruction'},201)
+  const beforeInstructionReview=await data(modernIndustry+'/review/industry-check/synthetic-envelope-before-instruction');await data(modernIndustry+'/decision/industry-check/synthetic-envelope-before-instruction',{version:beforeInstructionReview.version,reviewToken:beforeInstructionReview.reviewToken})
+  assert.equal((await data(modernIndustry)).checks.find(r=>r.id==='synthetic-envelope-before-instruction').sourcesCurrent,1)
+  const modernOriginal=Buffer.from('%PDF-1.7\nDepartment of the Treasury, Internal Revenue Service. Letter 2800C. Employer 00-0002525. Employee 900-25-2528. August 1, 2026. Effective September 30, 2026: single, multiple jobs adjustment, annual credits $1,200, other income $5,200, deductions $2,600, extra $5 each paycheck.\n%%EOF')
+  privateValue(modernOriginal.toString('base64'))
+  const modernInput={...instruction,workerSsn:'900-25-2528',settingsFormat:'current',multipleJobs:'yes',dependentCreditCents:120000,otherIncomeCents:520000,deductionsCents:260000,minimumAdditionalCents:500,pdf:modernOriginal.toString('base64'),quote:'Current-form IRS instruction: single, multiple jobs, credits 1200, other income 5200, deductions 2600, extra 5 per check.'}
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+modernDoor.replace('/api/','/app/'))
+  const modernForm=page.locator('form[action$="/withholding-instructions"]')
+  for(const key of ['kind','settingsFormat','filingStatus','multipleJobs','authenticationMethod'])await modernForm.locator('[name="'+key+'"]').selectOption(String(modernInput[key]))
+  for(const key of ['employerEin','workerSsn','letterOn','receivedOn','effectiveFrom','dependentCreditCents','otherIncomeCents','deductionsCents','minimumAdditionalCents','authenticationReference','quote'])await modernForm.locator('[name="'+key+'"]').fill(String(modernInput[key]))
+  await modernForm.locator('[name="pdf"]').setInputFiles({name:'synthetic-envelope-2528.pdf',mimeType:['application','pdf'].join('/'),buffer:modernOriginal});await modernForm.locator('[name="authenticated"]').check()
+  await modernForm.getByRole('button',{name:'Retain unapproved IRS instruction',exact:true}).focus();const [modernSubmitted]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST' && r.url()===origin+modernDoor.replace('/api/','/app/')),page.keyboard.press('Enter')]);assert.equal(modernSubmitted.status(),303);await page.waitForLoadState('load')
+  assert.equal((await data(modernIndustry)).checks.find(r=>r.id==='synthetic-envelope-before-instruction').sourcesCurrent,0,'A first IRS instruction invalidates a previously approved check that had no instruction dependency')
+  const unboundReturn=await call(base+'/industry-returns',{form:'941',taxYear:2026,quarter:3,checks:[{personId:modernPerson.id,id:'synthetic-envelope-before-instruction',version:1}]});assert.equal(unboundReturn.status,409);assert.equal((await unboundReturn.json()).error,'current_reviewed_check_required')
+  const modernW4={version:'2020_or_later',filingStatus:'single',step2Checked:true,step3AnnualCreditsCents:120000,step4aOtherIncomeCents:520000,step4bDeductionsCents:260000,step4cExtraWithholdingCents:500}
+  assert.deepEqual((await data(modernDoor))[0].data.modernSettings,modernW4)
+  const modernFields={filingStatus:'single',multipleJobs:'yes',dependentCreditCents:120000,otherIncomeCents:520000,deductionsCents:260000,additionalCents:2500,exempt:'no'}
+  const modernPaper={...paper,tin:'900252528',state:{...paper.state,original:{...paper.state.original,signedBy:'Synthetic current-form employee'}},federal:{form:'W-4',effectiveFrom:'2026-09-30',original:{...paperOriginal,signedBy:'Synthetic current-form employee',signedOn:'2026-09-30'},fields:modernFields}}
+  await data(modernPaperDoor,modernPaper,409)
+  const modernReview=await data(modernDoor+'/review');await data(modernDoor+'/approve',{version:modernReview.version,reviewToken:modernReview.reviewToken})
+  for(const lower of [{dependentCreditCents:120001},{otherIncomeCents:519999},{deductionsCents:260001},{additionalCents:499},{exempt:'yes'},{multipleJobs:'no'}])await data(modernPaperDoor,{...modernPaper,federal:{...modernPaper.federal,fields:{...modernFields,...lower}}},409)
+  assert.deepEqual(await data(modernPaperDoor),[],'Lower current-form elections create no paperwork version')
+  await data(modernPaperDoor,modernPaper,201)
+  assert.equal((await data(modernPaperDoor))[0].data.federal.fields.additionalCents,2500)
+  await data(modernIndustry+'/checks',modernCheck,201)
+  const currentCheck=(await data(modernIndustry)).checks.find(r=>r.id===modernCheck.id)
+  assert.equal(currentCheck.data.result.employeeTaxes.incomeTaxCents,12802,'Current-form lock-in: ((2900 + (54600 - 33250) * 22%) - 1200) / 52 + 5')
+  assert.equal(currentCheck.data.result.payDate,'2026-09-30');assert.equal(currentCheck.data.withholdingInstruction.effectiveFrom,'2026-09-30');assert.deepEqual(currentCheck.data.input.w4,modernW4)
+  const higherModernClass=await data(modernIndustry+'/classification',{...currentClassification,version:1,w4:{...modernW4,step4cExtraWithholdingCents:2500}},201),hc=await data(modernIndustry+'/review/industry-classification/'+higherModernClass.id);await data(modernIndustry+'/decision/industry-classification/'+higherModernClass.id,{version:hc.version,reviewToken:hc.reviewToken})
+  await data(modernIndustry+'/checks',{...modernCheck,id:'synthetic-envelope-current-higher'},201)
+  const currentHigher=(await data(modernIndustry)).checks.find(r=>r.id==='synthetic-envelope-current-higher');assert.equal(currentHigher.data.result.employeeTaxes.incomeTaxCents,14802);assert.equal(currentHigher.data.withholdingInstruction.decision,'higher-or-equal-election')
+  const modernModification={...modernInput,version:1,kind:'modification',letterOn:'2026-10-30',receivedOn:'2026-10-30',effectiveFrom:'2026-10-30',dependentCreditCents:150000,pdf:Buffer.from('%PDF-1.7\nSynthetic authenticated IRS Letter 2808C: current-form single, multiple jobs, annual credits $1,500, other income $5,200, deductions $2,600, extra $5 per check; effective on receipt October 30, 2026.\n%%EOF').toString('base64'),quote:'Authenticated current-form modification: annual credits $1,500 effective immediately on receipt.'}
+  await data(modernDoor,modernModification,201)
+  const modernModReview=await data(modernDoor+'/review');await data(modernDoor+'/approve',{version:modernModReview.version,reviewToken:modernModReview.reviewToken})
+  await data(base+'/people/'+modernPerson.id+'/allocations/work',{id:'synthetic-envelope-modern-work-next',version:0,day:'2026-10-19',state:'OH',locality:'Columbus',minutes:480,earnedCents:100000,officeState:'OH',nyReason:'not-applicable',sourceRef:'Signed Ohio register at modification receipt'},201)
+  await data(base+'/pay-settings/earnings-run',{id:modernRun,version:1,groupId:modernGroup,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',frequency:'weekly'},201)
+  await data(modernIndustry+'/checks',{...modernCheck,id:'synthetic-envelope-current-modified',runVersion:2},201)
+  const currentModified=(await data(modernIndustry)).checks.find(r=>r.id==='synthetic-envelope-current-modified');assert.equal(currentModified.data.withholdingInstruction.version,2);assert.equal(currentModified.data.withholdingInstruction.lockedIncomeTaxCents,12225);assert.equal(currentModified.data.result.employeeTaxes.incomeTaxCents,14802)
+  const modernRelease={...modernModification,version:2,kind:'release',pdf:Buffer.from('%PDF-1.7\nSynthetic authenticated IRS written release of the current-form instruction effective October 30, 2026 on receipt.\n%%EOF').toString('base64'),quote:'Authenticated current-form release effective immediately on receipt.'}
+  await data(modernDoor,modernRelease,201)
+  // A lower regular W-4 still cannot lower the check until the exact IRS release is approved.
+  const releasedClass=await data(modernIndustry+'/classification',{...currentClassification,version:2},201),releasedClassReview=await data(modernIndustry+'/review/industry-classification/'+releasedClass.id);await data(modernIndustry+'/decision/industry-classification/'+releasedClass.id,{version:releasedClassReview.version,reviewToken:releasedClassReview.reviewToken})
+  await data(modernIndustry+'/checks',{...modernCheck,id:'synthetic-envelope-current-release-pending',runVersion:2},201)
+  const releasePending=(await data(modernIndustry)).checks.find(r=>r.id==='synthetic-envelope-current-release-pending');assert.equal(releasePending.data.result.employeeTaxes.incomeTaxCents,12225);assert.equal(releasePending.data.withholdingInstruction.version,2)
+  const modernReleaseReview=await data(modernDoor+'/review');await data(modernDoor+'/approve',{version:modernReleaseReview.version,reviewToken:modernReleaseReview.reviewToken})
+  await data(modernIndustry+'/checks',{...modernCheck,id:'synthetic-envelope-current-released',runVersion:2},201)
+  const currentReleased=(await data(modernIndustry)).checks.find(r=>r.id==='synthetic-envelope-current-released');assert.equal(currentReleased.data.result.employeeTaxes.incomeTaxCents,7808);assert.equal(currentReleased.data.withholdingInstruction.decision,'reviewed-irs-release')
+  const modernHistory=await data(modernDoor);assert.deepEqual(modernHistory.map(r=>r.data.kind),['release','modification','2800C']);assert.deepEqual(modernHistory[2].data.modernSettings,modernW4);assert.ok(modernHistory.every(r=>r.createdBy===owner && r.approvedBy===owner && Number.isFinite(r.createdAt) && Number.isFinite(r.approvedAt)))
+  const instructionCiphers=await sql("SELECT cipher FROM env_workspace_versions WHERE kind='withholding-instruction'");assert.equal(instructionCiphers.length,6);assert.ok(instructionCiphers.every(r=>!r.cipher.includes('900-25-2528') && !r.cipher.includes(modernOriginal.toString('base64'))),'All instruction source versions stay encrypted')
+  await capture('current-form-calculated',modernIndustry.replace('/api/','/app/'))
+  await capture('current-form-instruction',modernDoor.replace('/api/','/app/'))
   await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:1,value:'900-25-2526'},201)
   await data(paperDoor,{...election({allowances:5}),version:3,federal:{...paper.federal,effectiveFrom:'2026-10-30',fields:{...paper.federal.fields,allowances:5}}},409)
   await data(instructionDoor,{...release,version:3,workerSsn:'900-25-2526'},409)
@@ -208,7 +272,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await call('/auth/signout',{})
   for(const target of [door,door+'/original/1/0',instructionDoor,instructionDoor+'/original/1']) assert.equal((await call(target)).status,401,'Sign-out immediately denies each new case and original transport')
   const counts=await sql(`SELECT (SELECT COUNT(*) FROM env_notice_dispatches) AS dispatches,(SELECT COUNT(*) FROM env_workspace_versions WHERE kind='earnings-run') AS runs`)
-  assert.deepEqual(counts,[{dispatches:0,runs:2}],'Notice calculation retains two run versions and no outbound send')
+  assert.deepEqual(counts,[{dispatches:0,runs:4}],'Notice calculation retains four run versions and no outbound send')
  } finally {await browser.close()}
- console.log('TAX-NOTICE-CASES passed: original custody, checked extraction and correction, exact review, deposit evidence, honest nonzero disposition, replay, overdue and reopening, exact reviewed SUI linkage, capped employer liability and current owner refusals; legacy worker-matched IRS instruction review, lower-election refusal, higher elections and reviewed modification or release; selected screens at 1440 and 390. Calculated legacy lock-in comparisons and modification or release passed; actual payroll payment and independent agency closure remain unproved.')
+ console.log('TAX-NOTICE-CASES passed: original custody, checked extraction and correction, exact review, deposit evidence, honest nonzero disposition, replay, overdue and reopening, exact reviewed SUI linkage, capped employer liability and current owner refusals; legacy worker-matched IRS instruction review, lower-election refusal, higher elections and reviewed modification or release; selected screens at 1440 and 390. Calculated legacy and current-form comparisons, modification and release passed; actual payroll payment and independent agency closure remain unproved.')
 }

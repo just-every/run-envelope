@@ -197,7 +197,7 @@ retention proof remain owed by ENV-025 and its existing cross-cutting clauses.
 
 The worker's signed-paper screen links to **IRS withholding instructions** at
 `/api/envelope/companies/:company/people/:person/withholding-instructions`.
-The same conservative native-owner restriction applies. These are bounded legacy
+The same conservative native-owner restriction applies. These are bounded legacy and current-form
 instruction records, not a complete withholding engine or legal-authenticity
 service. A PDF, model response or unchecked attestation cannot self-approve.
 
@@ -216,8 +216,11 @@ Legacy settings require `filingStatus`, `maximumAllowances` and
 `minimumAdditionalCents`. The supported 2800C date is 60 calendar days after its
 letter date. A modification or release is recorded effective on receipt and
 requires an earlier approved instruction. Other formats or unusual effective-date
-cases need additional implementation and authoritative review. Current-form
-W-4 amount comparisons remain unavailable.
+cases need additional implementation and authoritative review. For `settingsFormat:current`, retain `filingStatus`, `multipleJobs`, annual
+`dependentCreditCents`, `otherIncomeCents`, `deductionsCents` and per-check
+`minimumAdditionalCents`. The current settings are retained as an exact
+Publication 15-T W-4 arrangement; no credit, deduction or adjustment is inferred
+from model text.
 
 `GET /review` and `POST /approve` require an exact current human review token.
 Originals and source, actor and date history are retained by version at
@@ -266,19 +269,46 @@ employee deduction and produces no payment. Prior wages remain human-supplied
 register evidence; complete reconciliation and SUI legal coverage are unproved.
 
 A due retained IRS instruction is also checked at the regular-wage preview door.
-Pending implementation blocks that preview. For a reviewed legacy instruction,
+Pending implementation blocks that preview. For a reviewed legacy or current-form instruction,
 Publication 15-T calculates its amount independently of the retained W-4; the
 higher amount is used for this check. Thus a current-form election cannot lower
-the calculated legacy lock-in amount and a higher election remains available.
+the calculated lock-in amount and a higher election remains available.
 An approved release removes this calculation constraint; a pending release does
 not. Changed identity refuses. The check retains the selected settings, both
 compared amounts, exact instruction version, effective date and decision. New
 instruction, notice or rule versions invalidate affected check authority even
 after check approval; a stale check cannot prepare a return. These checks
 cover ordinary resident business employee cash wages only; special taxability
-refuses. Full current-format letters, all effective-date cases, actual first
+refuses. Complete source-format validation, all effective-date cases, actual first
 required payment and independent IRS authenticity remain unproved.
 
 This calculation default is pending CT approval alongside the existing case
 custody default. It authorizes no payroll payment, filing, external send,
 destruction or hold release, and ENV-025 remains PARTIAL.
+
+
+Current-form paper entry accepts the exact reviewed filing status and multiple
+jobs arrangement with no increase to allowed credits or deductions, no decrease
+to required other income, and no decrease to additional withholding. This
+monotone comparison proves a compatible higher election without guessing future
+wages. An alternate status or multiple-jobs arrangement requires an unavailable
+complete amount comparison and refuses entry. Regular-wage previews compare
+actual amounts on the check date and retain the higher amount. The journey
+records a synthetic current-format original through native upload, independently
+asserts every retained setting, rejects each decreasing field through the paper
+door, calculates on the specified effective date and honors a higher election.
+It does not prove timely human implementation or actual first-check payment.
+
+Official current-form arrangement and higher-election guidance:
+https://www.irs.gov/businesses/small-businesses-self-employed/withholding-compliance-questions-and-answers
+(2020 Form W-4 questions 1–3; consulted 27 October 2026). The retained source is
+human-authenticated, not independently authenticated by the application.
+
+
+The current-form journey also retains and reviews an immediate-on-receipt
+modification, recalculates its withholding floor and proves that an unapproved
+release preserves that floor. Only exact human approval of the retained release
+permits the ordinary lower election to determine the calculated check. The
+original, modification and release remain separate attributed encrypted versions;
+no source PDF or decision is overwritten. These synthetic format cases do not
+establish every IRS letter variant, source authenticity or legal effect.
