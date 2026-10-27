@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "01a61d2c3da9abf851b690e5cbc767ad6dfbbf6362f6ce03ca89b791a196f86e",
+      "sha256": "8ea3561f9604e93e5e57f29ca1ef57fe7615bc79a33112be78a47c10f9ddcb82",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fa476f4839eadf6023edcbf947dbab4ee6ef7c8d7ebe2daccac210abdec4ab06",
+      "sha256": "99c56729911153eaaed4af4a3d9ea8daf6ba0d08a9f12f74d0908c0c04c012c1",
       "executable": false
     },
     "deploy-demo.json": {
@@ -459,6 +459,10 @@
     },
     "docs/run-earnings-intake.md": {
       "sha256": "cad0d3140decf82a36498f1aff046ffc5b70d96b69134cd551ecb54d33f6d47b",
+      "executable": false
+    },
+    "docs/tip-intake.md": {
+      "sha256": "5a23ac98072343975f22f46e2d9c48dd3cf3b4e71c3cc5388579da10bfbbcdf7",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -1466,7 +1470,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "758bc1eb7d755a965e83b75c58e520246bf267872aec958f0496775485a06eb8",
+      "sha256": "639474160a9efd060104eb2ce4ae97be3f398aa7dc36d94b9d3a58fe8a01dff3",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -1555,6 +1559,10 @@
     },
     "src/envelope/intake/sources.ts": {
       "sha256": "24679577fe703e85d67d3ac42dff926041ecb0bff027f10f20eec06b14f9945b",
+      "executable": false
+    },
+    "src/envelope/intake/tips.ts": {
+      "sha256": "d7d1c487e573afaa77473d967c6dfb7709657fb6bfe5bd64237e764649fb8364",
       "executable": false
     },
     "src/envelope/leave/ledger.ts": {
@@ -1766,7 +1774,7 @@
       "executable": false
     },
     "src/envelope/workspace/tips.ts": {
-      "sha256": "79ecf502436006260a715f90b4ab10c23bf1af9753762253cec9b8b50a33664a",
+      "sha256": "f54d25789a587d25815500600cc36c5dfd449d5e969822ced2a1467b01c8d5b5",
       "executable": false
     },
     "src/family/envelope-family/README.md": {
@@ -3050,7 +3058,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "cd73f9fa12bab39f741c3c8f22212b11e9670b5681f11277721c30773df7768f",
+      "sha256": "da476f2ae96c16a80f7896d7a1300638cf46f3654b042ea9b47659b48563d6bd",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {

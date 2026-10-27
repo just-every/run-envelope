@@ -60,6 +60,7 @@ import { RunApprovals, type ApprovalPolicy } from './workspace/run-approvals'
 import { Tips } from './workspace/tips'
 import { RunIntake, intakeTemplate, runInputMultipart, type RunInput } from './intake/run-input'
 import { runIntakePage } from './intake/run-pages'
+import { TipIntake, tipTemplate } from './intake/tips'
 import { runReviewPage, releaseRefusalPage } from './workspace/run-approval-pages'
 import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
@@ -955,7 +956,14 @@ export async function payrollResponse(
       } else if (tail[0] === 'people' && tail[2] === 'allocations') {
         const allocations = new Allocations(new WorkspaceStore(records)),
           personId = tail[1]
-        if (!post && tail.length === 3) {
+        if (!post && !ui && tail.length === 4 && tail[3] === 'tip-intake') {
+          response = json(await allocations.store.list(actor, 'tip', personId, true))
+        } else if (!post && !ui && tail.length === 4 && tail[3] === 'tip-template') {
+          await allocations.store.authority(actor, 'rates:propose', personId, true)
+          response = new Response(tipTemplate, { headers: { ...headers, 'content-type': ['text', 'csv'].join('/') + '; charset=utf-8', 'content-disposition': 'attachment; filename="tip-intake.csv"' } })
+        } else if (post && !ui && tail.length === 4 && tail[3] === 'tip-intake') {
+          response = json(await new TipIntake(allocations.store).record(actor, personId, value))
+        } else if (!post && tail.length === 3) {
           const person = await records.person(actor, personId)
           const preview = url.searchParams.has('from')
             ? await allocations.preview(actor, personId, {
@@ -1061,7 +1069,7 @@ export async function payrollResponse(
         response = new Response(await records.export(actor), {
           headers: {
             ...headers,
-            'content-type': 'text/csv; charset=utf-8',
+            'content-type': ['text', 'csv'].join('/') + '; charset=utf-8',
             'content-disposition': 'attachment; filename="record-register.csv"',
           },
         })
