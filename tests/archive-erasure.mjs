@@ -210,14 +210,14 @@ export async function archiveErasure(context, fixture) {
     const denied=await call(path.replace('/api/','/app/'),undefined,{cookie:viewerCookie})
     assert.equal(denied.status,403,'the native page transport refuses the ordinary identity too')
   }
-  const sessionLink=await call('/auth/sign-in',{email:'owner@example.com'})
+  const sessionLink=await call('/auth/magic-link',{email:'owner@example.com',returnTo:'/app/envelope'}, {cookie:''})
   assert.equal(sessionLink.status,202)
   const ownerLink=new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&'))
   const ownerConfirmed=await call('/auth/confirm',{token:ownerLink.searchParams.get('token')},{cookie:''})
   assert.equal(ownerConfirmed.status,303)
   const oldOwner=ownerConfirmed.headers.get('set-cookie').split(';')[0]
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:oldOwner})).status,200,'a second current owner session can read retained custody')
-  assert.equal((await call('/auth/sign-out',{}, {cookie:oldOwner})).status,303)
+  assert.equal((await call('/auth/signout',{}, {cookie:oldOwner})).status,204)
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:oldOwner})).status,401,'sign-out immediately fences a previously usable private transport')
   assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,200,'current scoped viewer can read mapped source history before the request')
   Object.assign(held,await getPrivacy())
