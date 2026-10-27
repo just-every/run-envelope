@@ -579,6 +579,22 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     const trail = (await data(base + '/audit')).filter((e) => e.action === 'run.approved')
     assert.deepEqual([trail[0].actorId, trail[0].targetId, trail[0].version], [owner, tipRun, tipVersion],
       'the audit door names the latest approver and exact version')
+    // Adding intake to an already approved run is material even when no input
+    // version existed at its original review. Later file corrections are too.
+    const intakeDoor=door+'/intake', frozenTip=await tipData()
+    const imported={id:tipRun,version:0,namespace:'synthetic-envelope-approved-intake',rows:[{sourceId:'synthetic-envelope-approved-row',personId:t1.id,day:'2026-03-02',workweek:'2026-03-02',code:'bonus',minutes:0,amountCents:100,settlement:'',evidence:'synthetic-envelope-source-approval',state:'',riskClass:''}]}
+    const firstInput=await data(intakeDoor+'/preview',imported)
+    await data(intakeDoor+'/apply',{...imported,rows:firstInput.data.rows,digest:firstInput.digest,format:'grid'},201)
+    await release(tipRun,tipVersion,'run_sources_changed')
+    assert.deepEqual(await tipData(),frozenTip,'adding intake cannot overwrite an approved frozen version')
+    const inputReview=await data(intakeDoor+'/'+tipRun+'/review')
+    await data(intakeDoor+'/'+tipRun+'/approve',{version:1,reviewToken:inputReview.reviewToken})
+    tipVersion=await run(tipRun,tipVersion,tipSetup.group)
+    assert.equal((await tipData()).grossCashCents,frozenTip.grossCashCents+100)
+    await approve(tipRun,'approver-b');await release(tipRun,tipVersion,'run_not_payable')
+    const changedInput=await data(intakeDoor+'/preview',{...imported,version:1,rows:[{sourceId:imported.rows[0].sourceId,amountCents:200}]})
+    await data(intakeDoor+'/apply',{...imported,version:1,rows:changedInput.data.rows,digest:changedInput.digest,format:'grid'},201)
+    await release(tipRun,tipVersion,'run_sources_changed')
     await sql(`DELETE FROM oa_identity_providers WHERE client_id='${audience}'; DELETE FROM rer_dependency_link WHERE client_id='${audience}'; DELETE FROM oa_external_identities WHERE issuer='${issuer}' AND subject='${subject}'; UPDATE oa_auth_settings SET idp_sign_in=0 WHERE singleton=1`)
     // Native custody discovers the real bonus derivative and closes both agent
     // reads and human approval when a current privacy request holds the worker.

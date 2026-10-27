@@ -741,6 +741,7 @@ export function paySettingsPage(
         </p>
       </Card>
       <Card title="Preview and retain earnings">
+        <p><a href={base+'/intake'}>Enter run hours or upload a spreadsheet</a></p>
         <form className="field" method="post" action={base + '/earnings-run'}>
           <Field name="id" label="Earnings draft ID" />
           <Field
