@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "1c28f41b04ae42c2d02315272c8e0bfa93ec695c461e94366dcd6e50c7a35eb3",
+      "sha256": "560240eff5f8df28d7d5b84ab4b297dd159443d0fed470faaa3418184979d066",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "43fb0c4394fcab88b4e9ff6dabba0d1b8ed85d128d016f3a25fde7a5f4d327f1",
+      "sha256": "506d8cd06fa87aae50699e90e4f734231827f4759589f3c60c8ee40ec37f94d8",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1534,7 +1534,7 @@
       "executable": false
     },
     "src/envelope/industry/tip-taxes.ts": {
-      "sha256": "b45af6b6a006aff1dc4ad66bac72cbe3a50b91375c33903b951259560fc14de3",
+      "sha256": "1cc3b145e385cdd124b1c6a6f68b0c008ee4df9aba31967ee3156b4e181d30b0",
       "executable": false
     },
     "src/envelope/industry/types.ts": {
@@ -3046,11 +3046,11 @@
       "executable": false
     },
     "tests/run-intake.mjs": {
-      "sha256": "0fd309d486309182f243a6cc67369a8a0eb29c6f9c462783c0baa9500e7a6b32",
+      "sha256": "c5ad5f7a5bb25d7475750a3a3462df2a158f37470a29a1947d9a17424bba35f4",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "8f2d6dc8e693e7bae5e1d164bfca0dfa780d4838724cb406cd0fb622af6d269a",
+      "sha256": "20f2ef6e6ae2512f4e80885ea4f35fa0657a6829bb6cdc75974af6f85b136500",
       "executable": false
     },
     "tests/typecheck-checks.mjs": {
