@@ -280,25 +280,50 @@ export async function archiveErasure(context, fixture) {
   const localRequest=requestHistory.find(r=>r.personId===fixture.privacyPersonId)
   assert.ok(localRequest,'external follow-up must name a real separate local erasure request')
   const externalOutboundBefore=context.edge.mails.length
-  const followup={version:0,consent:true,requestId:localRequest.id,provider:'openai',reference:'synthetic-envelope-provider-request',status:'requested',evidence:'Synthetic owner requests provider follow-up; no remote deletion is asserted.'}
+  const followup={version:0,consent:true,requestId:localRequest.id,provider:'openai',channel:'openai-privacy-portal',fingerprint:held.fingerprint,records:held.retained.map(row=>row.id),reference:'synthetic-envelope-provider-request',status:'requested',evidence:'Synthetic owner requests provider follow-up; no remote deletion is asserted.'}
   assert.equal((await call(providerDoor,{...followup,requestId:'synthetic-envelope-foreign-request'})).status,409)
   assert.equal((await call('/api/envelope/companies/'+fixture.companies[1]+'/privacy-provider-requests',followup)).status,409,'another company cannot bind the local erasure request')
   assert.equal((await call(providerDoor,{...followup,status:'confirmation-reported'})).status,409,'a local request cannot start as remotely confirmed')
   assert.equal((await call(providerDoor,followup,{cookie:viewerCookie})).status,403)
   assert.equal((await call(providerDoor,followup,{cookie:''})).status,401)
   assert.equal((await call(providerDoor,followup,{authorization:'Bearer '+fixture.authority.agentToken})).status,403)
+  for(const invalid of [
+    {...followup,fingerprint:'synthetic-envelope-stale-scope'},
+    {...followup,records:[]},
+    {...followup,records:['synthetic-envelope-foreign-record']},
+    {...followup,records:[followup.records[0],followup.records[0]]},
+    {...followup,provider:'resend'},
+    {...followup,channel:'https://unapproved.example/erase'},
+  ]) assert.equal((await call(providerDoor,invalid)).status,409,'unreviewed scope or unsupported official channel cannot create provider follow-up')
+  assert.equal((await (await call(providerDoor)).json()).length,0,'refused request packets write no history')
   const externalCreated=await call(providerDoor,followup)
   assert.equal(externalCreated.status,201,await externalCreated.clone().text())
   const externalId=(await externalCreated.json()).id
+  const packetDoor=providerDoor+'/'+externalId+'/packet'
+  const packet=await (await call(packetDoor)).json()
+  assert.equal(packet.officialChannel,'https://privacy.openai.com/','only the official manual privacy channel is prepared')
+  assert.deepEqual(packet.scope,{fingerprint:held.fingerprint,records:[...followup.records].sort()},'the packet binds the independent exact retained selection')
+  assert.equal(packet.requestSent,false)
+  assert.equal(packet.externalDeletionVerified,false)
+  assert.equal(packet.transport,'owner-manual')
+  for(const [headers,status] of [[{cookie:viewerCookie},403],[{cookie:''},401],[{authorization:'Bearer '+fixture.authority.agentToken},403]])
+    assert.equal((await call(packetDoor,undefined,headers)).status,status,'request scope remains private')
+  for(const change of [{provider:'resend'},{reference:'synthetic-envelope-rebound'},{requestId:'synthetic-envelope-rebound'},{channel:'synthetic-envelope-rebound'},{records:[]},{fingerprint:'synthetic-envelope-rebound'}])
+    assert.equal((await call(providerDoor+'/'+externalId,{version:1,consent:true,status:'submitted',evidence:'Synthetic changed request scope',...change})).status,409,'a status gesture cannot widen frozen provider scope')
   for(const [version,status] of [[1,'submitted'],[2,'unknown'],[3,'rejected'],[4,'submitted']]) {
     const updated=await call(providerDoor+'/'+externalId,{version,consent:true,status,evidence:'Synthetic owner-attested '+status+' reference; provider retention remains separately governed.'})
     assert.equal(updated.status,201,await updated.clone().text())
+    if(status==='unknown') assert.equal((await call(providerDoor+'/'+externalId,{version:version+1,consent:true,status:'submitted',evidence:'Synthetic lost response cannot authorize a repeat'})).status,409)
   }
   assert.equal((await call(providerDoor+'/'+externalId,{version:1,consent:true,status:'confirmation-reported',evidence:'Stale response'})).status,409)
   let externalHistory=await (await call(providerDoor)).json()
   assert.deepEqual(externalHistory.filter(r=>r.id===externalId).map(r=>r.data.status),['submitted','rejected','unknown','submitted','requested'])
   assert.ok(externalHistory.every(r=>r.data.externalDeletionVerified===false&&r.data.provenance==='owner-attested'))
   assert.equal(context.edge.mails.length,externalOutboundBefore,'recording provider status sends no outbound request')
+  assert.equal((await call(providerDoor+'/'+externalId,{version:5,consent:true,status:'submitted',evidence:'Synthetic unknown result cannot be blindly repeated'})).status,409)
+  const otherProvider=await call(providerDoor,{version:0,consent:true,requestId:localRequest.id,provider:'resend',reference:'synthetic-envelope-mail-followup',status:'requested',evidence:'Synthetic separate manual follow-up remains available without a prepared channel.'})
+  assert.equal(otherProvider.status,201,'existing manual provider logs remain available')
+  assert.equal((await call(providerDoor+'/'+(await otherProvider.json()).id+'/packet')).status,409,'a generic manual entry cannot manufacture an official scoped packet')
   Object.assign(held,await getPrivacy())
   const selection = {fingerprint: held.fingerprint, records: held.retained.map(r => r.id), consent: true,
     legalBasis: 'Synthetic reviewed statutory retention release; no active legal hold remains.', custodian: 'Native payroll owner'}
@@ -417,6 +442,8 @@ export async function archiveErasure(context, fixture) {
     assert.equal(externalHistory.filter(r=>r.id===externalId).length,5,'local erasure preserves the separate unresolved provider request')
     assert.equal(externalHistory.find(r=>r.id===externalId).data.status,'submitted','local completion does not manufacture an external outcome')
     assert.equal(JSON.stringify(externalHistory).includes(fixture.privacyPersonId),false,'provider history contains no erased worker identifier')
+    assert.deepEqual((await (await call(packetDoor)).json()).scope,packet.scope,'local erasure preserves the exact opaque follow-up scope')
+    assert.equal((await call(providerDoor,{...followup,version:0})).status,409,'completed local requests cannot acquire a new unreviewed scope')
     const reported=await call(providerDoor+'/'+externalId,{version:5,consent:true,status:'confirmation-reported',evidence:'Synthetic retained provider confirmation entered by the owner; authenticity remains unverified.'})
     assert.equal(reported.status,201)
     const reportedHistory=await (await call(providerDoor)).json()

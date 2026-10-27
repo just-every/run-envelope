@@ -994,6 +994,7 @@ export async function payrollResponse(
       } else if (!ui && tail[0] === 'privacy-provider-requests') {
         const privacy=new ProviderPrivacy(new WorkspaceStore(records))
         if (!post && tail.length===1) response=json(await privacy.read(actor))
+        else if (!post && tail.length===3 && tail[2]==='packet') response=json(await privacy.packet(actor,tail[1]))
         else if (post && tail.length<=2) response=json(await privacy.save(actor,value,tail[1]),201)
         else throw new PayrollError('not_found',404)
       } else if (tail[0] === 'privacy-requests' && tail.length===1 && !post) {
