@@ -9,10 +9,11 @@ export function paperOnboardingPage(session:Session,companies:Company[],actor:Ac
   options:{workerType:string;federalForm:string;stateForm:string},review?:Awaited<ReturnType<PaperOnboarding['review']>>) {
   const base=companyPath(actor.company)+'/people/'+person.id+'/paper-onboarding'
   const latest=rows[0]
+  const can=(action:string)=>actor.grant.role==='owner' || actor.grant.actions.includes(action)
   const renderForm=(prefix:string,form:History[number]['data']['federal']|null,version:number)=>form && <div className="evidence-text">
     <h3>{form.form} · effective {form.effectiveFrom}</h3>
     <dl>{Object.entries(form.fields).map(([key,value])=><div key={key}><dt>{key.replace(/([A-Z])/g,' $1')}</dt><dd>{String(value)}</dd></div>)}</dl>
-    <p>Signed by {form.original.signedBy} on {form.original.signedOn}. <a href={base+'/original/'+version+'/'+prefix}>Download signed {prefix} original</a></p>
+    <p>Signed by {form.original.signedBy} on {form.original.signedOn}. {can('paper:download') && <a href={base+'/original/'+version+'/'+prefix}>Download signed {prefix} original</a>}</p>
   </div>
   const originalFields=(prefix:string,label:string)=><>
     <Field name={prefix+'.effectiveFrom'} label={label+' effective date'} type="date"/>
@@ -25,7 +26,7 @@ export function paperOnboardingPage(session:Session,companies:Company[],actor:Ac
   return page(session,person.name+' · Paper onboarding',companies,actor.company,<>
     <Card title="Signed paper, reviewed by a person">
       <p>No email, phone or bank account is required for this paper-check election. Retain the signed originals and transcribe their elections below.</p>
-      <p>Paper review does not authorize payroll. TIN matching, bank verification and payment remain unavailable. Only the installation owner can enter, review and download these records.</p>
+      <p>Paper review does not authorize payroll. TIN matching, bank verification and payment remain unavailable. Entry, exact review and original downloads require separate permissions for this company, location and sensitive fields.</p>
       <p><a href={companyPath(actor.company)+'/people/'+person.id+'/withholding-instructions'}>IRS withholding instructions</a></p>
       <p><a href={companyPath(actor.company)+'/people/'+person.id}>Back to worker</a></p>
     </Card>
@@ -42,11 +43,11 @@ export function paperOnboardingPage(session:Session,companies:Company[],actor:Ac
         <p>{row.data.workerType} · hired {row.data.hiredOn} · TIN {row.data.tin} · paper check. Payroll remains held.</p>
         <p>All fields entered by {row.data.enteredByName} ({row.createdBy}); reviewed by {row.approvedBy ?? 'no reviewer'}{row.withdrawnBy?'; review withdrawn by '+row.withdrawnBy:''}.</p>
         <details><summary>Inspect version {row.version} elections and originals</summary>{renderForm('federal',row.data.federal,row.version)}{renderForm('state',row.data.state,row.version)}</details>
-        {index===0 && !row.approvedBy && !row.withdrawnBy && row.sourcesCurrent && !review && <a className="btn" href={base+'/review'}>Review exact paper version</a>}
-        {index===0 && row.paperworkReviewed && <form method="post" action={base+'/withdraw'}><Hidden name="version" value={row.version}/><Submit>Withdraw paper review</Submit></form>}
+        {can('paper:review') && index===0 && !row.approvedBy && !row.withdrawnBy && row.sourcesCurrent && !review && <a className="btn" href={base+'/review'}>Review exact paper version</a>}
+        {can('paper:review') && index===0 && row.paperworkReviewed && <form method="post" action={base+'/withdraw'}><Hidden name="version" value={row.version}/><Submit>Withdraw paper review</Submit></form>}
       </article>)}
     </Card>
-    {!review && <>
+    {!review && can('paper:entry') && <>
       <Card title="Choose paper certificates"><form method="get" className="field" action={base}>
         <Select name="workerType" label="Worker classification" choices={['employee','contractor']} value={options.workerType}/>
         <Select name="federalForm" label="Federal paper form" choices={['W-4','W-4-pre2020','W-9']} value={options.federalForm}/>

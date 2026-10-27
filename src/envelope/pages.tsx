@@ -11,6 +11,9 @@ import { states, taxKinds, frequencies, type CompanySetup } from './setup'
 const actionLabels: Record<string, string> = {
   'records:read': 'View people',
   'records:write': 'Add people',
+  'paper:entry': 'Enter signed paper elections',
+  'paper:review': 'Review exact paper versions',
+  'paper:download': 'Download signed paper originals',
   'rates:propose': 'Propose rates',
   'rates:approve': 'Approve exact rates',
   'private:read': 'Read private records',
@@ -262,6 +265,7 @@ export function grantsPage(
   grants: Record<string, unknown>[],
   operators: { id: string; displayName: string; email: string }[],
   selectedOperator?: string,
+  paperPolicy = {version:0,requireSeparateReviewer:false},
 ) {
   const base = companyPath(actor.company)
   const selected = grants.find((g) => g.operatorId === selectedOperator && g.role !== 'owner')
@@ -321,6 +325,14 @@ export function grantsPage(
             )}
           </div>
         ))}
+      </Card>
+      <Card title="Paper review separation">
+        <form method="post" action={base+'/paper-policy'} className="field">
+          <Hidden name="version" value={paperPolicy.version}/>
+          <Select name="requireSeparateReviewer" label="Require different entering and reviewing people" choices={['false','true']} value={String(paperPolicy.requireSeparateReviewer)}/>
+          <p>Changing this policy invalidates pending paper reviews. Paper powers require tax and SSN access at the worker’s location and confer no other payroll power.</p>
+          <Submit>Save paper review policy</Submit>
+        </form>
       </Card>
       <Card title="Set an explicit grant">
         <p>
@@ -445,7 +457,7 @@ export function personPage(
     actor.company,
     <>
       <p><a className="btn" href={base + '/new-hire-reports'}>New-hire reporting</a></p>
-      {actor.grant.role==='owner' && <p><a className="btn" href={base + '/paper-onboarding'}>Signed paper onboarding</a></p>}
+      {(actor.grant.role==='owner' || ['paper:entry','paper:review','paper:download'].some(action=>can(actor,action,'tax') && can(actor,action,'ssn'))) && <p><a className="btn" href={base + '/paper-onboarding'}>Signed paper onboarding</a></p>}
       <p><a className="btn" href={companyPath(actor.company) + '/people/' + person.id + '/leave'}>Leave ledger</a></p>
       <p><a className="btn" href={base + '/hris'}>HR changes and source history</a> <a className="btn" href={base + '/earnings-sources'}>Job and commission earnings</a> <a className="btn" href={base + '/verification'}>Employment and income verification</a></p>
       {can(actor,'private:read','tax') && can(actor,'records:read','compensation') && <p><a className="btn" href={base + '/industry'}>Industry payroll treatment</a></p>}
