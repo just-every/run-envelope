@@ -147,7 +147,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
   exactKeys(input,['companyId','noticeId'])
   agent.allow('notices:process',input.companyId)
   const id=text(input.noticeId), f=agent.fence(), l=agent.location('location_id'), company=agent.grant.company_id
-  const notice=await agent.env.DB.prepare(`SELECT id,cipher FROM env_notices WHERE company_id=? AND id=? AND ${l.sql} AND ${f.sql}`).bind(company,id,...l.args,...f.args).first<{id:string;cipher:string}>()
+  const notice=await agent.env.DB.prepare(`SELECT id,cipher,digest FROM env_notices WHERE company_id=? AND id=? AND ${l.sql} AND ${f.sql}`).bind(company,id,...l.args,...f.args).first<{id:string;cipher:string;digest:string}>()
   if (!notice) throw new PayrollError('notice_unavailable',403)
   const provider=await agentProvider(agent,'openai'), key=await recordKey(agent.env.ENVELOPE_RECORD_KEY),
     secret=await providerSecret(agent.env,company,provider), original=await unseal(key,JSON.stringify([company,'notice',id]),notice.cipher),
@@ -174,7 +174,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
     if (output.length!==1 || output[0].type!=='output_text') throw 0
     const parsed=JSON.parse(String(output[0].text))
     if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',')!=='proposedReply,summary') throw 0
-    analysis={summary:redact(documentText(parsed.summary,6000),[secret]),proposedReply:redact(documentText(parsed.proposedReply,6000),[secret])}
+    analysis={summary:redact(documentText(parsed.summary,6000),[secret]),proposedReply:redact(documentText(parsed.proposedReply,6000),[secret]),sourceReference:'notice:'+id+':'+notice.digest}
   } catch { throw new PayrollError('notice_model_unavailable',503) }
   const analysisId=uuid(), cipher=await seal(key,JSON.stringify([company,'analysis',analysisId]),JSON.stringify(analysis))
   // In-flight provider, sponsor and grant revocation fences also protect results.

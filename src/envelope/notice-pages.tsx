@@ -48,9 +48,10 @@ export function noticesPage(session:Session,companies:Company[],actor:Actor,loca
 export function noticePage(session:Session,companies:Company[],actor:Actor,notice:Awaited<ReturnType<Notices['details']>>) {
   const base=companyPath(actor.company), canWrite=actor.grant.role==='owner' || actor.grant.actions.includes('notices:write'), canApprove=actor.grant.role==='owner' || actor.grant.actions.includes('notices:approve')
   return page(session,'Notice review',companies,actor.company,<>
+    {actor.grant.role==='owner' && <a className="btn" href={base+'/notices/'+notice.id+'/case'}>Manage notice evidence and deadlines</a>}
     <Card title="Recorded notice"><p className="evidence-text">{notice.reference}</p><p className="notice-text evidence-text">{redact(notice.body)}</p><p className="evidence-text">Notice ID: {notice.id}. MCP notice.process reads only redacted notice text, never payroll records or credentials.</p></Card>
     <Card title="Untrusted model proposals">
-      {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3 className="evidence-text">Summary</h3><p className="evidence-text">{String(a.summary)}</p><h3 className="evidence-text">Proposed reply — not approved</h3><p className="evidence-text">{String(a.proposedReply)}</p></div>) : <p className="evidence-text">No model result. A missing connection remains unavailable; no result is invented.</p>}
+      {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3 className="evidence-text">Summary</h3><p className="evidence-text">{String(a.summary)}</p><p className="evidence-text">Source citation: {String(a.sourceReference ?? 'Retained notice original')}</p><h3 className="evidence-text">Proposed reply — not approved</h3><p className="evidence-text">{String(a.proposedReply)}</p></div>) : <p className="evidence-text">No model result. A missing connection remains unavailable; no result is invented.</p>}
     </Card>
     <Card title="Exact reply versions">
       {notice.replies.length ? notice.replies.map(r => <div key={String(r.id)}>

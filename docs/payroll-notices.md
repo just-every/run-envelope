@@ -119,3 +119,129 @@ an invented analysis while human correspondence review remains available. All
 other implemented non-agent controls run without an AI credential. Full future
 payroll independence and complete external declarations remain ENV-073; see
 [installed data boundaries](./payroll-external-data.md).
+
+## Verified tax notice cases
+
+The notice review screen links to **Manage notice evidence and deadlines**. This
+bounded ENV-025 increment retains original PDFs, unverified OCR text, checked
+facts, corrections, deposit proof and reported agency responses. It supports
+SUI rate letters and IRS deposit mismatches. It does not implement automatic OCR,
+agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll changes.
+
+The current conservative policy is pending CT review: only the configured native
+installation owner with a current company session may use case routes or download
+their originals. Existing generic notice and correspondence permissions keep their
+existing scope. No case action sends data, pays money, signs a filing, releases a
+hold or deletes evidence. This bounded access policy does not complete the
+product's separately scoped staff permissions.
+
+All routes below are beneath an existing notice at
+`/api/envelope/companies/:company/notices/:notice/case`; native forms use the
+corresponding app route. An agent bearer cannot use these native-human doors.
+
+- `GET` returns retained versions with original digests and quotations, explicit
+  amounts, attributed decisions, current source state and follow-up. PDF bytes
+  are omitted from this view. An absent residual or assessed amount is unknown,
+  never zero. The agency deadline and assigned person survive closure reports.
+- `POST` records checked facts. Required fields are `version`, `type` (`sui-rate`
+  or `deposit-mismatch`), `agency`, `employerEin`, `periodStart`, `periodEnd`,
+  `dueOn`, `principalCents`, `proposedPenaltyCents` and `verifiedExtraction:true`.
+  First entry additionally requires `pdf` (base64), `quote` and `rawExtraction`.
+  Subsequent corrections require `correctionReason` and cannot replace the
+  original PDF or raw extraction. SUI facts also require `state`, `ratePercent`
+  and `effectiveFrom`. The EIN must match the company's private identifier.
+- `GET /review` and `POST /approve` review the exact retained version using the
+  existing session-bound, grant-bound, expiring human review token. Changed
+  facts or evidence cannot inherit a prior review. This reviews the record only.
+- `POST /evidence` retains `kind` (`deposit`, `agency-response` or `reopening`),
+  `reference`, `pdf`, `quote`, `version`, `employerEin` and the exact case period.
+  A deposit requires explicit `amountCents`. An agency response requires
+  `reviewedAgencyEvidence:true`, `residualCents`, `assessedPenaltyCents` and
+  `abatedPenaltyCents`; proposed penalties remain separate. Identical replay
+  returns the existing version; changed content or disposition under the same
+  reference refuses. Different evidence appends an unreviewed version.
+- `POST /link-rate` accepts `version`, `ruleId` and `ruleVersion` only after exact
+  case review and separate rule review. The final SUI rule must match state,
+  percentage and effective date, with `sourceRef` exactly
+  `notice:<notice id>:<original PDF sha256>`. A source edit or withdrawal makes
+  the link stale. Linking is not application of a rate to calculated wages or
+  liabilities. Existing rule administration remains the human review door.
+- `GET /original/:version/:index` downloads the exact retained PDF, with private
+  no-store headers and current authority. Index zero is the notice original;
+  later indexes are evidence in recorded order. Native multipart uploads are
+  limited to 384 KB per PDF. Small JSON inputs use the existing request limit.
+
+An agency response is **closure reported**, never independently verified or
+resolved. Its residual balance can be nonzero and remains explicitly reported.
+A reopened case returns the current balance to unknown while preserving the
+previous response and its amounts. Missing response evidence never manufactures
+closure. Overdue status is computed from the retained agency date and keeps an
+urgent named-human follow-up, including after a reported closure. No background
+carrier escalation or staffed service response is claimed.
+
+Model processing now attaches a server-generated citation to the exact retained
+notice digest. That citation identifies its input; it does not verify the model's
+claims or change the approval and dispatch boundaries above.
+
+`tests/tax-notice-runtime.mjs` **taxNoticeJourney / TAX-NOTICE-CASES**, loaded by
+the claims push shard in `verification.json`, exercises native upload, APIs,
+immutable PDFs and extraction, wrong employer and period refusal, corrections,
+exact review, replay, unknown and nonzero balances, overdue follow-up, reopening,
+reviewed SUI links and current native-owner access. Selected case screens are
+captured at 1440 and 390; the upload interaction runs at 1440. The existing
+**sponsoredJourney / SPONSORED-NOTICES** also checks the exact input citation.
+Synthetic source PDFs and reported responses are not live agency receipts or
+legal authenticity proof. Full notice resolution, custody, restore and legal
+retention proof remain owed by ENV-025 and its existing cross-cutting clauses.
+
+## Retained IRS withholding instructions
+
+The worker's signed-paper screen links to **IRS withholding instructions** at
+`/api/envelope/companies/:company/people/:person/withholding-instructions`.
+The same conservative native-owner restriction applies. These are bounded legacy
+instruction records, not a complete withholding engine or legal-authenticity
+service. A PDF, model response or unchecked attestation cannot self-approve.
+
+`POST` requires the retained PDF and quotation, employer EIN, worker SSN,
+`kind` (`2800C`, `modification` or `release`), `letterOn`, `receivedOn`,
+`effectiveFrom`, `authenticated:true`, `authenticationMethod` (`agency-portal`
+or `verified-agency-correspondence`) and `authenticationReference`. The employer
+must match; the worker identifier must match the existing encrypted private SSN.
+The caller must independently check that agency source, rather than trust text
+inside the attachment. The application retains this human report; it does not
+independently authenticate the IRS. Only an identifier digest is retained in
+structured instruction metadata, and neither that digest nor PDF bytes are
+returned by the history route.
+
+Legacy settings require `filingStatus`, `maximumAllowances` and
+`minimumAdditionalCents`. The supported 2800C date is 60 calendar days after its
+letter date. A modification or release is recorded effective on receipt and
+requires an earlier approved instruction. Other formats or unusual effective-date
+cases need additional implementation and authoritative review. Current-form
+W-4 amount comparisons remain unavailable.
+
+`GET /review` and `POST /approve` require an exact current human review token.
+Originals and source, actor and date history are retained by version at
+`GET /original/:version`. New sources never inherit approval. A changed worker
+identity cannot silently remove the instruction or authenticate a replacement.
+Historical source custody remains distinct from money or filing authority.
+
+The existing paper-election door checks applicable reviewed legacy instructions.
+It refuses an exemption, a different status, more allowances or reduced required
+additional withholding. A retained compatible legacy election with fewer
+allowances or more additional withholding is accepted. A pending implementation
+or modification holds affected entry for a human; an unapproved release keeps
+the prior approved restriction. Only the exact approved release removes this
+entry restriction. Collection pins reject entry if an instruction or its decision
+changes concurrently. Elections effective before an instruction are historical
+records; the future payroll engine must still apply the binding instruction when
+due. These entry guards do not prove a current-form taxpayer election, a lawful
+paycheck, the first required check or cent-level withholding. Paper review still
+confers no payable authority.
+
+Official source for the bounded legacy rules:
+https://www.irs.gov/individuals/understanding-your-letter-2800c
+(reviewed 20 July 2026; consulted 27 October 2026). It specifies the lock-in date,
+disregard of a decreasing W-4, permitted increases, and immediate modification
+on receipt of Letter 2808C. A synthetic matching-format PDF and a human-reported
+source check in a journey do not establish actual IRS authenticity or legal effect.
