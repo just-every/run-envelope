@@ -141,7 +141,7 @@ export async function providerInput(value: unknown) {
     for (const value of entries) {
       const entry = object(value), id = text(entry.id, 100), mapping = object(mappings[id])
       if (mapping.sourcePersonId !== object(entry.employee).id) throw new PayrollError('provider_worker_mapping_required', 409)
-      if (entry.deletedTime || (entry.overrideInTime && !object(entry.overrideInEmployee).id) || (entry.overrideOutTime && !object(entry.overrideOutEmployee).id))
+      if (entry.deletedTime || (entry.overrideInTime && (!entry.overrideInEmployee || !object(entry.overrideInEmployee).id)) || (entry.overrideOutTime && (!entry.overrideOutEmployee || !object(entry.overrideOutEmployee).id)))
         throw new PayrollError('provider_pay_code_review_required', 409)
       const start = entry.overrideInTime || entry.inTime, end = entry.overrideOutTime || entry.outTime
       if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) throw new PayrollError('closed_provider_time_required', 409)

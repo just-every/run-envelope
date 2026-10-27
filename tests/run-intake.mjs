@@ -545,6 +545,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     assert.equal((await data(pay + '/earnings-run', run, 201)).preview.grossCashCents, expected)
     const replay = await data(door + '/preview', { ...body, version: 1 })
     assert.equal((await data(door + '/apply', { ...body, version: 1, digest: replay.digest }, 201)).replayed, true)
+    const beforeRefusals = await data(door)
     await data(door + '/preview', { ...body, id: body.id + '-duplicate' }, 409)
     const unknown = structuredClone(source); unknown.mappings['89020'].personId = 'synthetic-envelope-unknown'
     await data(door + '/preview', { ...body, version: 1, providerCapture: unknown }, 409)
@@ -569,6 +570,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
       else incomplete.payload.more = true
       await data(door + '/preview', { ...body, version: 1, providerCapture: incomplete }, 409)
     }
+    assert.deepEqual(await data(door), beforeRefusals, provider + ' refusals retain every prior source version')
     const corrected = structuredClone(source)
     if (provider === 'homebase') {
       corrected.payload[0].clock_out = '2026-11-02T16:30:00Z'
