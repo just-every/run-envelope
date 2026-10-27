@@ -7,6 +7,7 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind =
   | 'provider-deletion-request'
   | 'notice-worker-link'
+  | 'run-input'
   | 'company-funding'
   | 'company-funding-plan'
   | 'tax-notice-case'
@@ -81,6 +82,7 @@ export const digest = async (value: string) =>
 export interface SourceFence { sql: string; args: (string | number)[] }
 export interface Sources {
   condition?: SourceFence
+  writeFence?: {sql:string; args:(string|number)[]}
   freshProof?: boolean
   /** Permanent source claims prevent one earning from entering two runs. */
   exclusiveSourceIds?: string[]
@@ -204,6 +206,10 @@ export class WorkspaceStore {
     const f = fence(actor),
       event = crypto.randomUUID(),
       version = expected + 1
+    if (sources.writeFence) {
+      f.sql += ` AND (${sources.writeFence.sql})`
+      f.args.push(...sources.writeFence.args)
+    }
     if (sources.freshProof) {
       const proof = stepUpFence(actor)
       f.sql += ` AND ${proof.sql}`

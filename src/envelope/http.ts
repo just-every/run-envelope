@@ -55,6 +55,7 @@ import {
   weeklyFrequencyRefusalPage,
 } from './workspace/pages'
 import { Schedules } from './workspace/schedules'
+import { RunInputs, earningsMultipart, earningsTemplate } from './workspace/run-input'
 import { PayItems } from './workspace/pay-items'
 import { PayPolicies } from './workspace/pay-policies'
 import { RunApprovals, type ApprovalPolicy } from './workspace/run-approvals'
@@ -91,6 +92,7 @@ async function input(request: Request): Promise<Input> {
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/withholding-instructions$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/notices\/[-a-zA-Z0-9]+\/case(?:\/evidence)?$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/pay-settings\/intake\/preview$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return runInputMultipart(request)
+  if (/\/pay-settings\/intake(?:-preview)?$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith('multipart/form-data')) return earningsMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/paper-onboarding$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return paperMultipart(request)
   const claims = /^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/claims(?:\/|$)/.test(new URL(request.url).pathname)
   if (claims && request.headers.get('content-type')?.startsWith('multipart/form-data')) return claimsMultipartInput(request)
@@ -131,6 +133,15 @@ async function input(request: Request): Promise<Input> {
           : (() => {
               throw new PayrollError('duplicate_input')
             })()
+    }
+    if (new URL(request.url).pathname.endsWith('/pay-settings/intake')) {
+      result.rows = [0,1,2].flatMap(index => {
+        const prefix=`row${index}.`
+        if (!result[prefix+'rowId']) return []
+        const row=Object.fromEntries(Object.entries(result).filter(([key])=>key.startsWith(prefix)).map(([key,value])=>[key.slice(prefix.length),value]))
+        row.sourceRef='manual:'+row.rowId
+        return [row]
+      })
     }
     return result
   }
@@ -620,7 +631,7 @@ export async function payrollResponse(
         const store = new WorkspaceStore(records),
           pay = new PayItems(store),
           approvals = new RunApprovals(store, pay),
-          setupKinds = ['group', 'pay-item', 'pay-change', 'proration-policy', 'approval-policy']
+          setupKinds = ['group', 'pay-item', 'pay-change', 'proration-policy', 'approval-policy', 'run-input']
         // The two-person threshold is the owner's own policy, end to end.
         if ((tail[1] === 'review' ? tail[2] : tail[1]) === 'approval-policy' && actor.grant.role !== 'owner')
           throw new PayrollError('owner_required', 403)
@@ -656,7 +667,16 @@ export async function payrollResponse(
                 { statuses, policies },
               )
             : json({ ...result, approvals: statuses, approvalPolicies: policies })
+        } else if (!post && tail.length === 3 && tail[1] === 'earnings-template') {
+          await store.authority(actor,'records:read',undefined,true)
+          response = earningsTemplate(tail[2])
+        } else if (post && tail.join('/') === 'pay-settings/intake-preview') {
+          response = json((await new RunInputs(store).prepare(actor,value)).data)
+        } else if (post && tail.join('/') === 'pay-settings/intake') {
+          const saved = await new RunInputs(store).save(actor,value)
+          response = ui ? redirect(base + '/pay-settings/review/run-input/'+saved.id) : json(saved,201)
         } else if (post && tail.length === 2 && setupKinds.includes(tail[1])) {
+          if(tail[1]==='run-input') throw new PayrollError('use_run_intake_door',400)
           const saved =
             tail[1] === 'group'
               ? await pay.group(actor, value)

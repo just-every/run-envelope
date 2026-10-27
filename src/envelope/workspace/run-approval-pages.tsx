@@ -44,7 +44,7 @@ export const RunBinding = ({ run }: { run: EarningsRun }) => (
       <dt>Rules</dt>
       <dd>
         {run.ruleSources.length
-          ? run.ruleSources.map((r) => `${r.name} v${r.version} (${r.determination})`).join('; ')
+          ? run.ruleSources.map((r) => `${r.name} v${r.version} (${r.determination}); state ${r.state ?? 'not retained'}; ${r.family ?? 'assessment'}: ${r.details ? Object.entries(r.details).map(([key,value]) => `${key}: ${value}`).join(', ') : 'assessment details not retained'}`).join('; ')
           : 'No period rule sources'}
       </dd>
     </div>
@@ -168,6 +168,7 @@ export function runReviewPage(
         approver-grant change voids this approval before release. Approval sends nothing.
       </p>
       <RunBinding run={row.data} />
+      {row.data.intake && <p>Intake {row.data.intake.fileName} · {row.data.intake.rows.length} retained source rows. Exact source rows and assessment inputs appear below.</p>}
       {row.data.people.map((p) => (
         <article key={p.id}>
           <h3>{p.name}</h3>
@@ -176,6 +177,7 @@ export function runReviewPage(
             reimbursement {dollars(p.reimbursementCents)} · after-tax deductions{' '}
             {dollars(p.afterTaxDeductionCents)}
           </p>
+          <p>Already-held tips {dollars(p.cashTipsCents)} · paycheck tips {dollars(p.paycheckTipsCents)} · reported tip basis {p.reportedTipsCents === undefined ? 'not retained' : dollars(p.reportedTipsCents)} · employee-furnished funds {dollars(p.tipFundsCents)}. Tax collections are not calculated.</p>
           {p.details.map((d, i) => (
             <p key={i}>{d}</p>
           ))}
