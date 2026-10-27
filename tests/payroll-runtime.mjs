@@ -4851,6 +4851,13 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   const wrongFields=await staff('synthetic-envelope-1929-fields','Synthetic limited fields','preparer',['paper:entry','paper:review','paper:download'],['tax'])
   const otherLocation=await data(base+'/locations',{name:'Synthetic other workplace',state:'OH'},201)
   const wrongLocation=await staff('synthetic-envelope-1929-location','Synthetic limited location','preparer',['paper:entry','paper:review','paper:download'],['tax','ssn'],[otherLocation.id])
+  const otherOwnerId='synthetic-envelope-1929-other-owner'
+  await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${otherOwnerId}','other-owner@example.com','Synthetic other native owner','owner','active',1,1)`)
+  const otherNativeOwner=await signIn(otherOwnerId)
+  const ownCompany=await data('/api/envelope/companies',{name:'Synthetic other owner company',ein:'00-0001929'},201,otherNativeOwner),ownBase='/api/envelope/companies/'+ownCompany.id
+  const ownLocation=await data(ownBase+'/locations',{name:'Synthetic owner workplace',state:'OH'},201,otherNativeOwner)
+  const ownWorker=await data(ownBase+'/people',{name:'Synthetic other worker',locationId:ownLocation.id},201,otherNativeOwner)
+  await noWrite(async()=>{await data(ownBase+'/people/'+ownWorker.id+'/paper-onboarding',input,403,otherNativeOwner)})
   const delegated={...input,version:4}
   await noWrite(async()=>{
     await data(door+'/review',undefined,403,preparer)
@@ -4940,6 +4947,11 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   assert.equal((await data(door))[0].payable,false)
   // Held custody does not acquire a delegated escape door.
   const inventory=await data(base+'/people/'+person.id+'/privacy')
+  await noWrite(async()=>{await data(base+'/people/'+person.id+'/privacy/request',{consent:true,fingerprint:inventory.fingerprint},409)})
+  const proofSession=(await sql(`SELECT id,operator_id,operator_version FROM oa_sessions WHERE token_hash='${originalOwnerHash}'`))[0]
+  const proofToken=randomBytes(32).toString('base64url'),proofHash=await hashToken(settings.SESSION_SECRET,'link',proofToken)
+  await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at) VALUES ('synthetic-envelope-paper-hold-proof','${proofHash}','${proofSession.id}','${proofSession.operator_id}',${proofSession.operator_version},'credentials:mint','/app',${Date.now()},${Date.now()+600000})`)
+  assert.equal((await call('/auth/confirm',{token:proofToken})).status,303)
   await data(base+'/people/'+person.id+'/privacy/request',{consent:true,fingerprint:inventory.fingerprint})
   await noWrite(async()=>{
     for(const who of [preparer,reviewer]) {
