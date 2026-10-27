@@ -370,7 +370,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
         day: '2026-11-02', workweek: '2026-11-02', settlement: ['cash','paycheck'][i] }
       sourceCapture.payload.push(provider === 'deputy' ? {
         Id: id, Employee: worker, Date: '2026-11-02', StartTime: Date.parse('2026-11-02T09:00:00Z') / 1000,
-        EndTime: Date.parse('2026-11-02T10:00:00Z') / 1000, TotalTime: 1, TimeApproved: true, PayRuleApproved: true,
+        EndTime: Date.parse('2026-11-02T10:00:00Z') / 1000, TotalTime: 1, TotalTimeInv: 1, TimeApproved: true, PayRuleApproved: true,
         TimeApprover: 8821, Discarded: false, IsLeave: false, isInProgress: false, ValidationFlag: 0,
       } : { id, user_id: worker, account_id: 8800, start_time: 'Mon, 02 Nov 2026 09:00:00 +0000',
         end_time: 'Mon, 02 Nov 2026 10:00:00 +0000', length: 1, is_approved: true, is_alerted: false, alert_type: 0,
@@ -416,7 +416,8 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     const id = 'synthetic-envelope-square-' + i, worker = 'synthetic-envelope-square-worker-' + i
     squareCapture.payload.push({ id, team_member_id: worker, location_id: squareCapture.account, version: 1, status: 'CLOSED',
       start_at: '2026-11-02T09:00:00Z', end_at: '2026-11-02T17:00:00Z',
-      breaks: [{ start_at: '2026-11-02T12:00:00Z', end_at: '2026-11-02T12:30:00Z', is_paid: i === 1 }],
+      breaks: [{ start_at: '2026-11-02T12:00:00Z', end_at: '2026-11-02T12:30:00Z', is_paid: i === 1,
+        break_type_id: 'synthetic-envelope-break-type', name: 'Synthetic meal break', expected_duration: 'PT30M' }],
       declared_cash_tip_money: { amount: [60000,30000][i], currency: 'USD' } })
     squareCapture.mappings[id] = { sourcePersonId: worker, personId: people[i].id, day: '2026-11-02',
       workweek: '2026-11-02', settlement: ['cash','paycheck'][i] }
