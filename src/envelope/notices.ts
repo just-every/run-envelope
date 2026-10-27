@@ -4,7 +4,8 @@ import { requireAction, fence, auditStatement, locationSql } from './access'
 import type { AgentTools } from './agents'
 import { PayrollError, text, integer, recordKey, seal, unseal } from './security'
 import { requirePayrollProof, stepUpFence } from './step-up'
-import { digest } from './workspace/store'
+import { digest, WorkspaceStore } from './workspace/store'
+import { WorkerPrivacy } from './worker-privacy'
 import { agentProvider, providerSecret, email, redact, externalFlows, type Provider } from './providers'
 
 interface Notice {id:string;locationId:string;reference:string;cipher:string;digest:string}
@@ -41,11 +42,22 @@ export class Notices {
       cipher=await seal(key,JSON.stringify([actor.company,'notice',id]),body)
     const result=await this.records.env.DB.batch<Record<string,unknown>>([
       this.records.statement(`INSERT INTO env_notices(company_id,id,location_id,reference,cipher,digest,created_by,created_at)
-        SELECT ?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM env_locations WHERE company_id=? AND id=?) RETURNING id`,[actor.company,id,location,reference,cipher,hash,actor.session.operator.id,Date.now(),...f.args,actor.company,location]),
+        SELECT ?,?,?,?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM env_locations WHERE company_id=? AND id=?)
+        AND NOT EXISTS(SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash=?) RETURNING id`,[actor.company,id,location,reference,cipher,hash,actor.session.operator.id,Date.now(),...f.args,actor.company,location,actor.company,await digest(JSON.stringify(['notice-source',reference]))]),
       auditStatement(this.records.env,actor,event,'notice.recorded',id,1,'EXISTS(SELECT 1 FROM env_notices WHERE company_id=? AND id=?)',[actor.company,id]),
     ])
     if (!result[0].results.length) throw new PayrollError('notice_or_authority_changed',409)
     return {id}
+  }
+  async linkWorker(actor:Actor,id:string,input:Input) {
+    new WorkerPrivacy(this.records).owner(actor)
+    const notice=await this.notice(actor,id,'notices:write'), personId=text(input.personId)
+    await this.records.person(actor,personId)
+    if (input.consent!==true || input.digest!==notice.digest) throw new PayrollError('exact_notice_custody_consent_required',409)
+    // Immutable association: a shared notice and all its versions are one
+    // retained dependency, never inferred from a name in free text.
+    return new WorkspaceStore(this.records).append(actor,'notice-worker-link',id,0,
+      {noticeId:id,noticeDigest:notice.digest},personId,false,{freshProof:true})
   }
   async details(actor:Actor,id:string) {
     const notice=await this.notice(actor,id), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY), f=fence(actor), event=uuid()

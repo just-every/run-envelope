@@ -58,7 +58,9 @@ export class WorkerPrivacy {
         const mappedSource = table.name === 'env_workspace_versions' && tables.find(t => t.name === 'env_hris_people')?.rows.some(link => selected.has(link) && link.source_id === row.object_id && row.kind === 'hris-hire')
         const earlierVersion = table.name === 'env_workspace_versions' && ids.has(String(row.object_id))
         const direct = table.name === 'env_people' ? row.id === personId :
-          row.person_id === personId || row.source_person_id === personId || ids.has(String(row.source_id)) || includes(payloads.get(row), ids)
+          (table.name === 'env_notices' && ids.has(String(row.id))) ||
+          row.person_id === personId || row.source_person_id === personId || ids.has(String(row.source_id))
+          || ids.has(String(row.notice_id)) || ids.has(String(row.reply_id)) || includes(payloads.get(row), ids)
         const child = table.parents.some(parent => tables.find(t => t.name === parent.table)?.rows.some(p =>
           selected.has(p) && parent.pairs.every(pair => row[pair.from] != null && row[pair.from] === p[pair.to])))
         // A dependency or people pin belongs to the version containing it, not
@@ -199,6 +201,7 @@ export class WorkerPrivacy {
     statements.push(this.records.statement(`UPDATE env_agent_access SET target_id=? WHERE company_id=? AND target_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`, [anonymous, actor.company, actor.company]))
     statements.push(this.records.statement(`UPDATE env_audit SET target_id=? WHERE company_id=? AND target_id IN (SELECT target_id FROM env_privacy_redactions WHERE company_id=?)`, [anonymous, actor.company, actor.company]))
     for (const entry of scope.entries.filter(e => e.table === 'env_hris_people')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, entry.row.source_key]))
+    for (const entry of scope.entries.filter(e => e.table === 'env_notices')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, await digest(JSON.stringify(['notice-source',entry.row.reference]))]))
     for (const entry of scope.entries.filter(e => e.table === 'env_workspace_versions')) statements.push(this.records.statement('INSERT OR IGNORE INTO env_privacy_source_fences(company_id,source_hash) VALUES(?,?)', [actor.company, await digest(JSON.stringify([entry.row.kind, entry.row.object_id]))]))
     const ordered: Table[] = [], pending = scope.tables.filter(t => scope.entries.some(e => e.table === t.name))
     while (pending.length) {
