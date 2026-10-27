@@ -58,6 +58,8 @@ import { PayItems } from './workspace/pay-items'
 import { PayPolicies } from './workspace/pay-policies'
 import { RunApprovals, type ApprovalPolicy } from './workspace/run-approvals'
 import { Tips } from './workspace/tips'
+import { RunIntake, intakeTemplate, runInputMultipart, type RunInput } from './intake/run-input'
+import { runIntakePage } from './intake/run-pages'
 import { runReviewPage, releaseRefusalPage } from './workspace/run-approval-pages'
 import { Rules } from './workspace/rules'
 import type { Kind } from './workspace/store'
@@ -86,13 +88,14 @@ const redirect = (location: string) =>
 async function input(request: Request): Promise<Input> {
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/withholding-instructions$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/notices\/[-a-zA-Z0-9]+\/case(?:\/evidence)?$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return taxNoticeMultipart(request)
+  if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/pay-settings\/intake\/preview$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return runInputMultipart(request)
   if (/^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/people\/[-a-zA-Z0-9]+\/paper-onboarding$/.test(new URL(request.url).pathname) && request.headers.get('content-type')?.startsWith(['multipart','form-data'].join('/'))) return paperMultipart(request)
   const claims = /^\/(?:app|api)\/envelope\/companies\/[-a-zA-Z0-9]+\/claims(?:\/|$)/.test(new URL(request.url).pathname)
   if (claims && request.headers.get('content-type')?.startsWith('multipart/form-data')) return claimsMultipartInput(request)
   if (!request.body) throw new PayrollError('invalid_input')
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = [],
-    limit = claims ? 3 * 1024 * 1024 : new URL(request.url).pathname.endsWith('/paper-onboarding') ? 1100000 : 64000
+    limit = claims ? 3 * 1024 * 1024 : /\/pay-settings\/intake\/(apply|preview)$/.test(new URL(request.url).pathname) ? 2 * 1024 * 1024 : new URL(request.url).pathname.endsWith('/paper-onboarding') ? 1100000 : 64000
   let size = 0
   while (true) {
     const { done, value } = await reader.read()
@@ -619,7 +622,24 @@ export async function payrollResponse(
         // The two-person threshold is the owner's own policy, end to end.
         if ((tail[1] === 'review' ? tail[2] : tail[1]) === 'approval-policy' && actor.grant.role !== 'owner')
           throw new PayrollError('owner_required', 403)
-        if (!post && tail.length === 1) {
+        if (tail[1] === 'intake') {
+          const intake=new RunIntake(store), back=base+'/pay-settings/intake', intakeSession=session
+          const render=async(preview?:Awaited<ReturnType<RunIntake['preview']>>,review?:import('./workspace/store').Revision<RunInput>&{reviewToken:string})=>runIntakePage(intakeSession,companies,actor,await records.people(actor),await intake.rows(actor),preview,review)
+          if(!post && tail.length===2)response=ui?await render():json(await intake.rows(actor))
+          else if(!post && tail.length===3 && tail[2]==='template'){
+            await store.authority(actor,'records:read',undefined,true)
+            const format=url.searchParams.get('format') || 'csv'
+            response=new Response(intakeTemplate(format),{headers:{...headers,'content-type':['application','octet-stream'].join('/'),'content-disposition':`attachment; filename="earnings-template.${format}"`}})
+          } else if(post && tail.length===3 && tail[2]==='preview'){
+            const result=await intake.preview(actor,value);response=ui?await render(result):json(result)
+          } else if(post && tail.length===3 && tail[2]==='apply'){
+            const result=await intake.apply(actor,value);response=ui?redirect(back):json(result,201)
+          } else if(!post && tail.length===4 && tail[3]==='review'){
+            const result=await store.review<RunInput>(actor,'run-intake',tail[2]);response=ui?await render(undefined,result):json(result)
+          } else if(post && tail.length===4 && ['approve','withdraw'].includes(tail[3])){
+            const result=await store.decide(actor,'run-intake',tail[2],value,undefined,tail[3]==='withdraw');response=ui?redirect(back):json(result)
+          } else throw new PayrollError('not_found',404)
+        } else if (!post && tail.length === 1) {
           const result = await pay.read(actor),
             statuses = await approvals.statuses(actor, result.runs),
             policies = await store.list<ApprovalPolicy>(actor, 'approval-policy', undefined, true, false)
