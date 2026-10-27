@@ -134,7 +134,9 @@ export class TaxNoticeCases {
     // A known applicable notice cannot be silently bypassed by omitting its ID.
     const history=await this.store.list<TaxNoticeCase>(actor,'tax-notice-case',undefined,true,false)
     const current=history.filter((r,i,a)=>a.findIndex(x=>x.id===r.id)===i)
-    const candidates=current.filter(r=>r.data.facts.type==='sui-rate' && run.locationStates.includes(r.data.facts.state) && r.data.facts.effectiveFrom<=run.payDate)
+    const applicable=(r:typeof history[number])=>r.data.facts.type==='sui-rate' && run.locationStates.includes(r.data.facts.state) && r.data.facts.effectiveFrom<=run.payDate
+    // An unapproved correction cannot retire the last reviewed applicable liability.
+    const candidates=current.filter(r=>applicable(r) || (!r.approvedBy && history.some(prior=>prior.id===r.id && prior.approvedBy && !prior.withdrawnBy && applicable(prior))))
     if(!candidates.length && !input.suiNoticeId) return null
     new WorkerPrivacy(this.store.records).owner(actor)
     if(candidates.length!==1 || candidates[0].id!==input.suiNoticeId) throw new PayrollError('exact_sui_notice_selection_required',409)

@@ -128,7 +128,7 @@ facts, corrections, deposit proof and reported agency responses. It supports
 SUI rate letters and IRS deposit mismatches. It does not implement automatic OCR,
 agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll payment.
 
-The current conservative policy is pending CT review: only the configured native
+The approved conservative casework policy permits only the configured native
 installation owner with a current company session may use case routes or download
 their originals. Existing generic notice and correspondence permissions keep their
 existing scope. No case action sends data, pays money, signs a filing, releases a
@@ -282,9 +282,9 @@ cover ordinary resident business employee cash wages only; special taxability
 refuses. Complete source-format validation, all effective-date cases, actual first
 required payment and independent IRS authenticity remain unproved.
 
-This calculation default is pending CT approval alongside the existing case
-custody default. It authorizes no payroll payment, filing, external send,
-destruction or hold release, and ENV-025 remains PARTIAL.
+The bounded calculation records remain distinct from the casework policy ruling.
+They authorize no payroll payment, filing, external send, destruction or hold
+release, and ENV-025 remains PARTIAL.
 
 
 Current-form paper entry accepts the exact reviewed filing status and multiple
@@ -314,3 +314,11 @@ no source PDF or decision is overwritten. These synthetic format cases do not
 establish every IRS letter variant, source authenticity or legal effect.
 
 Instruction versions pin the private SSN revision, with atomic checks on creation and review decisions. Restoring an old SSN value does not restore review authority. Every effective pending modification remains a hold even beneath a later pending release. Linked SUI evidence retains its exact approved rule dependency; edited or withdrawn rules refuse evidence appends, while reopening clears the link.
+
+## CT casework ruling, 27 October 2026
+
+CT scope ruling, 27 October 2026: APPROVE WITH RIDERS for conservative notice casework only. The configured native installation owner, using a current native session and current company authority, may retain case facts and originals and review exact source-bound case decisions. No automatic outbound action, payroll mutation, hold release, destruction or external deletion is authorized. A notice review does not approve a rate, signed response, filing or payment; each consequential action retains its separately authorized exact human approval. Source, worker identity, instruction, linked rule or current authority changes invalidate affected pending review even after evidence append or restoration of an earlier identity value. A pending release cannot override an unresolved stricter instruction. Closure reports remain unresolved until supported by agency disposition and actual remaining liability and penalty evidence; unknown balances stay unknown, claimed abatement stays distinct from actual abatement, and reopening preserves earlier evidence. Owner-only casework is too narrow for day-one payroll teams: ENV-028 must provide authorized bookkeepers, payroll administrators and accountants separately scoped case intake, investigation, exact review and original access by company, location and sensitive fields, with immediate revocation, distinct attribution and configured separation of duties. Delegation grants no consequential authority beyond its explicit scope. Existing generic correspondence keeps its separate authority; agent credentials gain no authority over these case records. Statutory custody, lawful eligible erasure and inactive restore remain owed under ENV-051, ENV-053 and ENV-054. This ruling supersedes the pending casework-policy label, preserves every original outcome and acceptance sentence, changes no status, and accepts no implementation completion or production readiness.
+
+## Saved-check source safety
+
+An unapproved correction cannot move a previously reviewed applicable SUI notice outside payday and silently remove its liability. Checks pin the worker private SSN revision before calculation and at append, and recheck it for review, approval and return preparation. Changing the identity and restoring its former value does not revive check authority. Checks from older versions without the required instruction, notice, rule and private-identity pins remain historical evidence and require a fresh calculation before review or return preparation.

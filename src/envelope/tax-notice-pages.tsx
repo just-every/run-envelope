@@ -13,7 +13,7 @@ export function taxNoticeCasePage(session:Session,companies:Company[],actor:Acto
   return page(session,'Notice evidence and deadlines',companies,actor.company,<>
     <Card title="Follow through with evidence">
       <p>Originals, extraction and corrections remain private. A person verifies each fact. Model proposals cannot approve rates, send responses or change pay.</p>
-      <p>Reported agency closure needs independent verification. Unknown balances stay unknown. Worker IRS instruction records are available from signed paper elections; calculated withholding remains unavailable.</p>
+      <p>Reported agency closure needs independent verification. Unknown balances stay unknown. Worker IRS instruction records constrain supported regular-wage calculations. Calculated previews do not authorize payment.</p>
       <a href={base}>Review notice and exact correspondence</a>
     </Card>
     {review && <Card title={'Review exact case version '+review.version}>
@@ -28,7 +28,7 @@ export function taxNoticeCasePage(session:Session,companies:Company[],actor:Acto
         <p>Response due {row.data.facts.dueOn}. {row.overdue?'Response overdue. ':''}{row.nextAction} Responsible person: {row.data.ownerName}.</p>
         <p>Notice principal ${(row.data.facts.principalCents/100).toFixed(2)}; proposed penalty ${(row.data.facts.proposedPenaltyCents/100).toFixed(2)}. Reported residual: {row.data.residualCents===null?'Unknown':'$'+(row.data.residualCents/100).toFixed(2)}. Assessed penalty: {row.data.assessedPenaltyCents===null?'Unknown':'$'+(row.data.assessedPenaltyCents/100).toFixed(2)}. Actually abated, as reported: {row.data.abatedPenaltyCents===null?'Unknown':'$'+(row.data.abatedPenaltyCents/100).toFixed(2)}.</p>
         <p>Entered by {row.createdBy} at {new Date(row.createdAt).toISOString()}; reviewed by {row.approvedBy ?? 'no reviewer'}. {row.sourcesCurrent?'':'Linked source changed; fresh reconciliation required.'}</p>
-        {row.data.facts.type==='sui-rate' && <p>SUI rate {row.data.facts.ratePercent}% effective {row.data.facts.effectiveFrom}. {row.data.rate?'Linked reviewed rule '+row.data.rate.id+' version '+row.data.rate.version:'No reviewed rule linked.'} Payroll calculation remains unavailable.</p>}
+        {row.data.facts.type==='sui-rate' && <p>SUI rate {row.data.facts.ratePercent}% effective {row.data.facts.effectiveFrom}. {row.data.rate?'Linked reviewed rule '+row.data.rate.id+' version '+row.data.rate.version:'No reviewed rule linked.'} Reviewing this case does not calculate payroll.</p>}
         <details><summary>Inspect source and evidence for version {row.version}</summary>
           <p className="notice-text">Unverified extraction: {redact(row.data.rawExtraction)}</p><p>{redact(row.data.correctionReason)}</p>
           <p className="notice-text">Original citation: {redact(row.data.original.quote)}</p><a href={door+'/original/'+row.version+'/0'}>Download retained notice original</a>

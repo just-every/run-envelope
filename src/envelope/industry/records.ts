@@ -81,7 +81,7 @@ export class IndustryRecords {
     const ytd=input.yearToDate as IndustryPayInput['yearToDate']
     if(!ytd||typeof ytd!=='object')throw new PayrollError('year_to_date_basis_required')
     const payInput:IndustryPayInput={payDate:run.data.payDate,cashGrossCents:worker.earningsCents,housingAllowanceCents:zero(input.housingAllowanceCents??0),shareholderHealthInsuranceCents:zero(input.shareholderHealthInsuranceCents??0),periodsPerYear:({weekly:52,biweekly:26,semimonthly:24,monthly:12} as const)[run.data.frequency as 'weekly']!,facts,w4:classification.data.w4,yearToDate:ytd}
-    const instructionPins=await collectionPins(this.store,actor,[{kind:'withholding-instruction',personId,exceptId:''}])
+    const instructionPins=await collectionPins(this.store,actor,[{kind:'withholding-instruction',personId,exceptId:''},{kind:'private-ssn',personId,exceptId:''}])
     const withholdingInstruction=await new WithholdingInstructions(this.store).forCheck(actor,personId,payInput)
     if(withholdingInstruction) {
       if(facts.taxResidency!=='resident' || facts.claims.length || payInput.housingAllowanceCents || payInput.shareholderHealthInsuranceCents || facts.employerKind!=='business' || facts.workerRole!=='employee') throw new PayrollError('lock_in_special_taxability_unavailable',409)
