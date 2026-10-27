@@ -253,6 +253,143 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     409
   )
 
+  // The provider captures enter the same public run door, then require exact native review.
+  // Source tender is deliberately independent from the reviewed settlement mapping.
+  for (const provider of ['lanyard', 'toast']) {
+    const providerRun = 'synthetic-envelope-' + provider + '-run'
+    const mappings = {}, payload = provider === 'toast' ? [] : {
+      id: 'synthetic-envelope-batch', revision: 2, status: 'exported',
+      exportedBy: 'synthetic-envelope-manager', exportedAt: '2026-11-09T12:00:00Z', lines: [],
+    }
+    for (let i = 0; i < 2; i++) {
+      const source = 'synthetic-envelope-provider-' + i, worker = 'synthetic-envelope-source-worker-' + i
+      const mapping = { sourcePersonId: worker, personId: people[i].id,
+        day: '2026-11-02', workweek: '2026-11-02' }
+      if (provider === 'toast') {
+        payload.push({ guid: source, employeeReference: { guid: worker },
+          inDate: '2026-11-02T09:00:00Z', outDate: '2026-11-02T17:00:00Z',
+          businessDate: '20261102', deleted: false, autoClockedOut: false,
+          regularHours: 8, overtimeHours: 0, declaredCashTips: 0, nonCashTips: [600,300][i],
+          cashGratuityServiceCharges: 0, nonCashGratuityServiceCharges: 0, tipsWithheld: 0,
+          nonCashTipsRoundingLoss: 0 })
+        mappings[source] = { ...mapping, settlements: { declaredCashTips: 'cash', nonCashTips: ['cash','paycheck'][i] } }
+      } else {
+        payload.lines.push({ timeId: source, payrollId: worker, start: '2026-11-02T09:00:00Z',
+          end: '2026-11-02T17:00:00Z', minutes: 480, revision: 1 })
+        payload.lines.push({ payInputId: source + '-tip', payrollId: worker, start: '2026-11-02T12:00:00Z',
+          minutes: 0, costCents: [60000,30000][i], payCode: 'tips', revision: 1 })
+        mappings[source] = mapping
+        mappings[source + '-tip'] = { ...mapping, settlement: ['cash','paycheck'][i] }
+      }
+    }
+    const capture = { provider, account: 'synthetic-envelope-workplace', payload, mappings,
+      evidence: 'synthetic-envelope-reviewed-export' }
+    const body = { id: providerRun, version: 0, providerCapture: capture }
+    const diff = await data(door + '/preview', body)
+    assert.equal(diff.data.namespace, provider + ':synthetic-envelope-workplace')
+    assert.equal(diff.data.providerCapture.sourceDigest, createHash('sha256').update(JSON.stringify(payload)).digest('hex'))
+    assert.equal(diff.data.rows.filter(r => r.code === 'regular').reduce((n,r) => n + r.minutes, 0), 960)
+    assert.deepEqual(diff.data.rows.filter(r => r.code === 'tip' && r.amountCents).map(r => [r.personId,r.amountCents,r.settlement]),
+      [[people[0].id,60000,'cash'],[people[1].id,30000,'paycheck']])
+    await data(door + '/apply', { ...body, digest: diff.digest }, 201)
+    const reviewProvider = async version => {
+      const exact = await data(door + '/' + providerRun + '/review')
+      await data(door + '/' + providerRun + '/approve', { version, reviewToken: exact.reviewToken })
+    }
+    await reviewProvider(1)
+    const runBody = { id: providerRun, version: 0, groupId: 'synthetic-envelope-802',
+      periodStart: '2026-11-02', periodEnd: '2026-11-15', payDate: '2026-11-16', frequency: 'biweekly' }
+    const frozen = await data(pay + '/earnings-run', runBody, 201)
+    assert.equal(frozen.preview.grossCashCents, 46000)
+    assert.deepEqual(frozen.preview.people.map(p => [p.earningsCents,p.cashTipsCents,p.paycheckTipsCents]),
+      [[8000,60000,0],[8000,0,30000],[0,0,0]])
+    const replayDiff = await data(door + '/preview', { ...body, version: 1 })
+    assert.equal((await data(door + '/apply', { ...body, version: 1, digest: replayDiff.digest }, 201)).replayed, true)
+    await data(door + '/preview', { ...body, id: providerRun + '-duplicate' }, 409)
+    if (provider === 'lanyard') {
+      const renamedBatch = structuredClone(capture)
+      renamedBatch.payload.id = 'synthetic-envelope-another-batch'
+      await data(door + '/preview', { ...body, id: providerRun + '-renamed', providerCapture: renamedBatch }, 409)
+    }
+    const omitted = structuredClone(capture)
+    if (provider === 'toast') omitted.payload.pop()
+    else omitted.payload.lines.pop()
+    await data(door + '/preview', { ...body, version: 1, providerCapture: omitted }, 409)
+    const unknown = structuredClone(capture)
+    Object.values(unknown.mappings)[0].personId = 'synthetic-envelope-unknown'
+    await data(door + '/preview', { ...body, version: 1, providerCapture: unknown }, 409)
+    const ambiguous = structuredClone(capture)
+    if (provider === 'toast') delete Object.values(ambiguous.mappings)[0].settlements.nonCashTips
+    else delete ambiguous.mappings['synthetic-envelope-provider-0-tip'].settlement
+    await data(door + '/preview', { ...body, version: 1, providerCapture: ambiguous }, 409)
+    // A settlement-only source edit creates a visible delta and makes the frozen earnings stale.
+    const changed = structuredClone(capture)
+    if (provider === 'toast') changed.mappings['synthetic-envelope-provider-0'].settlements.nonCashTips = 'paycheck'
+    else changed.mappings['synthetic-envelope-provider-0-tip'].settlement = 'paycheck'
+    const changedBody = { ...body, version: 1, providerCapture: changed }
+    const changedDiff = await data(door + '/preview', changedBody)
+    assert.deepEqual(changedDiff.cells.filter(c => c.status === 'change').map(c => [c.field,c.before,c.after]),
+      [['settlement','cash','paycheck']])
+    await data(door + '/apply', { ...changedBody, digest: changedDiff.digest }, 201)
+    await data(pay + '/earnings-run', { ...runBody, version: 1 }, 409)
+    await data(door + '/preview', { id: providerRun, namespace: diff.data.namespace, version: 2, rows: diff.data.rows }, 409)
+    await reviewProvider(2)
+    const revised = await data(pay + '/earnings-run', { ...runBody, version: 1 }, 201)
+    assert.equal(revised.preview.grossCashCents, 106000)
+    const retainedRuns = await data(pay)
+    assert.equal(retainedRuns.runs.find(r => r.id === providerRun && r.version === 1).data.grossCashCents, 46000)
+    await data(door + '/' + providerRun + '/withdraw', { version: 2 })
+    await data(pay + '/earnings-run', { ...runBody, version: 2 }, 409)
+    const unsupported = structuredClone(capture)
+    if (provider === 'toast') unsupported.payload[0].nonCashGratuityServiceCharges = 25
+    else unsupported.payload.lines[0].corrects = 'synthetic-envelope-prior'
+    await data(door + '/preview', { ...body, version: 2, providerCapture: unsupported }, 409)
+  }
+
+  const caLocation = await data(api + '/locations', { name: 'California premium workplace', state: 'CA' }, 201)
+  const caWorker = await data(api + '/people', { name: 'Synthetic premium worker', locationId: caLocation.id }, 201)
+  await setup('group', 'synthetic-envelope-premium-group', { name: 'Premium review', people: [caWorker.id] })
+  await setup('pay-change', 'synthetic-envelope-premium-rate', {
+    name: 'California nonexempt ordinary rate', groupId: 'synthetic-envelope-premium-group', effectiveDate: '2026-01-01',
+    items: [{ personId: caWorker.id, personVersion: caWorker.version, rateCents: 1000, basis: 'hourly',
+      salaryType: 'nonexempt', employmentFrom: '2026-01-01', employmentThrough: '2027-12-31', unpaidDates: [] }] })
+  const premiumRows = ['02','03','04','05','06'].map(day => ({ ...base,
+    sourceId: 'synthetic-envelope-premium-work-' + day, personId: caWorker.id, day: '2026-11-' + day, minutes: 480 }))
+  premiumRows.push({ ...base, sourceId: 'synthetic-envelope-premium-bonus', personId: caWorker.id,
+    code: 'nondiscretionary-bonus', amountCents: 8000 })
+  for (const code of ['meal-premium','rest-premium']) premiumRows.push({ ...base,
+    sourceId: 'synthetic-envelope-' + code, personId: caWorker.id, code, minutes: 60, state: 'CA' })
+  const premiumId = 'synthetic-envelope-premium-run', premiumBody = { id: premiumId, version: 0,
+    namespace: 'synthetic-envelope-premiums', rows: premiumRows }
+  const premiumDiff = await data(door + '/preview', premiumBody)
+  await data(door + '/apply', { ...premiumBody, digest: premiumDiff.digest }, 201)
+  const premiumReview = await data(door + '/' + premiumId + '/review')
+  await data(door + '/' + premiumId + '/approve', { version: 1, reviewToken: premiumReview.reviewToken })
+  const premiumRunBody = { id: premiumId, version: 0, groupId: 'synthetic-envelope-premium-group',
+    periodStart: '2026-11-02', periodEnd: '2026-11-08', payDate: '2026-11-09', frequency: 'weekly' }
+  const premiumResult = await data(pay + '/earnings-run', premiumRunBody, 201)
+  // Independently: $400 straight wages + $80 allocated bonus over 40 worked hours = $12 per hour.
+  // One meal and one rest premium are $12 each, without two fabricated worked hours.
+  assert.equal(premiumResult.preview.grossCashCents, 50400)
+  assert.deepEqual(premiumResult.preview.people[0].details.filter(d => d.startsWith('California ')), [
+    'California meal-premium 2026-11-02, source synthetic-envelope-meal-premium: 60 premium minutes, 1200 cents at the workweek regular rate; zero additional worked hours.',
+    'California rest-premium 2026-11-02, source synthetic-envelope-rest-premium: 60 premium minutes, 1200 cents at the workweek regular rate; zero additional worked hours.' ])
+  const premiumReplay = await data(door + '/preview', { ...premiumBody, version: 1 })
+  assert.equal((await data(door + '/apply', { ...premiumBody, version: 1, digest: premiumReplay.digest }, 201)).replayed, true)
+  await data(door + '/preview', { ...premiumBody, version: 1,
+    rows: [{ ...premiumRows.at(-1), sourceId: 'synthetic-envelope-duplicate-rest' }] }, 409)
+  await data(door + '/preview', { ...premiumBody, version: 1,
+    rows: [{ ...premiumRows.at(-1), minutes: 120 }] }, 409)
+  const removePremium = { ...premiumBody, version: 1, rows: [{ sourceId: 'synthetic-envelope-meal-premium', minutes: 0 }] }
+  const removedDiff = await data(door + '/preview', removePremium)
+  assert.deepEqual(removedDiff.cells.filter(c => c.status === 'change').map(c => [c.field,c.before,c.after]), [['minutes',60,0]])
+  await data(door + '/apply', { ...removePremium, digest: removedDiff.digest }, 201)
+  await data(pay + '/earnings-run', { ...premiumRunBody, version: 1 }, 409)
+  const correctedPremiumReview = await data(door + '/' + premiumId + '/review')
+  await data(door + '/' + premiumId + '/approve', { version: 2, reviewToken: correctedPremiumReview.reviewToken })
+  assert.equal((await data(pay + '/earnings-run', { ...premiumRunBody, version: 1 }, 201)).preview.grossCashCents, 49200)
+  assert.equal((await data(pay)).runs.find(r => r.id === premiumId && r.version === 1).data.grossCashCents, 50400)
+
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
     headless: true,

@@ -594,6 +594,22 @@ export class PayItems {
         earnings+=premium;taxable+=premium
         details.push(`Federal weekly overtime component for ${weekStart}: ${Number(week.microMinutes)/60000000} hours, ${Number(overtime)/60000000} overtime hours, ${Number(allocated)} cents allocated remuneration, ${premium} cents additional half-time. Complete jurisdiction and tax calculation remains held.`)
       }
+      // California DLSE meal and rest guidance: one additional hour at the
+      // workweek regular rate, including allocated nondiscretionary remuneration.
+      // Premium units are never included in the worked-time numerator or hours.
+      for (const line of inputLines.filter(r=>['meal-premium','rest-premium'].includes(r.code) && r.minutes)) {
+        const week=intakeWeeks.get(line.workweek), scoped=inputLines.filter(r=>r.workweek===line.workweek)
+        const unsupported=!week || !week.nonexempt || !week.microMinutes ||
+          assigned.find(p=>p.id===member.id)?.state!=='CA' || line.state!=='CA' ||
+          periodStart>line.workweek || periodEnd<addDays(line.workweek,6) ||
+          work.some(w=>w.data.day>=line.workweek && w.data.day<=addDays(line.workweek,6)) ||
+          scoped.some(r=>['tip','bonus','other-earning'].includes(r.code)) || tips.length || sourceEarnings.length || items.length
+        if(unsupported){holds.push({personId:member.id,reason:`${line.day}: complete California premium regular-rate remuneration requires review; no partial premium amount is substituted.`});continue}
+        const allocated=scoped.filter(r=>['nondiscretionary-bonus','commission'].includes(r.code)).reduce((n,r)=>n+BigInt(r.amountCents),0n)
+        const premium=money((week.straightNumerator+allocated*60000000n)*BigInt(line.minutes)*1000000n,60000000n*week.microMinutes)
+        earnings+=premium;taxable+=premium
+        details.push(`California ${line.code} ${line.day}, source ${line.sourceId}: ${line.minutes} premium minutes, ${premium} cents at the workweek regular rate; zero additional worked hours.`)
+      }
       for (const t of tips) {
         tipped[t.data.settlement] += t.data.amountCents
         tipped.funds += t.data.furnishedCents

@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "6a769303c9e2457cbd9165a23540b0dd9030278baeafcc97deb508be4d882b1f",
+      "sha256": "fffd034fb66359c65a8ca2eba2fa7f6e306a1b884864fde965e7898447d96d0b",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3d5a522aa07ceb472e9267807184955a5b9a81c6a37983d0ee85e7d4e4d5749e",
+      "sha256": "62ae2c9ce55042d8229891dc66a2d21ca4ce59b4841541ded83fff4554740959",
       "executable": false
     },
     "deploy-demo.json": {
@@ -455,6 +455,10 @@
     },
     "docs/private-inputs.md": {
       "sha256": "38e2340a10e38b3271eea0eac1a98996f9900a64fc0821894b971ca9e0b0979f",
+      "executable": false
+    },
+    "docs/run-earnings-intake.md": {
+      "sha256": "a694020b69901a7dc68d2eea05f8b1cca4ce6804c460b2d64debdad93da20c9c",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -634,7 +638,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "60cc5f7bfcfa1560f08f68a8863df21bf1985615c0e038ff0b6c315fc43b151a",
+      "sha256": "966ad1dc171d37588fd85622b57e10722f99a01af0f5a66d250a09387bc7f5c8",
       "executable": false
     },
     "packaging.json": {
@@ -642,7 +646,7 @@
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "0e5b7b25a593648fd4dd86cf7b3713384cad2f88681e56631bf237e57bc49908",
+      "sha256": "d18f54af0df5497dea3ea8e4db2d5b588f201dbd9ceed11a06a3ae47f6fc5bcd",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -1462,7 +1466,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "7819857aefc120e49d8f895fea46f641a52ab073711aaba9efbe3b68e89714ea",
+      "sha256": "bf2866df4534355ff3ba2b6607cac5463631f1c3dffa4a6804ab6dc7817cad9f",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -1535,6 +1539,14 @@
     },
     "src/envelope/intake/pages.tsx": {
       "sha256": "d8e6942737a4f0aefd6ecda7c1fa151572af54078fd32e2999cc25679948724b",
+      "executable": false
+    },
+    "src/envelope/intake/run-input.ts": {
+      "sha256": "f096c826dfb288f32af3fa839d2cc0391b96ae374cfb68ef23ef9aa09f73f95c",
+      "executable": false
+    },
+    "src/envelope/intake/run-pages.tsx": {
+      "sha256": "57ccb2453fa32912ee38f6db6025eb750a3e38f5bddb005f34e72eb61654590b",
       "executable": false
     },
     "src/envelope/intake/sources.ts": {
@@ -1670,7 +1682,7 @@
       "executable": false
     },
     "src/envelope/workspace/pages.tsx": {
-      "sha256": "c1125ca7de3b4ba2d9537ab4b62b55b0aca171aee22dd041b60ae09fc6db6898",
+      "sha256": "38f2c9270334a83c7d02d0668aa852c426390e04523e87ded9839fe20181836f",
       "executable": false
     },
     "src/envelope/workspace/pay-change-diff.ts": {
@@ -1682,7 +1694,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "041b093c84336ee6896c9846a06f201d31671d6fa0ff5096219e3982015bf823",
+      "sha256": "41e66f0aa39ed42dde20b24387e0204427a7f3aafac2ef1dd0617b11fa25917b",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -1718,7 +1730,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "dbca46f5273beba0e5e38d38e133765998a180b51890622d9394d92690200188",
+      "sha256": "2e893b6b6282bea0de332df5636936a394ce50f4016f15fd10ec35a9292c0a54",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3014,15 +3026,19 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "c0cef4ac9983b3455a78b677e116c09298534b7c373681e95addde3ff4d3e9e8",
+      "sha256": "cd73f9fa12bab39f741c3c8f22212b11e9670b5681f11277721c30773df7768f",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "54addd32e3ac0169bbbc6d425f2d5051e0005af2e88310737fefa9e7afaec035",
+      "sha256": "d16cad228f0ced8e773cc15571f7db1083ae6a846ced5c4e694c9a3186588311",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
       "sha256": "e14ecf5d5f575fead2c44afc624ecc47398c7f8622942534651df4c7b70701b5",
+      "executable": false
+    },
+    "tests/run-intake.mjs": {
+      "sha256": "fddf4b7bacdcaa07c459d8f79769e53882c274246df9c70eae813046a3520d4a",
       "executable": false
     },
     "tests/runtime.mjs": {
