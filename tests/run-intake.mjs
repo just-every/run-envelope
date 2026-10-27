@@ -706,6 +706,139 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
   assert.equal((await data(pay + '/earnings-run', { ...premiumRunBody, version: 1 }, 201)).preview.grossCashCents, 49200)
   assert.equal((await data(pay)).runs.find(r => r.id === premiumId && r.version === 1).data.grossCashCents, 50400)
 
+  // Reviewed non-work pay and mandatory service charges stay distinct from worked time and tips.
+  const earningWorker = await data(api + '/people', { name: 'Synthetic non-work earnings worker', locationId: location.id }, 201)
+  const earningGroup = 'synthetic-envelope-nonwork-group'
+  await setup('group', earningGroup, { name: 'Non-work earnings review', people: [earningWorker.id] })
+  await setup('pay-change', 'synthetic-envelope-nonwork-rate', {
+    name: 'Reviewed nonexempt rate', groupId: earningGroup, effectiveDate: '2026-01-01',
+    items: [{ personId: earningWorker.id, personVersion: earningWorker.version, rateCents: 1000, basis: 'hourly',
+      salaryType: 'nonexempt', employmentFrom: '2026-01-01', employmentThrough: '2027-12-31', unpaidDates: [] }] })
+  const earningRunIds = []
+  for (const format of ['grid','csv','xls','xlsx','toast','lanyard']) {
+    const id = 'synthetic-envelope-nonwork-' + format, namespace = id + '-source'
+    earningRunIds.push(id)
+    const entries = ['02','03','04','05','06'].map(day => ({ ...base,
+      sourceId: id + '-' + day, personId: earningWorker.id, day: '2026-11-' + day, minutes: 540,
+      job: day === '02' ? 'synthetic-envelope-kitchen' : 'synthetic-envelope-floor' }))
+    entries.push({ ...base, sourceId: id + '-service', personId: earningWorker.id, code: 'service-charge',
+      amountCents: 9000, settlement: 'paycheck', job: 'synthetic-envelope-floor' },
+      { ...base, sourceId: id + '-paid', personId: earningWorker.id, code: 'paid-leave', minutes: 480, amountCents: 8000 },
+      { ...base, sourceId: id + '-unpaid', personId: earningWorker.id, code: 'unpaid-leave', minutes: 120 },
+      { ...base, sourceId: id + '-bonus', personId: earningWorker.id, code: 'nondiscretionary-bonus', amountCents: 4500 })
+    let body = { id, version: 0, namespace, rows: entries }, providerCapture
+    if (format === 'toast' || format === 'lanyard') {
+      const payload = format === 'toast' ? [] : { id: id + '-batch', revision: 1, status: 'exported',
+        exportedBy: 'synthetic-envelope-payroll-reviewer', exportedAt: '2026-11-09T12:00:00Z', lines: [] }
+      const mappings = {}
+      for (const entry of entries.slice(0,5)) {
+        const mapping = { personId: earningWorker.id, sourcePersonId: 'synthetic-envelope-nonwork-source-worker',
+          day: entry.day, workweek: entry.workweek, job: entry.job }
+        if (format === 'toast') {
+          payload.push({ guid: entry.sourceId, employeeReference: { guid: mapping.sourcePersonId },
+            inDate: entry.day + 'T08:00:00Z', outDate: entry.day + 'T17:00:00Z', businessDate: entry.day.replaceAll('-', ''),
+            deleted: false, autoClockedOut: false, regularHours: 9, overtimeHours: 0,
+            declaredCashTips: 0, nonCashTips: 0, cashGratuityServiceCharges: 0, nonCashGratuityServiceCharges: entry.day.endsWith('02') ? 90 : 0 })
+          mappings[entry.sourceId] = { ...mapping, settlements: { declaredCashTips: 'cash', nonCashTips: 'cash', nonCashGratuityServiceCharges: 'paycheck' } }
+        } else {
+          payload.lines.push({ timeId: entry.sourceId, payrollId: mapping.sourcePersonId, revision: 1,
+            start: entry.day + 'T08:00:00Z', end: entry.day + 'T17:00:00Z', minutes: 540, job: entry.job })
+          mappings[entry.sourceId] = mapping
+        }
+      }
+      if (format === 'lanyard') {
+        payload.lines.push({ payInputId: id + '-paid', payrollId: 'synthetic-envelope-nonwork-source-worker', revision: 1,
+          start: '2026-11-02T12:00:00Z', end: '2026-11-02T12:00:00Z', minutes: 480, costCents: 8000, payCode: 'PTO',
+          approval: { by: 'synthetic-envelope-reviewer', at: '2026-11-09T12:00:00Z', reason: 'synthetic-envelope-approved-leave' } })
+        mappings[id + '-paid'] = { personId: earningWorker.id, sourcePersonId: 'synthetic-envelope-nonwork-source-worker',
+          day: '2026-11-02', workweek: '2026-11-02' }
+      }
+      providerCapture = { provider: format, account: id, evidence: 'synthetic-envelope-reviewed-nonwork-capture', payload, mappings }
+      body = { id, version: 0, providerCapture }
+    }
+    const prepare = async request => {
+      if (!['csv','xls','xlsx'].includes(format)) return data(door + '/preview', request)
+      const response = await call(door + '/template?format=' + format)
+      assert.equal(response.status, 200)
+      const book = read(new Uint8Array(await response.arrayBuffer()), { type: 'array' })
+      const headers = utils.sheet_to_json(book.Sheets[book.SheetNames[0]], { header: 1 })[0]
+      book.Sheets[book.SheetNames[0]] = utils.aoa_to_sheet([headers, ...request.rows.map(row => headers.map(key => row[key] ?? ''))])
+      const form = new FormData()
+      form.set('id', id); form.set('version', String(request.version)); form.set('namespace', namespace)
+      form.set('file', new File([write(book, { type: 'array', bookType: format === 'xls' ? 'biff8' : format })], id + '.' + format))
+      const result = await fetch(origin + door + '/preview', { method: 'POST', headers: { cookie, origin }, body: form })
+      assert.equal(result.status, 200, await result.clone().text())
+      return result.json()
+    }
+    const commitInput = async (request, diff) => data(door + '/apply', providerCapture ? { ...request, digest: diff.digest } : {
+      id, version: request.version, namespace, rows: diff.data.rows, fileDigest: diff.data.fileDigest, format: diff.data.format, digest: diff.digest }, 201)
+    const diff = await prepare(body)
+    assert.equal(diff.data.rows.filter(row => row.code === 'regular').reduce((sum,row) => sum + row.minutes, 0), 2700)
+    assert.equal(diff.data.rows.find(row => row.code === 'regular' && row.day === '2026-11-02').job, 'synthetic-envelope-kitchen')
+    if (format !== 'toast') assert.equal(diff.data.rows.find(row => row.code === 'paid-leave').minutes, 480)
+    await commitInput(body, diff)
+    const reviewEarning = async version => {
+      const review = await data(door + '/' + id + '/review')
+      await data(door + '/' + id + '/approve', { version, reviewToken: review.reviewToken })
+    }
+    const runBody = { id, version: 0, groupId: earningGroup, periodStart: '2026-11-02', periodEnd: '2026-11-08',
+      payDate: '2026-11-09', frequency: 'weekly' }
+    await reviewEarning(1)
+    const result = (await data(pay + '/earnings-run', runBody, 201)).preview
+    // Independent 45 worked hours at $10. PTO is $80, not eight more worked hours.
+    // Native: ($450 + $90 service wages + $45 bonus) / 45 = $13; half-time is $32.50.
+    const expected = format === 'toast' ? 57000 : format === 'lanyard' ? 55500 : 69750
+    assert.equal(result.grossCashCents, expected, format + ' exact wage, service and non-work totals')
+    assert.equal(result.people[0].earningsCents, expected)
+    assert.equal(result.people[0].cashTipsCents, 0, 'mandatory service charges never become declared tips')
+    assert.equal(result.people[0].paycheckTipsCents, 0)
+    assert.match(result.people[0].details.join(' '), /45 hours, 5 overtime hours/)
+    assert.equal(result.paymentReady, false)
+    assert.equal((await commitInput({ ...body, version: 1 }, await prepare({ ...body, version: 1 }))).replayed, true)
+    let correction
+    if (format === 'toast') {
+      const changed = structuredClone(providerCapture)
+      changed.payload[0].nonCashGratuityServiceCharges = 0
+      correction = { ...body, version: 1, providerCapture: changed }
+      const unsafe = structuredClone(providerCapture); unsafe.mappings[entries[0].sourceId].settlements.nonCashGratuityServiceCharges = 'cash'
+      assert.equal((await data(door + '/preview', { ...body, version: 1, providerCapture: unsafe }, 409)).error, 'service_charge_unpaid_wage_evidence_required')
+    } else if (format === 'lanyard') {
+      const delta = structuredClone(providerCapture); delta.payload.lines.at(-1).revision = 2
+      assert.equal((await data(door + '/preview', { ...body, version: 1, providerCapture: delta }, 409)).error,
+        'provider_pay_code_review_required', 'a later PTO export is a delta, never a replacement amount')
+      const unapprovedLeave = structuredClone(providerCapture); unapprovedLeave.payload.lines.at(-1).approval.at = 'not-a-date'
+      assert.equal((await data(door + '/preview', { ...body, version: 1, providerCapture: unapprovedLeave }, 409)).error,
+        'approved_provider_export_required')
+      const changed = structuredClone(providerCapture)
+      changed.payload.lines.at(-1).minutes = 240; changed.payload.lines.at(-1).costCents = 4000
+      correction = { ...body, version: 1, providerCapture: changed }
+    } else {
+      correction = { ...body, version: 1, rows: [{ sourceId: id + '-service', amountCents: 0 }, { sourceId: id + '-paid', amountCents: '' }] }
+      for (const settlement of ['', 'cash']) assert.equal((await data(door + '/preview', {
+        ...body, version: 1, rows: [{ ...entries[5], sourceId: id + '-ambiguous-service', settlement }] }, 409)).error, 'service_charge_unpaid_wage_evidence_required')
+      assert.equal((await data(door + '/preview', { ...body, version: 1,
+        rows: [{ ...entries[7], amountCents: 100 }] }, 400)).error, 'unpaid_leave_cannot_create_pay')
+    }
+    const corrected = await prepare(correction)
+    assert.ok(corrected.cells.some(cell => cell.status === 'change' && cell.field === 'amountCents'))
+    if (!providerCapture) assert.equal(corrected.data.rows.find(row => row.code === 'paid-leave').amountCents, 8000, 'blank preserves reviewed leave pay')
+    await commitInput(correction, corrected)
+    await data(pay + '/earnings-run', { ...runBody, version: 1 }, 409)
+    await reviewEarning(2)
+    assert.equal((await data(pay + '/earnings-run', { ...runBody, version: 1 }, 201)).preview.grossCashCents,
+      format === 'toast' ? 47500 : format === 'lanyard' ? 51500 : 60250)
+    assert.equal((await data(pay)).runs.find(run => run.id === id && run.version === 1).data.grossCashCents, expected)
+    await data(door + '/' + id + '/withdraw', { version: 2 })
+    await data(pay + '/earnings-run', { ...runBody, version: 2 }, 409)
+  }
+
+  const jobEdit = { id: earningRunIds[0], version: 2, namespace: earningRunIds[0] + '-source',
+    rows: [{ sourceId: earningRunIds[0] + '-02', job: 'synthetic-envelope-prep' }] }
+  const jobDiff = await data(door + '/preview', jobEdit)
+  assert.deepEqual(jobDiff.cells.filter(cell => cell.status === 'change').map(cell => [cell.field,cell.before,cell.after]),
+    [['job','synthetic-envelope-kitchen','synthetic-envelope-prep']])
+  await data(door + '/apply', { ...jobEdit, digest: jobDiff.digest }, 201)
+
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
     headless: true,
@@ -751,6 +884,12 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     }
     await page.goto(origin + door.replace('/api/', '/app/'))
     await capture('run-intake-entry')
+    await page.goto(origin + (door + '/' + earningRunIds[0] + '/review').replace('/api/', '/app/'))
+    assert.match(await page.locator('main').innerText(), /paid-leave/)
+    assert.match(await page.locator('main').innerText(), /service-charge/)
+    assert.match(await page.locator('main').innerText(), /synthetic-envelope-prep/)
+    await capture('run-intake-nonwork-review')
+    await page.goto(origin + door.replace('/api/', '/app/'))
     // A provider import also works through the native form, without a manual namespace.
     await page.setViewportSize({ width: 1440, height: 1000 })
     const browserCapture = structuredClone(clockifyCapture), browserSource = 'synthetic-envelope-clockify-browser'
@@ -1385,6 +1524,45 @@ export async function runIntakeCases({ origin, cookie, sql, settings }) {
     const erasureAudit = (await data(api + '/audit')).filter(e => e.action === 'privacy.worker.erased')
     assert.equal(erasureAudit.length, 1)
     assert.notEqual(erasureAudit[0].targetId, people[0].id)
+
+    const nonworkDoor = api + '/people/' + earningWorker.id + '/privacy'
+    const nonworkInventory = await data(nonworkDoor)
+    for (const id of earningRunIds) assert.equal(nonworkInventory.retained.filter(record =>
+      record.table === 'env_workspace_versions' && record.key.kind === 'run-intake' && record.key.object_id === id).length,
+      id === earningRunIds[0] ? 3 : 2, 'custody retains each original and corrected non-work source: ' + id)
+    const nonworkSources = await data(door)
+    for (const row of await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}' AND kind='run-intake'`))
+      assert.ok(!row.cipher.includes('synthetic-envelope-nonwork'), 'non-work source records and job labels stay encrypted')
+    await data(nonworkDoor + '/request', { consent: true, fingerprint: nonworkInventory.fingerprint })
+    await data(door, undefined, 403, staff.reviewer.cookie)
+    await data(nonworkDoor, undefined, 403, staff.reviewer.cookie)
+    const nonworkHeld = await data(nonworkDoor)
+    const nonworkSelection = { consent: true, fingerprint: nonworkHeld.fingerprint, records: nonworkHeld.retained.map(record => record.id),
+      legalBasis: 'Synthetic reviewed non-work source retention release; no active statutory hold remains.', custodian: 'Native payroll owner',
+      earliestReleaseAt: '2000-01-01T00:00:00.000Z' }
+    await data(nonworkDoor + '/release', nonworkSelection, 409)
+    await data(nonworkDoor + '/retain', nonworkSelection)
+    await data(nonworkDoor + '/release', nonworkSelection)
+    const nonworkErased = await data(api + '/people/' + earningWorker.id + '/erase', { ...nonworkSelection, version: earningWorker.version })
+    const afterNonwork = await data(door)
+    assert.ok(!afterNonwork.some(row => earningRunIds.includes(row.id)), 'eligible erasure removes every retained non-work capture and job version')
+    for (const id of earningRunIds) {
+      const prior = nonworkSources.find(row => row.id === id && row.version === 1)
+      const replay = prior.data.providerCapture ? { providerCapture: structuredClone(prior.data.providerCapture) } :
+        { namespace: prior.data.namespace, rows: prior.data.rows.map(row => ({ ...row, personId: people[1].id })) }
+      if (replay.providerCapture) for (const mapping of Object.values(replay.providerCapture.mappings)) mapping.personId = people[1].id
+      assert.equal((await data(door + '/preview', { id: id + '-replay', version: 0, ...replay }, 409)).error, 'erased_source',
+        'changing run and worker cannot resurrect non-work input: ' + id)
+    }
+    assert.deepEqual(await data(door), afterNonwork)
+    const nonworkAudit = (await data(api + '/audit')).filter(event => event.action === 'privacy.worker.erased')
+    const currentErasure = nonworkAudit.find(event => event.targetId === nonworkErased.id)
+    assert.ok(currentErasure, 'the bounded recent audit exposes the exact new erasure receipt')
+    assert.equal(currentErasure.actorId, owner)
+    assert.equal(currentErasure.version, earningWorker.version)
+    const allErasures = await sql(`SELECT target_id AS targetId FROM env_audit WHERE company_id='${company.id}' AND action='privacy.worker.erased'`)
+    assert.equal(allErasures.length, 2, 'both erasure receipts survive beyond the recent audit page')
+    assert.ok(allErasures.every(event => ![people[0].id, earningWorker.id].includes(event.targetId)))
 
   } finally {
     await browser.close()

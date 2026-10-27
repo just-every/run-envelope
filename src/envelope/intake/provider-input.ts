@@ -55,7 +55,7 @@ export async function providerInput(value: unknown) {
   const rows: IntakeLine[] = []
   const add = (id: string, map: Input, code: string, minutes: number, amountCents: number, settlement = '') => {
     rows.push({ sourceId: id, personId: text(map.personId), day: date(map.day),
-      workweek: date(map.workweek), code, minutes, amountCents, settlement, evidence, state: '', riskClass: '' })
+      workweek: date(map.workweek), code, minutes, amountCents, settlement, evidence, state: '', riskClass: '', job: map.job ? text(map.job, 120) : '' })
   }
   if (provider === 'lanyard') {
     const batch = object(payload)
@@ -67,12 +67,20 @@ export async function providerInput(value: unknown) {
     for (const value of batch.lines) {
       const line = object(value), worker = text(line.payrollId), code = String(line.payCode || 'regular')
       // Lanyard corrections are signed deltas. Refuse rather than treating one as a replacement.
-      if (line.corrects || !['regular', 'tips', 'meal premium', 'rest premium'].includes(code))
+      if (line.corrects || !['regular', 'tips', 'PTO', 'meal premium', 'rest premium'].includes(code))
         throw new PayrollError('provider_pay_code_review_required', 409)
-      const minutes = number(line.minutes), amount = code === 'tips' ? number(line.costCents) : 0
+      const minutes = number(line.minutes), amount = ['tips','PTO'].includes(code) ? number(line.costCents) : 0
       if (!Number.isSafeInteger(amount) || (code === 'tips' && minutes !== 0))
         throw new PayrollError('invalid_provider_number')
       if (!Number.isSafeInteger(line.revision) || Number(line.revision) < 1) throw new PayrollError('invalid_provider_revision')
+      if (code === 'PTO') {
+        // Later PTO exports are differences from prior claimed inputs, never replacement totals.
+        if (line.revision !== 1) throw new PayrollError('provider_pay_code_review_required', 409)
+        const approval = object(line.approval)
+        text(approval.by); text(approval.reason, 500)
+        if (typeof approval.at !== 'string' || !Number.isFinite(Date.parse(approval.at)))
+          throw new PayrollError('approved_provider_export_required', 409)
+      }
       const key = text(line.rootId || line.timeId || line.payInputId, 90)
       const mapping = object(mappings[text(line.timeId || line.payInputId, 90)])
       if (mapping.sourcePersonId !== worker) throw new PayrollError('provider_worker_mapping_required', 409)
@@ -81,9 +89,10 @@ export async function providerInput(value: unknown) {
       if (code === 'tips' && !['cash','paycheck'].includes(String(mapping.settlement)))
         throw new PayrollError('tip_settlement_required', 409)
       const premium = code === 'meal premium' || code === 'rest premium'
-      add(key + ':' + code.replaceAll(' ', '-'), mapping, code === 'tips' ? 'tip' : premium ? code.replaceAll(' ', '-') : 'regular', minutes, amount,
+      add(key + ':' + code.replaceAll(' ', '-'), mapping, code === 'tips' ? 'tip' : code === 'PTO' ? 'paid-leave' : premium ? code.replaceAll(' ', '-') : 'regular', minutes, amount,
         code === 'tips' ? String(mapping.settlement) : '')
       if (premium) rows.at(-1)!.state = 'CA'
+      if (line.job) rows.at(-1)!.job = text(line.job, 120)
     }
   } else if (provider === 'homebase' || provider === '7shifts') {
     const homebase = provider === 'homebase', envelope = homebase ? undefined : object(payload)
@@ -244,7 +253,7 @@ export async function providerInput(value: unknown) {
         Date.parse(String(entry.outDate)) <= Date.parse(String(entry.inDate)))
         throw new PayrollError('closed_provider_time_required', 409)
       // These amounts need their own reviewed earning treatment; never silently discard them.
-      for (const key of ['cashGratuityServiceCharges','nonCashGratuityServiceCharges','tipsWithheld','nonCashTipsRoundingLoss'])
+      for (const key of ['tipsWithheld','nonCashTipsRoundingLoss'])
         if (entry[key] !== undefined && entry[key] !== 0) throw new PayrollError('provider_pay_code_review_required', 409)
       const mapping = object(mappings[id]), settlements = object(mapping.settlements)
       if (mapping.sourcePersonId !== worker) throw new PayrollError('provider_worker_mapping_required', 409)
@@ -253,6 +262,14 @@ export async function providerInput(value: unknown) {
       for (const key of ['declaredCashTips','nonCashTips']) {
         if (!['cash','paycheck'].includes(String(settlements[key]))) throw new PayrollError('tip_settlement_required', 409)
         add(id + ':' + key, mapping, 'tip', 0, cents(entry[key]), String(settlements[key]))
+      }
+      for (const key of ['cashGratuityServiceCharges','nonCashGratuityServiceCharges']) {
+        if (entry[key] === undefined) continue
+        const amount = cents(entry[key])
+        // Mandatory service charges are wages. Import only an explicitly reviewed unpaid wage.
+        if (amount && settlements[key] !== 'paycheck')
+          throw new PayrollError('service_charge_unpaid_wage_evidence_required', 409)
+        add(id + ':' + key, mapping, 'service-charge', 0, amount, 'paycheck')
       }
     }
   }

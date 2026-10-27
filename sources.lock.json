@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "547448432e29994a8f1c627fc74081405415ae705e4320b8b38381b6fcc10eee",
+      "sha256": "01a61d2c3da9abf851b690e5cbc767ad6dfbbf6362f6ce03ca89b791a196f86e",
       "executable": false
     },
     "AGENTS.md": {
@@ -338,7 +338,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "84de173ae817692561bf7e8a06d48d3b59fda2dcd7dd38a1936dd0640e07161d",
+      "sha256": "fa476f4839eadf6023edcbf947dbab4ee6ef7c8d7ebe2daccac210abdec4ab06",
       "executable": false
     },
     "deploy-demo.json": {
@@ -458,7 +458,7 @@
       "executable": false
     },
     "docs/run-earnings-intake.md": {
-      "sha256": "979347f0b78b47751324a9ad7d2f6611443107776eb3eca2437a489213862c59",
+      "sha256": "cad0d3140decf82a36498f1aff046ffc5b70d96b69134cd551ecb54d33f6d47b",
       "executable": false
     },
     "docs/unemployment-claims.md": {
@@ -1542,15 +1542,15 @@
       "executable": false
     },
     "src/envelope/intake/provider-input.ts": {
-      "sha256": "2adf35b41563bf97bc968c22b0d68d1835d0c67f0cca24311b2e97356ec41596",
+      "sha256": "aa6f51b56924f2f24a1ba676071e5b730d0aaf7977168b0317bab2ca429aa77e",
       "executable": false
     },
     "src/envelope/intake/run-input.ts": {
-      "sha256": "efa366c64213bb78a84e513652b4a324936fb5f5078e62b173896593d424cd05",
+      "sha256": "f6702711c408d05d9038351ecb5cef406ea8163e3b4322ca6bff4bdda7965d45",
       "executable": false
     },
     "src/envelope/intake/run-pages.tsx": {
-      "sha256": "9518d8e45cac3d243de5c93d4af941ea73e77c38cd5cf39c9fd70c2137169552",
+      "sha256": "7021061adedb222898e4eb6e304171b79653330c3b36d624cb535d64aec82ab3",
       "executable": false
     },
     "src/envelope/intake/sources.ts": {
@@ -1718,7 +1718,7 @@
       "executable": false
     },
     "src/envelope/workspace/pay-items.ts": {
-      "sha256": "41e66f0aa39ed42dde20b24387e0204427a7f3aafac2ef1dd0617b11fa25917b",
+      "sha256": "8c103ee7c4a0c950afc5432bed4dd0fa03893f234d89c2836c0ea9e76c2b5f28",
       "executable": false
     },
     "src/envelope/workspace/pay-policies.ts": {
@@ -3062,7 +3062,7 @@
       "executable": false
     },
     "tests/run-intake.mjs": {
-      "sha256": "3d212b6032d071e2928edddeae864e6aaefb65ed2d16cf02f666e39b04085a4f",
+      "sha256": "5357daee59ed39d627ead1f76601fe55d771765ff6c02391c29e63060946a8e1",
       "executable": false
     },
     "tests/runtime.mjs": {

@@ -23,6 +23,7 @@ export const intakeColumns = [
   'evidence',
   'state',
   'riskClass',
+  'job',
 ] as const
 export const intakeCodes = [
   'regular',
@@ -32,6 +33,9 @@ export const intakeCodes = [
   'other-earning',
   'reimbursement',
   'tip',
+  'service-charge',
+  'paid-leave',
+  'unpaid-leave',
   'meal-premium',
   'rest-premium',
   'wa-assessment-hours',
@@ -49,6 +53,7 @@ export interface IntakeLine {
   evidence: string
   state: string
   riskClass: string
+  job: string
 }
 export interface RunInput {
   namespace: string
@@ -98,6 +103,7 @@ export function workbookRows(bytes: Uint8Array, mapping: Input = {}) {
   try {
     book = read(bytes, {
       type: 'array',
+      raw: true,
       cellFormula: true,
       bookVBA: true,
       sheetRows: 502,
@@ -113,7 +119,7 @@ export function workbookRows(bytes: Uint8Array, mapping: Input = {}) {
     throw new PayrollError('single_plain_worksheet_required')
   const sheet = book.Sheets[book.SheetNames[0]]
   for (const [key, cell] of Object.entries(sheet))
-    if (!key.startsWith('!') && (cell.f || cell.l || cell.t === 'e'))
+    if (!key.startsWith('!') && (cell.f || cell.l || cell.t === 'e' || (typeof cell.v === 'string' && /^\s*[=+@]/.test(cell.v))))
       throw new PayrollError('intake_formula_or_link_refused')
   const table = utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
@@ -129,7 +135,7 @@ export function workbookRows(bytes: Uint8Array, mapping: Input = {}) {
   const selected = intakeColumns.map((key) => String(mapping[key] || key))
   if (
     new Set(selected).size !== selected.length ||
-    selected.some((h) => !headers.includes(h))
+    selected.some((h, i) => intakeColumns[i] !== 'job' && !headers.includes(h))
   )
     throw new PayrollError('intake_column_mapping_required')
   return table
@@ -300,6 +306,7 @@ export class RunIntake {
         evidence: text(merged.evidence, 500),
         state: empty(merged.state) ? '' : text(merged.state, 2),
         riskClass: empty(merged.riskClass) ? '' : text(merged.riskClass, 80),
+        job: empty(merged.job) ? '' : text(merged.job, 120),
       }
       if (!people.has(line.personId))
         throw new PayrollError('intake_person_mapping_required', 409)
@@ -314,17 +321,21 @@ export class RunIntake {
       if (line.minutes > 1440) throw new PayrollError('invalid_intake_minutes')
       if (line.code === 'tip' && !line.settlement)
         throw new PayrollError('tip_settlement_required', 409)
-      if (line.code !== 'tip' && line.settlement)
+      if (line.code === 'service-charge' && line.settlement !== 'paycheck')
+        throw new PayrollError('service_charge_unpaid_wage_evidence_required', 409)
+      if (!['tip', 'service-charge'].includes(line.code) && line.settlement)
         throw new PayrollError('unexpected_tip_settlement')
       if (line.code === 'regular' && line.amountCents !== 0)
         throw new PayrollError('regular_hours_require_reviewed_rate')
       if (
         line.code !== 'regular' &&
-        !['meal-premium','rest-premium'].includes(line.code) &&
+        !['meal-premium','rest-premium','paid-leave','unpaid-leave'].includes(line.code) &&
         !line.code.endsWith('assessment-hours') &&
         line.minutes !== 0
       )
         throw new PayrollError('premium_or_earning_cannot_create_hours')
+      if (line.code === 'unpaid-leave' && line.amountCents !== 0)
+        throw new PayrollError('unpaid_leave_cannot_create_pay')
       if (['meal-premium','rest-premium'].includes(line.code) && line.minutes &&
         (line.minutes !== 60 || line.amountCents !== 0 || line.state !== 'CA'))
         throw new PayrollError('california_premium_unit_required', 409)
