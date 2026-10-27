@@ -164,7 +164,7 @@ export async function archiveErasure(context, fixture) {
     assert.equal((await call(personBase+'/hris',{...input.body,type})).status,409,'unsupported provider event is refused without adding private custody')
   }
   for (const id of fixture.custodyObjects) {
-    const expected=id===fixture.sharedCustody.groupId||id===fixture.sharedCustody.runId?1:id.endsWith('-sick')||id.endsWith('-holiday')?5:id.endsWith('-pto')?4:2
+    const expected=id===fixture.sharedCustody.groupId?1:id===fixture.sharedCustody.runId?3:id.endsWith('-sick')||id.endsWith('-holiday')?5:id.endsWith('-pto')?4:2
     assert.equal(held.retained.filter(r => r.table === 'env_workspace_versions' && r.key.object_id === id).length, expected,
       'every source revision, connected bank, shared group and downstream run is retained: '+id)
   }
@@ -210,15 +210,16 @@ export async function archiveErasure(context, fixture) {
     personBase+'/new-hire-reports',personBase+'/new-hire-reports/'+reporting.reportId+'/review',
     personBase+'/new-hire-reports/'+reporting.activeReportId+'/review',
     personBase+'/withholding-instructions',personBase+'/withholding-instructions/review',
-    personBase+'/withholding-instructions/original/1',personBase+'/withholding-instructions/original/2']
+    personBase+'/withholding-instructions/original/1',personBase+'/withholding-instructions/original/2',company+'/pay-settings/intake']
   const approvedReviewDoors=new Set([company+'/hris-hires/'+fixture.hireCustody.id+'/review',personBase+'/new-hire-reports/'+reporting.activeReportId+'/review',personBase+'/withholding-instructions/review'])
+  const ordinaryStatus=path=>path===company+'/pay-settings/intake'?200:403
   const ownerStatus=path=>approvedReviewDoors.has(path)?409:200
   for(const path of privateDoors) {
     const originalResponse=await call(path)
     assert.equal(originalResponse.status,ownerStatus(path),'current owner reads retained custody: '+path+' '+await originalResponse.clone().text())
     if(path.includes('/original/')) assert.equal(Buffer.from(await originalResponse.arrayBuffer()).toString('base64'),fixture.privateCustody.pdf,'the positive original path returns the exact retained bytes')
     assert.equal((await call(path,undefined,{cookie:''})).status,401,'signed-out direct private transport refuses')
-    assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'ordinary grant cannot acquire owner-only original custody')
+    assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,ordinaryStatus(path),'ordinary access follows the existing record or original permission')
     assert.equal((await call(path,undefined,{authorization:'Bearer '+fixture.authority.agentToken})).status,403,'mixed agent credentials cannot acquire owner custody')
   }
   for(const path of privateDoors) {
@@ -226,7 +227,7 @@ export async function archiveErasure(context, fixture) {
     assert.equal(html.status,ownerStatus(path),'the current owner can use private transport '+path)
     if(!path.includes('/original/')) assert.match(html.headers.get('content-type'),/text\/html/)
     const denied=await call(path.replace('/api/','/app/'),undefined,{cookie:viewerCookie})
-    assert.equal(denied.status,403,'the native page transport refuses the ordinary identity too')
+    assert.equal(denied.status,ordinaryStatus(path),'native page access follows the same private permission')
   }
   const sessionLink=await call('/auth/magic-link',{email:'owner@example.com',returnTo:'/app/envelope'}, {cookie:''})
   assert.equal(sessionLink.status,202)
@@ -257,6 +258,7 @@ export async function archiveErasure(context, fixture) {
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'held private originals remain restricted')
   const custodyBeforeDenied=await getPrivacy()
   const mutationDoors=[
+    [company+'/pay-settings/intake/apply',{...fixture.sharedCustody.intakeInput,version:2,digest:'synthetic-envelope-stale-preview'}],
     [personBase+'/new-hire-reports',reporting.reportInput],
     [personBase+'/new-hire-reports/'+reporting.activeReportId+'/approve',{version:1,reviewToken:'synthetic-envelope-stale-review'}],
     [personBase+'/new-hire-reports/'+reporting.activeReportId+'/transfer',{version:1}],
@@ -397,11 +399,13 @@ export async function archiveErasure(context, fixture) {
     assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/allocations')).status,404)
     assert.equal((await call(company+'/hris-hires',fixture.hireCustody.input)).status,409,'original mapped hire source cannot resurrect a worker')
     assert.ok(!(await (await call(company+'/hris-hires')).json()).some(r=>r.id===fixture.hireCustody.id),'erased mapped hire is absent from the collection')
+    assert.ok(!(await (await call(company+'/pay-settings/intake')).json()).some(r=>r.id===fixture.sharedCustody.runId),'erasure removes both versions of shared run intake')
+    assert.equal((await call(company+'/pay-settings/intake/preview',{...fixture.sharedCustody.intakeInput,id:'synthetic-envelope-renamed-private-intake',version:0,rows:fixture.sharedCustody.intakeInput.rows.map(row=>({...row,personId:fixture.sharedCustody.coworkerId}))})).status,409,'erased shared input cannot replay under a renamed run and surviving coworker')
     assert.equal((await call(company+'/people/'+fixture.sharedCustody.coworkerId)).status,200,'erasing a shared run does not erase its unrelated coworker')
     const afterSettings=await (await call(company+'/pay-settings')).json()
     assert.ok(!afterSettings.runs.some(r=>r.id===fixture.sharedCustody.runId),'shared downstream payroll is absent after erasure')
     assert.equal((await call(company+'/notices/'+fixture.noticeCustody.id)).status,403,'erased notice body and derivatives are unavailable')
-    for(const path of privateDoors) assert.ok([403,404].includes((await call(path)).status),'erased private history and original bytes are unavailable')
+    for(const path of privateDoors.filter(path=>path!==company+'/pay-settings/intake')) assert.ok([403,404].includes((await call(path)).status),'erased private history and original bytes are unavailable')
     assert.equal((await call(personBase+'/new-hire-reports',reporting.reportInput)).status,404,'a stale reporting payload cannot recreate the erased worker')
     assert.equal((await call(personBase+'/withholding-instructions',reporting.instructionInput)).status,404,'a stale IRS instruction cannot recreate the erased worker')
     const coworkerAfter=await (await call(company+'/people/'+fixture.sharedCustody.coworkerId+'/privacy')).json()

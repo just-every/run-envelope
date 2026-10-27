@@ -217,12 +217,20 @@ export async function archiveFixture(context) {
   await payroll.data(company.base+'/pay-settings/group',{id:custodyGroup,version:0,name:'Shared local custody run',people:[privacyPerson.id,coworker.id]},201)
   const groupReview=await payroll.data(company.base+'/pay-settings/review/group/'+custodyGroup)
   await payroll.data(company.base+'/pay-settings/group/'+custodyGroup+'/approve',{version:groupReview.version,reviewToken:groupReview.reviewToken})
+  const intakeInput={id:custodyRun,namespace:'synthetic-envelope-privacy-run-source',rows:[privacyPerson.id,coworker.id].map((personId,index)=>({sourceId:'synthetic-envelope-privacy-run-row-'+index,personId,day:'2026-10-19',workweek:'2026-10-19',code:'bonus',minutes:0,amountCents:index?600:500,settlement:'',evidence:'Synthetic reviewed shared intake',state:'',riskClass:''}))}
+  for(const version of [0,1]) {
+    const input={...intakeInput,version,rows:intakeInput.rows.map((row,index)=>({...row,amountCents:index?600:version?700:500}))}
+    const preview=await payroll.data(company.base+'/pay-settings/intake/preview',input)
+    await payroll.data(company.base+'/pay-settings/intake/apply',{...input,digest:preview.digest},201)
+  }
+  const intakeReview=await payroll.data(company.base+'/pay-settings/intake/'+custodyRun+'/review')
+  await payroll.data(company.base+'/pay-settings/intake/'+custodyRun+'/approve',{version:intakeReview.version,reviewToken:intakeReview.reviewToken})
   const sharedRun=await payroll.data(company.base+'/pay-settings/earnings-run',{id:custodyRun,version:0,groupId:custodyGroup,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',frequency:'weekly'},201)
   assert.deepEqual(sharedRun.preview.people.map(p=>p.id).sort(),[privacyPerson.id,coworker.id].sort())
   await payroll.data(custodyBase+'/leave/entries',{bucket:'holiday',version:4,sourceId:'synthetic-envelope-custody-holiday-review',sourceVersion:1,
     day:'2026-10-20',operation:'adjustment',direction:'credit',minutes:1,evidence:hostileCustody},201)
   custodyObjects.push(custodyGroup,custodyRun)
-  const sharedCustody={coworkerId:coworker.id,groupId:custodyGroup,runId:custodyRun}
+  const sharedCustody={coworkerId:coworker.id,groupId:custodyGroup,runId:custodyRun,intakeInput}
   const privacyWork = await payroll.data(company.base + '/people/' + privacyPerson.id + '/allocations/work', {
     id: 'synthetic-envelope-privacy-work', version: 0, day: '2026-10-19', state: 'TX', locality: 'Austin', minutes: 480,
     earnedCents: 100000, officeState: 'TX', nyReason: 'not-applicable', sourceRef: 'Synthetic approved local-custody time'
