@@ -1,3 +1,4 @@
+import { NyDbl } from './benefits/ny-dbl'
 import { calculationPreview, type PreviewInput } from './calculation/preview'
 import { stateCoverage } from './calculation/states'
 import { accountingResponse } from './accounting/http'
@@ -471,7 +472,11 @@ export async function payrollResponse(
       if(parts[2]==='calculation-coverage' && !post) return json(stateCoverage())
       if(parts[2]==='calculation-preview' && post){
         let result
-        try { result=calculationPreview(value as unknown as PreviewInput) }
+        try {
+          const ref = value.nyDbl as {personId:string;proposalId:string;version:number} | undefined
+          const dbl = ref ? await new NyDbl(new WorkspaceStore(records)).calculation(actor,ref.personId,ref.proposalId,ref.version) : undefined
+          result=calculationPreview(value as unknown as PreviewInput,dbl)
+        }
         catch(error){ throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
         // A preview neither reads employee records nor retains supplied personal
         // data. Repeat current authority immediately before returning its result.
@@ -512,7 +517,24 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
+      if (!ui && tail[0] === 'ny-dbl-plans') {
+        const dbl = new NyDbl(new WorkspaceStore(records)), store = dbl.store
+        await dbl.scope(actor)
+        if (tail.length===1) response=json(post?await dbl.savePlan(actor,value):await dbl.plans(actor),post?201:200)
+        else if(tail.length===3 && tail[2]==='review' && !post) response=json(await store.review(actor,'ny-dbl-plan',tail[1]))
+        else if(tail.length===3 && tail[2]==='approve' && post) response=json(await store.decide(actor,'ny-dbl-plan',tail[1],value))
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0]==='people' && tail[2]==='ny-dbl') {
+        const dbl = new NyDbl(new WorkspaceStore(records)), person=tail[1]
+        await dbl.scope(actor,person)
+        if(tail.length===3 && !post) response=json(await dbl.history(actor,person))
+        else if(tail.length===4 && tail[3]==='evidence' && post) response=json(await dbl.saveEvidence(actor,person,value),201)
+        else if(tail.length===5 && tail[3]==='evidence' && tail[4]==='review' && !post) response=json(await dbl.store.review(actor,'ny-dbl-evidence',person,person))
+        else if(tail.length===5 && tail[3]==='evidence' && tail[4]==='approve' && post) response=json(await dbl.store.decide(actor,'ny-dbl-evidence',person,value,person))
+        else if(tail.length===4 && tail[3]==='proposals' && post) response=json(await dbl.prepare(actor,person,value),201)
+        else if(tail.length===4 && tail[3]==='remittance' && post) throw new PayrollError('dbl_carrier_remittance_unavailable',409)
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
         const payroll = new CompanyPayroll(records)
         response = json(post ? await payroll.account(actor, value) : await payroll.accounts(actor), post ? 201 : 200)
       } else if (!ui && tail[0] === 'funding-plans') {

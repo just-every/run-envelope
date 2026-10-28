@@ -5,6 +5,9 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'ny-dbl-plan'
+  | 'ny-dbl-evidence'
+  | 'ny-dbl-proposal'
   | 'provider-deletion-request'
   | 'notice-worker-link'
   | 'run-input'

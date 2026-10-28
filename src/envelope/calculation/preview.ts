@@ -1,3 +1,4 @@
+import type { nyDblCalculation } from '../benefits/ny-dbl'
 import { validDate } from '../industry/classification'
 import { calculateIndustryPay } from '../industry/calculate'
 import { roundRatio,validCents } from '../industry/federal-withholding'
@@ -7,6 +8,7 @@ import { weeklyEarnings,type WorkWeek } from './earnings'
 import { stateWithholding, stateCoverage } from './states'
 
 export interface PreviewInput {
+  nyDbl?:{personId:string;proposalId:string;version:number}
   edition:'2025-01'|'2026-01';payDate:string;from:string;through:string;frequency:'weekly'|'biweekly'|'semimonthly'|'monthly'
   workState:string;residentState:string;locality:string
   remuneration:{kind:'hourly';weeks:WorkWeek[]}|{kind:'salary';cashCents:number;exempt:true}
@@ -21,17 +23,20 @@ const checked=(n:unknown)=>{if(!validCents(n)||n>100000000)reject('invalid_previ
 const noTaxFacts={employerKind:'business',entityType:'corporation',workerRole:'employee',workKind:'nonagricultural',seasonal:false,taxResidency:'resident',claims:[]} as const
 
 /** A stateless proposed calculation, never an approval, pay instruction or persisted check. */
-export function calculationPreview(input:PreviewInput){
-  if(!input || Object.keys(input).some(k=>!['edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
+export function calculationPreview(input:PreviewInput,nyDbl?:ReturnType<typeof nyDblCalculation>){
+  if(!input || Object.keys(input).some(k=>!['nyDbl','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
   const year=input.edition==='2025-01'?'2025':'2026'
   if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || input.payDate<input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
   if(typeof input.workState!=='string'||typeof input.residentState!=='string'||!input.workState.trim()||!input.residentState.trim()||input.workState.length>80||input.residentState.length>80)reject('work_and_residence_locations_required')
   if(!input.yearToDate || !['socialSecurityWagesCents','medicareWagesCents','futaWagesCents','suiWagesCents'].every(k=>validCents(input.yearToDate[k as keyof PreviewInput['yearToDate']]))) reject('complete_year_to_date_required')
   if(!input.tips || ![input.tips.heldCents,input.tips.paycheckCents,input.tips.furnishedCents].every(validCents) || !Array.isArray(input.deductions) || input.deductions.length>20) reject('complete_tips_and_deductions_required')
+  if (input.nyDbl && (!nyDbl || input.workState!=='NY' || Object.keys(input.nyDbl).some(k=>!['personId','proposalId','version'].includes(k)))) reject('invalid_dbl_preview_reference')
+  if (nyDbl && nyDbl.rows.some(w=>w.weekFrom<input.from || w.weekFrom>input.through)) reject('dbl_proposal_outside_preview_period')
   const holds:{code:string;location:string;reason:string;nextAction:string}[]=[]
   const hold=(code:string,location:string,reason:string)=>holds.push({code,location:location||'Unassigned location',reason,nextAction:'Request official-source mapping or correct the inputs; keep this employee held.'})
   if(input.workState!==input.residentState)hold('multistate-allocation-unmapped',input.workState+' and '+input.residentState,'Cross-state sourcing and resident credits require a mapped allocation.')
   if(typeof input.locality!=='string'||input.locality!=='none')hold('locality-unmapped',String(input.locality??''),'A mapped work and residence locality is required. Unknown local tax is never zero tax.')
+  if(nyDbl) hold('ny-dbl-preparation-only','NY','DBL is a proposed after-tax contribution. Actual coverage, collection, employer funding and insurer remittance remain unproved.')
   const r=input.remuneration
   let earnings:ReturnType<typeof weeklyEarnings>|undefined,gross!:number
   if(r?.kind==='hourly'){
@@ -41,6 +46,7 @@ export function calculationPreview(input:PreviewInput){
     if(Object.keys(r).some(k=>!['kind','cashCents','exempt'].includes(k)))reject('unsupported_remuneration')
     gross=checked(r.cashCents)
   }else reject('supported_remuneration_required')
+  if(nyDbl && nyDbl.rows.reduce((n,w)=>n+w.wagesCents,0)!==gross) reject('dbl_wages_do_not_match_preview')
   const p=periods[input.frequency] as PayPeriods
   let federal:ReturnType<typeof calculateIndustryPay>
   try { federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate}) } catch(error) {
@@ -85,7 +91,7 @@ export function calculationPreview(input:PreviewInput){
     assumptions:{worker:'Ordinary resident employee of a taxable corporation, with no federal exemption',taxability:'Ordinary taxable cash wages; no pre-tax benefits, imputed income or special wage exclusions',companyEntity:'Hypothetical assumption; no actual company tax-entity determination is read or changed'},
     federalRatesBasisPoints:{socialSecurity:620,medicare:145,additionalMedicare:90,futaBeforeCredits:600},
     earnings,grossCashCents:gross,heldTipsCents:input.tips.heldCents,paycheckTipsCents:input.tips.paycheckCents,newCashBeforeTaxCents:newCash,
-    federal,state,tipTaxes:tip,federalEmployerTaxes:combinedFederalEmployer,sui,deductions,federalGarnishmentLimitCents:federalGarnishmentLimit,
+    nyDbl,federal,state,tipTaxes:tip,federalEmployerTaxes:combinedFederalEmployer,sui,deductions,federalGarnishmentLimitCents:federalGarnishmentLimit,
     netCashCents:holds.length?null:disposable-deducted,holds,coverage:stateCoverage(input.edition),
     limitations:['Proposed calculation only; no money moves and no historical payroll record is changed.','The complete 51-state programs and the 688-entry large-local file remain in the denominator.','No supplied account number, provider grant or client approval creates payment authority.']}
 }

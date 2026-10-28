@@ -1,3 +1,4 @@
+import { nyDblJourney } from './ny-dbl-runtime.mjs'
 import { calculationJourney } from './calculation-runtime.mjs'
 import { accountingJourney } from './accounting-runtime.mjs'
 import { chromium } from '@playwright/test'
@@ -50,7 +51,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
-    'firm', 'industry,calculation', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
+    'firm', 'industry,calculation,ny-dbl', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -243,7 +244,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['ny-dbl', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -294,6 +295,7 @@ try {
   if (!selected || selected.includes('new-hires')) await newHireJourney({ origin, cookie, advanceClock:async instant=>{assert.ok(clockEntrypoint,'New-hire journey requires its pinned clock');assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
   if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql,settings})
   if (!selected || selected.includes('multi-company')) await multiCompanyJourney({ origin, cookie, sql, settings })
+  if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
