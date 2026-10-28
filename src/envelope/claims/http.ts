@@ -15,6 +15,16 @@ interface Context {ui:boolean;post:boolean;parts:string[];value:Input;records:Re
 export async function claimsResponse({ui,post,parts,value,records,session,companies}:Context):Promise<Response|null>{
  if(parts[0]!=='companies'||parts[2]!=='claims')return null
  const actor=await records.actor(parts[1]),store=new WorkspaceStore(records),claims=new ClaimsRecords(store),base=companyPath(actor.company)+'/claims'
+ // Resolve only registered actions; inherited object names never reach form or claim processing.
+ if(parts.length===5&&post){
+  const id=parts[3],action=parts[4]
+  const methods={evidence:()=>claims.evidence(actor,id,input),prepare:()=>claims.prepare(actor,id,input),sign:()=>claims.sign(actor,id,input),'portal-review':()=>claims.portalReview(actor,id,input),handoff:()=>claims.handoff(actor,id,input),confirmation:()=>claims.confirmation(actor,id,input),'follow-up':()=>claims.followUp(actor,id,input),'begin-follow-up':()=>claims.beginFollowUp(actor,id,input),escalate:()=>claims.escalate(actor,id,input)}
+  const method=Object.hasOwn(methods,action)?methods[action as keyof typeof methods]:undefined;if(!method)throw new PayrollError('not_found',404)
+  claims.lifecycle.scope(actor)
+  if(value.claimId&&value.claimId!==id)throw new PayrollError('claim_identity_mismatch',409)
+  const input=await resolveClaimForm(action,{...value,claimId:id},actor,store)
+  const result=await method();return ui?redirect(base+'/'+id):json(result)
+ }
  const f=claims.lifecycle.scope(actor)
  const representatives=async()=> (await records.statement(`SELECT o.id,o.display_name AS name FROM oa_operators o JOIN env_grants g ON g.operator_id=o.id WHERE o.status='active' AND g.company_id=? AND g.role='owner' AND g.revoked_at IS NULL AND ${f.sql} ORDER BY o.display_name`,[actor.company,...f.args]).all<{id:string;name:string}>()).results
  if(parts.length===3&&!post){const rows=await claims.list(actor);return ui?claimsPage(session,companies,actor,rows,await representatives()):json(rows)}
@@ -42,13 +52,6 @@ export async function claimsResponse({ui,post,parts,value,records,session,compan
   }
   const file=row.data.artifacts.find(a=>a.id===parts[5]);if(!file)throw new PayrollError('claim_artifact_not_found',404)
   return new Response(Uint8Array.from(atob(file.contentBase64),c=>c.charCodeAt(0)),{headers:{...headers,'content-type':['application','octet-stream'].join('/'),'content-security-policy':"sandbox; default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",'x-download-options':'noopen','content-disposition':'attachment; filename="'+file.name.replace(/[^A-Za-z0-9._-]/g,'_')+'"'}})
- }
- if(parts.length===5&&post){
-  if(value.claimId&&value.claimId!==id)throw new PayrollError('claim_identity_mismatch',409)
-  const action=parts[4],input=await resolveClaimForm(action,{...value,claimId:id},actor,store)
-  const methods={evidence:()=>claims.evidence(actor,id,input),prepare:()=>claims.prepare(actor,id,input),sign:()=>claims.sign(actor,id,input),'portal-review':()=>claims.portalReview(actor,id,input),handoff:()=>claims.handoff(actor,id,input),confirmation:()=>claims.confirmation(actor,id,input),'follow-up':()=>claims.followUp(actor,id,input),'begin-follow-up':()=>claims.beginFollowUp(actor,id,input),escalate:()=>claims.escalate(actor,id,input)}
-  const method=methods[action as keyof typeof methods];if(!method)throw new PayrollError('not_found',404)
-  const result=await method();return ui?redirect(base+'/'+id):json(result)
  }
  throw new PayrollError('not_found',404)
 }

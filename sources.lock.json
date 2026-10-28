@@ -2122,7 +2122,7 @@
       "executable": false
     },
     "src/envelope/claims/http.ts": {
-      "sha256": "1d860c2f1edd7932afac41f012ade771bbb0ee0a0dcbd8f67aeb1ce1a51c2d61",
+      "sha256": "e41b23d11f0b9866e08811eec2cba6d82f4702653ede7d595af49f8f37c59b7d",
       "executable": false
     },
     "src/envelope/claims/lifecycle.ts": {
@@ -2218,7 +2218,7 @@
       "executable": false
     },
     "src/envelope/income-verification/text.ts": {
-      "sha256": "340575bcbac075649db5156d917a7c10b35de94ea2c137c7d6123426db82862d",
+      "sha256": "133b765bc93c1cd43673b538e2429524ed7fb454e477c7a993338ac5f94976f2",
       "executable": false
     },
     "src/envelope/industry/agency-form-map.ts": {
@@ -3678,7 +3678,7 @@
       "executable": false
     },
     "tests/claims-browser.mjs": {
-      "sha256": "8a07d90ba89d97abd6827dcf1a98cca6a55beab14a8377843114cc9602be5209",
+      "sha256": "f773baee217759891d9f644cb97b5e5b2fe9b73843d845c7db803cdb3880baac",
       "executable": false
     },
     "tests/claims-fixture.mjs": {

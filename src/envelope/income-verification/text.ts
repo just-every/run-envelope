@@ -119,4 +119,4 @@ const spanish: Record<string,string> = {
   "through": "Hasta",
   "grossCents": "Salario bruto en centavos",
 }
-export const verificationText = (language: VerificationLanguage) => (text: string) => language === 'es' ? spanish[text] ?? text : text
+export const verificationText = (language: VerificationLanguage) => (text: string) => language === 'es' && Object.hasOwn(spanish, text) ? spanish[text] : text
