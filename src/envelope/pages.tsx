@@ -23,6 +23,10 @@ const actionLabels: Record<string, string> = {
   'pay:approve': 'Approve exact earnings runs',
   'pay:release': 'Request payroll release (held)',
   'audit:read': 'Read company audit',
+  'cases:intake': 'Enter checked notice facts',
+  'cases:investigate': 'Investigate notice evidence',
+  'cases:review': 'Review exact notice cases',
+  'cases:download': 'Download notice case originals',
   'notices:read': 'Read tax notices',
   'notices:write': 'Prepare tax notice replies',
   'notices:approve': 'Approve exact notice replies',
@@ -267,6 +271,7 @@ export function grantsPage(
   operators: { id: string; displayName: string; email: string }[],
   selectedOperator?: string,
   paperPolicy = {version:0,requireSeparateReviewer:false},
+  casePolicy = {version:0,requireSeparateReviewer:false},
 ) {
   const base = companyPath(actor.company)
   const selected = grants.find((g) => g.operatorId === selectedOperator && g.role !== 'owner')
@@ -333,6 +338,14 @@ export function grantsPage(
           <label className="field"><span>Paper review separation</span><select name="requireSeparateReviewer" defaultValue={String(paperPolicy.requireSeparateReviewer)}><option value="false">Same person may enter and review</option><option value="true">Different people must enter and review</option></select></label>
           <p>Changing this policy invalidates pending paper reviews. Paper powers require tax and SSN access at the worker’s location and confer no other payroll power.</p>
           <Submit>Save paper review policy</Submit>
+        </form>
+      </Card>
+      <Card title="Notice case review separation">
+        <form method="post" action={base+'/case-policy'} className="field">
+          <Hidden name="version" value={casePolicy.version}/>
+          <label className="field"><span>Notice case review separation</span><select name="requireSeparateReviewer" defaultValue={String(casePolicy.requireSeparateReviewer)}><option value="false">Same person may enter and review</option><option value="true">Different people must enter and review</option></select></label>
+          <p>Changing this policy invalidates pending case reviews. Case access requires notice reading and every sensitive field at the notice location because originals and extraction are unstructured. Case review grants no rate, reply, payment or filing authority.</p>
+          <Submit>Save notice case review policy</Submit>
         </form>
       </Card>
       <Card title="Set an explicit grant">
