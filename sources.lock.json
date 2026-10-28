@@ -486,7 +486,7 @@
       "executable": false
     },
     "docs/hawaii-plan-shares.md": {
-      "sha256": "46d8d7662a6056d301cf6814440c393be7964761dc8b61f4c1ac5ac3d6b78325",
+      "sha256": "3490f3035c1bd77ff388bfe0d6b1e276d8b9950ac403961dfcf255924bb4a3a0",
       "executable": false
     },
     "docs/industry-forms.md": {
@@ -2054,7 +2054,7 @@
       "executable": false
     },
     "src/envelope/benefits/hi-plan-shares.ts": {
-      "sha256": "6ccc6b0ff45ef8c3bfa06a013a1ded89a9386718aff3087ebe7480e31741222a",
+      "sha256": "38044a90901fb171714465c88863ca14f04355f781094ba3b5ca73dc18321b0a",
       "executable": false
     },
     "src/envelope/benefits/retirement-records.ts": {
@@ -2122,7 +2122,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "f48cf1a0637d3d31712f439e8e69e1886b16662ad3be7971c883ea845f58c543",
+      "sha256": "033618127989e265dd85871b5edd491750383f1022c121acf5f04a8e508e80ee",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2230,7 +2230,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "98206af2d60e711020790f6abc410f20886f7e6f6ea869b12b978129fa6bab00",
+      "sha256": "77a676292de6dd5d15276bc26a15d31792fdaa594b16c91bfd35a801f3824154",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -3846,7 +3846,7 @@
       "executable": false
     },
     "tests/hi-benefits-runtime.mjs": {
-      "sha256": "f3a4f2d48e5120ea8a6b1a16e7c45424cb2749ee89df280074b84b62efed0776",
+      "sha256": "4a92d45f063c181baab204ecc35ebd060d4663886bea79df15db8917b688db1e",
       "executable": false
     },
     "tests/human-proof-fixture.mjs": {

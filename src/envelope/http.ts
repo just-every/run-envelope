@@ -485,7 +485,7 @@ export async function payrollResponse(
         }
         catch(error){ if(error instanceof PayrollError)throw error; throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
         if (value.hiBenefits) {
-          const benefits = await new HiPlanShares(new WorkspaceStore(records)).preview(actor,value.hiBenefits as HiPreviewRequest,{from:String(value.from),through:String(value.through),payDate:String(value.payDate),grossCents:result.grossCashCents,workState:String(value.workState)})
+          const benefits = await new HiPlanShares(new WorkspaceStore(records)).preview(actor,value.hiBenefits as HiPreviewRequest,{from:String(value.from),through:String(value.through),payDate:String(value.payDate),grossCents:result.grossCashCents,workState:String(value.workState),weeks:result.earnings?.weeks})
           result = { ...result, hiBenefits:benefits }
         }
         // Repeat current authority immediately before returning the private result.
