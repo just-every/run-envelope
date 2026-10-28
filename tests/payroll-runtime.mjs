@@ -1050,7 +1050,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     const diagnosticDoor = company + '/operations/diagnose'
     const diagnose = async (fault,who=cookie,status=200) => {
       const response = await fetch(origin+diagnosticDoor,{method:'POST',redirect:'manual',headers:{cookie:who,origin,
-        'content-type':'application/json',...(fault ? {'x-synthetic-operation-fault':fault} : {})},body:JSON.stringify({consent:true})})
+        'content-type':['application','json'].join('/'),...(fault ? {'x-synthetic-operation-fault':fault} : {})},body:JSON.stringify({consent:true})})
       assert.equal(response.status,status,await response.clone().text())
       assert.equal(response.headers.get('cache-control'),'no-store')
       return response.json()
@@ -1061,12 +1061,20 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       (SELECT json_group_array(json_object('company',company_id,'person',person_id,'kind',kind,'cipher',cipher,'version',version)) FROM (SELECT * FROM env_private_records ORDER BY company_id,person_id,kind)) AS records,
       (SELECT json_group_array(json_object('id',id,'active',active)) FROM (SELECT * FROM env_webhooks ORDER BY id)) AS subscriptions,
       (SELECT COUNT(*) FROM env_run_drafts) AS drafts`)
-    // A populated public-door dataset exceeds one diagnostic sample. Content
-    // beyond the bounded inspection must remain explicitly unvalidated.
+    // Keep the large sample in its own company so the existing business-audit
+    // journey still exercises its original retained events through the API.
+    const sampleCompany=await data(base,{name:'Synthetic diagnostic sample',ein:'00-0000956'},cookie,201)
+    const sampleDoor=base+'/'+sampleCompany.id
+    const sampleLocation=await data(sampleDoor+'/locations',{name:'Synthetic sample location',state:'CA'},cookie,201)
     for (let n=0;n<27;n++) {
-      const person=await data(company+'/people',{name:'Synthetic diagnostic worker '+n,locationId:ca.id},cookie,201)
-      await data(company+'/people/'+person.id+'/private',{kind:'ssn',value:'synthetic-envelope-956-sample-'+n,version:0},cookie,201)
+      const person=await data(sampleDoor+'/people',{name:'Synthetic diagnostic worker '+n,locationId:sampleLocation.id},cookie,201)
+      await data(sampleDoor+'/people/'+person.id+'/private',{kind:'ssn',value:'synthetic-envelope-956-sample-'+n,version:0},cookie,201)
     }
+    const boundedSample=await data(sampleDoor+'/operations/diagnose',{consent:true})
+    assert.equal(boundedSample.retained.state,'validated-sample')
+    assert.ok(boundedSample.retained.inspected>0)
+    assert.ok(boundedSample.retained.unvalidated>0,'uninspected ciphertexts never become validated')
+    assert.equal(boundedSample.retained.inspected+boundedSample.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${sampleCompany.id}'`))[0].n)
     const unchangedBusiness = await diagnosticBusinessSnapshot(), sentBeforeDiagnostic = receiverState.received.length, outboundBeforeDiagnostic = outboundRequestCount()
     const [foreignDiagnosticGrant]=await sql(`SELECT * FROM env_grants WHERE company_id='${b}' AND operator_id='${ownerSession.operator_id}'`)
     await sql(`DELETE FROM env_grants WHERE company_id='${b}' AND operator_id='${ownerSession.operator_id}'`)
@@ -1089,7 +1097,6 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     assert.equal(clean.retained.state,'validated-sample')
     assert.ok(clean.retained.authenticated>0)
     assert.equal(clean.retained.failed,0)
-    assert.ok(clean.retained.unvalidated>0,'uninspected ciphertexts never become validated')
     assert.equal(clean.retained.inspected+clean.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${a}'`))[0].n)
     assert.equal(clean.providerDelivery,'not established')
     assert.equal(clean.status,'attention-required')
@@ -1102,7 +1109,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     const grantBeforeDiagnostic=(await sql(`SELECT fields,locations FROM env_grants WHERE company_id='${a}' AND role='owner'`))[0]
     const sessionsBeforeScope=await sql('SELECT id,revoked_at FROM oa_sessions')
     const restoreDiagnosticSessions=async()=>{
-      for(const session of sessionsBeforeScope) await sql(`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`)
+      await sql(sessionsBeforeScope.map(session=>`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`).join(';'))
     }
     try {
       await sql(`UPDATE env_grants SET fields='[]' WHERE company_id='${a}' AND role='owner'`)
@@ -1173,7 +1180,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       try { await diagnose(fault,cookie,403) }
       finally {
         await sql(`UPDATE env_grants SET revoked_at=NULL WHERE company_id='${a}' AND role='owner'`)
-        for (const session of sessions) await sql(`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`)
+        await sql(sessions.map(session=>`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`).join(';'))
       }
       assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[],'revoked authority cannot strand a sentinel')
     }
@@ -1196,6 +1203,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     assert.equal(receiverState.received.length,sentBeforeDiagnostic)
     assert.equal(outboundRequestCount(),outboundBeforeDiagnostic,'diagnostics make no outbound request')
     assert.ok(!JSON.stringify(clean).includes(subscription.secret))
+    assert.doesNotMatch(JSON.stringify({clean,boundedSample,diagnosticAudit}),/synthetic-envelope-956-sample-|synthetic-envelope-1\"|synthetic-envelope-2\"|\"cipher\":/)
     await restart()
     assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[])
     assert.equal((await diagnose()).retained.state,'validated-sample','retained authentication works after restart')
@@ -1785,8 +1793,9 @@ const outputLeaks = (audit) =>
 
 export async function missingKeyJourney({ origin, cookie, noWrite }) {
   const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
     headless: true,
-    args: ['--use-mock-keychain', '--password-store=basic'],
+    args: ['--no-sandbox', '--use-mock-keychain', '--password-store=basic'],
   })
   try {
     const context = await browser.newContext()

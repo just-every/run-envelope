@@ -550,7 +550,7 @@
       "executable": false
     },
     "docs/payroll-operations.md": {
-      "sha256": "ea2da4b3927ee449023a0dd99bd34c0ae5118441b47f7c00b273f6dfbb82ef4d",
+      "sha256": "86d9947680d7047eb70b2888961f2a20d062f816bf99efe6db163965543d6874",
       "executable": false
     },
     "docs/payroll-pay-items.md": {
@@ -771,6 +771,10 @@
     },
     "migrations/core/0037_workspace_decision_authority.sql": {
       "sha256": "57d3b52c5715787e24a62ea80df33d5969cb53ffd8adaa26372582cf6077f98e",
+      "executable": false
+    },
+    "migrations/core/0038_operation_sentinels.sql": {
+      "sha256": "94c0b1b02178a92e5e46a2b013272d48a6c4b1339929a9098b87f15009a97630",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -2354,7 +2358,7 @@
       "executable": false
     },
     "src/envelope/lifecycle.ts": {
-      "sha256": "944975308f6db22b7cd99260f9afee589109780dc977ebf747b925082837fb72",
+      "sha256": "1ab42e5dfc2191526f5fff29ed437de9381f04a83a021bedadd5bec715dde2ef",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -3910,7 +3914,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "43aa6d8e7dbf3ce9e590538e9047df7685e094d20e0df5095f2f904ec76aa10e",
+      "sha256": "8bbf16b3ae33c47d749132262dfc58e8d84547c8afe5791ddf5b3c744ae39b32",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
