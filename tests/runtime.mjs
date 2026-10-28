@@ -301,7 +301,7 @@ try {
   if (selected?.includes('hi-benefits')) await hiBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('extended-retirement')) await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('retirement')) await retirementBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
-  if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
