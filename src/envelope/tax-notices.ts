@@ -60,6 +60,8 @@ export class TaxNoticeCases {
   async history(actor:Actor,id:string) {
     await this.authority(actor,id)
     const rows=(await this.store.list<TaxNoticeCase>(actor,'tax-notice-case')).filter(r=>r.id===id)
+    const event=await auditStatement(this.store.records.env,actor,crypto.randomUUID(),'notice.case.read',id,rows[0]?.version ?? 0).run()
+    if (!event.meta.changes) throw new PayrollError('authority_changed',409)
     return rows.map(r=>({...r,data:{...r.data,original:{...r.data.original,pdf:undefined},evidence:r.data.evidence.map(e=>({...e,document:{...e.document,pdf:undefined}}))},
       resolved:false,independentlyVerifiedAgencyDisposition:false,payrollChanged:false,
       overdue:r.data.facts.dueOn<new Date().toISOString().slice(0,10),

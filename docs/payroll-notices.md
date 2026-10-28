@@ -136,7 +136,9 @@ selects company and locations plus separate `cases:intake`, `cases:investigate`,
 are unstructured and may contain compensation, tax, SSN and bank data. A grant
 that omits any such field cannot read the case or its originals. Field-minimized
 case views remain unfinished; they are never simulated by returning an
-unredacted document to a narrower grant.
+unredacted document to a narrower grant. Grant `records:read` to use the existing
+notice-list screen. The permitted notice view links directly to the case; the
+case link is absent when the required evidence scope is missing.
 
 Intake records checked facts and corrections. Investigation appends deposit,
 response and reopening evidence. Exact case review grants none of the other
@@ -155,6 +157,16 @@ cannot review that same version, including an owner. A policy revision
 invalidates outstanding case-review tokens. A changed source or evidence version
 also requires fresh review. This policy governs case evidence only and confers
 no rate, correspondence, filing or payment authority.
+
+The existing worker-custody link can associate a notice with a worker under
+explicit native-owner consent. A held erasure request denies staff case reads,
+review, edits and original downloads while retaining audited native-owner access.
+Case intake and review grants cannot release that hold. The owner must classify
+and explicitly release the exact retained set before eligible erasure. The notice
+journey checks deletion of all linked case versions and originals, anonymized
+audit targets and refusal to replay the retired notice source. These native
+checks do not establish external deletion, full legal retention coverage or
+case-specific recovery from an older archive.
 
 All routes below are beneath an existing notice at
 `/api/envelope/companies/:company/notices/:notice/case`; native forms use the
