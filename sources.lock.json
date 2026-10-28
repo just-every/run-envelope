@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "cb65ed1682a241d4f118d8ff9d932589860f37bd6266e913154eb7fa151c4b09",
+      "sha256": "8a02791494dc567d884ab88a7ecbdb5a2e37cf9d20c252ec6085abb69eefd44c",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4d2770b49b7697598b8c6260dff33d82883f4767a32a3ea5e06aaa71dda5a77d",
+      "sha256": "10d60daf2e75b6e3c2bc3b6a49f7488da3a85108a61516f3dbfb4454493a3a82",
       "executable": false
     },
     "deploy-demo.json": {
@@ -586,7 +586,7 @@
       "executable": false
     },
     "docs/private-inputs.md": {
-      "sha256": "4a2fedf60c029642a232d803d710aee37fbd4b0e994e02d7ea7658f4489b39a2",
+      "sha256": "22d2b54b17e1da099bf444cba278a1cdc59e16010c25c0efe995fa669032492e",
       "executable": false
     },
     "docs/retirement-preparation.md": {
@@ -3910,11 +3910,11 @@
       "executable": false
     },
     "tests/payroll-doors.mjs": {
-      "sha256": "2d2fb9a674ba49a2dbd635ed60baadeea9dde3c7c1ddc2b1b92dd50faee9a703",
+      "sha256": "fd5dcdffa3bc52d7203f670b6e1636b5d76e8e1f7567eb47f1cecad551b0ad23",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "b1539997bc59c01ead18c7d91a2d8bb835561fb606e99f851993a69524d048dc",
+      "sha256": "9fa473fe2d3880dddd1ab7fa2ad09888311afde416bf3c7258b63d2a95c79a56",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {

@@ -91,9 +91,9 @@ export async function renderedPayrollDoors(owner, origin, roots) {
    const response=await owner.request.get(origin+path,{maxRedirects:0})
    assert.ok(response.status()<500,'populated payroll document responds: '+path)
    documents.push({path,status:response.status()})
-   if(!response.headers()['content-type']?.startsWith('text/html')) continue
+   if(!response.headers()['content-type']?.startsWith(['text','html'].join('/'))) continue
    const links=await parser.evaluate(html=>{
-    const document=new DOMParser().parseFromString(html,'text/html')
+    const document=new DOMParser().parseFromString(html,['text','html'].join('/'))
     return [...document.querySelectorAll('[href],[action],[formaction]')].flatMap(node=>
      ['href','action','formaction'].map(attribute=>({target:node.getAttribute(attribute),mutation:attribute!=='href'})))
    },await response.text())

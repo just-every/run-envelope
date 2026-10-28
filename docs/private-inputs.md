@@ -131,7 +131,10 @@ Federal and state originals carry different bytes, as do their replacement
 versions. GET checks exact bytes independently for each form; HEAD retains the
 same authority and attachment protections without a body. Keyboard downloads
 open the distinct replacement links at both release widths, so a form or version
-mix-up cannot pass by returning an identical fixture.
+mix-up cannot pass by returning an identical fixture. Current owners and scoped
+downloaders also attempt to overwrite and delete retained originals through
+their download links; these unsupported mutations refuse without changing the
+retained records or audit.
 This finite boundary proof does not establish exhaustive structured inputs,
 interaction states, contrast or accessibility-tree announcements.
 
