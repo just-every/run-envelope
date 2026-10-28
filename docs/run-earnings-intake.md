@@ -137,11 +137,11 @@ claim across batches; changing batch identity cannot duplicate a source.
 First-revision Lanyard `PTO` input lines with attributed, dated approval retain
 their reviewed `minutes` and `costCents` as
 paid leave, never worked time. Later PTO exports are signed differences from
-prior claimed inputs and remain refused pending complete reconciliation. Source
+prior claimed inputs and use the signed-export reconciliation described below. Source
 `job` labels remain on ordinary rows.
-Signed corrections, segmented duplicate identities and other earning codes
-require additional implementation; they are refused, never treated as ordinary
-replacement hours or silently discarded. Imported status is retained evidence
+Snapshot captures refuse signed corrections and segmented identities. Use
+signed-export reconciliation for those exports; other unsupported earning codes
+remain refused, never treated as ordinary replacement hours or silently discarded. Imported status is retained evidence
 from the supplied capture; it is not verified against a running Lanyard tenant.
 
 Toast uses the array returned by the published
@@ -321,5 +321,44 @@ or an actual wage payment.
 Job labels appear in the input diff, retained exact review and earnings
 provenance. A provider mapping may supply a reviewed `job`; Lanyard's own `job`
 field takes precedence. No accounting destination, worker identity or legal
-jurisdiction is inferred from a job label. Segmented Lanyard rows sharing one
-lineage remain refused rather than dropping or duplicating one allocation.
+jurisdiction is inferred from a job label. Segmented Lanyard exports use the
+signed-export path below rather than dropping or duplicating an allocation.
+
+## Reconcile Lanyard exported differences
+
+For a new run importing actual Lanyard batches, set `reconciliation` to
+`signed-exports` in `providerCapture`. Keep that mode, source account and run ID
+for every later batch. Snapshot history cannot be silently converted to signed
+history: reconcile the previously retained source before selecting a new run.
+
+Import the original exported batch before its corrections. Envelope retains
+each batch and reviewed mapping in encrypted history. A batch ID binds its exact
+source payload; an altered payload under the same batch ID is refused. Replaying
+any retained batch changes no hours, amount or input version. A new batch cannot
+claim the same source revision again. Source lineage claims also prevent another
+run from claiming the enclosing time through a different job allocation.
+
+Lanyard's `regularLines` export groups job, work area and site allocations and
+subtracts prior exported allocations. Envelope retains each allocation separately
+and adds the signed differences to its original totals. A correction's `corrects`
+identity must exist in the retained history with the same root. Missing history,
+stale source revisions, inconsistent worker or workweek mappings and a negative
+resulting entitlement refuse the entire import before writing a version. The
+original source day and actual workweek remain explicit reviewed mappings;
+neither a job label nor UTC time infers a legal payroll jurisdiction.
+
+The same reconciliation handles Lanyard's signed `PTO` minutes and cents, `tips`
+cents, and separate meal and rest premium minutes. Payroll inputs retain their
+source approver, time and reason. Paid leave stays outside worked hours. Tip
+settlement remains explicitly reviewed; held tips add no second cash payout.
+Premiums remain separate from worked time. Source batches and mappings are
+retained alongside the resulting totals and exact cell differences. Applying a
+correction requires fresh source review and invalidates affected prior earnings
+approval while preserving the frozen prior run.
+
+This door consumes reviewed exports; it does not poll a Lanyard installation or
+authenticate a source approval. Withdraw native source approval when approval is
+revoked at the source. Unsupported overtime classifications, sick and holiday
+pay exports, differentials and other source earning types still need their own
+reconciliation. No payment, leave-consumption receipt or live source connection
+is established by retaining a batch.

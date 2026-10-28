@@ -2,6 +2,7 @@ import type { Input } from '../records'
 import { PayrollError, text, date } from '../security'
 import { digest } from '../workspace/store'
 import type { IntakeLine } from './run-input'
+import { lanyardExports } from './lanyard-exports'
 
 function object(value: unknown): Input {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -45,13 +46,20 @@ function closedMinutes(start: number, end: number, values: unknown, keys: [strin
 }
 
 /** Reviewed source captures, never an authenticated provider acknowledgement. */
-export async function providerInput(value: unknown) {
+export async function providerInput(value: unknown, previous?: Input) {
   let input: Input
   try { input = object(typeof value === 'string' ? JSON.parse(value) : value) }
   catch { throw new PayrollError('invalid_provider_export') }
   const provider = text(input.provider), account = text(input.account, 80)
   if (!['lanyard', 'toast', 'clockify', 'square', 'deputy', 'when-i-work', 'homebase', '7shifts', 'quickbooks-time', 'clover'].includes(provider)) throw new PayrollError('unsupported_time_provider')
   const payload = input.payload, mappings = object(input.mappings), evidence = text(input.evidence, 500)
+  if (previous?.reconciliation === 'signed-exports' && input.reconciliation !== 'signed-exports')
+    throw new PayrollError('provider_reconciliation_mode_immutable', 409)
+  if (input.reconciliation === 'signed-exports') {
+    if (provider !== 'lanyard' || (previous && previous.reconciliation !== 'signed-exports'))
+      throw new PayrollError('provider_reconciliation_mode_immutable', 409)
+    return { ...await lanyardExports(input, previous), namespace: provider + ':' + account }
+  }
   const rows: IntakeLine[] = []
   const add = (id: string, map: Input, code: string, minutes: number, amountCents: number, settlement = '') => {
     rows.push({ sourceId: id, personId: text(map.personId), day: date(map.day),
@@ -274,6 +282,6 @@ export async function providerInput(value: unknown) {
     }
   }
   if (!rows.length || rows.length > 500) throw new PayrollError('intake_row_limit')
-  return { rows, namespace: provider + ':' + account,
+  return { rows, sourceClaims: [] as string[], namespace: provider + ':' + account,
     capture: { ...input, provider, account, sourceDigest: await digest(JSON.stringify(payload)), boundary: 'human-reviewed-capture' } }
 }

@@ -215,11 +215,10 @@ export class RunIntake {
   }
   async preview(actor: Actor, input: Input) {
     await this.store.authority(actor, 'rates:propose', undefined, true)
-    const provider = input.providerCapture ? await providerInput(input.providerCapture) : undefined
-    const id = objectId(input.id),
-      expected = revision(input.version),
-      namespace = provider?.namespace ?? text(input.namespace, 120)
+    const id = objectId(input.id), expected = revision(input.version)
     const existing = (await this.rows(actor)).find((r) => r.id === id)
+    const provider = input.providerCapture ? await providerInput(input.providerCapture, existing?.data.providerCapture) : undefined
+    const namespace = provider?.namespace ?? text(input.namespace, 120)
     if ((existing?.version ?? 0) !== expected)
       throw new PayrollError('intake_version_conflict', 409)
     if (existing && existing.data.namespace !== namespace)
@@ -386,7 +385,8 @@ export class RunIntake {
     }
     rows.sort((a, b) => a.sourceId.localeCompare(b.sourceId))
     const claims = await Promise.all(
-      rows.map((r) => digest(JSON.stringify([namespace, r.sourceId])))
+      [...new Set([...rows.map(r => r.sourceId), ...(provider?.sourceClaims ?? [])])]
+        .map(sourceId => digest(JSON.stringify([namespace, sourceId])))
     )
     if (await this.store.records.statement(
       'SELECT 1 FROM env_privacy_source_fences WHERE company_id=? AND source_hash IN(SELECT value FROM json_each(?))',

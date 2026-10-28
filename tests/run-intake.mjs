@@ -7,6 +7,7 @@ import { randomBytes, createHash } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
+import { lanyardExportCases } from './lanyard-exports.mjs'
 
 /** Run intake through the same native HTTP and built screens used by employers. */
 export async function runIntakeCases({ origin, cookie, sql, settings, advanceClock }) {
@@ -777,6 +778,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
   assert.deepEqual(captureRefusals.map(({label,observed}) => [label,observed]),
     captureRefusals.map(({label,expected}) => [label,expected]), 'malformed captures refuse at both public intake doors')
 
+  const allocated = await lanyardExportCases({data,door,pay,personId:people[0].id})
   const caLocation = await data(api + '/locations', { name: 'California premium workplace', state: 'CA' }, 201)
   const caWorker = await data(api + '/people', { name: 'Synthetic premium worker', locationId: caLocation.id }, 201)
   await setup('group', 'synthetic-envelope-premium-group', { name: 'Premium review', people: [caWorker.id] })
@@ -999,6 +1001,8 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     }
     await page.goto(origin + door.replace('/api/', '/app/'))
     await capture('run-intake-entry')
+    assert.ok((await page.locator('main').innerText()).includes(allocated.id))
+    await capture('run-intake-signed-correction')
     await page.goto(origin + (door + '/' + earningRunIds[0] + '/review').replace('/api/', '/app/'))
     assert.match(await page.locator('main').innerText(), /paid-leave/)
     assert.match(await page.locator('main').innerText(), /service-charge/)
@@ -1626,7 +1630,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     assert.equal(erased.erased, true)
     assert.ok(erased.recordsDeleted >= exactCustody.retained.length)
     const remaining = await data(door)
-    for (const id of [runId, ...['lanyard','toast','deputy','when-i-work','clockify','square','homebase','7shifts','quickbooks-time','clover'].map(provider => 'synthetic-envelope-' + provider + '-run')])
+    for (const id of [runId, allocated.id, ...['lanyard','toast','deputy','when-i-work','clockify','square','homebase','7shifts','quickbooks-time','clover'].map(provider => 'synthetic-envelope-' + provider + '-run')])
       assert.equal(remaining.filter(r => r.id === id).length, 0, 'eligible erasure removes every retained intake version: ' + id)
     assert.equal((await call(api + '/people/' + people[0].id)).status, 404)
     const replayRows = rows.map(row => ({ ...row, personId: people[1].id }))
@@ -1638,6 +1642,9 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
       assert.equal(response.error, 'erased_source', provider + ' erasure fences source identity after run renaming and worker remapping')
     }
     assert.deepEqual(await data(door), remaining, 'stale source replay restores no private version')
+    const staleAllocated = structuredClone(allocated.original)
+    for (const mapping of Object.values(staleAllocated.mappings)) mapping.personId = people[1].id
+    assert.equal((await data(door+'/preview',{id:allocated.id+'-replay',version:0,providerCapture:staleAllocated},409)).error,'erased_source')
     const erasureAudit = (await data(api + '/audit')).filter(e => e.action === 'privacy.worker.erased')
     assert.equal(erasureAudit.length, 1)
     assert.notEqual(erasureAudit[0].targetId, people[0].id)
