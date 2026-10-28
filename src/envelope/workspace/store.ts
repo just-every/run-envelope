@@ -7,6 +7,8 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from '../securit
 export type Kind =
   | 'hi-benefit-plan'
   | 'hi-benefit-preview'
+  | 'retirement-election'
+  | 'retirement-preview'
   | 'provider-deletion-request'
   | 'notice-worker-link'
   | 'run-input'
