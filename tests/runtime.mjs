@@ -29,6 +29,7 @@ import {
   identityJourney,
   sponsoredJourney,
   payrollJourney,
+  operationsFaultWorker,
   missingKeyJourney,
   allocationJourney,
   scheduleJourney,
@@ -134,11 +135,12 @@ const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
 const clockEntrypoint = clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
+const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
 let output = ''
 async function launch(bindings) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
-    ...(clockEntrypoint ? {entrypoint:clockEntrypoint} : {}),
+    ...((clockEntrypoint ?? operationsEntrypoint) ? {entrypoint:clockEntrypoint ?? operationsEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
     dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
   })

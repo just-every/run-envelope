@@ -4,14 +4,52 @@
 import assert from 'node:assert/strict'
 import { randomBytes,createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
 import { chromium } from '@playwright/test'
-import { privateValue } from './privacy-recorder.mjs'
+import { privateValue, outboundRequestCount } from './privacy-recorder.mjs'
 import { payrollWithoutAiJourney } from './industry-runtime.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 import { runIntakeCases } from './run-intake.mjs'
+
+// Test-only dependency faults wrap the real emitted Worker and local D1. No
+// fault header or alternate dependency implementation ships in the application.
+export async function operationsFaultWorker() {
+  const configPath = resolve('dist/server/wrangler.json')
+  const config = JSON.parse(await readFile(configPath,'utf8'))
+  const target = './' + config.main.replace(/^\.\//,'')
+  const entrypoint = join(dirname(configPath),'operations-test-faults.mjs')
+  await writeFile(entrypoint, `
+import worker from ${JSON.stringify(target)}
+export * from ${JSON.stringify(target)}
+export default {
+  ...worker,
+  async fetch(request,env,context) {
+    const fault = request.headers.get('x-synthetic-operation-fault')
+    if (!fault || !new URL(request.url).pathname.endsWith('/operations/diagnose'))
+      return worker.fetch(request,env,context)
+    const db = env.DB, company = new URL(request.url).pathname.split('/')[4]
+    let injected = false
+    const wrapped = new Proxy(db, {get(target,property) {
+      if (property === 'batch') return async statements => {
+        if (injected) return target.batch(statements)
+        injected = true
+        if (fault === 'timeout') await new Promise(resolve => setTimeout(resolve,2200))
+        if (fault === 'session-before') await db.prepare("UPDATE oa_sessions SET revoked_at=1 WHERE id='synthetic-envelope-records-owner-session'").run()
+        const result = await target.batch(statements)
+        if (fault === 'grant-after') await db.prepare("UPDATE env_grants SET revoked_at=1 WHERE company_id=? AND role='owner'").bind(company).run()
+        return result
+      }
+      const value = target[property]
+      return typeof value === 'function' ? value.bind(target) : value
+    }})
+    return worker.fetch(request,{...env,DB:wrapped},context)
+  }
+}
+`)
+  return entrypoint
+}
 
 // UUID references are public identifiers, not private numeric pay values.
 const withoutUuidReferences = text => text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, '')
@@ -1007,6 +1045,161 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       assert.equal(unavailable.jobs.unknown,1)
       assert.equal(unavailable.providerDelivery,'not established')
     } finally { await restart() }
+
+    // Explicit dependency validation preserves the real unknown receiver effect.
+    const diagnosticDoor = company + '/operations/diagnose'
+    const diagnose = async (fault,who=cookie,status=200) => {
+      const response = await fetch(origin+diagnosticDoor,{method:'POST',redirect:'manual',headers:{cookie:who,origin,
+        'content-type':'application/json',...(fault ? {'x-synthetic-operation-fault':fault} : {})},body:JSON.stringify({consent:true})})
+      assert.equal(response.status,status,await response.clone().text())
+      assert.equal(response.headers.get('cache-control'),'no-store')
+      return response.json()
+    }
+    const diagnosticBusinessSnapshot = () => sql(`SELECT
+      (SELECT json_group_array(json_object('id',id,'status',status,'attempt',attempt,'claim',claim_id)) FROM (SELECT * FROM env_webhook_jobs ORDER BY id)) AS jobs,
+      (SELECT json_group_array(json_object('id',id,'outcome',outcome,'finished',finished_at)) FROM (SELECT * FROM env_webhook_attempts ORDER BY id)) AS attempts,
+      (SELECT json_group_array(json_object('company',company_id,'person',person_id,'kind',kind,'cipher',cipher,'version',version)) FROM (SELECT * FROM env_private_records ORDER BY company_id,person_id,kind)) AS records,
+      (SELECT json_group_array(json_object('id',id,'active',active)) FROM (SELECT * FROM env_webhooks ORDER BY id)) AS subscriptions,
+      (SELECT COUNT(*) FROM env_run_drafts) AS drafts`)
+    // A populated public-door dataset exceeds one diagnostic sample. Content
+    // beyond the bounded inspection must remain explicitly unvalidated.
+    for (let n=0;n<27;n++) {
+      const person=await data(company+'/people',{name:'Synthetic diagnostic worker '+n,locationId:ca.id},cookie,201)
+      await data(company+'/people/'+person.id+'/private',{kind:'ssn',value:'synthetic-envelope-956-sample-'+n,version:0},cookie,201)
+    }
+    const unchangedBusiness = await diagnosticBusinessSnapshot(), sentBeforeDiagnostic = receiverState.received.length, outboundBeforeDiagnostic = outboundRequestCount()
+    const [foreignDiagnosticGrant]=await sql(`SELECT * FROM env_grants WHERE company_id='${b}' AND operator_id='${ownerSession.operator_id}'`)
+    await sql(`DELETE FROM env_grants WHERE company_id='${b}' AND operator_id='${ownerSession.operator_id}'`)
+    try {
+      await noWrite(async()=>{
+        await data(diagnosticDoor,{consent:false},cookie,400)
+        await diagnose(undefined,actors.accountant.cookie,403)
+        await data('/api/envelope/companies/'+b+'/operations/diagnose',{consent:true},cookie,403)
+        await data(diagnosticDoor,{consent:true},'',401)
+      })
+    } finally {
+      const columns=Object.keys(foreignDiagnosticGrant)
+      const literal=value=>value===null?'NULL':typeof value==='number'?String(value):"'"+value.replaceAll("'","''")+"'"
+      await sql(`INSERT INTO env_grants(${columns.join(',')}) VALUES(${columns.map(c=>literal(foreignDiagnosticGrant[c])).join(',')})`)
+    }
+    const clean = await diagnose()
+    assert.equal(clean.database.state,'healthy')
+    assert.equal(clean.encryptedStorage.state,'healthy')
+    assert.equal(clean.cleanup.state,'verified')
+    assert.equal(clean.retained.state,'validated-sample')
+    assert.ok(clean.retained.authenticated>0)
+    assert.equal(clean.retained.failed,0)
+    assert.ok(clean.retained.unvalidated>0,'uninspected ciphertexts never become validated')
+    assert.equal(clean.retained.inspected+clean.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${a}'`))[0].n)
+    assert.equal(clean.providerDelivery,'not established')
+    assert.equal(clean.status,'attention-required')
+    assert.equal(clean.automaticRetry,false)
+    assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[])
+    const diagnosticAudit=await sql(`SELECT actor_id,action,target_id,version FROM env_audit WHERE action LIKE 'operations.%' ORDER BY rowid`)
+    assert.ok(diagnosticAudit.some(r=>r.action==='operations.diagnostic.started' && r.target_id===clean.id))
+    assert.ok(diagnosticAudit.some(r=>r.action==='operations.ciphertext.inspected'))
+    assert.ok(diagnosticAudit.some(r=>r.action.startsWith('operations.diagnostic.healthy.healthy.verified.validated-sample')))
+    const grantBeforeDiagnostic=(await sql(`SELECT fields,locations FROM env_grants WHERE company_id='${a}' AND role='owner'`))[0]
+    const sessionsBeforeScope=await sql('SELECT id,revoked_at FROM oa_sessions')
+    const restoreDiagnosticSessions=async()=>{
+      for(const session of sessionsBeforeScope) await sql(`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`)
+    }
+    try {
+      await sql(`UPDATE env_grants SET fields='[]' WHERE company_id='${a}' AND role='owner'`)
+      await restoreDiagnosticSessions()
+      const excluded=await diagnose()
+      assert.equal(excluded.retained.inspected,0,'ungranted fields are not read even by diagnostics')
+      assert.equal(excluded.retained.state,'unvalidated')
+    } finally {
+      await sql(`UPDATE env_grants SET fields='${grantBeforeDiagnostic.fields}' WHERE company_id='${a}' AND role='owner'`)
+      await restoreDiagnosticSessions()
+    }
+    const inspectedBeforeAuditFailure=(await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n
+    await sql("CREATE TRIGGER synthetic_envelope_diagnostic_audit BEFORE INSERT ON env_audit WHEN NEW.action LIKE 'operations.%' BEGIN SELECT RAISE(ABORT,'synthetic-envelope-956-audit'); END")
+    try {
+      const noAudit=await diagnose()
+      assert.equal(noAudit.database.state,'unhealthy')
+      assert.equal(noAudit.audit,'unavailable')
+      assert.equal(noAudit.retained.inspected,0,'unavailable audit cannot permit content inspection')
+      assert.equal((await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n,inspectedBeforeAuditFailure)
+    } finally { await sql('DROP TRIGGER synthetic_envelope_diagnostic_audit') }
+    const [original] = await sql(`SELECT * FROM env_private_records WHERE company_id='${a}' ORDER BY person_id,kind LIMIT 1`)
+    const recordWhere = `company_id='${a}' AND person_id='${original.person_id}' AND kind='${original.kind}'`
+    await sql(`UPDATE env_private_records SET cipher='synthetic-envelope-956-corrupt' WHERE ${recordWhere}`)
+    try {
+      const corrupt=await diagnose()
+      assert.equal(corrupt.retained.state,'unhealthy')
+      assert.ok(corrupt.retained.failed>0)
+      assert.equal(corrupt.encryptedStorage.state,'healthy','new ciphertext cannot prove retained content healthy')
+      assert.ok(corrupt.nextAction.includes('restore dependency or key access'))
+      assert.doesNotMatch(JSON.stringify(corrupt),/synthetic-envelope-956-corrupt|SyntaxError|person_id|\"cipher\":/)
+    } finally { await sql(`UPDATE env_private_records SET cipher='${original.cipher.replaceAll("'","''")}' WHERE ${recordWhere}`) }
+    await restart({ENVELOPE_RECORD_KEY:randomBytes(32).toString('base64')})
+    try {
+      const wrong=await diagnose()
+      assert.equal(wrong.encryptedStorage.state,'healthy')
+      assert.equal(wrong.retained.state,'unhealthy','valid-format wrong key fails retained authentication')
+      assert.equal(wrong.retained.authenticated,0)
+    } finally { await restart() }
+    await sql("CREATE TRIGGER synthetic_envelope_diagnostic_write BEFORE INSERT ON env_operation_sentinels BEGIN SELECT RAISE(ABORT,'synthetic-envelope-956-write'); END")
+    try {
+      assert.equal((await data(company+'/operations')).database,'reachable')
+      const writeFailure=await diagnose()
+      assert.equal(writeFailure.database.state,'unhealthy','read reachability never proves writes')
+      assert.equal(writeFailure.encryptedStorage.state,'unvalidated')
+      assert.equal(writeFailure.cleanup.state,'verified','failed atomic transaction leaves no sentinel')
+      assert.ok(!JSON.stringify(writeFailure).includes('synthetic-envelope-956-write'))
+    } finally { await sql('DROP TRIGGER synthetic_envelope_diagnostic_write') }
+    await sql('CREATE TRIGGER synthetic_envelope_diagnostic_cleanup BEFORE DELETE ON env_operation_sentinels BEGIN SELECT RAISE(IGNORE); END')
+    try {
+      const failedCleanup=await diagnose()
+      assert.equal(failedCleanup.database.state,'unhealthy')
+      assert.equal(failedCleanup.cleanup.state,'unhealthy')
+      assert.ok(failedCleanup.nextAction.includes('inspect isolated diagnostic cleanup'))
+      assert.equal((await sql('SELECT COUNT(*) AS n FROM env_operation_sentinels'))[0].n,1)
+    } finally {
+      await sql('DROP TRIGGER synthetic_envelope_diagnostic_cleanup')
+      await sql('DELETE FROM env_operation_sentinels')
+    }
+    const timed=await diagnose('timeout')
+    assert.equal(timed.database.state,'unvalidated')
+    assert.ok(timed.database.reason.includes('timeout'))
+    assert.equal(timed.encryptedStorage.state,'unvalidated')
+    assert.equal(timed.cleanup.state,'unvalidated','timeout cannot establish a late transaction outcome')
+    await new Promise(resolve=>setTimeout(resolve,300))
+    assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[],'late isolated transaction cleans itself')
+    for (const fault of ['session-before','grant-after']) {
+      const sessions=await sql('SELECT id,revoked_at FROM oa_sessions')
+      try { await diagnose(fault,cookie,403) }
+      finally {
+        await sql(`UPDATE env_grants SET revoked_at=NULL WHERE company_id='${a}' AND role='owner'`)
+        for (const session of sessions) await sql(`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`)
+      }
+      assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[],'revoked authority cannot strand a sentinel')
+    }
+    await sql(`INSERT INTO env_privacy_holds(company_id,record_id,fingerprint,legal_basis,custodian,release_at) VALUES('${a}','synthetic-envelope-956-hold','synthetic-envelope-956','retained source','owner','2099-01-01')`)
+    const inspectedBeforeHold=(await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n
+    try {
+      const held=await diagnose()
+      assert.equal(held.retained.state,'unvalidated')
+      assert.equal(held.retained.inspected,0)
+      assert.equal(held.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${a}'`))[0].n)
+      assert.equal((await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n,inspectedBeforeHold)
+    } finally { await sql(`DELETE FROM env_privacy_holds WHERE company_id='${a}' AND record_id='synthetic-envelope-956-hold'`) }
+    // GET does not reuse the successful POST sample as a storage-health claim.
+    await noWrite(async()=>{
+      const readOnly=await data(company+'/operations')
+      assert.equal(readOnly.checks.storage.content,'not validated')
+      assert.equal(readOnly.jobs.unknown,1)
+    })
+    assert.deepEqual(await diagnosticBusinessSnapshot(),unchangedBusiness,'diagnostics never alter private values, business state, unknown work or send authority')
+    assert.equal(receiverState.received.length,sentBeforeDiagnostic)
+    assert.equal(outboundRequestCount(),outboundBeforeDiagnostic,'diagnostics make no outbound request')
+    assert.ok(!JSON.stringify(clean).includes(subscription.secret))
+    await restart()
+    assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[])
+    assert.equal((await diagnose()).retained.state,'validated-sample','retained authentication works after restart')
+    assert.equal((await data(company+'/operations')).jobs.unknown,1)
 
     await restart()
     assert.equal((await data(hooks)).jobs.find(j=>j.id===job.id).status,'unknown')

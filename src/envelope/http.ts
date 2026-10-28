@@ -621,6 +621,8 @@ export async function payrollResponse(
         } else throw new PayrollError('not_found',404)
       } else if (!ui && tail.length === 1 && tail[0] === 'operations' && !post) {
         response = json(await new Lifecycle(records).health(actor))
+      } else if (!ui && tail.length === 2 && tail[0] === 'operations' && tail[1] === 'diagnose' && post) {
+        response = json(await new Lifecycle(records).diagnose(actor,value))
       } else if (!ui && tail[0] === 'webhooks') {
         const lifecycle = new Lifecycle(records)
         if (tail.length === 1) response = json(post ? await lifecycle.subscribe(actor,value) : await lifecycle.read(actor),post ? 201 : 200)

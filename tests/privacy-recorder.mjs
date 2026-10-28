@@ -118,3 +118,5 @@ export async function finishPrivacyRecording() {
   assert.deepEqual(violations, [], 'No private value or undeclared destination in recorded channels')
   console.log('PRIVACY-RECORDER passed ' + JSON.stringify(counts))
 }
+
+export const outboundRequestCount = () => counts.outbound
