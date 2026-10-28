@@ -40,11 +40,6 @@
       "environment": "ENVELOPE_RECORD_KEY"
     },
     {
-      "binding": "MAIL_ACCOUNT_ID",
-      "environment": "MAIL_ACCOUNT_ID",
-      "optional": true
-    },
-    {
       "binding": "INSTALLATION_KEY",
       "environment": "INSTALLATION_KEY"
     }

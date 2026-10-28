@@ -354,7 +354,7 @@
       "executable": false
     },
     "deploy.json": {
-      "sha256": "9fbd3eb711e1126cefea798fcf46da73743037debdf29c455c413b0215ad27cc",
+      "sha256": "d0c00c9e99de316a011859b60538e3fd22516f6a6ef8381a5f4c4214a2e9a23b",
       "executable": false
     },
     "docs/accounting-preparation.md": {
@@ -3818,7 +3818,7 @@
       "executable": false
     },
     "wrangler.jsonc": {
-      "sha256": "03aa20aee3a550688e366b66dc1c1d9b43769797e799f68df60e3742bab18854",
+      "sha256": "f265e797e9d8a483da87411210bd3e3787cc381fa75cd91537bc8c63f122b76b",
       "executable": false
     }
   }
