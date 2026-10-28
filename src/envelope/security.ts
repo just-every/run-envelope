@@ -47,6 +47,18 @@ export async function unseal(key: CryptoKey, context: string, cipher: string) {
     throw new PayrollError('private_record_unavailable', 503)
   }
 }
+// Diagnostics authenticate retained bytes without decoding or returning private
+// text. Clear the temporary plaintext buffer as soon as authentication completes.
+export async function authenticateCiphertext(key: CryptoKey, context: string, cipher: string) {
+  try {
+    const value = JSON.parse(cipher)
+    if (value.v !== 1) throw new Error('unsupported_cipher')
+    const bytes = await crypto.subtle.decrypt({name:'AES-GCM',
+      iv:Uint8Array.from(atob(value.iv),(c) => c.charCodeAt(0)),additionalData:encoder.encode(context)},
+      key,Uint8Array.from(atob(value.data),(c) => c.charCodeAt(0)))
+    new Uint8Array(bytes).fill(0)
+  } catch { throw new PayrollError('private_record_unavailable',503) }
+}
 export const text = (value: unknown, max = 120): string => {
   if (
     typeof value !== 'string' ||
