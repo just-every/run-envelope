@@ -53,7 +53,8 @@
           "src/base/setup-state.ts",
           "src/base/setup.ts",
           "src/base/static-assets.ts",
-          "src/base/theme-frame.ts"
+          "src/base/theme-frame.ts",
+          "src/foundation/runtime"
         ],
         "origin": {
           "repository": "https://github.com/runeditrun/base.git",
@@ -267,6 +268,40 @@
             "originPath": "foundation/runtime/contract-style.ts"
           }
         ]
+      }
+    },
+    {
+      "id": "runeditrun/agent-door",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/agent-door"
+        ],
+        "origin": {
+          "repository": "https://github.com/runeditrun/base.git",
+          "revision": "d555e789cffb744a9f83d76ebe42a2e3bdd7a055",
+          "paths": [
+            "modules/agent-door"
+          ]
+        }
+      }
+    },
+    {
+      "id": "runeditrun/business-settings",
+      "role": "module",
+      "source": {
+        "kind": "local",
+        "paths": [
+          "src/modules/business-settings"
+        ],
+        "origin": {
+          "repository": "https://github.com/runeditrun/base.git",
+          "revision": "d555e789cffb744a9f83d76ebe42a2e3bdd7a055",
+          "paths": [
+            "modules/business-settings"
+          ]
+        }
       }
     }
   ]
