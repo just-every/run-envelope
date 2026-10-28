@@ -174,7 +174,8 @@ export class Lifecycle {
       COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0) AS epoch`,
       [actor.company,...args,actor.company]).first<{total:number;permitted:number;epoch:number}>())
     if (inventory.value) retained.unvalidated = inventory.value.total
-    if (inventory.value && key.value && inventory.value.permitted > 0) {
+    const dependenciesValidated = database.state === 'healthy' && encryptedStorage.state === 'healthy' && cleanup.state === 'verified'
+    if (inventory.value && key.value && dependenciesValidated && inventory.value.permitted > 0) {
       const sample = await bounded(() => this.records.statement(`SELECT r.person_id,r.kind,r.version FROM env_private_records r
         JOIN env_people p ON p.company_id=r.company_id AND p.id=r.person_id WHERE ${permitted} ORDER BY r.person_id,r.kind LIMIT 25`,args)
         .all<{person_id:string;kind:string;version:number}>())
@@ -203,7 +204,7 @@ export class Lifecycle {
         if (retained.inspected === sample.value.results.length)
           retained.reason = retained.failed ? 'ciphertext authentication failed' : 'bounded sample only; all other content remains unvalidated'
       } else retained.reason = sample.state === 'timeout' ? 'timeout' : 'inventory unavailable'
-    } else retained.reason = !inventory.value ? 'inventory unavailable' : !key.value ? 'record key unavailable' : 'no permitted unheld ciphertexts inspected'
+    } else retained.reason = !inventory.value ? 'inventory unavailable' : !key.value ? 'record key unavailable' : !dependenciesValidated ? 'dependency round trip incomplete; content not inspected' : 'no permitted unheld ciphertexts inspected'
     // Do not claim a sample remains current after erasure, source changes or a hold.
     if (retained.inspected) {
       const stable = await bounded(() => this.records.statement(`SELECT 1 WHERE ${noHolds}
