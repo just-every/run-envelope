@@ -31,7 +31,7 @@ The app wears the owner-approved look (app pick A): build every screen from the
 tokens and components named in docs/LOOK.md, and keep public/rer-theme.css
 within Base's theme grammar (the installer reads it).
 
-Pin the published `@runeditrun/rer` exactly at 0.2.80. There is no local CLI
+Pin the published `@runeditrun/rer` exactly at 0.2.85. There is no local CLI
 copy. Public commands are `rer install`, `rer setup`, `rer dev`, `rer build`,
 `rer verify`, `rer check`, `rer describe`, `rer export`, `rer import`,
 `rer reset --yes` and `rer deploy`. For an owner installation use `rer install`,
