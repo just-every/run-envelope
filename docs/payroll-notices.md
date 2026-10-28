@@ -128,12 +128,33 @@ facts, corrections, deposit proof and reported agency responses. It supports
 SUI rate letters and IRS deposit mismatches. It does not implement automatic OCR,
 agency feeds, dedicated incoming email, complete IRS lock-in handling or payroll payment.
 
-The approved conservative casework policy permits only the configured native
-installation owner with a current company session may use case routes or download
-their originals. Existing generic notice and correspondence permissions keep their
-existing scope. No case action sends data, pays money, signs a filing, releases a
-hold or deletes evidence. This bounded access policy does not complete the
-product's separately scoped staff permissions.
+Under RL-6, the configured native installation owner may delegate casework to
+current native staff identities through **Settings → Payroll grants**. Each grant
+selects company and locations plus separate `cases:intake`, `cases:investigate`,
+`cases:review` and `cases:download` powers. Case access also requires
+`notices:read` and all four sensitive fields because original PDFs and extraction
+are unstructured and may contain compensation, tax, SSN and bank data. A grant
+that omits any such field cannot read the case or its originals. Field-minimized
+case views remain unfinished; they are never simulated by returning an
+unredacted document to a narrower grant.
+
+Intake records checked facts and corrections. Investigation appends deposit,
+response and reopening evidence. Exact case review grants none of the other
+powers; original retrieval requires its own download grant and records the actor,
+notice, source version and time. Location boundaries are checked before private
+versions are decrypted. Revoking or changing a grant ends existing sessions and
+invalidates pending review tokens. Existing generic notice and correspondence
+permissions keep their existing scope. SUI rule linkage and worker-specific IRS
+instructions retain their native-owner restriction. No case action sends data,
+pays money, signs a filing, releases a hold or deletes evidence.
+
+The owner can configure **Notice case review separation** on that same Settings
+page. `POST /api/envelope/companies/:company/case-policy` accepts `version` and
+`requireSeparateReviewer`. With separation enabled, the latest evidence entrant
+cannot review that same version, including an owner. A policy revision
+invalidates outstanding case-review tokens. A changed source or evidence version
+also requires fresh review. This policy governs case evidence only and confers
+no rate, correspondence, filing or payment authority.
 
 All routes below are beneath an existing notice at
 `/api/envelope/companies/:company/notices/:notice/case`; native forms use the
@@ -186,7 +207,7 @@ claims or change the approval and dispatch boundaries above.
 the claims push shard in `verification.json`, exercises native upload, APIs,
 immutable PDFs and extraction, wrong employer and period refusal, corrections,
 exact review, replay, unknown and nonzero balances, overdue follow-up, reopening,
-reviewed SUI links and current native-owner access. Selected case screens are
+reviewed SUI links and current native-owner access. It also exercises location-scoped staff intake and investigation, distinct exact human review, independently granted original access, policy-change invalidation, session revocation, sensitive-field refusals and attributed decisions and original retrieval. Selected case screens are
 captured at 1440 and 390; the upload interaction runs at 1440. The existing
 **sponsoredJourney / SPONSORED-NOTICES** also checks the exact input citation.
 Synthetic source PDFs and reported responses are not live agency receipts or

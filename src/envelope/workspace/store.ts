@@ -1,7 +1,7 @@
 import { stepUpFence } from '../step-up'
 import type { Records, Input } from '../records'
 import { currentReviewInputs, reviewInputFence, type ReviewInputSet } from './review-inputs'
-import { fence, auditStatement, requireAction, type Actor } from '../access'
+import { fence, auditStatement, requireAction, locationSql, fields, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
@@ -12,6 +12,7 @@ export type Kind =
   | 'tip-tax-funds'
   | 'company-funding'
   | 'company-funding-plan'
+  | 'case-policy'
   | 'tax-notice-case'
   | 'withholding-instruction'
   | 'run-intake'
@@ -134,6 +135,28 @@ export class WorkspaceStore {
       throw new PayrollError('all_locations_required', 403)
     return null
   }
+  caseAuthority(actor: Actor, action = 'read') {
+    if (actor.session.kind !== 'native') throw new PayrollError('native_case_session_required',403)
+    if (actor.grant.role === 'owner' && (actor.session.operator.role !== 'owner' || actor.session.operator.email.trim().toLowerCase() !== this.records.env.OWNER_EMAIL.trim().toLowerCase()))
+      throw new PayrollError('owner_required',403)
+    // Unstructured originals and extraction may contain any sensitive field.
+    for (const field of fields) requireAction(actor,'notices:read',undefined,field)
+    if (action === 'read' || action === 'write') {
+      const allowed = action === 'read' ? ['cases:intake','cases:investigate','cases:review','cases:download'] : ['cases:intake','cases:investigate']
+      if (actor.grant.role !== 'owner' && !allowed.some(power => actor.grant.actions.includes(power))) throw new PayrollError('case_permission_required',403)
+    } else requireAction(actor,action)
+  }
+  caseScope(actor: Actor, id: string) {
+    const location = locationSql(actor,'n.location_id')
+    return {sql:`EXISTS(SELECT 1 FROM env_notices n WHERE n.company_id=? AND n.id=? AND ${location.sql})`,args:[actor.company,id,...location.args]}
+  }
+  async casePolicy(actor: Actor) {
+    const f = fence(actor)
+    const row = await this.records.statement(`SELECT version,cipher FROM env_workspace_versions WHERE company_id=? AND kind='case-policy' AND object_id='case-review' AND ${f.sql} ORDER BY version DESC LIMIT 1`,[actor.company,...f.args]).first<{version:number;cipher:string}>()
+    if (!row) return {version:0,requireSeparateReviewer:false}
+    const data=JSON.parse(await unseal(await recordKey(this.records.env.ENVELOPE_RECORD_KEY),JSON.stringify([actor.company,'case-policy','case-review',row.version]),row.cipher))
+    return {version:row.version,requireSeparateReviewer:data.requireSeparateReviewer===true}
+  }
   async paperAuthority(actor: Actor, action: string, personId?: string) {
     if (actor.session.kind !== 'native') throw new PayrollError('native_paper_session_required', 403)
     if (actor.grant.role==='owner' && (actor.session.operator.role!=='owner' || actor.session.operator.email.trim().toLowerCase()!==this.records.env.OWNER_EMAIL.trim().toLowerCase()))
@@ -155,6 +178,12 @@ export class WorkspaceStore {
   }
   async paperReviewFence(actor: Actor, kind: Kind, createdBy: string, withdraw=false) {
     const f = fence(actor)
+    if (kind === 'tax-notice-case') {
+      const policy = await this.casePolicy(actor)
+      if (!withdraw && policy.requireSeparateReviewer && createdBy === actor.session.operator.id) throw new PayrollError('distinct_case_reviewer_required',403)
+      return {sql:f.sql+" AND COALESCE((SELECT MAX(version) FROM env_workspace_versions WHERE company_id=? AND kind='case-policy' AND object_id='case-review'),0)=?",
+        args:[...f.args,actor.company,policy.version],salt:':case-policy:'+policy.version}
+    }
     if (kind !== 'paper-onboarding') return {...f,salt:''}
     const policy = await this.paperPolicy(actor)
     if (!withdraw && policy.requireSeparateReviewer && createdBy === actor.session.operator.id)
@@ -169,10 +198,15 @@ export class WorkspaceStore {
     compensation = false,
     audited = true,
   ): Promise<Revision<T>[]> {
-    const person = kind==='paper-onboarding' ? await this.paperAuthority(actor,'records:read',personId) : await this.authority(actor, 'records:read', personId, compensation)
+    const person = kind==='tax-notice-case' ? (this.caseAuthority(actor), null) : kind==='paper-onboarding' ? await this.paperAuthority(actor,'records:read',personId) : await this.authority(actor, 'records:read', personId, compensation)
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const f = fence(actor),
       event = crypto.randomUUID()
+    if (kind === 'tax-notice-case') {
+      const location = locationSql(actor,'n.location_id')
+      f.sql += ` AND EXISTS(SELECT 1 FROM env_notices n WHERE n.company_id=v.company_id AND n.id=v.object_id AND ${location.sql})`
+      f.args.push(...location.args)
+    }
     const result = await this.records.env.DB.batch<Record<string, unknown>>([
       ...(audited
         ? [
@@ -232,7 +266,7 @@ export class WorkspaceStore {
     sources: Sources = {},
   ) {
     objectId(id)
-    const person = kind==='paper-onboarding' ? await this.paperAuthority(actor,'paper:entry',personId) : await this.authority(
+    const person = kind==='tax-notice-case' ? (this.caseAuthority(actor,'write'), null) : kind==='paper-onboarding' ? await this.paperAuthority(actor,'paper:entry',personId) : await this.authority(
       actor,
       compensation ? 'rates:propose' : 'records:write',
       personId,
@@ -241,6 +275,11 @@ export class WorkspaceStore {
     const f = fence(actor),
       event = crypto.randomUUID(),
       version = expected + 1
+    if (kind === 'tax-notice-case') {
+      const scope=this.caseScope(actor,id)
+      f.sql += ` AND ${scope.sql}`
+      f.args.push(...scope.args)
+    }
     if (sources.writeFence) {
       f.sql += ` AND (${sources.writeFence.sql})`
       f.args.push(...sources.writeFence.args)
@@ -377,7 +416,8 @@ export class WorkspaceStore {
   }
   async review<T = Input>(actor: Actor, kind: Kind, id: string, personId?: string, condition?: SourceFence) {
     const row = await this.find<T>(actor, kind, id, personId, true)
-    if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
+    if (kind==='tax-notice-case') this.caseAuthority(actor,'cases:review')
+    else if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
     else await this.authority(actor, 'rates:approve', personId, true)
     if (!row.sourcesCurrent || row.approvedBy || row.withdrawnBy)
       throw new PayrollError('review_stale', 409)
@@ -427,7 +467,8 @@ export class WorkspaceStore {
     condition?: SourceFence,
   ) {
     const row = await this.find(actor, kind, id, personId, true)
-    if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
+    if (kind==='tax-notice-case') this.caseAuthority(actor,'cases:review')
+    else if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
     else await this.authority(actor, 'rates:approve', personId, true)
     const version = integer(input.version),
       f = await this.paperReviewFence(actor,kind,row.createdBy,withdraw),
