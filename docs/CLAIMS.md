@@ -32,7 +32,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 24 | 06 | Each run proven to the cent: register, bank debit, tax deposits, 401(k) remittance and ledger agree | `ENV-038` missing; `ENV-061` missing | missing |
 | 25 | 06 | Bank funding of net pay, taxes and 401(k) | `ENV-011` missing | missing |
 | 26 | 06 | EFTPS, Ohio and Columbus deposits accepted | `ENV-014` missing; `ENV-015` missing | missing |
-| 27 | 06 | 401(k) contributions remitted to Guideline | `ENV-019` missing | missing |
+| 27 | 06 | 401(k) contributions remitted to Guideline | `ENV-019` partial | partial |
 | 28 | 08 | A jurisdiction register of every tax account with its dates | `ENV-001` partial | partial |
 | 29 | 08 | Address change made in the employee portal | `ENV-022` missing | missing |
 | 30 | 10 | Q3 Form 941 for four businesses filed and accepted by the IRS | `ENV-014` missing | missing |
@@ -45,4 +45,4 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 37 | 01 Hero, 13 | 100% free, open source alternative to Gusto, ADP RUN and Paychex Flex | `ENV-026` missing | missing |
 | 38 | 12, 01 Run Envelope | One line starts Envelope on your computer (`npx -y @runeditrun/rer dev just-every/run-envelope`) | `ENV-050` missing | missing |
 
-Claims: 38; 0 done, 18 partial, 20 missing.
+Claims: 38; 0 done, 19 partial, 19 missing.
