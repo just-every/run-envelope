@@ -568,9 +568,10 @@ export class Records {
     if (!actor.grant.locations.includes('*'))
       throw new PayrollError('payroll_access_denied', 403)
     const f = fence(actor)
+    // UUIDs do not order tied timestamps; keep the most recently appended event first.
     return (
       await this.statement(
-        `SELECT actor_id AS actorId,action,target_id AS targetId,version,occurred_at AS occurredAt FROM env_audit WHERE company_id=? AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
+        `SELECT actor_id AS actorId,action,target_id AS targetId,version,occurred_at AS occurredAt FROM env_audit WHERE company_id=? AND ${f.sql} ORDER BY occurred_at DESC,rowid DESC LIMIT 200`,
         [actor.company, ...f.args],
       ).all()
     ).results

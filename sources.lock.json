@@ -2402,7 +2402,7 @@
       "executable": false
     },
     "src/envelope/records.ts": {
-      "sha256": "56b4a2758c85ec9a0cbfb7918cf2c266e6562fcdd4522b4e27429f109967c1a2",
+      "sha256": "ad40ca14d7f546e7fe05ab182aae9e9f4a78804f123b3a58b18db8d4d8b2eb46",
       "executable": false
     },
     "src/envelope/review-presentation.ts": {
@@ -3894,7 +3894,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "28582122609cddf0baf57c8c7e11d733192c1951ae8328038a31e048f5f0be8d",
+      "sha256": "24eb2fdea305a2cd9e23bda3ad2e72a8ff38b3af96de29c2beabe9605be8d1bb",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
