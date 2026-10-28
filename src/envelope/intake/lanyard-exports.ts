@@ -16,6 +16,21 @@ const signed = (value: unknown) => {
 type Export = { payload: Input; mappings: Input; evidence: string }
 const sourceKey = (line: Input) => text(line.timeId || line.payInputId || line.sickUseId || line.holidayPayId || line.arrivalPremiumId, 90)
 const sourceRoot = (line: Input) => text(line.rootId || line.payInputId || line.sickUseId || line.holidayPayId || line.arrivalPremiumId || line.timeId, 90)
+const detail = (line: Input) => line.sickLine ? ['sick'] : line.holidayPayId ? ['nonwork-holiday'] :
+  line.differentialLine ? ['differential', line.ruleId ?? ''] :
+  line.premiumLine ? ['premium', line.kind ?? '', line.date ?? ''] :
+    line.holidayLine && !line.holidayPayId ? ['holiday', line.date ?? ''] : []
+const sourceVersion = (line: Input) => [line.revision, line.premiumRevision, line.ruleRevision].map((value, i) => {
+  if (i && value === undefined) return 0
+  const version = signed(value)
+  if (version < 1) throw new PayrollError('invalid_provider_revision')
+  return version
+})
+const sourceVersionKey = (line: Input) => JSON.stringify([sourceKey(line), line.payCode || 'regular', detail(line), line.premiumInputId ?? ''])
+const newer = (current: number[], previous: number[]) => {
+  for (let i = 0; i < current.length; i++) if (current[i] !== previous[i]) return current[i] > previous[i]
+  return false
+}
 
 /** Lanyard exports differences, including negative job allocations and non-work pay. */
 export async function lanyardExports(input: Input, previous?: Input) {
@@ -39,20 +54,20 @@ export async function lanyardExports(input: Input, previous?: Input) {
     throw new PayrollError('intake_row_limit')
   const totals = new Map<string, IntakeLine>(), events = new Set<string>()
   const times = new Map<string, { root: string; revision: number }>()
-  const revisions = new Map<string, number>(), sourceClaims = new Set<string>()
+  const revisions = new Map<string, number[]>(), sourceClaims = new Set<string>(), roots = new Set<string>()
   const workers = new Map<string, string>()
   for (const entry of exports) {
     const nextTimes = new Map<string, { root: string; revision: number }>()
     for (const raw of entry.payload.lines as unknown[]) {
       const line = object(raw), key = sourceKey(line), root = sourceRoot(line)
-      const code = String(line.payCode || 'regular'), revision = signed(line.revision)
-      if (revision < 1)
-        throw new PayrollError('provider_pay_code_review_required', 409)
+      const code = String(line.payCode || 'regular'), version = sourceVersion(line), revision = version[0]
       if (line.corrects && (!times.has(String(line.corrects)) || times.get(String(line.corrects))!.root !== root))
         throw new PayrollError('provider_correction_history_required', 409)
-      const revisionKey = JSON.stringify([root, code])
-      if ((revisions.has(revisionKey) && revision <= revisions.get(revisionKey)!) ||
+      const revisionKey = sourceVersionKey(line)
+      if ((revisions.has(revisionKey) && !newer(version, revisions.get(revisionKey)!)) ||
           (line.payInputId && revision > 1 && !revisions.has(revisionKey)))
+        throw new PayrollError('provider_correction_history_required', 409)
+      if (line.timeId && roots.has(root) && !times.has(key) && !line.corrects)
         throw new PayrollError('provider_correction_history_required', 409)
       const mapping = object(entry.mappings[key]), worker = text(line.payrollId)
       let nativeCode: string
@@ -81,10 +96,10 @@ export async function lanyardExports(input: Input, previous?: Input) {
       }
       const allocation = [line.job ?? '', line.area ?? '', line.site ?? '']
       const suffix = allocation.some(Boolean) ? ':' + (await digest(JSON.stringify(allocation))).slice(0, 12) : ''
-      const sourceId = ['regular','tips','PTO','meal premium','rest premium'].includes(code)
+      const sourceId = !detail(line).length && ['regular','tips','PTO','meal premium','rest premium'].includes(code)
         ? root + ':' + code.replaceAll(' ', '-') + suffix
-        : 'lanyard-' + await digest(JSON.stringify([root,code,allocation]))
-      const event = JSON.stringify([key, revision, code, allocation])
+        : 'lanyard-' + await digest(JSON.stringify([root,code,allocation,detail(line)]))
+      const event = JSON.stringify([revisionKey,version,allocation])
       if (events.has(event)) throw new PayrollError('provider_export_already_claimed', 409)
       events.add(event)
       sourceClaims.add(root + ':' + code.replaceAll(' ', '-'))
@@ -113,7 +128,8 @@ export async function lanyardExports(input: Input, previous?: Input) {
     for (const [key, value] of nextTimes) times.set(key, value)
     for (const raw of entry.payload.lines as unknown[]) {
       const line = object(raw)
-      revisions.set(JSON.stringify([sourceRoot(line), line.payCode || 'regular']), Number(line.revision))
+      revisions.set(sourceVersionKey(line), sourceVersion(line))
+      roots.add(sourceRoot(line))
     }
     // Each exported batch must reconcile to a nonnegative retained entitlement.
     if ([...totals.values()].some(row => row.minutes < 0 || row.amountCents < 0))

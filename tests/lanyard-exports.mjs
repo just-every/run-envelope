@@ -13,7 +13,7 @@ export async function lanyardExportCases({data, door, pay, personId, origin, coo
     payload:{id:'synthetic-envelope-original-export',revision:2,status:'exported',exportedBy:approval.by,exportedAt:approval.at,lines:[]},mappings:{}}
   const lines = original.payload.lines
   for (const [job,minutes] of [['Kitchen',240],['Floor',240]])
-    lines.push({rootId:root,timeId:'synthetic-envelope-original-time',revision:2,payrollId:worker,
+    lines.push({rootId:root,timeId:'synthetic-envelope-original-time',revision:5,payrollId:worker,
       start:'2026-11-02T09:00:00Z',end:'2026-11-02T17:00:00Z',minutes,job,area:job,site:'synthetic-envelope-site'})
   original.mappings['synthetic-envelope-original-time'] = mapping
   for (const day of ['03','04','05','06']) {
@@ -31,7 +31,7 @@ export async function lanyardExportCases({data, door, pay, personId, origin, coo
     start:'2026-11-02T12:00:00Z',minutes:120,costCents:2000,payCode:'Reviewed sick leave'},
     {holidayPayId:'synthetic-envelope-allocated-holiday',holidayLine:true,revision:1,payrollId:worker,
       start:'2026-11-02T12:00:00Z',minutes:180,costCents:3000,payCode:'Reviewed holiday pay'},
-    {rootId:root,timeId:'synthetic-envelope-original-time',differentialLine:true,revision:2,payrollId:worker,
+    {rootId:root,timeId:'synthetic-envelope-original-time',differentialLine:true,revision:5,payrollId:worker,
       start:'2026-11-02T09:00:00Z',minutes:480,costCents:1000,payCode:'Reviewed shift differential'})
   original.mappings['synthetic-envelope-allocated-sick'] = mapping
   original.mappings['synthetic-envelope-allocated-holiday'] = mapping
@@ -53,7 +53,7 @@ export async function lanyardExportCases({data, door, pay, personId, origin, coo
   correction.payload.id = 'synthetic-envelope-corrected-export'
   correction.payload.lines = [
     ...[['Kitchen',-120],['Floor',60]].map(([job,minutes])=>({rootId:root,timeId:'synthetic-envelope-corrected-time',
-      corrects:'synthetic-envelope-original-time',revision:4,payrollId:worker,start:'2026-11-02T09:00:00Z',
+      corrects:'synthetic-envelope-original-time',revision:2,payrollId:worker,start:'2026-11-02T09:00:00Z',
       end:'2026-11-02T16:00:00Z',minutes,job,area:job,site:'synthetic-envelope-site'})),
     {payInputId:'synthetic-envelope-allocated-PTO',revision:2,payrollId:worker,start:'2026-11-02T12:00:00Z',
       minutes:-240,costCents:-4000,payCode:'PTO',approval},
@@ -62,7 +62,7 @@ export async function lanyardExportCases({data, door, pay, personId, origin, coo
     {...lines.find(line=>line.sickLine),revision:2,minutes:-60,costCents:-1000},
     {...lines.find(line=>line.holidayPayId),revision:2,minutes:-180,costCents:-3000},
     {...lines.find(line=>line.differentialLine),timeId:'synthetic-envelope-corrected-time',corrects:'synthetic-envelope-original-time',
-      revision:4,minutes:-60,costCents:500},
+      revision:2,minutes:-60,costCents:500},
   ]
   correction.mappings = {'synthetic-envelope-corrected-time':mapping,
     'synthetic-envelope-allocated-PTO':mapping,'synthetic-envelope-allocated-tips':mapping,
@@ -138,7 +138,32 @@ export async function lanyardExportCases({data, door, pay, personId, origin, coo
   for (const action of ['preview','apply'])
     assert.equal((await data(door+'/'+action,duplicate,409)).error,'source_already_assigned_to_run',
       'changing only job allocation cannot move one source entitlement into another run')
+  // A premium can receive a renewed decision while its enclosing timesheet is unchanged.
+  const premiumId = 'synthetic-envelope-renewed-premium', premiumTime = premiumId+'-time'
+  const premiumOriginal = {provider:'lanyard',account:premiumId,reconciliation:'signed-exports',
+    evidence:'synthetic-envelope-reviewed-premium',mappings:{[premiumTime]:mapping},
+    payload:{id:premiumId+'-original',revision:2,status:'exported',exportedBy:approval.by,exportedAt:approval.at,
+      lines:[{timeId:premiumTime,rootId:premiumTime,revision:3,payrollId:worker,start:'2026-11-02T09:00:00Z',
+        premiumLine:true,premiumInputId:premiumId+'-decision',premiumRevision:1,ruleId:premiumId+'-rule',ruleRevision:1,
+        kind:'reporting',date:'2026-11-02',payCode:'Reporting premium',minutes:60,costCents:500}]}}
+  const premiumChanged = structuredClone(premiumOriginal)
+  premiumChanged.payload.id = premiumId+'-correction'
+  Object.assign(premiumChanged.payload.lines[0],{premiumRevision:2,minutes:-30,costCents:-200})
+  for (const [version,capture,total] of [[0,premiumOriginal,500],[1,premiumChanged,300]]) {
+    const body = {id:premiumId,version,providerCapture:capture}
+    const preview = await data(door+'/preview',body)
+    assert.deepEqual(preview.data.rows.map(row=>[row.minutes,row.amountCents]),[[0,total]])
+    await data(door+'/apply',{...body,digest:preview.digest},201)
+    const review = await data(door+'/'+premiumId+'/review')
+    await data(door+'/'+premiumId+'/approve',{version:version+1,reviewToken:review.reviewToken})
+    assert.equal((await data(pay+'/earnings-run',{...run,id:premiumId,version},201)).preview.grossCashCents,total)
+  }
+  assert.equal((await data(pay)).runs.find(row=>row.id===premiumId && row.version===1).data.grossCashCents,500)
+  const stalePremium = structuredClone(premiumOriginal);stalePremium.payload.id= premiumId+'-stale'
+  assert.equal((await data(door+'/preview',{id:premiumId,version:2,providerCapture:stalePremium},409)).error,'provider_correction_history_required')
+  await data(door+'/'+premiumId+'/withdraw',{version:2})
+  await data(pay+'/earnings-run',{...run,id:premiumId,version:2},409)
   await data(door+'/'+id+'/withdraw',{version:2})
   await data(pay+'/earnings-run',{...run,version:2},409)
-  return {id,original}
+  return {id,original,premiumId,premiumOriginal}
 }

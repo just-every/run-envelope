@@ -159,6 +159,11 @@ explicit `paycheck` value in that field's reviewed settlement mapping, confirmin
 unpaid wages. Already-paid or uncertain service wages are refused until
 reconciled. Withheld tips and rounding losses remain refused when nonzero. An omitted
 previously active source row is refused; submit an explicit zero correction.
+When `jobReference` is present, map its exact `guid` as `sourceJobId` and choose
+the native payroll `job` label. A source job change requires a fresh exact
+mapping and review. A job-only correction changes the retained allocation and
+invalidates the affected review without changing hours or fabricating wages;
+earlier frozen earnings and source versions remain intact.
 
 Reviewed capture imports have no outbound connection or automatic revocation
 feed. Withdraw the local source approval when its external approval changes;
@@ -174,10 +179,32 @@ Clockify accepts a reviewed array of locked `REGULAR` entries from the current
 `id`, `userId`, `workspaceId`, `isLocked`, `type` and `timeInterval` with
 `start`, `end` and numeric-seconds `duration` as a string. The duration must
 match the closed interval. Other duration encodings and nonregular entry types
-require source review rather than guessed conversion. The workspace must match
+require source review rather than guessed conversion, except the explicitly
+mapped non-work types below. The workspace must match
 `account`; map each entry identity to exact source and native worker identifiers,
 local day and actual workweek. A locked entry is not authenticated employer
 approval; native exact review remains mandatory.
+
+The same v1 `TimeEntryDtoImplV1` schema also supplies locked `TIME_OFF` and
+`HOLIDAY` entries. Their mappings must explicitly choose `code: paid-leave` or
+`code: unpaid-leave` and supply integer `amountCents`, including an explicit zero
+for unpaid leave. Clockify's time-entry schema does not supply the payroll wage
+amount or establish whether a leave entitlement is paid. Those values are
+retained native reviewer declarations, not invented provider fields. An unknown
+treatment, missing amount, unlocked entry or nonzero unpaid amount refuses the
+capture. Actual source duration remains non-work minutes, never worked time.
+Corrections retain the source identity and expose the exact duration and amount
+delta; replay adds no money and withdrawal makes the prior earnings stale.
+Statutory leave rates, balance ownership and consumption remain held under the
+existing leave boundary. This is a reviewed export path, not authenticated
+Clockify synchronization or a leave-payment receipt.
+
+When a Clockify entry includes `projectId` or `taskId`, its mapping must retain
+the matching `sourceJobId` or `sourceTaskId` and an explicit payroll `job` label.
+A changed source project or task refuses until its exact mapping is reviewed
+again. The native job label and its correction appear in the retained cell diff;
+the original source identifiers remain in the encrypted capture. No accounting
+destination or job-specific rate is inferred from a label.
 
 Square accepts a reviewed array of closed
 [Timecard objects](https://developer.squareup.com/reference/square/objects/Timecard)
@@ -349,7 +376,11 @@ and adds the signed differences to its original totals. A correction's `corrects
 identity must exist in the retained history with the same root. Missing history,
 stale source revisions, inconsistent worker or workweek mappings and a negative
 resulting entitlement refuse the entire import before writing a version. The
-original source day and actual workweek remain explicit reviewed mappings;
+revision belongs to its source record: a linked correction may begin below its
+predecessor's revision. A renewed premium decision is tracked independently of
+the enclosing timesheet version, so unchanged worked time does not prevent an
+approved premium correction. Replaying an older decision as a new export refuses.
+The original source day and actual workweek remain explicit reviewed mappings;
 neither a job label nor UTC time infers a legal payroll jurisdiction.
 
 The same reconciliation handles Lanyard's signed `PTO`, sick and non-work
