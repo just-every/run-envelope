@@ -4,7 +4,7 @@ import { mkdtemp,writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { portalViewResponse,sidesSubmissionEdge } from './claims-portal-edge.mjs'
-import { payrollDoors, payrollSnapshot, publicSiteBrowser, visitorStorage } from './payroll-doors.mjs'
+import { payrollDoors, payrollSnapshot, publicSiteBrowser, renderedPayrollDoors, visitorStorage } from './payroll-doors.mjs'
 
 export async function claimsBrowser({context,f,completedDoor,wageDoor,edge}){
  const {default:axe}=await import('axe-core')
@@ -336,7 +336,9 @@ export async function safeInputsBrowser({context,f}) {
   await owned.goto(context.origin+ui)
   const rendered=await owned.locator('[href],[action],[formaction]').evaluateAll(nodes=>nodes.flatMap(node=>
    ['href','action','formaction'].map(key=>node.getAttribute(key)).filter(value=>value?.startsWith('/app/envelope'))))
-  const privateDoors=[...new Set([...payrollDoors(f,{id:imported.id,artifacts:[hostile,pdf]},notice),...rendered,
+  const populated=await renderedPayrollDoors(owner,context.origin,[ui,f.base.replace('/api/','/app/'),personDoor.replace('/api/','/app/'),noticePath.replace('/api/','/app/')])
+  await writeFile(join(proof,'populated-documents.json'),JSON.stringify(populated,null,2))
+  const privateDoors=[...new Set([...populated.doors,...payrollDoors(f,{id:imported.id,artifacts:[hostile,pdf]},notice),...rendered,
    '/auth/session','/auth/operators','/auth/sessions','/auth/domain-rules','/auth/providers','/auth/settings/identity',
    '/auth/invite/cancel','/auth/operator/status','/auth/operator/role','/auth/session/revoke','/auth/step-up',
    '/auth/providers/unlink','/auth/providers/relink','/auth/settings/business','/auth/setup-complete','/auth/email','/auth/display-name',
@@ -425,6 +427,24 @@ export async function safeInputsBrowser({context,f}) {
    }
    assert.deepEqual(await snapshot(),before,'rejected input writes no private version or audit')
   }
+  // Every mutation actually offered by the populated documents uses the same
+  // structured request boundary. None may retain a version from malformed data.
+  const inputBefore=await payrollSnapshot(context.sql),inputCases=[]
+  for(const path of populated.inputs) for(const [body,type,status] of [
+   ['null',['application','json'].join('/'),400],
+   ['[]',['application','json'].join('/'),400],
+   ['1',['application','json'].join('/'),400],
+   [Buffer.from([255,254]),['application','json'].join('/'),400],
+   ['version=1&version=2',['application','x-www-form-urlencoded'].join('/'),400],
+   ['<html>synthetic-envelope-587</html>',['text','html'].join('/'),415],
+  ]) {
+   const response=await owner.request.post(context.origin+path,{headers:{origin:context.origin,'content-type':type},data:body,maxRedirects:0})
+   assert.equal(response.status(),status,path+' refuses malformed structured input')
+   inputCases.push({path,type,status:response.status()})
+  }
+  assert.equal(await payrollSnapshot(context.sql),inputBefore,'malformed populated forms change no retained business or identity row')
+  await writeFile(join(proof,'structured-form-refusals.json'),JSON.stringify(inputCases,null,2))
+  console.log('Populated payroll input boundaries passed: '+populated.documents.length+' documents, '+populated.inputs.length+' forms, '+inputCases.length+' refusal cases')
   const structuredSnapshot=()=>context.sql('SELECT company_id,kind,object_id,version,cipher FROM env_workspace_versions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_notice_replies; SELECT * FROM env_verification_releases')
   for(const [path,body,status] of [
    [f.base+'/hris-hires',{...source,version:2,sourceVersion:3,export:[]},400],

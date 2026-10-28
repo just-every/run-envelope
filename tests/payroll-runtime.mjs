@@ -4727,11 +4727,12 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+door.replace('/api/','/app/'));assert.match(await page.locator('main').innerText(),/No signed paper elections recorded/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(folder,'paper-empty-'+width+'.png'),fullPage:true})}
   } finally {await emptyBrowser.close()}
   const pdf=Buffer.from('%PDF-1.4\nSynthetic signed paper original for fixture 1925\n%%EOF').toString('base64')
+  const statePdf=Buffer.concat([Buffer.from('%PDF-1.4\nSynthetic state original 1925\n'),Buffer.from([0,128,255]),Buffer.from('\n%%EOF')]).toString('base64')
   const original={signed:true,signedBy:'Synthetic paper employee',signedOn:'2026-01-01',pdf}
   const input={version:0,attestTranscription:true,workerType:'employee',hiredOn:'2026-01-02',paymentMethod:'paper-check',tin:'900001925',address:'1 Synthetic Street, Columbus OH 43215',
     federal:{form:'W-4',effectiveFrom:'2026-01-02',original,fields:{filingStatus:'single',multipleJobs:'no',dependentCreditCents:200000,otherIncomeCents:0,deductionsCents:0,additionalCents:2500,exempt:'no'}},
-    state:{form:'OH-IT-4',effectiveFrom:'2026-01-02',original,fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:1000,localExemption:'none'}}}
-  privateValue(input.tin);privateValue(pdf)
+    state:{form:'OH-IT-4',effectiveFrom:'2026-01-02',original:{...original,pdf:statePdf},fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:1000,localExemption:'none'}}}
+  privateValue(input.tin);privateValue(pdf);privateValue(statePdf)
   const snapshot=()=>sql(`SELECT (SELECT COUNT(*) FROM env_people) AS people,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_workspace_reviews) AS reviews,(SELECT COUNT(*) FROM env_audit) AS audit`)
   const noWrite=async task=>{const before=await snapshot();await task();assert.deepEqual(await snapshot(),before,'refused onboarding creates no records, decisions, review tokens or audit')}
   await noWrite(async()=>{
@@ -4757,7 +4758,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   assert.equal(row.createdBy,row.approvedBy);assert.ok(row.createdBy);assert.ok(row.createdAt);assert.ok(row.approvedAt)
   const bytes=await call(door+'/original/1/federal');assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),['application','octet-stream'].join('/'));assert.match(bytes.headers.get('content-disposition'),/^attachment/);assert.equal(Buffer.from(await bytes.arrayBuffer()).toString('base64'),pdf)
   // A district move appends rather than replacing the signed source and decision.
-  const moved={...input,version:1,state:{...input.state,effectiveFrom:'2026-07-01',original:{...original,signedOn:'2026-06-30'},fields:{...input.state.fields,schoolDistrictName:'Synthetic Worthington',schoolDistrictNumber:'2516'}}}
+  const moved={...input,version:1,state:{...input.state,effectiveFrom:'2026-07-01',original:{...input.state.original,signedOn:'2026-06-30'},fields:{...input.state.fields,schoolDistrictName:'Synthetic Worthington',schoolDistrictNumber:'2516'}}}
   await data(door,moved,201)
   rows=await data(door);assert.deepEqual(rows.map(r=>r.version),[2,1]);assert.deepEqual(rows.map(r=>r.data.state.fields.schoolDistrictNumber),['2516','2503'])
   assert.equal(rows[0].paperworkReviewed,false);assert.equal(rows[1].paperworkReviewed,true)
@@ -4792,6 +4793,8 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   await noWrite(async()=>{await data(door+'/approve',{version:3,reviewToken:reviewOwner.reviewToken},409)})
   await noWrite(async()=>{await data(door,{...legacy,version:3,federal:{...legacy.federal,original:{...original,signedOn:'2026-01-01'}}},400)})
   const uploadedPdf=Buffer.concat([Buffer.from('%PDF-1.4\n'+'% Synthetic signed paper 1925\n'.repeat(6000)),Buffer.from([0,128,255]),Buffer.from('\n%%EOF')])
+  const uploadedStatePdf=Buffer.concat([Buffer.from('%PDF-1.4\nSynthetic replacement state 1925\n'),Buffer.from([255,128,0]),Buffer.from('\n%%EOF')])
+  const originalBytes=(version,form)=>version===4 ? form==='federal'?uploadedPdf:uploadedStatePdf : Buffer.from(form==='federal'?pdf:statePdf,'base64')
   const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   try {
     const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}])
@@ -4822,7 +4825,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     const fields={'hiredOn':'2026-01-02','tin':input.tin,'address':input.address,'federal.effectiveFrom':'2026-09-01','federal.signedBy':'Synthetic paper employee','federal.signedOn':'2026-08-31','federal.fields.additionalCents':'666','state.effectiveFrom':'2026-09-01','state.signedBy':'Synthetic paper employee','state.signedOn':'2026-08-31','state.fields.residenceAddress':'4 Synthetic Street, Columbus OH','state.fields.schoolDistrictName':'Synthetic Columbus','state.fields.schoolDistrictNumber':'2503'}
     for(const [key,value] of Object.entries(fields)) await page.locator('[name="'+key+'"]').fill(value)
     for(const prefix of ['federal','state']) {
-      await page.locator('[name="'+prefix+'.pdf"]').setInputFiles({name:'synthetic-envelope-1925.pdf',mimeType:['application','pdf'].join('/'),buffer:uploadedPdf})
+      await page.locator('[name="'+prefix+'.pdf"]').setInputFiles({name:'synthetic-envelope-1925.pdf',mimeType:['application','pdf'].join('/'),buffer:prefix==='federal'?uploadedPdf:uploadedStatePdf})
       await page.locator('[name="'+prefix+'.signed"]').check()
     }
     await page.locator('[name="attestTranscription"]').check()
@@ -4909,7 +4912,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   assert.equal(delegatedRow.data.tin,'•••••1925');assert.equal(JSON.stringify(delegatedRow).includes(pdf),false)
   for(const form of ['federal','state']) {
     const original=await call(door+'/original/5/'+form,undefined,downloader)
-    assert.equal(original.status,200);assert.equal(Buffer.from(await original.arrayBuffer()).toString('base64'),pdf)
+    assert.equal(original.status,200);assert.deepEqual(Buffer.from(await original.arrayBuffer()),originalBytes(5,form))
   }
   // Tax-form custody through both native document and API download doors. The
   // retained replacement has binary bytes and differs from the first original.
@@ -4928,7 +4931,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
       assert.equal(response.headers.get('set-cookie'),null)
       assert.match(response.headers.get('content-security-policy'),/^sandbox; default-src 'none';/)
       const actual=Buffer.from(await response.arrayBuffer())
-      assert.deepEqual(actual,method==='HEAD'?Buffer.alloc(0):version===4?uploadedPdf:Buffer.from(pdf,'base64'),'each retained version serves its exact original bytes')
+      assert.deepEqual(actual,method==='HEAD'?Buffer.alloc(0):originalBytes(version,form),'each retained version serves its exact original bytes')
     }
   }
   const refuseOriginals=async(who,status,paths=originalPaths)=>{
@@ -4941,7 +4944,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
         assert.equal(response.headers.get('cache-control'),'no-store')
         assert.equal(response.headers.get('content-disposition'),null,'a refusal is never an attachment')
         const body=await response.text()
-        for(const value of [input.tin,pdf,uploadedPdf.toString('base64'),'%PDF-1.4','Synthetic signed paper original for fixture 1925'])assert.ok(!body.includes(value),'a refused original contains no private form data')
+        for(const value of [input.tin,pdf,statePdf,uploadedPdf.toString('base64'),uploadedStatePdf.toString('base64'),'%PDF-1.4','Synthetic signed paper original for fixture 1925','Synthetic state original 1925'])assert.ok(!body.includes(value),'a refused original contains no private form data')
         if(method==='HEAD')assert.equal(body,'')
       }
     })
@@ -4981,6 +4984,13 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
           const [download]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Enter')])
           assert.equal(download.suggestedFilename(),'signed-paper.pdf')
           assert.deepEqual(await readFile(await download.path()),Buffer.from(pdf,'base64'))
+          for(const form of ['federal','state']) {
+            const replacement=page.locator('a[href$="/original/4/'+form+'"]')
+            await replacement.focus()
+            const [saved]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Enter')])
+            assert.equal(saved.suggestedFilename(),'signed-paper.pdf')
+            assert.deepEqual(await readFile(await saved.path()),originalBytes(4,form),'keyboard download keeps the exact replacement form')
+          }
         }
         if(label==='reviewer') assert.equal(await page.getByRole('link',{name:/Download signed/}).count(),0)
         await page.screenshot({path:join(folder,'paper-staff-'+label+'-'+width+'.png'),fullPage:true})
@@ -5031,7 +5041,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
       await data(door+'/original/1/state',undefined,403,who)
     }
   })
-  const heldOriginal=await call(door+'/original/1/state');assert.equal(heldOriginal.status,200);assert.equal(Buffer.from(await heldOriginal.arrayBuffer()).toString('base64'),pdf)
+  const heldOriginal=await call(door+'/original/1/state');assert.equal(heldOriginal.status,200);assert.equal(Buffer.from(await heldOriginal.arrayBuffer()).toString('base64'),statePdf)
   for(const path of [door,door+'/review',door+'/original/1/state']) {
     const denied=await fetch(origin+path,{headers:{authorization:'Bearer synthetic-envelope-1929',origin},redirect:'manual'})
     assert.ok([401,403].includes(denied.status),'agent credentials gain no paper authority')
