@@ -778,7 +778,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
   assert.deepEqual(captureRefusals.map(({label,observed}) => [label,observed]),
     captureRefusals.map(({label,expected}) => [label,expected]), 'malformed captures refuse at both public intake doors')
 
-  const allocated = await lanyardExportCases({data,door,pay,personId:people[0].id})
+  const allocated = await lanyardExportCases({data,door,pay,personId:people[0].id,origin,cookie})
   const caLocation = await data(api + '/locations', { name: 'California premium workplace', state: 'CA' }, 201)
   const caWorker = await data(api + '/people', { name: 'Synthetic premium worker', locationId: caLocation.id }, 201)
   await setup('group', 'synthetic-envelope-premium-group', { name: 'Premium review', people: [caWorker.id] })

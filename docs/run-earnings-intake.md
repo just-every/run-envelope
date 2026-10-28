@@ -337,6 +337,11 @@ source payload; an altered payload under the same batch ID is refused. Replaying
 any retained batch changes no hours, amount or input version. A new batch cannot
 claim the same source revision again. Source lineage claims also prevent another
 run from claiming the enclosing time through a different job allocation.
+The retained source history is bounded to 5,000 exported lines; the resulting
+intake still has at most 500 rows. Corrections can therefore reconcile a full
+500-row original without treating its retained history as new payable rows.
+The native apply form sends the selected capture, while its earlier batch history
+is reconstructed from retained server records.
 
 Lanyard's `regularLines` export groups job, work area and site allocations and
 subtracts prior exported allocations. Envelope retains each allocation separately
@@ -347,8 +352,15 @@ resulting entitlement refuse the entire import before writing a version. The
 original source day and actual workweek remain explicit reviewed mappings;
 neither a job label nor UTC time infers a legal payroll jurisdiction.
 
-The same reconciliation handles Lanyard's signed `PTO` minutes and cents, `tips`
-cents, and separate meal and rest premium minutes. Payroll inputs retain their
+The same reconciliation handles Lanyard's signed `PTO`, sick and non-work
+holiday minutes and cents, `tips` cents, and separate meal and rest premium
+minutes. Sick and holiday source markers determine non-work treatment even when
+the source uses a configured pay-code label. For a shift differential, worked
+holiday premium or other source premium marked by Lanyard, explicitly map
+`code: other-earning` on that source identity. Its additional cents are retained;
+the source's covered minutes remain in the capture and never create a second
+set of worked hours. Unknown source types or a missing premium mapping refuse
+before any version is written. Payroll inputs retain their
 source approver, time and reason. Paid leave stays outside worked hours. Tip
 settlement remains explicitly reviewed; held tips add no second cash payout.
 Premiums remain separate from worked time. Source batches and mappings are
@@ -358,7 +370,8 @@ approval while preserving the frozen prior run.
 
 This door consumes reviewed exports; it does not poll a Lanyard installation or
 authenticate a source approval. Withdraw native source approval when approval is
-revoked at the source. Unsupported overtime classifications, sick and holiday
-pay exports, differentials and other source earning types still need their own
-reconciliation. No payment, leave-consumption receipt or live source connection
+revoked at the source. Classified overtime adjustments and other unsupported
+source earning types still need their own reconciliation. A supplied premium
+amount is a reviewed source declaration; full legal regular-rate calculation is
+held rather than guessed. No payment, leave-consumption receipt or live source connection
 is established by retaining a batch.

@@ -4,6 +4,7 @@ import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
 import { claimsFixture } from './claims-fixture.mjs'
 import { archiveAuthority } from './archive-authority.mjs'
 import { archiveYearFixture } from './archive-year-fixture.mjs'
+import { intakeCustodyFixture } from './intake-custody.mjs'
 
 /** Real native business records; only the retained agency request is a source-edge fixture. */
 export async function archiveFixture(context) {
@@ -152,6 +153,9 @@ export async function archiveFixture(context) {
   const paperReview=await payroll.data(paperDoor+'/review')
   await payroll.data(paperDoor+'/approve',{version:paperReview.version,reviewToken:paperReview.reviewToken})
   const privateCustody={paperId:paper.id,caseId:custodyNotice.id,pdf:custodyPdf}
+  const erasedIntakes = await intakeCustodyFixture(payroll, company, privacyPerson.id, 'erased')
+  const retainedIntakes = await intakeCustodyFixture(payroll, company, person.id, 'retained')
+  custodyObjects.push(...erasedIntakes.map(row=>row.id))
   const aiProviders=await payroll.data(company.base+'/providers')
   await payroll.data(company.base+'/providers',{id:'openai',version:aiProviders.find(p=>p.id==='openai').version,enabled:true,consent:true,secret:'synthetic-envelope-privacy-ai'},201)
   const aiAgent=await payroll.data(company.base+'/agents',{name:'Synthetic privacy analysis',hours:1,actions:['notices:process'],fields:['tax'],locations:['*'],providers:['openai'],models:['gpt-4.1-mini']},201)
@@ -211,5 +215,5 @@ export async function archiveFixture(context) {
     {companyId:privacyClaims.company.id,personId:privacyClaims.person.id,objects:[privacyClaim.id],kind:'claim',
      claimId:privacyClaim.id,request:privacyClaims.validRequest(),artifactIds:privacyClaimRow.data.artifacts.map(a=>a.id)}]
   return { companies: [company.id, second.id, claims.company.id], years: [year, secondYear], checkId: check.id,
-    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, custodyObjects, custodyInputs, noticeCustody, sharedCustody, privateCustody, hireCustody, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
+    creatorCompanies, formerEmail, creatorId: creator.operator.id, privacyGraphs, custodyObjects, custodyInputs, erasedIntakes, retainedIntakes, noticeCustody, sharedCustody, privateCustody, hireCustody, hostileCustody, privacyPersonId: privacyPerson.id, privacyWorkId: privacyWork.id, claimId: claim.id, noticeId: notice.id, unusedId: unused.id, retainedPersonId: person.id, authority, privateValue: '900-69-0001' }
 }

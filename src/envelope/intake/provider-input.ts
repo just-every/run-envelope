@@ -30,6 +30,12 @@ function requireWorkerMapping(worker: unknown, mapping: Input) {
     worker.length > 120 || /[\u0000-\u001f]/.test(worker) || mapping.sourcePersonId !== worker)
     throw new PayrollError('provider_worker_mapping_required', 409)
 }
+/** Send only the submitted capture back through the form; retained history stays server-owned. */
+export function providerSubmission(input: Input) {
+  const capture = { ...input }
+  for (const field of ['signedExports','sourceDigest','boundary']) delete capture[field]
+  return capture
+}
 function closedMinutes(start: number, end: number, values: unknown, keys: [string, string, string]) {
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 86400000)
     throw new PayrollError('closed_provider_time_required', 409)
