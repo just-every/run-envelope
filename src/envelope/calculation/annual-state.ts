@@ -9,6 +9,7 @@ const caHead:readonly Row[]=[[0,0,110],[22173,243.90,220],[52530,911.75,440],[67
 const cents=(v:number)=>BigInt(Math.round(v*100))
 const nonnegative=(v:bigint)=>v>0n?v:0n
 export const annualStateSources:Record<string,string>={
+ HI:'https://files.hawaii.gov/tax/news/pubs/25BkltA.pdf',
  NE:'https://revenue.nebraska.gov/sites/revenue.nebraska.gov/files/doc/business/Cir_En_2025/2026cir_en_whole.pdf',
  SC:'https://dor.sc.gov/sites/dor/files/forms/WH1603F_2026.pdf',
  DC:'https://otr.cfo.dc.gov/am/page/dc-individual-and-fiduciary-income-tax-rates',
@@ -35,7 +36,12 @@ export function annualState(state:string,wages:number,periods:number,election:Re
  const trace:Record<string,unknown>[]=[]
  const apply=(wages:bigint,rows:readonly Row[],denominator=1n)=>{const row=[...rows].reverse().find(r=>wages>=cents(r[0])*denominator)??rows[0];trace.push({base:{numerator:wages.toString(),denominator:denominator.toString(),unit:'cents'},floorDollars:row[0],annualTaxBaseDollars:row[1],rateBasisPoints:row[2]});return brackets(wages,rows,denominator)}
  let annual=0n,annualDenominator=1n,detail:Record<string,unknown>={},rounding:'cent'|'dollar'='cent'
- if(state==='CA'){
+ if(state==='HI'){
+   if(additionalAllowances)throw new Error('hawaii_hw4_regular_allowances_only')
+   const taxable=nonnegative(a-435000n-BigInt(allowances)*114400n)
+   const rows:readonly Row[]=status==='married'?[[0,0,140],[19200,269,320],[28800,576,550],[38400,1104,640],[48000,1718,680],[72000,3350,720],[96000,5078,760],[250000,16782,790]]:[[0,0,140],[9600,134,320],[14400,288,550],[19200,552,640],[24000,859,680],[36000,1675,720],[48000,2539,760],[125000,8391,790]]
+   annual=apply(taxable,rows);detail={method:'Booklet A 2026 Part 1 annualized method, page 20',annualRegularAllowanceDollars:1144,extraLumpSumAllowanceDollars:4350,taxableAnnualWagesCents:taxable.toString()}
+ }else if(state==='CA'){
    const joint=status==='married'&&allowances>=2,head=status==='head_household',large=joint||head
    const low=large?37791:18896,standard=large?11412:5706
    const taxable=nonnegative(a-cents(standard)-BigInt(additionalAllowances)*100000n)

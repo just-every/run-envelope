@@ -129,6 +129,9 @@ export async function archiveJourney(context) {
     const state = directory => join(directory, '.wrangler', 'state')
     let before = await snapshot(state(source))
     for (const id of fixture.companies) assert.ok(before.env_companies.some(row => row.id === id))
+    for (const source of [...fixture.erasedIntakes,...fixture.retainedIntakes])
+      assert.equal(before.env_workspace_versions.filter(row=>row.kind==='run-intake' && row.object_id===source.id).length,2,
+        'the earlier archive really contains both source capture editions before erasure')
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
     for (const year of fixture.years) {
       for (const returnId of [year.originalReturnId, year.correctedReturnId])

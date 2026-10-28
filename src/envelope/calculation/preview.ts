@@ -24,7 +24,7 @@ const noTaxFacts={employerKind:'business',entityType:'corporation',workerRole:'e
 export function calculationPreview(input:PreviewInput){
   if(!input || Object.keys(input).some(k=>!['edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
   const year=input.edition==='2025-01'?'2025':'2026'
-  if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
+  if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || input.payDate<input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
   if(typeof input.workState!=='string'||typeof input.residentState!=='string'||!input.workState.trim()||!input.residentState.trim()||input.workState.length>80||input.residentState.length>80)reject('work_and_residence_locations_required')
   if(!input.yearToDate || !['socialSecurityWagesCents','medicareWagesCents','futaWagesCents','suiWagesCents'].every(k=>validCents(input.yearToDate[k as keyof PreviewInput['yearToDate']]))) reject('complete_year_to_date_required')
   if(!input.tips || ![input.tips.heldCents,input.tips.paycheckCents,input.tips.furnishedCents].every(validCents) || !Array.isArray(input.deductions) || input.deductions.length>20) reject('complete_tips_and_deductions_required')
@@ -42,7 +42,12 @@ export function calculationPreview(input:PreviewInput){
     gross=checked(r.cashCents)
   }else reject('supported_remuneration_required')
   const p=periods[input.frequency] as PayPeriods
-  const federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate})
+  let federal:ReturnType<typeof calculateIndustryPay>
+  try { federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate}) } catch(error) {
+    if(!(error instanceof Error)||error.message!=='industry_cash_insufficient_for_regular_wage_withholding')throw error
+    hold('regular-wage-cash-insufficient',input.workState,'Regular wage taxes exceed cash wages. Review the election and lawful collection; no negative payout is created.')
+    return {edition:input.edition,payDate:input.payDate,status:'held',paymentReady:false,approval:'unavailable',dispatch:'unavailable',grossCashCents:gross,federal:null,state:null,netCashCents:null,holds,coverage:stateCoverage(input.edition)}
+  }
   let state=stateWithholding(input.workState,gross,input.frequency,input.payDate,input.stateElection,federal.employeeTaxes.incomeTaxCents)
   if(input.workState!==input.residentState)state={...state,withholdingCents:null,reason:'Cross-state sourcing and resident credits are unmapped; no single-state amount is substituted for them.'}
   if(input.tips.heldCents+input.tips.paycheckCents && !['AK','FL','NV','NH','SD','TN','TX','WA','WY'].includes(input.workState))state={...state,withholdingCents:null,reason:'Reported-tip state taxability and collection are not mapped; the ordinary wage component cannot be used as total withholding.'}

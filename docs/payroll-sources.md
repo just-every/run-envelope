@@ -106,6 +106,11 @@ and `earningType` (job, commission or per-service). This documents Envelope's
 intake contract; it does not manufacture a sibling's remote API or receipt.
 A source correction replaces its earlier amount in the selected period, never
 adds a second earning. Each source record has independent identity and review.
+Retaining an earnings run claims each included sibling earning for that run.
+A correction stays on the same run ID and advances its version; the original
+frozen result remains retained. Another run cannot claim the same source earning,
+including after a source correction. Previewing alone reserves no source and
+neither an earnings preparation nor a source claim establishes payment.
 
 Easel is a cost reader/planner and cannot submit earnings. Purse supplier bills,
 Coaster reimbursement choices, planning proposals and already-paid expenses

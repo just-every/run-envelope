@@ -11,6 +11,7 @@ import {
   companyPath,
 } from '../pages'
 import type { Revision } from '../workspace/store'
+import { providerSubmission } from './provider-input'
 import {
   intakeColumns,
   intakeCodes,
@@ -226,7 +227,7 @@ export function runIntakePage(
             <Hidden name="id" value={preview.id} />
             <Hidden name="version" value={preview.version} />
             <Hidden name="namespace" value={preview.data.namespace} />
-            {preview.data.providerCapture ? <Hidden name="providerCapture" value={JSON.stringify(preview.data.providerCapture)} /> : <Hidden name="rows" value={JSON.stringify(preview.data.rows)} />}
+            {preview.data.providerCapture ? <Hidden name="providerCapture" value={JSON.stringify(providerSubmission(preview.data.providerCapture))} /> : <Hidden name="rows" value={JSON.stringify(preview.data.rows)} />}
             <Hidden name="fileDigest" value={preview.data.fileDigest} />
             <Hidden name="format" value={preview.data.format} />
             <Hidden name="digest" value={preview.digest} />

@@ -4241,6 +4241,13 @@ export async function sourceIntakeJourney({ origin, cookie, sql, settings, advan
     assert.equal((await data(pay)).runs.find(r=>r.id==='synthetic-envelope-940').sourceStatus,'changed-repreview-required')
     await data(earn,changed,409)
     assert.ok((await data(earn)).find(r=>r.id===correction.id).affectedRuns.some(r=>r.id==='synthetic-envelope-940'))
+    const correctedRun = {id:'synthetic-envelope-940',version:1,groupId:group,periodStart:'2026-11-01',periodEnd:'2026-11-01',payDate:'2026-11-02',frequency:'weekly'}
+    assert.equal((await data(pay+'/earnings-run',correctedRun,201)).preview.taxableCashCents,1915)
+    const sourceRuns = (await data(pay)).runs
+    assert.equal(sourceRuns.find(row=>row.id===correctedRun.id && row.version===1).data.taxableCashCents,1815,'commission correction retains the original frozen earnings')
+    const duplicatedSource = await data(pay+'/earnings-run',{...correctedRun,id:'synthetic-envelope-duplicate-commission',version:0},409)
+    assert.equal(duplicatedSource.error,'source_already_assigned_to_run')
+    assert.deepEqual((await data(pay)).runs,sourceRuns,'a second run cannot duplicate any of the six source earnings')
     for(const provider of ['easel','purse','coaster']) await data(earn,{...earnings[0].body,provider},400)
     await data(earn,{...earnings[0].body,export:{...earnings[0].body.export,paymentState:'paid'}},409)
     await data(earn,{...earnings[0].body,export:{...earnings[0].body.export,status:'proposal'}},409)

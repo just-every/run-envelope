@@ -81,6 +81,20 @@ export async function archiveAdoption(context, fixture) {
       'adopted historical compensation remains the exact archived annual calculation')
   assert.ok(history.checks.some(row => row.id === fixture.years[0].correctionId && row.data.corrects),
     'adopted history preserves linked corrections without replaying wages')
+  const intakeDoor = company+'/pay-settings/intake'
+  const inputs = await call(intakeDoor,undefined,cookie)
+  assert.equal(inputs.status,200)
+  const inputHistory = await inputs.json()
+  for (const source of fixture.retainedIntakes) for (const original of source.history) {
+    assert.deepEqual(inputHistory.find(row=>row.id===source.id && row.version===original.version).data,original.data,
+      'native restore preserves each exact source capture, signed batch history and corrected total')
+    assert.equal((await call(intakeDoor+'/'+source.id+'/approve',{version:original.version,reviewToken:'synthetic-envelope-old-review'},cookie)).status,403,
+      'historical source evidence supplies no renewed approval authority')
+  }
+  for (const source of fixture.erasedIntakes) assert.ok(!inputHistory.some(row=>row.id===source.id))
+  const restoredInput = fixture.retainedIntakes[0]
+  assert.equal((await call(intakeDoor+'/preview',{id:restoredInput.id,version:2,providerCapture:restoredInput.original},cookie)).status,403,
+    'history adoption cannot prepare another source version')
   const taxResponse = await call('/api/envelope/recovery/' + selected.id + '/tax-history', undefined, cookie)
   assert.equal(taxResponse.status, 200, await taxResponse.clone().text())
   const taxHistory = await taxResponse.json()

@@ -89,7 +89,7 @@ calculation engineering or completion.
 The ordinary withholding corpus also includes California, North Carolina,
 Kentucky, Michigan, Indiana, Colorado, Idaho, Iowa, Delaware, Kansas, Minnesota,
 Missouri, North Dakota, Virginia, Wisconsin, Oregon, Utah, Alabama, South
-Carolina, DC, Nebraska, Mississippi and Georgia. Alaska, Florida,
+Carolina, DC, Nebraska, Mississippi, Georgia, Oklahoma, New Mexico, Montana, West Virginia, Louisiana, Rhode Island and Hawaii. Alaska, Florida,
 Nevada, South Dakota, Tennessee and Wyoming join the cited no-wage-income-tax
 entries. This is component coverage; all 51 complete-state determinations remain
 unproved. The coverage door lists each mapped component with its case identifier.
@@ -128,6 +128,30 @@ wages; no family, visa, agricultural or other special exemption is inferred.
 Georgia uses the retained September guide for proposed checks from October 28.
 Mississippi requires the actual certificate exemption amount. Nebraska currently
 requires zero allowances; nonzero elections need the minimum-withholding rules.
-Every supported component is exercised by one of 37 independent cent-level
+Every supported component is exercised by one of 44 independent cent-level
 golden cases within the public-door calculation journey. These cases do not
 prove complete jurisdiction calculation, legal compliance or actual payday.
+
+Oklahoma retains the actual printed period thresholds and rounded exemption
+constants. New Mexico currently retains only its weekly percentage table and
+refuses to substitute that table for another pay frequency. A regular-wage tax
+election exceeding cash wages returns a named hold and an unavailable net.
+That refusal is distinct from the lawful statutory tip-tax shortage.
+
+Montana retains its actual period formula. Page 16 requires rounding up while
+some examples use nearest-dollar rounding. The component is held whenever those
+readings differ for the proposed amount; no interpretation silently chooses a tax.
+The complete-period schema requires the proposed payment on or after its end.
+
+West Virginia uses its March 2026 printed period schedules and whole-dollar
+rounding. One-job and two-job tables require an explicit certificate election;
+marital status never silently selects the lower schedule.
+
+Louisiana follows R-1306 for the actual L-4 standard-deduction election, including
+its two independent worked examples and the 3.09% withholding cushion. Rhode
+Island currently maps only its weekly percentage table with zero RI-W4 allowances;
+other periods and allowance cases remain held.
+
+Hawaii follows Booklet A Part 1, which expressly permits annualized calculation.
+Its regular HW-4 allowances, extra lump-sum allowance and published annual bracket
+bases are retained, with the official weekly worked example.

@@ -2,6 +2,7 @@ import type { Input } from '../records'
 import { PayrollError, text, date } from '../security'
 import { digest } from '../workspace/store'
 import type { IntakeLine } from './run-input'
+import { lanyardExports } from './lanyard-exports'
 
 function object(value: unknown): Input {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -29,6 +30,17 @@ function requireWorkerMapping(worker: unknown, mapping: Input) {
     worker.length > 120 || /[\u0000-\u001f]/.test(worker) || mapping.sourcePersonId !== worker)
     throw new PayrollError('provider_worker_mapping_required', 409)
 }
+function requireJobMapping(source: unknown, mapping: Input, field = 'sourceJobId') {
+  if (typeof source !== 'string' || !source.trim() || source !== source.trim() ||
+      mapping[field] !== source || typeof mapping.job !== 'string' || !mapping.job.trim())
+    throw new PayrollError('provider_job_mapping_required', 409)
+}
+/** Send only the submitted capture back through the form; retained history stays server-owned. */
+export function providerSubmission(input: Input) {
+  const capture = { ...input }
+  for (const field of ['signedExports','sourceDigest','boundary']) delete capture[field]
+  return capture
+}
 function closedMinutes(start: number, end: number, values: unknown, keys: [string, string, string]) {
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 86400000)
     throw new PayrollError('closed_provider_time_required', 409)
@@ -45,13 +57,20 @@ function closedMinutes(start: number, end: number, values: unknown, keys: [strin
 }
 
 /** Reviewed source captures, never an authenticated provider acknowledgement. */
-export async function providerInput(value: unknown) {
+export async function providerInput(value: unknown, previous?: Input) {
   let input: Input
   try { input = object(typeof value === 'string' ? JSON.parse(value) : value) }
   catch { throw new PayrollError('invalid_provider_export') }
   const provider = text(input.provider), account = text(input.account, 80)
   if (!['lanyard', 'toast', 'clockify', 'square', 'deputy', 'when-i-work', 'homebase', '7shifts', 'quickbooks-time', 'clover'].includes(provider)) throw new PayrollError('unsupported_time_provider')
   const payload = input.payload, mappings = object(input.mappings), evidence = text(input.evidence, 500)
+  if (previous?.reconciliation === 'signed-exports' && input.reconciliation !== 'signed-exports')
+    throw new PayrollError('provider_reconciliation_mode_immutable', 409)
+  if (input.reconciliation === 'signed-exports') {
+    if (provider !== 'lanyard' || (previous && previous.reconciliation !== 'signed-exports'))
+      throw new PayrollError('provider_reconciliation_mode_immutable', 409)
+    return { ...await lanyardExports(input, previous), namespace: provider + ':' + account }
+  }
   const rows: IntakeLine[] = []
   const add = (id: string, map: Input, code: string, minutes: number, amountCents: number, settlement = '') => {
     rows.push({ sourceId: id, personId: text(map.personId), day: date(map.day),
@@ -235,14 +254,28 @@ export async function providerInput(value: unknown) {
       const interval = object(entry.timeInterval), mapping = object(mappings[id])
       if (entry.workspaceId !== account || mapping.sourcePersonId !== worker)
         throw new PayrollError('provider_worker_mapping_required', 409)
-      if (entry.type !== 'REGULAR' || entry.isLocked !== true)
+      const nonwork = entry.type === 'TIME_OFF' || entry.type === 'HOLIDAY'
+      if ((!nonwork && entry.type !== 'REGULAR') || entry.isLocked !== true)
         throw new PayrollError('reviewed_locked_time_required', 409)
       if (typeof interval.duration !== 'string' || !/^\d+$/.test(interval.duration))
         throw new PayrollError('provider_duration_review_required', 409)
       const seconds = Number(interval.duration), start = Date.parse(String(interval.start)), end = Date.parse(String(interval.end))
       if (!Number.isSafeInteger(seconds) || seconds < 0 || !Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start !== seconds * 1000)
         throw new PayrollError('closed_provider_time_required', 409)
-      add(id + ':regular', mapping, 'regular', seconds / 60, 0)
+      for (const [field,mapped] of [['projectId','sourceJobId'],['taskId','sourceTaskId']]) {
+        if (entry[field] !== undefined && entry[field] !== null && entry[field] !== '') {
+          requireJobMapping(entry[field],mapping,mapped)
+        }
+      }
+      if (nonwork) {
+        if (!['paid-leave','unpaid-leave'].includes(String(mapping.code)))
+          throw new PayrollError('provider_leave_mapping_required', 409)
+        const amount = number(mapping.amountCents)
+        if (!Number.isSafeInteger(amount)) throw new PayrollError('provider_fractional_cent')
+        if (mapping.code === 'unpaid-leave' && amount !== 0)
+          throw new PayrollError('unpaid_leave_cannot_create_pay')
+        add(id + ':regular', mapping, String(mapping.code), seconds / 60, amount)
+      } else add(id + ':regular', mapping, 'regular', seconds / 60, 0)
     }
   } else {
     if (!Array.isArray(payload)) throw new PayrollError('invalid_provider_export')
@@ -257,6 +290,8 @@ export async function providerInput(value: unknown) {
         if (entry[key] !== undefined && entry[key] !== 0) throw new PayrollError('provider_pay_code_review_required', 409)
       const mapping = object(mappings[id]), settlements = object(mapping.settlements)
       if (mapping.sourcePersonId !== worker) throw new PayrollError('provider_worker_mapping_required', 409)
+      if (entry.jobReference !== undefined && entry.jobReference !== null)
+        requireJobMapping(object(entry.jobReference).guid,mapping)
       if (String(entry.businessDate) !== String(mapping.day).replaceAll('-', '')) throw new PayrollError('provider_day_mapping_required', 409)
       add(id + ':regular', mapping, 'regular', (number(entry.regularHours) + number(entry.overtimeHours)) * 60, 0)
       for (const key of ['declaredCashTips','nonCashTips']) {
@@ -274,6 +309,6 @@ export async function providerInput(value: unknown) {
     }
   }
   if (!rows.length || rows.length > 500) throw new PayrollError('intake_row_limit')
-  return { rows, namespace: provider + ':' + account,
+  return { rows, sourceClaims: [] as string[], namespace: provider + ':' + account,
     capture: { ...input, provider, account, sourceDigest: await digest(JSON.stringify(payload)), boundary: 'human-reviewed-capture' } }
 }

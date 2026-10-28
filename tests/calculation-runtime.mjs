@@ -37,6 +37,13 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
   ['KY',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},3274],
   ['MI',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4250],
   ['IN',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},2950],
+  ['HI',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4834],
+  ['RI',{filingStatus:'single',allowances:0,additionalCents:0},3750],
+  ['LA',{standardDeduction:1,additionalCents:0},2325],
+  ['WV',{table:'one-earner-one-job',allowances:0,additionalCents:0},3100],
+  ['MT',{certificate:'MW-4-2026',filingStatus:'married_joint',additionalCents:0},1800],
+  ['OK',{filingStatus:'single',allowances:0,additionalCents:0},3536],
+  ['NM',{filingStatus:'single',allowances:0,additionalCents:0},3186],
   ['NE',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},3606],
   ['MS',{filingStatus:'S',exemptionCents:600000,additionalCents:0},2600],
   ['GA',{filingStatus:'single',dependents:0,additionalCents:0},3551],
@@ -77,6 +84,31 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
    const r=await data(door,{...fixture,workState:'IA',residentState:'IA',frequency,remuneration:{kind:'salary',exempt:true,cashCents:wages},stateElection:election})
    assert.equal(r.state.withholdingCents,expected,'Iowa official 2026 worked example')
  }
+ for(const [frequency,wages,standardDeduction,expected] of [['weekly',70000,1,1398],['biweekly',460000,2,11154]]){
+   const official=await data(door,{...fixture,workState:'LA',residentState:'LA',frequency,remuneration:{kind:'salary',exempt:true,cashCents:wages},stateElection:{standardDeduction,additionalCents:0}})
+   assert.equal(official.state.withholdingCents,expected,'Louisiana R-1306 official computer-formula example')
+ }
+ const hawaiiExample=await data(door,{...fixture,workState:'HI',residentState:'HI',remuneration:{kind:'salary',exempt:true,cashCents:50000},stateElection:{filingStatus:'single',allowances:3,additionalAllowances:0,additionalCents:0}})
+ assert.equal(hawaiiExample.state.withholdingCents,958,'Hawaii Booklet A annual-method official example')
+ const twoJobs=await data(door,{...fixture,workState:'WV',residentState:'WV',stateElection:{table:'two-earner-or-multiple-jobs',allowances:0,additionalCents:0}})
+ assert.equal(twoJobs.state.withholdingCents,3400,'West Virginia separately elected two-job schedule')
+ const nmExample=await data(door,{...fixture,workState:'NM',residentState:'NM',stateElection:{filingStatus:'married',allowances:0,additionalCents:2000}})
+ assert.equal(nmExample.state.withholdingCents,4180,'New Mexico official weekly worked example including additional withholding')
+ for(const [state,before,on,election] of [
+   ['ID','2026-07-22','2026-07-23',{filingStatus:'single',childAllowances:0,additionalCents:0}],
+   ['UT','2026-05-31','2026-06-01',{certificate:'modern-w4',filingStatus:'single'}],
+ ]){
+   const early=await data(door,{...fixture,from:'2026-05-18',through:'2026-05-24',payDate:before,workState:state,residentState:state,stateElection:election})
+   const current=await data(door,{...fixture,from:'2026-05-18',through:'2026-05-24',payDate:on,workState:state,residentState:state,stateElection:election})
+   assert.equal(early.state.withholdingCents,null);assert.ok(current.state.withholdingCents>0)
+ }
+ const mtAmbiguous=await data(door,{...fixture,workState:'MT',residentState:'MT',stateElection:{certificate:'MW-4-2026',filingStatus:'single',additionalCents:0}})
+ assert.equal(mtAmbiguous.state.withholdingCents,null);assert.match(mtAmbiguous.state.reason,/rounding/)
+ const nmOtherPeriod=await data(door,{...fixture,workState:'NM',residentState:'NM',frequency:'monthly',stateElection:{filingStatus:'single',allowances:0,additionalCents:0}})
+ assert.equal(nmOtherPeriod.state.withholdingCents,null)
+ const cashHeld=await data(door,{...fixture,w4:{...ordinaryW4,step4cExtraWithholdingCents:200000}})
+ assert.equal(cashHeld.netCashCents,null);assert.equal(cashHeld.federal,null)
+ assert.ok(cashHeld.holds.some(h=>h.code==='regular-wage-cash-insufficient'&&h.reason&&h.location))
  const capped=await data(door,{...fixture,yearToDate:{...fixture.yearToDate,socialSecurityWagesCents:18449900,medicareWagesCents:19999900,futaWagesCents:699900,suiWagesCents:899900}})
  assert.deepEqual(capped.federal.employeeTaxes,{incomeTaxCents:7808,socialSecurityCents:6,medicareCents:1450,additionalMedicareCents:899})
  assert.equal(capped.federal.employerTaxes.futaCents,6)
@@ -102,6 +134,10 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  const premium=await data(door,{...fixture,workState:'CA',residentState:'CA',stateElection:{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},remuneration:{kind:'hourly',weeks:[caWeek]}})
  assert.deepEqual(premium.earnings.weeks[0].premiums.map(p=>p.amountCents),[2200,2200])
  assert.equal(premium.earnings.workedHoursHundredths,4000);assert.equal(premium.grossCashCents,92400)
+ const daily=await data(door,{...fixture,workState:'CA',residentState:'CA',stateElection:{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},remuneration:{kind:'hourly',weeks:[{from:week.from,days:[{day:week.from,segments:[{hoursHundredths:1300,rateCents:2000}]}],productionBonusCents:0,premiums:[]}]}})
+ assert.deepEqual([daily.earnings.weeks[0].overtimeHoursHundredths,daily.earnings.weeks[0].doubleTimeHoursHundredths,daily.grossCashCents],[400,100,32000])
+ const seventh=await data(door,{...fixture,workState:'CA',residentState:'CA',stateElection:{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},remuneration:{kind:'hourly',weeks:[{from:week.from,days:['19','20','21','22','23','24','25'].map(d=>({day:'2026-10-'+d,segments:[{hoursHundredths:800,rateCents:2000}]})),productionBonusCents:0,premiums:[]}]}})
+ assert.deepEqual([seventh.earnings.weeks[0].overtimeHoursHundredths,seventh.earnings.weeks[0].doubleTimeHoursHundredths,seventh.grossCashCents],[1600,0,128000])
  const tips=await data(door,{...fixture,remuneration:{kind:'hourly',weeks:[{from:week.from,days:[{day:'2026-10-19',segments:[{hoursHundredths:1000,rateCents:213}]},{day:'2026-10-20',segments:[{hoursHundredths:1000,rateCents:213}]}],productionBonusCents:0,premiums:[]}]},tips:{heldCents:60000,paycheckCents:0,furnishedCents:0}})
  assert.equal(tips.grossCashCents,4260);assert.equal(tips.tipTaxes.netCashCents,0)
  assert.deepEqual(tips.tipTaxes.order.map(o=>o.kind),['regular-wage-taxes','tip-social-security-and-medicare','tip-income-tax'])
@@ -116,7 +152,7 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  assert.equal(garnished.netCashCents,null);assert.ok(garnished.holds.some(h=>h.code==='unlawful-garnishment'))
  const negative=await data(door,{...fixture,deductions:[{kind:'voluntary-after-tax',amountCents:99999,authorizationRef:'synthetic-envelope-9605'}]})
  assert.equal(negative.netCashCents,null);assert.ok(negative.holds.some(h=>h.code==='negative-net-deduction'))
- for(const bad of [{edition:'2027-01'},{payDate:'2026-02-30'},{yearToDate:{}},{paymentReady:true},{stateElection:{exempt:true}},{remuneration:{kind:'salary',exempt:true,cashCents:1.5}}]){
+ for(const bad of [{edition:'2027-01'},{payDate:'2026-02-30'},{payDate:'2026-10-18'},{yearToDate:{}},{paymentReady:true},{stateElection:{exempt:true}},{remuneration:{kind:'salary',exempt:true,cashCents:1.5}}]){
    assert.equal((await call(door,{...fixture,...bad})).status,400)
  }
  const historicalInput={...fixture,edition:'2025-01',payDate:'2025-10-30',from:'2025-10-20',through:'2025-10-26'}

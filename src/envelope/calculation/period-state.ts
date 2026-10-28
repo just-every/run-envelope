@@ -1,5 +1,6 @@
 import {roundRatio,validCents} from '../industry/federal-withholding'
 export const periodStateSources:Record<string,string>={
+ LA:'https://dam.ldr.la.gov/taxforms/1306-1-26.pdf',
  GA:'https://dor.georgia.gov/document/document/2026-employers-tax-guide-updated-september-2026/download',
  UT:'https://tax.utah.gov/forms-pubs/pub-14/',
  CO:'https://tax.colorado.gov/sites/tax/files/documents/DR_1098_Colorado_Withholding_Worksheet_for_Employees.pdf',
@@ -12,7 +13,13 @@ export function periodState(state:string,wages:number,frequency:'weekly'|'biweek
  if(!Object.hasOwn(periodStateSources,state))return null
  const periods={weekly:52,biweekly:26,semimonthly:24,monthly:12}[frequency]
  let amount:number,detail:Record<string,unknown>
- if(state==='GA'){
+ if(state==='LA'){
+   if(!exactKeys(election,['standardDeduction','additionalCents'])||![0,1,2].includes(Number(election.standardDeduction))||!validCents(election.standardDeduction)||!validCents(election.additionalCents))throw new Error('louisiana_l4_deduction_election_required')
+   const annualDeduction=BigInt(election.standardDeduction)*1287500n,deduction=roundRatio(annualDeduction,BigInt(periods))
+   const taxable=Math.max(0,wages-deduction)
+   amount=roundRatio(BigInt(taxable)*309n,10000n)+election.additionalCents
+   detail={method:'R-1306 January 2026 computer formula',standardDeductionElection:election.standardDeduction,annualDeductionCents:annualDeduction.toString(),periodDeductionCents:deduction,taxablePeriodWagesCents:taxable,rateBasisPoints:309,rounding:'Period deduction and withholding rounded to cents as the official worked examples show',additionalCents:election.additionalCents}
+ }else if(state==='GA'){
    if(!exactKeys(election,['filingStatus','dependents','additionalCents'])||!['single','head_household','married_single_income','married_two_incomes'].includes(String(election.filingStatus))||!validCents(election.dependents)||!validCents(election.additionalCents))throw new Error('georgia_g4_certificate_required')
    const values={weekly:[28846,57692,9615],biweekly:[57692,115385,19231],semimonthly:[62500,125000,20833],monthly:[125000,250000,41667]}[frequency]
    const standard=values[election.filingStatus==='married_single_income'?1:0],dependent=BigInt(election.dependents)*BigInt(values[2])

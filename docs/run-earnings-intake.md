@@ -137,11 +137,11 @@ claim across batches; changing batch identity cannot duplicate a source.
 First-revision Lanyard `PTO` input lines with attributed, dated approval retain
 their reviewed `minutes` and `costCents` as
 paid leave, never worked time. Later PTO exports are signed differences from
-prior claimed inputs and remain refused pending complete reconciliation. Source
+prior claimed inputs and use the signed-export reconciliation described below. Source
 `job` labels remain on ordinary rows.
-Signed corrections, segmented duplicate identities and other earning codes
-require additional implementation; they are refused, never treated as ordinary
-replacement hours or silently discarded. Imported status is retained evidence
+Snapshot captures refuse signed corrections and segmented identities. Use
+signed-export reconciliation for those exports; other unsupported earning codes
+remain refused, never treated as ordinary replacement hours or silently discarded. Imported status is retained evidence
 from the supplied capture; it is not verified against a running Lanyard tenant.
 
 Toast uses the array returned by the published
@@ -159,6 +159,11 @@ explicit `paycheck` value in that field's reviewed settlement mapping, confirmin
 unpaid wages. Already-paid or uncertain service wages are refused until
 reconciled. Withheld tips and rounding losses remain refused when nonzero. An omitted
 previously active source row is refused; submit an explicit zero correction.
+When `jobReference` is present, map its exact `guid` as `sourceJobId` and choose
+the native payroll `job` label. A source job change requires a fresh exact
+mapping and review. A job-only correction changes the retained allocation and
+invalidates the affected review without changing hours or fabricating wages;
+earlier frozen earnings and source versions remain intact.
 
 Reviewed capture imports have no outbound connection or automatic revocation
 feed. Withdraw the local source approval when its external approval changes;
@@ -174,10 +179,32 @@ Clockify accepts a reviewed array of locked `REGULAR` entries from the current
 `id`, `userId`, `workspaceId`, `isLocked`, `type` and `timeInterval` with
 `start`, `end` and numeric-seconds `duration` as a string. The duration must
 match the closed interval. Other duration encodings and nonregular entry types
-require source review rather than guessed conversion. The workspace must match
+require source review rather than guessed conversion, except the explicitly
+mapped non-work types below. The workspace must match
 `account`; map each entry identity to exact source and native worker identifiers,
 local day and actual workweek. A locked entry is not authenticated employer
 approval; native exact review remains mandatory.
+
+The same v1 `TimeEntryDtoImplV1` schema also supplies locked `TIME_OFF` and
+`HOLIDAY` entries. Their mappings must explicitly choose `code: paid-leave` or
+`code: unpaid-leave` and supply integer `amountCents`, including an explicit zero
+for unpaid leave. Clockify's time-entry schema does not supply the payroll wage
+amount or establish whether a leave entitlement is paid. Those values are
+retained native reviewer declarations, not invented provider fields. An unknown
+treatment, missing amount, unlocked entry or nonzero unpaid amount refuses the
+capture. Actual source duration remains non-work minutes, never worked time.
+Corrections retain the source identity and expose the exact duration and amount
+delta; replay adds no money and withdrawal makes the prior earnings stale.
+Statutory leave rates, balance ownership and consumption remain held under the
+existing leave boundary. This is a reviewed export path, not authenticated
+Clockify synchronization or a leave-payment receipt.
+
+When a Clockify entry includes `projectId` or `taskId`, its mapping must retain
+the matching `sourceJobId` or `sourceTaskId` and an explicit payroll `job` label.
+A changed source project or task refuses until its exact mapping is reviewed
+again. The native job label and its correction appear in the retained cell diff;
+the original source identifiers remain in the encrypted capture. No accounting
+destination or job-specific rate is inferred from a label.
 
 Square accepts a reviewed array of closed
 [Timecard objects](https://developer.squareup.com/reference/square/objects/Timecard)
@@ -321,5 +348,61 @@ or an actual wage payment.
 Job labels appear in the input diff, retained exact review and earnings
 provenance. A provider mapping may supply a reviewed `job`; Lanyard's own `job`
 field takes precedence. No accounting destination, worker identity or legal
-jurisdiction is inferred from a job label. Segmented Lanyard rows sharing one
-lineage remain refused rather than dropping or duplicating one allocation.
+jurisdiction is inferred from a job label. Segmented Lanyard exports use the
+signed-export path below rather than dropping or duplicating an allocation.
+
+## Reconcile Lanyard exported differences
+
+For a new run importing actual Lanyard batches, set `reconciliation` to
+`signed-exports` in `providerCapture`. Keep that mode, source account and run ID
+for every later batch. Snapshot history cannot be silently converted to signed
+history: reconcile the previously retained source before selecting a new run.
+
+Import the original exported batch before its corrections. Envelope retains
+each batch and reviewed mapping in encrypted history. A batch ID binds its exact
+source payload; an altered payload under the same batch ID is refused. Replaying
+any retained batch changes no hours, amount or input version. A new batch cannot
+claim the same source revision again. Source lineage claims also prevent another
+run from claiming the enclosing time through a different job allocation.
+The retained source history is bounded to 5,000 exported lines; the resulting
+intake still has at most 500 rows. Corrections can therefore reconcile a full
+500-row original without treating its retained history as new payable rows.
+The native apply form sends the selected capture, while its earlier batch history
+is reconstructed from retained server records.
+
+Lanyard's `regularLines` export groups job, work area and site allocations and
+subtracts prior exported allocations. Envelope retains each allocation separately
+and adds the signed differences to its original totals. A correction's `corrects`
+identity must exist in the retained history with the same root. Missing history,
+stale source revisions, inconsistent worker or workweek mappings and a negative
+resulting entitlement refuse the entire import before writing a version. The
+revision belongs to its source record: a linked correction may begin below its
+predecessor's revision. A renewed premium decision is tracked independently of
+the enclosing timesheet version, so unchanged worked time does not prevent an
+approved premium correction. Replaying an older decision as a new export refuses.
+The original source day and actual workweek remain explicit reviewed mappings;
+neither a job label nor UTC time infers a legal payroll jurisdiction.
+
+The same reconciliation handles Lanyard's signed `PTO`, sick and non-work
+holiday minutes and cents, `tips` cents, and separate meal and rest premium
+minutes. Sick and holiday source markers determine non-work treatment even when
+the source uses a configured pay-code label. For a shift differential, worked
+holiday premium or other source premium marked by Lanyard, explicitly map
+`code: other-earning` on that source identity. Its additional cents are retained;
+the source's covered minutes remain in the capture and never create a second
+set of worked hours. Unknown source types or a missing premium mapping refuse
+before any version is written. Payroll inputs retain their
+source approver, time and reason. Paid leave stays outside worked hours. Tip
+settlement remains explicitly reviewed; held tips add no second cash payout.
+Premiums remain separate from worked time. Source batches and mappings are
+retained alongside the resulting totals and exact cell differences. Applying a
+correction requires fresh source review and invalidates affected prior earnings
+approval while preserving the frozen prior run.
+
+This door consumes reviewed exports; it does not poll a Lanyard installation or
+authenticate a source approval. Withdraw native source approval when approval is
+revoked at the source. Classified overtime adjustments and other unsupported
+source earning types still need their own reconciliation. A supplied premium
+amount is a reviewed source declaration; full legal regular-rate calculation is
+held rather than guessed. No payment, leave-consumption receipt or live source connection
+is established by retaining a batch.

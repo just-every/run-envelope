@@ -170,6 +170,7 @@ export class WorkspaceStore {
     personId?: string,
     compensation = false,
     audited = true,
+    latestObjectId?: string,
   ): Promise<Revision<T>[]> {
     const person = kind==='paper-onboarding' ? await this.paperAuthority(actor,'records:read',personId) : await this.authority(actor, 'records:read', personId, compensation)
     const key = await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
@@ -193,13 +194,14 @@ export class WorkspaceStore {
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedBy,
         (SELECT occurred_at FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='approved') AS approvedAt,
         (SELECT actor_id FROM env_workspace_decisions d WHERE d.company_id=v.company_id AND d.kind=v.kind AND d.object_id=v.object_id AND d.version=v.version AND d.decision='withdrawn') AS withdrawnBy
-        FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? AND ${personId ? 'v.person_id=?' : 'v.person_id IS NULL'} AND ${f.sql}
+        FROM env_workspace_versions v WHERE v.company_id=? AND v.kind=? ${latestObjectId ? 'AND v.object_id=?' : ''} AND ${personId ? 'v.person_id=?' : 'v.person_id IS NULL'} AND ${f.sql}
         ${audited ? 'AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)' : ''}
         ${person ? 'AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)' : ''}
-        ORDER BY v.object_id,v.version DESC`,
+        ORDER BY v.object_id,v.version DESC ${latestObjectId ? 'LIMIT 1' : ''}`,
         [
           actor.company,
           kind,
+          ...(latestObjectId ? [latestObjectId] : []),
           ...(personId ? [personId] : []),
           ...f.args,
           ...(audited ? [event] : []),

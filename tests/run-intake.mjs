@@ -7,6 +7,8 @@ import { randomBytes, createHash } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
+import { lanyardExportCases } from './lanyard-exports.mjs'
+import { clockifyLeaveCases } from './clockify-leave.mjs'
 
 /** Run intake through the same native HTTP and built screens used by employers. */
 export async function runIntakeCases({ origin, cookie, sql, settings, advanceClock }) {
@@ -381,13 +383,14 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
       const mapping = { sourcePersonId: worker, personId: people[i].id,
         day: '2026-11-02', workweek: '2026-11-02' }
       if (provider === 'toast') {
-        payload.push({ guid: source, employeeReference: { guid: worker },
+        payload.push({ guid: source, employeeReference: { guid: worker }, jobReference: { guid: 'synthetic-envelope-toast-job-' + i },
           inDate: '2026-11-02T09:00:00Z', outDate: '2026-11-02T17:00:00Z',
           businessDate: '20261102', deleted: false, autoClockedOut: false,
           regularHours: 8, overtimeHours: 0, declaredCashTips: 0, nonCashTips: [600,300][i],
           cashGratuityServiceCharges: 0, nonCashGratuityServiceCharges: 0, tipsWithheld: 0,
           nonCashTipsRoundingLoss: 0 })
-        mappings[source] = { ...mapping, settlements: { declaredCashTips: 'cash', nonCashTips: ['cash','paycheck'][i] } }
+        mappings[source] = { ...mapping, sourceJobId: 'synthetic-envelope-toast-job-' + i, job: i ? 'Floor' : 'Kitchen',
+          settlements: { declaredCashTips: 'cash', nonCashTips: ['cash','paycheck'][i] } }
       } else {
         payload.lines.push({ timeId: source, payrollId: worker, start: '2026-11-02T09:00:00Z',
           end: '2026-11-02T17:00:00Z', minutes: 480, revision: 1 })
@@ -469,12 +472,32 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     assert.equal(revised.preview.grossCashCents, 170000)
     const retainedRuns = await data(pay)
     assert.equal(retainedRuns.runs.find(r => r.id === providerRun && r.version === 1).data.grossCashCents, 110000)
-    await data(door + '/' + providerRun + '/withdraw', { version: 2 })
-    await data(pay + '/earnings-run', { ...runBody, version: 2 }, 409)
+    let currentVersion = 2
+    if (provider === 'toast') {
+      const moved = structuredClone(changed)
+      moved.payload[0].jobReference.guid = 'synthetic-envelope-toast-job-corrected'
+      const moveBody = { ...body, version: 2, providerCapture: moved }
+      assert.equal((await data(door + '/preview', moveBody, 409)).error, 'provider_job_mapping_required')
+      moved.mappings['synthetic-envelope-provider-0'].sourceJobId = moved.payload[0].jobReference.guid
+      moved.mappings['synthetic-envelope-provider-0'].job = 'Bar'
+      const movement = await data(door + '/preview', moveBody)
+      const changedCells = movement.cells.filter(cell => cell.status === 'change')
+      assert.ok(changedCells.some(cell => cell.field === 'job' && cell.before === 'Kitchen' && cell.after === 'Bar'))
+      assert.ok(changedCells.every(cell => cell.field === 'job'), 'a source job change does not manufacture hours or money')
+      await data(door + '/apply', { ...moveBody, digest: movement.digest }, 201)
+      await data(pay + '/earnings-run', { ...runBody, version: 2 }, 409)
+      await reviewProvider(3)
+      assert.equal((await data(pay + '/earnings-run', { ...runBody, version: 2 }, 201)).preview.grossCashCents, 170000)
+      assert.equal((await data(door)).find(row => row.id === providerRun && row.version === 1).data.rows
+        .find(row => row.sourceId === 'synthetic-envelope-provider-0:regular').job, 'Kitchen')
+      currentVersion = 3
+    }
+    await data(door + '/' + providerRun + '/withdraw', { version: currentVersion })
+    await data(pay + '/earnings-run', { ...runBody, version: currentVersion }, 409)
     const unsupported = structuredClone(capture)
     if (provider === 'toast') unsupported.payload[0].nonCashGratuityServiceCharges = 25
     else unsupported.payload.lines[0].corrects = 'synthetic-envelope-prior'
-    await data(door + '/preview', { ...body, version: 2, providerCapture: unsupported }, 409)
+    await data(door + '/preview', { ...body, version: currentVersion, providerCapture: unsupported }, 409)
   }
 
   for (const provider of ['deputy','when-i-work']) {
@@ -777,6 +800,8 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
   assert.deepEqual(captureRefusals.map(({label,observed}) => [label,observed]),
     captureRefusals.map(({label,expected}) => [label,expected]), 'malformed captures refuse at both public intake doors')
 
+  const allocated = await lanyardExportCases({data,door,pay,personId:people[0].id,origin,cookie})
+  const clockifyLeave = await clockifyLeaveCases({data,door,pay,people})
   const caLocation = await data(api + '/locations', { name: 'California premium workplace', state: 'CA' }, 201)
   const caWorker = await data(api + '/people', { name: 'Synthetic premium worker', locationId: caLocation.id }, 201)
   await setup('group', 'synthetic-envelope-premium-group', { name: 'Premium review', people: [caWorker.id] })
@@ -999,6 +1024,8 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     }
     await page.goto(origin + door.replace('/api/', '/app/'))
     await capture('run-intake-entry')
+    assert.ok((await page.locator('main').innerText()).includes(allocated.id))
+    await capture('run-intake-signed-correction')
     await page.goto(origin + (door + '/' + earningRunIds[0] + '/review').replace('/api/', '/app/'))
     assert.match(await page.locator('main').innerText(), /paid-leave/)
     assert.match(await page.locator('main').innerText(), /service-charge/)
@@ -1583,7 +1610,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     })
     const custody = api + '/people/' + people[0].id + '/privacy'
     const inventory = await data(custody)
-    for (const id of [runId, 'synthetic-envelope-lanyard-run', 'synthetic-envelope-toast-run',
+    for (const id of [runId, allocated.id, allocated.premiumId, clockifyLeave.id, 'synthetic-envelope-lanyard-run', 'synthetic-envelope-toast-run',
       'synthetic-envelope-deputy-run', 'synthetic-envelope-when-i-work-run',
       'synthetic-envelope-clockify-run', 'synthetic-envelope-square-run', 'synthetic-envelope-homebase-run',
       'synthetic-envelope-7shifts-run', 'synthetic-envelope-quickbooks-time-run', 'synthetic-envelope-clover-run']) {
@@ -1626,7 +1653,7 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
     assert.equal(erased.erased, true)
     assert.ok(erased.recordsDeleted >= exactCustody.retained.length)
     const remaining = await data(door)
-    for (const id of [runId, ...['lanyard','toast','deputy','when-i-work','clockify','square','homebase','7shifts','quickbooks-time','clover'].map(provider => 'synthetic-envelope-' + provider + '-run')])
+    for (const id of [runId, allocated.id, allocated.premiumId, clockifyLeave.id, ...['lanyard','toast','deputy','when-i-work','clockify','square','homebase','7shifts','quickbooks-time','clover'].map(provider => 'synthetic-envelope-' + provider + '-run')])
       assert.equal(remaining.filter(r => r.id === id).length, 0, 'eligible erasure removes every retained intake version: ' + id)
     assert.equal((await call(api + '/people/' + people[0].id)).status, 404)
     const replayRows = rows.map(row => ({ ...row, personId: people[1].id }))
@@ -1638,6 +1665,15 @@ export async function runIntakeCases({ origin, cookie, sql, settings, advanceClo
       assert.equal(response.error, 'erased_source', provider + ' erasure fences source identity after run renaming and worker remapping')
     }
     assert.deepEqual(await data(door), remaining, 'stale source replay restores no private version')
+    const staleAllocated = structuredClone(allocated.original)
+    for (const mapping of Object.values(staleAllocated.mappings)) mapping.personId = people[1].id
+    assert.equal((await data(door+'/preview',{id:allocated.id+'-replay',version:0,providerCapture:staleAllocated},409)).error,'erased_source')
+    const stalePremium = structuredClone(allocated.premiumOriginal)
+    for (const mapping of Object.values(stalePremium.mappings)) mapping.personId = people[1].id
+    assert.equal((await data(door+'/preview',{id:allocated.premiumId+'-replay',version:0,providerCapture:stalePremium},409)).error,'erased_source')
+    const staleLeave = structuredClone(clockifyLeave.capture)
+    for (const mapping of Object.values(staleLeave.mappings)) mapping.personId = people[1].id
+    assert.equal((await data(door+'/preview',{id:clockifyLeave.id+'-replay',version:0,providerCapture:staleLeave},409)).error,'erased_source')
     const erasureAudit = (await data(api + '/audit')).filter(e => e.action === 'privacy.worker.erased')
     assert.equal(erasureAudit.length, 1)
     assert.notEqual(erasureAudit[0].targetId, people[0].id)

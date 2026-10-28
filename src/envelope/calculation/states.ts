@@ -1,3 +1,6 @@
+import {westVirginiaWithholding,westVirginiaSource} from './west-virginia'
+import {montanaWithholding,montanaSource} from './montana'
+import {printedWithholding,printedSources} from './printed-tables'
 import {mississippiWithholding,mississippiSource} from './mississippi'
 import {alabamaWithholding,alabamaSource} from './alabama'
 import {oregonWithholding,oregonSource} from './oregon'
@@ -10,7 +13,7 @@ import { nyWithholding,type NyWithholdingInput } from '../workspace/ny-withholdi
 import { roundRatio,validCents } from '../industry/federal-withholding'
 const states='AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ')
 const sources:Record<string,string>={
-  MS:mississippiSource,AL:alabamaSource,OR:oregonSource,...annualStateSources,...periodStateSources,...bracketStateSources,
+  WV:westVirginiaSource,MT:montanaSource,...printedSources,MS:mississippiSource,AL:alabamaSource,OR:oregonSource,...annualStateSources,...periodStateSources,...bracketStateSources,
   PA:'https://www.pa.gov/agencies/revenue/resources/tax-types-and-information/employer-withholding',
   NJ:'https://www.nj.gov/treasury/taxation/pdf/withholdingtables.pdf',
   NY:'https://www.tax.ny.gov/pdf/publications/withholding/nys50_t_nys.pdf',
@@ -44,6 +47,9 @@ export function stateWithholding(state:string,wages:number,frequency:'weekly'|'b
   if(state==='ID' && payDate<'2026-07-23')return {...base,reason:'The retained Idaho edition starts July 23, 2026; this older state calculation remains unmapped.'}
   if(state==='MS')return {...base,reason:'Ordinary signed-certificate withholding; state programs remain separate.',...mississippiWithholding(wages,{weekly:52,biweekly:26,semimonthly:24,monthly:12}[frequency],election)}
   if(state==='AL')return {...base,reason:'Ordinary A-4 taxable cash wages; state programs remain separate.',...alabamaWithholding(wages,{weekly:52,biweekly:26,semimonthly:24,monthly:12}[frequency],federalIncomeTaxCents,election)}
+  if(state==='WV')return {...base,...westVirginiaWithholding(wages,frequency,election)}
+  if(state==='MT')return {...base,...montanaWithholding(wages,frequency,election)}
+  if(state==='OK'||state==='NM'||state==='RI')return {...base,...printedWithholding(state,wages,frequency,election)}
   if(state==='OR')return {...base,...oregonWithholding(wages,{weekly:52,biweekly:26,semimonthly:24,monthly:12}[frequency],federalIncomeTaxCents,election)}
   let withholding:number
   let detail:unknown

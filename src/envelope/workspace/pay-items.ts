@@ -862,6 +862,13 @@ export class PayItems {
     const unique = objects.filter(
       (o, i, a) => a.findIndex((x) => x.kind === o.kind && x.id === o.id) === i,
     )
+    const sourceClaims = await Promise.all(unique.filter(source=>source.kind==='source-earning')
+      .map(source=>digest(JSON.stringify(['source-earning',source.id]))))
+    if (sourceClaims.length && await this.store.records.statement(
+      `SELECT 1 FROM env_workspace_review_inputs WHERE company_id=? AND source_kind='intake-source'
+       AND (kind!='earnings-run' OR object_id!=?) AND source_person_id IN(SELECT value FROM json_each(?))`,
+      [actor.company, objectId(input.id), JSON.stringify(sourceClaims)],
+    ).first()) throw new PayrollError('source_already_assigned_to_run',409)
     return {
       ...(await this.store.append(
         actor,
@@ -874,6 +881,7 @@ export class PayItems {
         {
           people: group.data.people.map((p) => ({ id: p.id, version: p.version })),
           objects: unique,
+          exclusiveSourceIds: sourceClaims,
           // New work IDs for a payee and any approval-policy change are material.
           reviewSets: await collectionPins(this.store, actor, [
             ...group.data.people.flatMap((p) => (['work', 'tip', 'leave-account', 'hris-event', 'source-earning'] as Kind[]).map((kind) => ({ kind, personId: p.id, exceptId: '' }))),

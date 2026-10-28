@@ -188,12 +188,22 @@ export async function archiveErasure(context, fixture) {
   assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,200,'current scoped viewer can read mapped source history before the request')
   Object.assign(held,await getPrivacy())
   const custodyReads = ['leave','hris','earnings-sources',...['ssn','bank','tax'].map(kind => 'private/' + kind)]
+  const intakeDoor = company+'/pay-settings/intake'
+  const beforeIntakes = await call(intakeDoor,undefined,{cookie:viewerCookie})
+  assert.equal(beforeIntakes.status,200)
+  const beforeIntakeRows = await beforeIntakes.json()
+  for (const source of fixture.erasedIntakes) assert.equal(beforeIntakeRows.filter(row=>row.id===source.id).length,2)
+  assert.equal((await call(intakeDoor,undefined,{cookie:''})).status,401)
+  assert.equal((await call(intakeDoor,undefined,{authorization:'Bearer '+fixture.authority.agentToken})).status,403)
   for (const door of custodyReads) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/' + door, undefined, {cookie:viewerCookie})).status,200,
     'a current ordinary grant can read the exact custody family before the erasure request')
   assert.equal((await call(privacyDoor+'/request',{consent:true,fingerprint:held.fingerprint})).status,200)
   for (const door of custodyReads) assert.equal((await call(company + '/people/' + fixture.privacyPersonId + '/' + door, undefined, {cookie:viewerCookie})).status,403,
     'a held request withdraws ordinary access to each leave, intake and private attachment door')
   assert.equal((await call(company+'/hris-hires',undefined,{cookie:viewerCookie})).status,403,'held mapped source history refuses ordinary access')
+  assert.equal((await call(intakeDoor,undefined,{cookie:viewerCookie})).status,403,'held source captures refuse a previously permitted intake reader')
+  const ownerIntakes = await (await call(intakeDoor)).json()
+  for (const source of fixture.erasedIntakes) assert.equal(ownerIntakes.filter(row=>row.id===source.id).length,2,'current owner retains exact held source history')
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'held private originals remain restricted')
   const scopedRead=await worker.fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+fixture.authority.agentToken},body:JSON.stringify({jsonrpc:'2.0',id:54,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0],personId:fixture.privacyPersonId}}})})
   assert.equal(scopedRead.status,403,'a previously usable sponsored bearer cannot read retained company data')
@@ -314,6 +324,18 @@ export async function archiveErasure(context, fixture) {
     assert.ok(!(await (await call(company+'/hris-hires')).json()).some(r=>r.id===fixture.hireCustody.id),'erased mapped hire is absent from the collection')
     assert.equal((await call(company+'/people/'+fixture.sharedCustody.coworkerId)).status,200,'erasing a shared run does not erase its unrelated coworker')
     const afterSettings=await (await call(company+'/pay-settings')).json()
+    const afterIntakes = await (await call(intakeDoor)).json()
+    for (const source of fixture.erasedIntakes) assert.ok(!afterIntakes.some(row=>row.id===source.id),'erasure removes original and corrected capture history')
+    const replacement = await (await call(company+'/people',{name:'Synthetic intake replay worker',
+      locationId:(await (await call(company)).json()).people[0].locationId})).json()
+    for (const source of fixture.erasedIntakes) {
+      const capture = structuredClone(source.original)
+      for (const mapping of Object.values(capture.mappings)) mapping.personId = replacement.id
+      const replay = await call(intakeDoor+'/preview',{id:source.id+'-replay',version:0,providerCapture:capture})
+      assert.equal(replay.status,409)
+      assert.equal((await replay.json()).error,'erased_source','source claims survive run renaming and source-worker remapping')
+    }
+    assert.deepEqual(await (await call(intakeDoor)).json(),afterIntakes,'refused replay restores no input history')
     assert.ok(!afterSettings.runs.some(r=>r.id===fixture.sharedCustody.runId),'shared downstream payroll is absent after erasure')
     assert.equal((await call(company+'/notices/'+fixture.noticeCustody.id)).status,403,'erased notice body and derivatives are unavailable')
     for(const path of privateDoors) assert.ok([403,404].includes((await call(path)).status),'erased private history and original bytes are unavailable')
