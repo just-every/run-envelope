@@ -23,7 +23,8 @@
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity,agent-policy pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-policy pnpm run test:runtime"
       ]
     },
     {

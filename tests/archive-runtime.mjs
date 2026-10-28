@@ -145,6 +145,7 @@ export async function archiveJourney(context) {
     }
     assert.ok(before.env_grants.length && before.oa_sessions.length, 'the source has active company authority and native sessions to exclude')
     assert.ok(before.env_agent_grants.some(row => row.id === fixture.authority.agentId && row.expires_at > Date.now()), 'a live sponsored agent grant exists before export')
+    assert.ok(before.env_agent_class_policy.some(row=>row.company_id===fixture.companies[0]&&row.answers),'the source has an explicitly answered active class policy')
     assert.ok(before.env_agent_credentials.some(row => row.id === fixture.authority.agentId), 'the source agent has a usable credential')
     assert.ok(before.env_external_providers.some(row => row.enabled === 1), 'the source has an explicitly enabled provider')
     for (const effect of fixture.authority.effects) {
@@ -204,7 +205,7 @@ export async function archiveJourney(context) {
     const includedBefore = Object.fromEntries(Object.keys(rows).map(name => [name, before[name] ?? []]))
     assert.equal(digest(ciphers(rows)), digest(ciphers(includedBefore)), 'encrypted records retain their exact ciphertext and record association')
     assert.equal(digest(rows.env_workspace_decisions), digest(before.env_workspace_decisions), 'human approval history remains evidence')
-    for (const name of ['oa_sessions', 'oa_tokens', 'oa_credentials', 'oa_step_up_challenges', 'env_grants', 'env_workspace_reviews', 'env_rate_reviews', 'env_notice_reviews', 'env_external_providers', 'env_agent_credentials', 'env_webhook_keys'])
+    for (const name of ['env_agent_class_policy', 'oa_sessions', 'oa_tokens', 'oa_credentials', 'oa_step_up_challenges', 'env_grants', 'env_workspace_reviews', 'env_rate_reviews', 'env_notice_reviews', 'env_external_providers', 'env_agent_credentials', 'env_webhook_keys'])
       assert.equal(rows[name]?.length ?? 0, 0, 'archive carries no active authority from ' + name)
     for (const name of ['env_agent_grants', 'env_notice_approvals', 'env_verification_consents', 'env_verification_releases'])
       for (const row of rows[name] ?? []) assert.equal(row.expires_at, 0, 'retained authorization evidence is inactive')
