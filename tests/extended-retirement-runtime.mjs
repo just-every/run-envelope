@@ -43,6 +43,24 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   assert.equal(max.result.employeeDeductionCents,0);assert.equal(max.result.collectedCents,0);assert.equal(max.result.providerAcceptance,'unavailable')
   await refused(s,request(2750001,800000),'combined_403b_elective_limit_exceeded')
   await refused(s,request(2750000,800000,4450001),'combined_annual_additions_limit_exceeded')
+  // Section 414(v) also applies when employer contributions exhaust the
+  // annual additions ceiling before the employee reaches the elective limit.
+  const additionsCatchUp=await preview(s,request(2000000,0,6000000))
+  assert.deepEqual(additionsCatchUp.result.allocation,{ordinaryCents:1200000,serviceCents:0,ageCents:800000,specialCents:0})
+  assert.deepEqual(additionsCatchUp.result.reporting.box12,[{code:'E',amountCents:2000000}])
+  assert.equal(additionsCatchUp.result.employeeDeductionCents,0)
+  await refused(s,request(2000001,0,6000000),'combined_annual_additions_limit_exceeded')
+  // Opening registers retain actual non-age additions and age catch-up
+  // separately, including catch-up triggered by the additions ceiling.
+  const additionsOpening=await save({...initial,opening:{electiveCents:1200000,planElectiveCents:1200000,serviceCents:0,ageCents:400000,annualAdditionsCents:7200000}})
+  assert.deepEqual((await preview(additionsOpening,request(400000))).result.allocation,{ordinaryCents:0,serviceCents:0,ageCents:400000,specialCents:0})
+  await refused(additionsOpening,request(400001),'combined_annual_additions_limit_exceeded')
+  await refused(additionsOpening,request(0,0,1),'combined_annual_additions_limit_exceeded')
+  const noAdditionsAge=await save({...initial,ageAtYearEnd:49})
+  await refused(noAdditionsAge,request(2000000,0,6000000),'combined_annual_additions_limit_exceeded')
+  const disallowedAdditionsAge=await save({...initial,allowsAgeCatchUp:false})
+  await refused(disallowedAdditionsAge,request(2000000,0,6000000),'combined_annual_additions_limit_exceeded')
+  await refused(s,request(0,0,7200001),'combined_annual_additions_limit_exceeded')
   const y25=await save({...initial,year:2025,effectiveFrom:'2025-01-01',effectiveThrough:'2025-12-31'})
   const old=await preview(y25,request(2650000,750000,4350000,'2025-10-30'))
   assert.deepEqual(old.result.allocation,{ordinaryCents:2350000,serviceCents:300000,ageCents:750000,specialCents:0})
@@ -53,6 +71,10 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   const highIncome=await save({...initial,priorYearFicaWagesCents:15000001})
   await refused(highIncome,request(3550000),'age_catch_up_must_be_roth')
   assert.equal((await preview(highIncome,request(2750000,800000))).result.rothCents,800000)
+  await refused(highIncome,request(2000000,0,6000000),'age_catch_up_must_be_roth')
+  const additionsRoth=await preview(highIncome,request(1200000,800000,6000000))
+  assert.deepEqual(additionsRoth.result.allocation,{ordinaryCents:1200000,serviceCents:0,ageCents:800000,specialCents:0})
+  assert.deepEqual(additionsRoth.result.reporting.box12,[{code:'E',amountCents:1200000},{code:'BB',amountCents:800000}])
   const threshold=await save({...initial,priorYearFicaWagesCents:15000000})
   assert.equal((await preview(threshold,request(3550000))).result.allocation.ageCents,800000)
   // The remaining lifetime and service formula, not a fixed extra allowance,

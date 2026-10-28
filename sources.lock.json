@@ -474,7 +474,7 @@
       "executable": false
     },
     "docs/extended-retirement.md": {
-      "sha256": "d30a677fdb034b4ce11b36091d29cb4a242eb6bd9816b69e948b6980154fba94",
+      "sha256": "514259d0ba39941f9db8df7a2e93ba799484d3982ccff1bf3f7a893cab3f11a6",
       "executable": false
     },
     "docs/firm-work.md": {
@@ -2046,7 +2046,7 @@
       "executable": false
     },
     "src/envelope/benefits/extended-retirement.ts": {
-      "sha256": "7fbf731c5fabb12a28af7f7e5dda362994a473c0cb0803eb32d9de277eb62620",
+      "sha256": "569811b8688ee659a9a2946a3c7ab5bb9efc2b66031714b452227d9c64948005",
       "executable": false
     },
     "src/envelope/benefits/hi-plan-shares.ts": {
@@ -3722,7 +3722,7 @@
       "executable": false
     },
     "tests/extended-retirement-runtime.mjs": {
-      "sha256": "9435228a2274cc3169d8c58bc67465f6dc1f50cb3c7c69b259352bea393778b9",
+      "sha256": "06b2f2b5454d3ae4112f1bb203fc0c329ba17f81f6c9a1f0845dc0c4bee9f897",
       "executable": false
     },
     "tests/firm-fixture.mjs": {

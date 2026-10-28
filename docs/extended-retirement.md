@@ -62,7 +62,15 @@ Traditional and Roth employee requests share the elective ceiling. Non-age
 employee amounts and employer contributions share the lesser of annual
 additions and includible compensation. Ordinary and service employee amounts
 produce prepared E and BB fields according to their traditional and Roth split;
-age catch-up keeps the same arrangement's code.
+age catch-up keeps the same arrangement's code. Age catch-up can also apply
+when the combined annual-additions ceiling is reached before the elective
+ceiling. Only employee deferrals above the applicable non-age limit are
+reclassified; employer contributions remain annual additions. In 2026, an
+eligible age-55 employee contributing $20,000 alongside $60,000 from the
+employer has $12,000 ordinary deferrals and $8,000 age catch-up, leaving $72,000
+annual additions. Prior age catch-up remains separate from the non-age opening
+register, and its remaining capacity and any Roth requirement still apply.
+See [the section 414(v) catch-up regulation](https://www.irs.gov/pub/irs-regs/td9072.pdf).
 
 ## 457(b)
 

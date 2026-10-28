@@ -106,14 +106,24 @@ export function extendedRetirementCalculation(setup: ExtendedRetirementSetup, ra
   if (setup.arrangement === '403b') {
     const s = setup.service!, serviceLimit = s.enabled ? Math.max(0, Math.min(300_000, 1_500_000 - s.lifetimeUsedBeforeYearCents, Math.floor(500_000 * s.yearsOfService) - s.employerDeferralsBeforeYearCents)) : 0
     if (prior.serviceCents! > serviceLimit || prior.serviceCents !== Math.max(0, prior.electiveCents! - rules.electiveCents) || prior.ageCents! > ageLimit || prior.electiveCents! > rules.electiveCents + serviceLimit) fail('inconsistent_403b_opening_register')
-    if (prior.ageCents && prior.electiveCents !== rules.electiveCents + serviceLimit) fail('service_before_age_catch_up_required')
+    annualLimitCents = Math.min(rules.additionsCents, setup.compensationCents)
+    if (prior.ageCents && prior.electiveCents !== rules.electiveCents + serviceLimit && prior.annualAdditionsCents !== annualLimitCents) fail('service_before_age_catch_up_required')
     ordinaryCents = Math.min(elective, Math.max(0, rules.electiveCents - prior.electiveCents!))
     serviceCents = Math.min(elective - ordinaryCents, serviceLimit - prior.serviceCents!)
     ageCents = elective - ordinaryCents - serviceCents
     if (ageCents + prior.ageCents! > ageLimit) fail('combined_403b_elective_limit_exceeded')
+    if (prior.planElectiveCents! > prior.electiveCents! || prior.annualAdditionsCents! < prior.planElectiveCents! || prior.annualAdditionsCents! + employerCents > annualLimitCents) fail('combined_annual_additions_limit_exceeded')
+    // Section 414(v) excludes eligible employee catch-up from section 415(c)
+    // even when employer additions fill that ceiling before elective limits.
+    // Keep ordinary and then service deferrals within both non-age limits;
+    // employer contributions can never be reclassified as employee catch-up.
+    const additionsCatchUp = Math.max(0, prior.annualAdditionsCents! + ordinaryCents + serviceCents + employerCents - annualLimitCents)
+    if (prior.ageCents! + ageCents + additionsCatchUp > ageLimit) fail('combined_annual_additions_limit_exceeded')
+    const serviceReclassified = Math.min(serviceCents, additionsCatchUp)
+    serviceCents -= serviceReclassified
+    ordinaryCents -= additionsCatchUp - serviceReclassified
+    ageCents += additionsCatchUp
     if (rothRequired && ageCents > rothCents) fail('age_catch_up_must_be_roth')
-    annualLimitCents = Math.min(rules.additionsCents, setup.compensationCents)
-    if (prior.planElectiveCents! > prior.electiveCents! || prior.annualAdditionsCents! < prior.planElectiveCents! || prior.annualAdditionsCents! + ordinaryCents + serviceCents + employerCents > annualLimitCents) fail('combined_annual_additions_limit_exceeded')
     if (prior.planElectiveCents! + prior.ageCents! + elective > setup.compensationCents) fail('elective_deferrals_exceed_compensation')
     if (traditionalCents) box12.push({code:'E', amountCents:traditionalCents})
     if (rothCents) box12.push({code:'BB', amountCents:rothCents})
