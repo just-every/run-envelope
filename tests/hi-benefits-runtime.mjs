@@ -116,6 +116,34 @@ export async function hiBenefitsJourney({ origin, cookie, sql, settings, restart
   assert.equal(calculation.hiBenefits.proposedEmployeeCents,50);assert.equal(calculation.status,'held');assert.equal(calculation.netCashCents,null)
   assert.ok(calculation.holds.some(h=>h.code==='state-programs-unmapped'));assert.equal(calculation.paymentReady,false)
   await refuse(base+'/calculation-preview',{...calc,hiBenefits:request({...tdi,version:1},[period(10000)])},'hi_calculation_wages_mismatch')
+  // Weekly earnings must retain their own TDI ceilings through calculation.
+  // $100 and $2,000 wage weeks owe $0.50 and $7.50, not the $10.50
+  // obtained by reallocating the same total to $1,000 and $1,100 weeks.
+  const weeklyPlan = await save(plan('synthetic-envelope-tdi-weekly','tdi'))
+  const weeklyPeriods = (first, second) => [period(first,{payDate:'2026-10-23'}),
+    period(second,{from:'2026-10-12',through:'2026-10-18',payDate:'2026-10-23',weekFrom:'2026-10-12'})]
+  const weeklyCalc = {...calc,through:'2026-10-18',payDate:'2026-10-23',frequency:'biweekly',
+    remuneration:{kind:'hourly',weeks:[
+      {from:'2026-10-05',days:[{day:'2026-10-05',segments:[{hoursHundredths:100,rateCents:10000}]}],productionBonusCents:0,premiums:[]},
+      {from:'2026-10-12',days:[{day:'2026-10-12',segments:[{hoursHundredths:100,rateCents:200000}]}],productionBonusCents:0,premiums:[]}]}}
+  const lawfulWeekly = await data(base+'/calculation-preview',{...weeklyCalc,hiBenefits:request(weeklyPlan,weeklyPeriods(10000,200000))})
+  assert.deepEqual(lawfulWeekly.hiBenefits.periods.map(p=>p.proposedEmployeeCents),[50,750])
+  assert.equal(lawfulWeekly.hiBenefits.proposedEmployeeCents,800)
+  assert.equal(lawfulWeekly.netCashCents,null);assert.equal(lawfulWeekly.paymentReady,false)
+  await refuse(base+'/calculation-preview',{...weeklyCalc,hiBenefits:request(weeklyPlan,weeklyPeriods(100000,110000))},'hi_calculation_wages_mismatch')
+  const splitWeekly = await data(base+'/calculation-preview',{...weeklyCalc,hiBenefits:request(weeklyPlan,[
+    period(4000,{through:'2026-10-07',payDate:'2026-10-23'}),
+    period(6000,{from:'2026-10-08',payDate:'2026-10-23'}),weeklyPeriods(10000,200000)[1]])})
+  assert.deepEqual(splitWeekly.hiBenefits.periods.map(p=>p.proposedEmployeeCents),[20,30,750])
+  assert.equal(splitWeekly.hiBenefits.proposedEmployeeCents,800)
+  await refuse(base+'/calculation-preview',{...weeklyCalc,remuneration:{kind:'salary',exempt:true,cashCents:210000},
+    hiBenefits:request(weeklyPlan,weeklyPeriods(100000,110000))},'hi_calculation_wages_mismatch')
+  // A tax cash-shortage hold must still bind the actual earning weeks.
+  const cashHeld = {...weeklyCalc,w4:{...ordinaryW4,step4cExtraWithholdingCents:300000}}
+  const lawfulHeld = await data(base+'/calculation-preview',{...cashHeld,hiBenefits:request(weeklyPlan,weeklyPeriods(10000,200000))})
+  assert.equal(lawfulHeld.hiBenefits.proposedEmployeeCents,800)
+  assert.ok(lawfulHeld.holds.some(h=>h.code==='regular-wage-cash-insufficient'))
+  await refuse(base+'/calculation-preview',{...cashHeld,hiBenefits:request(weeklyPlan,weeklyPeriods(100000,110000))},'hi_calculation_wages_mismatch')
   const beforeRestart = await data(door)
   await restart()
   assert.deepEqual(await data(door),beforeRestart,'Encrypted evidence, versions, decisions and proposed amounts survive restart without collecting funds')
