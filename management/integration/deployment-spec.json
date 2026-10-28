@@ -232,8 +232,14 @@
     {
       "binding": "DB",
       "name": "0038_agent_class_policy.sql",
-      "sha256": "a5b77087ad860bf4aeec825ec640216c8b793e69068d11b1da07d28e01f5f30d",
-      "sql": "CREATE TABLE env_agent_class_policy (\n company_id TEXT PRIMARY KEY REFERENCES env_companies(id),\n version INTEGER NOT NULL, answers TEXT CHECK(answers IS NULL OR json_valid(answers)),\n paused INTEGER NOT NULL CHECK(paused IN (0,1)), change_id TEXT NOT NULL,\n updated_by TEXT NOT NULL REFERENCES oa_operators(id), updated_at INTEGER NOT NULL\n);\nCREATE TABLE env_agent_call_audit (\n id TEXT PRIMARY KEY, company_id TEXT NOT NULL REFERENCES env_companies(id),\n credential_id TEXT NOT NULL REFERENCES env_agent_grants(id), sponsor_id TEXT NOT NULL REFERENCES oa_operators(id),\n tool TEXT NOT NULL, transport TEXT NOT NULL, classes TEXT NOT NULL CHECK(json_valid(classes)),\n decision TEXT NOT NULL, policy_version INTEGER NOT NULL, occurred_at INTEGER NOT NULL\n);\nCREATE INDEX env_agent_call_audit_period ON env_agent_call_audit(company_id,occurred_at);\nCREATE TRIGGER env_agent_call_audit_immutable_update BEFORE UPDATE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\nCREATE TRIGGER env_agent_call_audit_immutable_delete BEFORE DELETE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\n"
+      "sha256": "70b70565d861233decac32f6e698406192d69ad1518685551cddf1faac778b6f",
+      "sql": "CREATE TABLE env_agent_class_policy (\n company_id TEXT PRIMARY KEY REFERENCES env_companies(id),\n version INTEGER NOT NULL, answers TEXT CHECK(answers IS NULL OR json_valid(answers)),\n paused INTEGER NOT NULL CHECK(paused IN (0,1)), change_id TEXT NOT NULL,\n updated_by TEXT NOT NULL REFERENCES oa_operators(id), updated_at INTEGER NOT NULL\n);\nCREATE TABLE env_agent_call_audit (\n id TEXT PRIMARY KEY, company_id TEXT NOT NULL REFERENCES env_companies(id),\n credential_id TEXT NOT NULL REFERENCES env_agent_grants(id), sponsor_id TEXT NOT NULL REFERENCES oa_operators(id),\n tool TEXT NOT NULL, transport TEXT NOT NULL, classes TEXT NOT NULL CHECK(json_valid(classes)),\n decision TEXT NOT NULL, policy_version INTEGER NOT NULL, occurred_at INTEGER NOT NULL\n);\nCREATE INDEX env_agent_call_audit_period ON env_agent_call_audit(company_id,occurred_at);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0039_agent_audit_finalization.sql",
+      "sha256": "7e12b24e92ea6e3e3c0be942bb73f2cca9d466db761ffed2e8f278d32aac1a4c",
+      "sql": "-- Attribution is immutable. A pending call may record one terminal decision;\n-- an interrupted process leaves a truthful pending row rather than no history.\nCREATE TRIGGER env_agent_call_audit_immutable_update BEFORE UPDATE ON env_agent_call_audit\nWHEN OLD.decision!='pending' OR NEW.decision='pending'\n OR NEW.id IS NOT OLD.id OR NEW.company_id IS NOT OLD.company_id\n OR NEW.credential_id IS NOT OLD.credential_id OR NEW.sponsor_id IS NOT OLD.sponsor_id\n OR NEW.tool IS NOT OLD.tool OR NEW.transport IS NOT OLD.transport\n OR NEW.classes IS NOT OLD.classes OR NEW.occurred_at IS NOT OLD.occurred_at\nBEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\nCREATE TRIGGER env_agent_call_audit_immutable_delete BEFORE DELETE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

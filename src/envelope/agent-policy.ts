@@ -83,7 +83,7 @@ export class AgentPolicy {
 /** Restriction only: policy cannot supply a scope, a human decision or provider consent. */
 export async function policyCall<T>(agent: AgentTools, tool: string, transport: string, execute: () => Promise<T>): Promise<T> {
   const company = agent.grant.company_id, setupLink = '/app/envelope/companies/'+encodeURIComponent(company)+'/agents#class-policy'
-  const classes = toolClasses[tool] ?? [], id = crypto.randomUUID()
+  const classes = Object.hasOwn(toolClasses,tool) ? toolClasses[tool] : [], id = crypto.randomUUID()
   let decision = 'refused', policyVersion = 0
   const read = () => agent.env.DB.prepare('SELECT version,answers,paused FROM env_agent_class_policy WHERE company_id=?').bind(company).first<PolicyRow>()
   const refusal = (row: PolicyRow | null) => {
@@ -96,6 +96,8 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
     if (classes.some(c=>answers[c as keyof ClassAnswers]!=='autonomous')) return 'policy_unset'
     return null
   }
+  await agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at)
+    VALUES(?,?,?,?,?,?,?,'pending',0,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now()).run()
   try {
     if (!classes.length) throw new PayrollError('agent_tool_denied',403)
     const row = await read(), code = refusal(row)
@@ -123,7 +125,6 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
     if (error instanceof PayrollError && /authority|revoked/.test(error.code)) decision='authority_revoked'
     throw error
   } finally {
-    await agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),decision,policyVersion,Date.now()).run()
+    await agent.env.DB.prepare(`UPDATE env_agent_call_audit SET decision=?,policy_version=? WHERE id=? AND decision='pending'`).bind(decision,policyVersion,id).run()
   }
 }

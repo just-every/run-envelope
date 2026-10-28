@@ -11,5 +11,3 @@ CREATE TABLE env_agent_call_audit (
  decision TEXT NOT NULL, policy_version INTEGER NOT NULL, occurred_at INTEGER NOT NULL
 );
 CREATE INDEX env_agent_call_audit_period ON env_agent_call_audit(company_id,occurred_at);
-CREATE TRIGGER env_agent_call_audit_immutable_update BEFORE UPDATE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;
-CREATE TRIGGER env_agent_call_audit_immutable_delete BEFORE DELETE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;

@@ -403,8 +403,8 @@ An unanswered company returns `policy_unset` and a `setupLink` to its own
 settings. A blocked class returns `policy_blocked`. A review or approval hold
 returns `policy_review_required` or `policy_approval_required`. Pause returns
 `agents_paused`. MCP includes the link in its error data; REST includes it in
-the JSON error. CLI commands fail with the same HTTP refusal and print no
-credential. Credential rotation is also held; the old secret changes only on
+the JSON error. CLI commands fail with the same HTTP refusal, policy code and validated setup
+link and print no credential. Credential rotation is also held; the old secret changes only on
 an allowed rotation.
 
 Pause is persisted in D1 and checked before every fenced payroll read or write.
@@ -418,8 +418,8 @@ The Agents page reports class and decision totals for a selected UTC date range
 (default: the latest seven dates; maximum: 32 dates). Totals include all matching
 audited tool calls; the attributed detail view shows the latest 200. Calls with
 multiple classes count once in each class. Company owners see their company's
-history; other sponsors see only their own. Each completed authenticated tool
-attempt records the credential, sponsor, tool, transport, server classes, policy
+history; other sponsors see only their own. Each authenticated tool attempt is recorded before execution and finalized once;
+an interrupted execution stays pending. Its row records the credential, sponsor, tool, transport, server classes, policy
 version and decision, without input payloads or private compensation. Invalid
 bearers and discovery are outside these tool totals. Full seeded-week Base
 outcomes and classification of every staff, firm, provider and security change

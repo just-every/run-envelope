@@ -42,6 +42,13 @@ async function main() {
   }).catch(() => { throw Error('Installation request failed; no redirected request was followed. Retry preparation with the same requestKey.') })
   if (!response.ok) {
     // Never echo arbitrary remote content or request headers into an error log.
+    const value = await response.json().catch(() => null)
+    const policyCodes = ['policy_unset','policy_blocked','policy_review_required','policy_approval_required','agents_paused','policy_changed']
+    if (policyCodes.includes(value?.error)) {
+      const expected = '/app/envelope/companies/'+company+'/agents#class-policy'
+      const next = value.setupLink === expected ? ' Open '+new URL(expected,origin).href : ''
+      throw Error(`Installation refused request (HTTP ${response.status}): ${value.error}.${next}`)
+    }
     throw Error(`Installation refused request (HTTP ${response.status})`)
   }
   const value = await response.json().catch(() => { throw Error('Installation returned invalid JSON') })

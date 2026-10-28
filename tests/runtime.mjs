@@ -1,3 +1,4 @@
+import { agentPolicyWorker } from './agent-policy-worker.mjs'
 import { agentPolicyJourney } from './agent-policy-runtime.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
 import { extendedRetirementJourney } from './extended-retirement-runtime.mjs'
@@ -132,7 +133,7 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
-const clockEntrypoint = clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
+const clockEntrypoint = process.env.ENVELOPE_JOURNEYS === 'agent-policy' ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
 let output = ''

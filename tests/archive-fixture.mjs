@@ -1,3 +1,4 @@
+import { answerAgentPolicy } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
@@ -200,6 +201,7 @@ export async function archiveFixture(context) {
   const owner=(await payroll.data('/auth/session')).operator.id
   const work=await payroll.data(privacyBase+'/firm-work',{workKind:'run',sourceKind:'earnings-run',sourceId:privacyPayroll.run.id,sourceVersion:1,
     title:'Review synthetic erased payroll',details:'Private payroll preparation derivative',dueDate:'2026-10-30',dueTime:'16:00',timeZone:'UTC',evidenceRef:'Synthetic current payroll source',assigneeId:owner},201)
+  await answerAgentPolicy({...context,company:privacyPayroll.id})
   const draftAgent=await payroll.data(privacyBase+'/agents',{name:'Synthetic local draft custody',hours:1,actions:['drafts:prepare','drafts:read','records:read'],fields:['compensation'],locations:['*'],providers:[],models:[]},201)
   const rpc=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{origin:context.origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+draftAgent.token},body:JSON.stringify({jsonrpc:'2.0',id:540,method:['tools','call'].join('/'),params:{name:'draft.prepare',arguments:{companyId:privacyPayroll.id,personId:privacyWorker.id,minutes:480,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',sourceRef:'Synthetic reviewed input',requestKey:'synthetic-envelope-privacy-draft'}}})})
   assert.equal(rpc.status,200,await rpc.clone().text())

@@ -911,10 +911,10 @@ export async function payrollResponse(
                 classPolicy,activity,
               )
             : json({ grants, access, classPolicy, activity })
-        } else if (tail.join('/') === 'agents/class-policy' && post) {
+        } else if (tail.length === 2 && tail[1] === 'class-policy' && post) {
           const result = await new AgentPolicy(records).save(actor,value)
           response = ui ? redirect(base+'/agents#class-policy') : json(result)
-        } else if (tail.join('/') === 'agents/pause' && post) {
+        } else if (tail.length === 2 && tail[1] === 'pause' && post) {
           const result = await new AgentPolicy(records).save(actor,value,true)
           response = ui ? redirect(base+'/agents#class-policy') : json(result)
         } else if (tail.join('/') === 'agents/policy' && post) {
