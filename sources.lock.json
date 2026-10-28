@@ -550,7 +550,7 @@
       "executable": false
     },
     "docs/payroll-operations.md": {
-      "sha256": "86d9947680d7047eb70b2888961f2a20d062f816bf99efe6db163965543d6874",
+      "sha256": "d6bfd660cf56f538b032702a5ad4378b2d7a7f11fc133917bf61cedee5f8cdab",
       "executable": false
     },
     "docs/payroll-pay-items.md": {
@@ -2358,7 +2358,7 @@
       "executable": false
     },
     "src/envelope/lifecycle.ts": {
-      "sha256": "1ab42e5dfc2191526f5fff29ed437de9381f04a83a021bedadd5bec715dde2ef",
+      "sha256": "2e5ef805b4d77ba47eac72bbe54840cff9ae341128362b9c76868dee11ba8e51",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -3918,7 +3918,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "f128304dfdc35f1cbe5fba19d47af7cd0b837dfa971554758bf4ca3c9778462d",
+      "sha256": "c908a7e4d587ce1654a130811dce22fd20222e0b8605561892e892261971376d",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
