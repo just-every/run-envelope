@@ -118,7 +118,7 @@ export class HiPlanShares {
     await this.scope(actor,personId)
     return this.store.decide(actor,'hi-benefit-plan',id,input,personId)
   }
-  async preview(actor: Actor, request: HiPreviewRequest, calculation?: { from:string; through:string; payDate:string; grossCents:number; workState:string }) {
+  async preview(actor: Actor, request: HiPreviewRequest, calculation?: { from:string; through:string; payDate:string; grossCents:number; workState:string; weeks?: { from:string; through:string; grossCents:number }[] }) {
     fields(request, ['id','version','personId','planId','planVersion','wageEvidence','periods'])
     const personId = objectId(request.personId)
     await this.scope(actor,personId)
@@ -140,6 +140,21 @@ export class HiPlanShares {
     })
     if (periods.some((v,i) => i && v.from <= periods[i-1].through)) fail('hi_overlapping_wage_periods')
     if (calculation && (calculation.workState !== 'HI' || periods[0].from !== calculation.from || periods.at(-1)!.through !== calculation.through || periods.some(v => v.payDate !== calculation.payDate) || periods.reduce((n,v) => n + v.grossCents,0) !== calculation.grossCents)) fail('hi_calculation_wages_mismatch')
+    if (calculation && p.program === 'tdi') {
+      // A matching paycheck total cannot move earnings between weekly ceilings.
+      // Hourly calculations provide actual weeks, including overtime and bonuses.
+      if (calculation.weeks) {
+        const allocatedWeeks = new Set(periods.map(v => v.weekFrom))
+        if (allocatedWeeks.size !== calculation.weeks.length || calculation.weeks.some(week => {
+          const allocated = periods.filter(v => v.weekFrom === week.from)
+          return !allocated.length || allocated[0].from !== week.from || allocated.at(-1)!.through !== week.through ||
+            allocated.reduce((n,v) => n + v.grossCents,0) !== week.grossCents
+        })) fail('hi_calculation_wages_mismatch')
+      } else if (periods.some(v => v.weekFrom !== periods[0].weekFrom)) {
+        // A salary total alone supplies no actual allocation across wage weeks.
+        fail('hi_calculation_wages_mismatch')
+      }
+    }
     const balances = new Map<string, { gross:number; employee:number; dependent:number }>()
     const results = periods.map(period => {
       const window = p.program === 'tdi' ? period.weekFrom : period.payDate.slice(0,7)
