@@ -83,6 +83,8 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.equal((await tool('bonus.read',{companyId:company.id,runId:bonus.id})).preview.grossCashCents,25000)
     assert.equal((await tool('reports.bonuses',{companyId:company.id})).bonuses.length,1)
     assert.equal((await tool('run.review',{companyId:company.id,runId:bonus.id})).approval,'requires-separate-human-proof')
+    await configure({money:'blocked'})
+    assert.equal((await tool('bonus.prepare',{...input,companyId:company.id,minutes:undefined,amountCents:25000,requestKey:'synthetic-envelope-9607'})).id,bonus.id,'blocking money leaves uncalculated preparation available')
     const old=credential.token;credential={...credential,...await tool('credentials.rotate')}
     assert.equal((await mcp('records.list',{companyId:company.id},old)).status,401)
     assert.equal((await rest('/records')).status,200)

@@ -13,7 +13,7 @@ export const toolClasses: Record<string, readonly string[]> = {
   'draft.prepare': ['standard'],
   'draft.read': ['sensitive'],
   'reports.proposals': ['sensitive'],
-  'bonus.prepare': ['money'],
+  'bonus.prepare': ['standard'],
   'bonus.read': ['sensitive'],
   'reports.bonuses': ['sensitive'],
   'run.review': ['standard'],
