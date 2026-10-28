@@ -1,5 +1,6 @@
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
 import { ExtendedRetirement } from './benefits/extended-retirement'
+import { RetirementRecords } from './benefits/retirement-records'
 import { calculationPreview, type PreviewInput } from './calculation/preview'
 import { stateCoverage } from './calculation/states'
 import { accountingResponse } from './accounting/http'
@@ -544,6 +545,13 @@ export async function payrollResponse(
         }
         else if (tail.length===6 && tail[3]==='plans' && tail[5]==='review' && !post) response=json(await benefits.review(actor,personId,tail[4]))
         else if (tail.length===6 && tail[3]==='plans' && tail[5]==='approve' && post) response=json(await benefits.approve(actor,personId,tail[4],value))
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0]==='people' && tail[2]==='retirement') {
+        const retirement=new RetirementRecords(new WorkspaceStore(records)),personId=tail[1]
+        if (tail.length===3) response=json(post?await retirement.save(actor,personId,value):await retirement.list(actor,personId),post?201:200)
+        else if (tail.length===4 && tail[3]==='review' && !post) response=json(await retirement.review(actor,personId))
+        else if (tail.length===4 && tail[3]==='approve' && post) response=json(await retirement.approve(actor,personId,value))
+        else if (tail.length===4 && tail[3]==='preview' && post) response=json(await retirement.preview(actor,personId,value),201)
         else throw new PayrollError('not_found',404)
       } else if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
         const payroll = new CompanyPayroll(records)

@@ -1,5 +1,6 @@
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
 import { extendedRetirementJourney } from './extended-retirement-runtime.mjs'
+import { retirementBenefitsJourney } from './retirement-benefits-runtime.mjs'
 import { calculationJourney } from './calculation-runtime.mjs'
 import { accountingJourney } from './accounting-runtime.mjs'
 import { chromium } from '@playwright/test'
@@ -52,7 +53,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
-    'firm', 'industry,calculation,extended-retirement,hi-benefits', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
+    'firm', 'industry,calculation,extended-retirement,hi-benefits,retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -245,7 +246,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -298,6 +299,7 @@ try {
   if (!selected || selected.includes('multi-company')) await multiCompanyJourney({ origin, cookie, sql, settings })
   if (selected?.includes('hi-benefits')) await hiBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('extended-retirement')) await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('retirement')) await retirementBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })

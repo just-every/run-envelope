@@ -9,6 +9,8 @@ export type Kind =
   | 'hi-benefit-preview'
   | 'extended-retirement'
   | 'extended-retirement-preview'
+  | 'retirement-election'
+  | 'retirement-preview'
   | 'provider-deletion-request'
   | 'notice-worker-link'
   | 'run-input'
