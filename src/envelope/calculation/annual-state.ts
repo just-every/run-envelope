@@ -9,6 +9,8 @@ const caHead:readonly Row[]=[[0,0,110],[22173,243.90,220],[52530,911.75,440],[67
 const cents=(v:number)=>BigInt(Math.round(v*100))
 const nonnegative=(v:bigint)=>v>0n?v:0n
 export const annualStateSources:Record<string,string>={
+ VT:'https://help.nfc.usda.gov/bulletins/2026/1780320782.htm',
+ OH:'https://help.nfc.usda.gov/bulletins/2026/1786990318.htm',
  HI:'https://files.hawaii.gov/tax/news/pubs/25BkltA.pdf',
  NE:'https://revenue.nebraska.gov/sites/revenue.nebraska.gov/files/doc/business/Cir_En_2025/2026cir_en_whole.pdf',
  SC:'https://dor.sc.gov/sites/dor/files/forms/WH1603F_2026.pdf',
@@ -36,7 +38,17 @@ export function annualState(state:string,wages:number,periods:number,election:Re
  const trace:Record<string,unknown>[]=[]
  const apply=(wages:bigint,rows:readonly Row[],denominator=1n)=>{const row=[...rows].reverse().find(r=>wages>=cents(r[0])*denominator)??rows[0];trace.push({base:{numerator:wages.toString(),denominator:denominator.toString(),unit:'cents'},floorDollars:row[0],annualTaxBaseDollars:row[1],rateBasisPoints:row[2]});return brackets(wages,rows,denominator)}
  let annual=0n,annualDenominator=1n,detail:Record<string,unknown>={},rounding:'cent'|'dollar'='cent'
- if(state==='HI'){
+ if(state==='VT'){
+   if(additionalAllowances)throw new Error('vermont_explicit_w4vt_regular_allowances_only')
+   const taxable=nonnegative(a-BigInt(allowances)*540000n)
+   const rows:readonly Row[]=status==='married'?[[0,0,0],[11775,0,335],[96475,2837.45,660],[216525,10760.75,760],[323825,18915.55,875]]:[[0,0,0],[3925,0,335],[54675,1700.13,660],[126775,6458.73,760],[260225,16600.93,875]]
+   annual=apply(taxable,rows);detail={method:'Official NFC June 9, 2026 processing formula with an explicit state certificate; original state-table reconciliation remains unproved',authorityPublication:'https://tax.vermont.gov/document/gb-1210-2026-income-tax-withholding-instructions-tables-and-charts',annualAllowanceDollars:5400,taxableAnnualWagesCents:taxable.toString()}
+ }else if(state==='OH'){
+   if(additionalAllowances)throw new Error('ohio_it4_regular_exemptions_only')
+   const taxable=nonnegative(a-BigInt(allowances)*65000n)
+   annual=apply(taxable,[[0,0,160],[26050,416.80,299],[100000,2627.91,340]])
+   detail={method:'Official NFC September 23, 2026 annual processing formula; original state-table reconciliation remains unproved',authorityNotice:'https://content.govdelivery.com/accounts/OHTAX/bulletins/420a1ea',annualExemptionDollars:650,taxableAnnualWagesCents:taxable.toString()}
+ }else if(state==='HI'){
    if(additionalAllowances)throw new Error('hawaii_hw4_regular_allowances_only')
    const taxable=nonnegative(a-435000n-BigInt(allowances)*114400n)
    const rows:readonly Row[]=status==='married'?[[0,0,140],[19200,269,320],[28800,576,550],[38400,1104,640],[48000,1718,680],[72000,3350,720],[96000,5078,760],[250000,16782,790]]:[[0,0,140],[9600,134,320],[14400,288,550],[19200,552,640],[24000,859,680],[36000,1675,720],[48000,2539,760],[125000,8391,790]]

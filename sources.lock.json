@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "e2f77c4bbaac8b3b76bcca1f50328230e016ff14ef61e546c0ae62f9a9cfb947",
+      "sha256": "f0183c810e35bd6b63cbd0a38a54363ec98429e162723ce12f0b93d995587fd1",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b1b142472bac0a613b3e27c8cb6421a1502ac78b6d407077ff940d8ae7b96bc1",
+      "sha256": "67ca6e9aa4ceb3986641634b658f3eb9f7dd5db13f7aa2a9dd24006b26a6d47c",
       "executable": false
     },
     "deploy-demo.json": {
@@ -514,7 +514,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "3da3d979bce8716973ab06414142c4cc4d52e22b2978a61ab418f2ab35cd3380",
+      "sha256": "f4f53dd3f5e02e9d7d8cf3ac0622b398f492f1088632cd75ee30196d2f272e29",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2046,15 +2046,35 @@
       "executable": false
     },
     "src/envelope/calculation/annual-state.ts": {
-      "sha256": "0fd1551270a07e9eb2b4a3391602a89918d097d5f54bd8a697d504b068a328f2",
+      "sha256": "df8c2826377086fc40f36348822baefafe48bf3eb6ad6148f54dfa0a9ccf04b7",
+      "executable": false
+    },
+    "src/envelope/calculation/arkansas.ts": {
+      "sha256": "5ca7288af8d8f12481d7a944dba45d8fca932673ef298c1fca67987638b6101a",
       "executable": false
     },
     "src/envelope/calculation/bracket-state.ts": {
       "sha256": "bd4048e5e17eb0655d360372b391cc29f48a364bad3be85a43bcae62c0046895",
       "executable": false
     },
+    "src/envelope/calculation/connecticut.ts": {
+      "sha256": "d8827f5fd7290c8de1a6e45198a6001a083a323e0e40aedaa695563602161227",
+      "executable": false
+    },
     "src/envelope/calculation/earnings.ts": {
       "sha256": "59a6f3551c31924746cf1bd822dfad29a175282ad231d3e42ac3f5d4a9b96b9b",
+      "executable": false
+    },
+    "src/envelope/calculation/maine.ts": {
+      "sha256": "2655bdd7346a472c336f4dba43a94dc62c02e6cb9c85db7e6a3f1b6e30c55994",
+      "executable": false
+    },
+    "src/envelope/calculation/maryland.ts": {
+      "sha256": "57ec95b4df2a15fa97fc4bbb0b12a67612a16414154f69e508e3a7033c34ca33",
+      "executable": false
+    },
+    "src/envelope/calculation/massachusetts.ts": {
+      "sha256": "a522a4af4889ca864eb7e98960d32c0f1390862136e9d73b53f4d6cddf813677",
       "executable": false
     },
     "src/envelope/calculation/mississippi.ts": {
@@ -2074,7 +2094,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "14d24c756821ad9ab7e02ae4ef8db848392054783528d55a874a002a57c75cba",
+      "sha256": "dd6a14d72cee9478dde7406e8881ede1a6d7cb50905689fb43ee306ac0ba9751",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2086,7 +2106,7 @@
       "executable": false
     },
     "src/envelope/calculation/states.ts": {
-      "sha256": "6eaf9ce4f305f8667a2176943591dd58b1e247488c900143debaa42bf8b4173f",
+      "sha256": "d64a57b56f2feb438636cd7c1215073daf97fb48a0ed0b467e6cf91a91b37854",
       "executable": false
     },
     "src/envelope/calculation/west-virginia.ts": {
@@ -3654,7 +3674,7 @@
       "executable": false
     },
     "tests/calculation-runtime.mjs": {
-      "sha256": "31bfdb1fd0a9364b42de3fd1858d2c304cd9bdfa915bf75773bb63b146b3e615",
+      "sha256": "a9392bae0f9eae04d2d2130ef7d83f87ea0cb9f6cb854c7f07dc4bc437ec59ff",
       "executable": false
     },
     "tests/claims-browser.mjs": {

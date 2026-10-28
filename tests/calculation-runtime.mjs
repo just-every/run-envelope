@@ -37,6 +37,13 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
   ['KY',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},3274],
   ['MI',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4250],
   ['IN',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},2950],
+  ['VT',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},3097],
+  ['OH',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},2294],
+  ['MA',{allowances:0,headOfHousehold:false,blindCount:0,retirementDeductedBeforeCents:0,otherRetirementCurrentCents:0,additionalCents:0},4618],
+  ['AR',{allowances:0,additionalCents:0},2819],
+  ['MD',{filingStatus:'single',allowances:0,additionalCents:0},4439],
+  ['ME',{filingStatus:'single',allowances:0,additionalCents:0},4600],
+  ['CT',{code:'F',additionalCents:0,reductionCents:0},3652],
   ['HI',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4834],
   ['RI',{filingStatus:'single',allowances:0,additionalCents:0},3750],
   ['LA',{standardDeduction:1,additionalCents:0},2325],
@@ -90,6 +97,22 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  }
  const hawaiiExample=await data(door,{...fixture,workState:'HI',residentState:'HI',remuneration:{kind:'salary',exempt:true,cashCents:50000},stateElection:{filingStatus:'single',allowances:3,additionalAllowances:0,additionalCents:0}})
  assert.equal(hawaiiExample.state.withholdingCents,958,'Hawaii Booklet A annual-method official example')
+ for(const [code,expected] of [['A',4024],['B',2968],['C',1609],['D',4106]]){
+   const ct=await data(door,{...fixture,workState:'CT',residentState:'CT',stateElection:{code,additionalCents:0,reductionCents:0}})
+   assert.equal(ct.state.withholdingCents,expected,'Connecticut independently calculated CT-W4 code '+code)
+ }
+ const ctRecapture=await data(door,{...fixture,workState:'CT',residentState:'CT',remuneration:{kind:'salary',exempt:true,cashCents:500000},stateElection:{code:'F',additionalCents:0,reductionCents:0}})
+ assert.equal(ctRecapture.state.withholdingCents,31288,'Connecticut high-income phaseout and tax recapture')
+ const maineHigh=await data(door,{...fixture,workState:'ME',residentState:'ME',remuneration:{kind:'salary',exempt:true,cashCents:300000},stateElection:{filingStatus:'single',allowances:0,additionalCents:0}})
+ assert.equal(maineHigh.state.withholdingCents,null);assert.match(maineHigh.state.reason,/phaseout/)
+ const arkansasExample=await data(door,{...fixture,workState:'AR',residentState:'AR',frequency:'monthly',remuneration:{kind:'salary',exempt:true,cashCents:212700},stateElection:{allowances:2,additionalCents:0}})
+ assert.equal(arkansasExample.state.withholdingCents,3650,'Arkansas official monthly AR4EC worked example')
+ const arkansasConflict=await data(door,{...fixture,workState:'AR',residentState:'AR',frequency:'monthly',remuneration:{kind:'salary',exempt:true,cashCents:838000},stateElection:{allowances:0,additionalCents:0}})
+ assert.equal(arkansasConflict.state.withholdingCents,null);assert.match(arkansasConflict.state.reason,/midrange/)
+ const maCap=await data(door,{...fixture,workState:'MA',residentState:'MA',stateElection:{allowances:1,headOfHousehold:true,blindCount:1,retirementDeductedBeforeCents:199999,otherRetirementCurrentCents:0,additionalCents:0}})
+ assert.equal(maCap.state.withholdingCents,4132);assert.equal(maCap.state.calculation.currentRetirementDeductionCents,1)
+ const maSurtax=await data(door,{...fixture,workState:'MA',residentState:'MA',remuneration:{kind:'salary',exempt:true,cashCents:2500000},stateElection:{allowances:0,headOfHousehold:false,blindCount:0,retirementDeductedBeforeCents:200000,otherRetirementCurrentCents:0,additionalCents:0}})
+ assert.equal(maSurtax.state.withholdingCents,139788)
  const twoJobs=await data(door,{...fixture,workState:'WV',residentState:'WV',stateElection:{table:'two-earner-or-multiple-jobs',allowances:0,additionalCents:0}})
  assert.equal(twoJobs.state.withholdingCents,3400,'West Virginia separately elected two-job schedule')
  const nmExample=await data(door,{...fixture,workState:'NM',residentState:'NM',stateElection:{filingStatus:'married',allowances:0,additionalCents:2000}})
@@ -114,7 +137,7 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  assert.equal(capped.federal.employerTaxes.futaCents,6)
  assert.equal(capped.sui.amountCents,3)
  // Unknown state, local authority and cross-state sourcing remain named holds.
- for(const input of [{workState:'ZZ'},{locality:'synthetic-envelope-unknown-city'},{residentState:'PA'},{workState:'OH',residentState:'OH'}]){
+ for(const input of [{workState:'ZZ'},{locality:'synthetic-envelope-unknown-city'},{residentState:'PA'},{workState:'OH',residentState:'OH',from:'2026-07-13',through:'2026-07-19',payDate:'2026-10-30',stateElection:{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0}}]){
    const held=await data(door,{...fixture,...input})
    assert.equal(held.status,'held');assert.equal(held.netCashCents,null)
    assert.ok(held.holds.some(h=>h.location && h.reason && h.nextAction))

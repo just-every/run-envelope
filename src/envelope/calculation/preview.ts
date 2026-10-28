@@ -48,7 +48,8 @@ export function calculationPreview(input:PreviewInput){
     hold('regular-wage-cash-insufficient',input.workState,'Regular wage taxes exceed cash wages. Review the election and lawful collection; no negative payout is created.')
     return {edition:input.edition,payDate:input.payDate,status:'held',paymentReady:false,approval:'unavailable',dispatch:'unavailable',grossCashCents:gross,federal:null,state:null,netCashCents:null,holds,coverage:stateCoverage(input.edition)}
   }
-  let state=stateWithholding(input.workState,gross,input.frequency,input.payDate,input.stateElection,federal.employeeTaxes.incomeTaxCents)
+  let state=stateWithholding(input.workState,gross,input.frequency,input.payDate,input.stateElection,federal.employeeTaxes.incomeTaxCents,federal.employeeTaxes.socialSecurityCents+federal.employeeTaxes.medicareCents+federal.employeeTaxes.additionalMedicareCents,input.through)
+  if(['CT','MA'].includes(input.workState)&&earnings?.weeks.some(w=>w.overtimeCents||w.productionBonusCents||w.premiums.length))state={...state,withholdingCents:null,reason:input.workState+' supplemental compensation requires its separate official withholding method; the periodic ordinary-wage calculation is not substituted.'}
   if(input.workState!==input.residentState)state={...state,withholdingCents:null,reason:'Cross-state sourcing and resident credits are unmapped; no single-state amount is substituted for them.'}
   if(input.tips.heldCents+input.tips.paycheckCents && !['AK','FL','NV','NH','SD','TN','TX','WA','WY'].includes(input.workState))state={...state,withholdingCents:null,reason:'Reported-tip state taxability and collection are not mapped; the ordinary wage component cannot be used as total withholding.'}
   if(state.withholdingCents===null)hold('state-withholding-unmapped',input.workState,state.reason)

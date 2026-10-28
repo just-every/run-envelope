@@ -48,14 +48,14 @@ Additional Medicare and FUTA lines. FUTA uses the gross 6% without an invented
 credit for state tax payment. This preview does not establish final annual
 FUTA credit reductions or filed Form 940 amounts.
 
-Ordinary state withholding components initially cover Pennsylvania, New Jersey,
-New York, Illinois and Arizona, with cited no-wage-income-tax determinations for
-Texas, Washington and New Hampshire. State elections are explicit: NJ table,
-allowances and additional cents; NY filing status, allowances and additional
-cents; IL basic allowances, additional allowances and additional cents; AZ
-nonzero elected basis points and additional cents. The remaining listed states
-return an unmapped amount, never a fabricated zero. Other state programs and
-local authorities remain distinct obligations even in a no-income-tax state.
+The ordinary withholding corpus has one independently calculated fixture for each
+of the 50 states and DC. These are bounded component methods, with explicit
+certificate elections and source dates. An unproved election, period, source
+boundary or other program does not become zero tax. For example, NJ requires its
+table and allowances; IL requires basic and additional allowances; AZ requires a
+nonzero A-4 percentage. The coverage door lists all 51 case identifiers and their
+source references. Ohio and Vermont use identified official federal processing
+references whose original state-table reconciliation remains unproved.
 
 The coverage response always lists all 50 states and DC. It reports component
 coverage separately from complete-state coverage, which remains zero. A work
@@ -84,16 +84,13 @@ The latter is an inventory source, not a substitute for an assigned employer rat
 The licensed vendor reconciliation remains field proof R-5 and does not gate
 calculation engineering or completion.
 
-## Expanded retained components
+## Retained component methods
 
-The ordinary withholding corpus also includes California, North Carolina,
-Kentucky, Michigan, Indiana, Colorado, Idaho, Iowa, Delaware, Kansas, Minnesota,
-Missouri, North Dakota, Virginia, Wisconsin, Oregon, Utah, Alabama, South
-Carolina, DC, Nebraska, Mississippi, Georgia, Oklahoma, New Mexico, Montana, West Virginia, Louisiana, Rhode Island and Hawaii. Alaska, Florida,
-Nevada, South Dakota, Tennessee and Wyoming join the cited no-wage-income-tax
-entries. This is component coverage; all 51 complete-state determinations remain
-unproved. The coverage door lists each mapped component with its case identifier.
-The journey fails if any mapped component lacks its independent golden case.
+The nine no-wage-income-tax determinations are Alaska, Florida, Nevada,
+New Hampshire, South Dakota, Tennessee, Texas, Washington and Wyoming. Other
+payroll programs remain required there. The remaining state and DC methods are
+also components: all 51 complete-state determinations remain unproved. The
+journey refuses a corpus where a component lacks an independent golden case.
 
 Each state keeps its own period constants and rounding. Colorado follows DR 1098
 in cents. Iowa follows the 2026 formula's period deductions and separately rounded
@@ -128,7 +125,7 @@ wages; no family, visa, agricultural or other special exemption is inferred.
 Georgia uses the retained September guide for proposed checks from October 28.
 Mississippi requires the actual certificate exemption amount. Nebraska currently
 requires zero allowances; nonzero elections need the minimum-withholding rules.
-Every supported component is exercised by one of 44 independent cent-level
+Every supported component is exercised by one of 51 independent cent-level
 golden cases within the public-door calculation journey. These cases do not
 prove complete jurisdiction calculation, legal compliance or actual payday.
 
@@ -155,3 +152,41 @@ other periods and allowance cases remain held.
 Hawaii follows Booklet A Part 1, which expressly permits annualized calculation.
 Its regular HW-4 allowances, extra lump-sum allowance and published annual bracket
 bases are retained, with the official weekly worked example.
+
+Connecticut follows TPG-211 steps 1 through 16 for explicit CT-W4 codes A, B, C,
+D and F, including personal exemptions, the 2% phase-out add-back, tax recapture,
+personal tax credits and additional or reduced withholding. Supplemental
+compensation remains separately unmapped; no generic exemption is inferred.
+
+Maine follows its revised August 2026 percentage method below the published
+standard-deduction phaseout threshold, including the state’s whole-dollar
+rounding. High-income phaseout and surcharge cases remain held.
+
+Maryland retains the first state withholding bracket, its printed per-period
+standard deduction and MW507 exemption constants. The withholding rate is 4.75%,
+rather than the lower income-tax-return rates. County withholding and higher
+state brackets remain unmapped, and no complete Maryland net is returned.
+
+Arkansas follows its 2026 computer formula, annual whole-dollar gross-tax rounding
+and AR4EC credits. Step 2 and its worked example disagree on the upper limit for
+the midrange method; the disputed interval remains held. Its independent monthly
+worked example is exercised through the same preview API.
+
+Massachusetts uses Circular M’s printed period exemption factors and credits,
+not annual factors divided approximately. Its explicit prior retirement-deduction
+accumulator caps current actual FICA and other qualifying retirement deductions
+at the remaining $2,000 allowance. The 2026 annualized 4% surtax is included;
+supplemental wages and PFML remain separately unmapped.
+
+Ohio’s retained component uses the official September 23 NFC processing formula
+and the state’s August effective-date announcement. Reconciliation to the original
+state table remains unproved. The date gate uses the payroll period end, so paying
+an older period later cannot select a newer rule. Ohio municipalities, school
+districts and other state programs remain separately unmapped.
+
+Vermont’s retained component uses the official June 9 NFC processing formula
+with an explicit state certificate and no inferred federal-election fallback.
+The current state publication is identified, but original state-table
+reconciliation remains unproved. Earlier state editions remain unmapped.
+The 51 ordinary component cases do not establish complete-state or complete
+program coverage: the complete-state count remains zero.
