@@ -4753,10 +4753,10 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   assert.equal(row.data.state.fields.schoolDistrictNumber,'2503');assert.equal(row.data.state.fields.additionalCents,1000)
   assert.equal(row.data.state.original.attached,true);assert.equal(row.data.state.original.signedBy,original.signedBy)
   assert.equal(row.paperworkReviewed,false);assert.equal(row.payable,false)
-  assert.equal(JSON.stringify(rows).includes(input.tin),false);assert.equal(JSON.stringify(rows).includes(pdf),false)
+  assert.equal(JSON.stringify(rows).includes(input.tin),false);assert.equal(JSON.stringify(rows).includes(pdf),false);assert.equal(JSON.stringify(rows).includes(statePdf),false)
   await noWrite(async()=>{await data(door,input,409);await data(door+'/approve',{version:1,reviewToken:'synthetic-envelope-unreviewed'},409)})
   const review=await data(door+'/review')
-  assert.equal(review.data.tin,'•••••1925');assert.equal(JSON.stringify(review).includes(pdf),false)
+  assert.equal(review.data.tin,'•••••1925');assert.equal(JSON.stringify(review).includes(pdf),false);assert.equal(JSON.stringify(review).includes(statePdf),false)
   await data(door+'/approve',{version:1,reviewToken:review.reviewToken})
   row=(await data(door))[0];assert.equal(row.paperworkReviewed,true);assert.equal(row.payable,false)
   assert.equal(row.createdBy,row.approvedBy);assert.ok(row.createdBy);assert.ok(row.createdAt);assert.ok(row.approvedAt)
@@ -4953,6 +4953,16 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
       }
     })
   }
+  // Download authority is read-only, including a known retained version.
+  await noWrite(async()=>{
+    for(const who of [cookie,downloader])for(const path of originalPaths) {
+      for(const method of ['POST','PUT','DELETE']) {
+        const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin,'content-type':['application','json'].join('/')},body:JSON.stringify({...input,version:5})})
+        assert.equal(response.status,method==='POST'?404:405,'a retained original cannot be overwritten through its download door')
+        assert.equal(response.headers.get('content-disposition'),null)
+      }
+    }
+  })
   await refuseOriginals('',401)
   for(const who of [outsider,preparer,reviewer,wrongFields,otherNativeOwner])await refuseOriginals(who,403)
   await refuseOriginals(wrongLocation,404)
