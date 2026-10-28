@@ -254,6 +254,7 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   const erasedAudit=await data(base+'/audit');assert.ok(!erasedAudit.some(row=>row.targetId===erasing.id||row.targetId===planId||row.targetId===captured.id))
   // A changed company grant cannot regain approval power through a fresh login.
   await sql(`UPDATE env_grants SET version=version+1 WHERE company_id='${company.id}' AND role='owner'`)
+  assert.equal((await call(door)).status,401,'The original shared owner session is revoked by the grant change')
   const freshToken=randomBytes(32).toString('base64url'),freshHash=await hashToken(settings.SESSION_SECRET,'session',freshToken),freshId='synthetic-envelope-9296'
   await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) SELECT '${freshId}','${freshHash}',operator_id,operator_version,'native',${Date.now()},${Date.now()+3600000} FROM oa_sessions WHERE token_hash='${ownerSessionHash}'`)
   cookie=cookie.split('=')[0]+'='+freshToken
@@ -266,6 +267,7 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   const afterGrant=await preview(newGrantSetup,request(30000))
   assert.equal((await data(door)).proposals.find(row=>row.id===afterGrant.id).preparationCurrent,true)
   console.log('EXTENDED-RETIREMENT passed: reviewed year-specific 403(b), both 457(b) arrangements and SEP proposals, combined limits, ordering, reporting, unchanged refusals, source corrections, replay, restart and current private authority')
+  return cookie
 }
 
 /** Retirement history uses the existing actual native export and restore journey. */

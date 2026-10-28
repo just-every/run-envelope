@@ -3746,7 +3746,7 @@
       "executable": false
     },
     "tests/extended-retirement-runtime.mjs": {
-      "sha256": "22f85d54e5b38d65268414a3d02f80ea1f95dbdc1f692d152df18e746ba052bd",
+      "sha256": "1dbc7602bde6e1214edc95a9dcd62cba6b269ecf20ace0c1d090b0292694274c",
       "executable": false
     },
     "tests/firm-fixture.mjs": {
@@ -3926,7 +3926,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "9cf6df8cc229f38d088598c2961352288d0671b264ec4868217eac26de0d65bd",
+      "sha256": "31263143ba8df8aba3f895f338188d5093038f6cab6294059cb950c1a2b515e0",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {

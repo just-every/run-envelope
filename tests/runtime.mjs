@@ -181,7 +181,7 @@ try {
     body: JSON.stringify({ token: setupToken, displayName: 'Kim Sorensen' }),
   })
   assert.equal(claim.status, 303, await claim.text())
-  const cookie = claim.headers.get('set-cookie').split(';')[0]
+  let cookie = claim.headers.get('set-cookie').split(';')[0]
   assert.equal(
     (await manual('/app', { headers: { cookie } })).headers.get('location'),
     '/setup',
@@ -299,7 +299,7 @@ try {
   if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql,settings})
   if (!selected || selected.includes('multi-company')) await multiCompanyJourney({ origin, cookie, sql, settings })
   if (selected?.includes('hi-benefits')) await hiBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
-  if (selected?.includes('extended-retirement')) await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('extended-retirement')) cookie = await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('retirement')) await retirementBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
