@@ -16,6 +16,8 @@ export type Kind =
   | 'withholding-instruction'
   | 'run-intake'
   | 'intake-source'
+  | 'ledger-connection'
+  | 'ledger-journal'
   | 'paper-onboarding'
   | 'automation-policy'
   | 'paper-policy'
