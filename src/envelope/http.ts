@@ -1,3 +1,5 @@
+import { calculationPreview, type PreviewInput } from './calculation/preview'
+import { stateCoverage } from './calculation/states'
 import { accountingResponse } from './accounting/http'
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
@@ -462,6 +464,22 @@ export async function payrollResponse(
     if (automation) return automation
     const firm = await firmResponse({ url, ui, post, parts, value, records, session, companies })
     if (firm) return firm
+    if (!ui && parts[0]==='companies' && parts.length===3 && ['calculation-preview','calculation-coverage'].includes(parts[2])) {
+      const actor=await records.actor(parts[1])
+      ownerOnly(actor)
+      await records.company(actor)
+      if(parts[2]==='calculation-coverage' && !post) return json(stateCoverage())
+      if(parts[2]==='calculation-preview' && post){
+        let result
+        try { result=calculationPreview(value as unknown as PreviewInput) }
+        catch(error){ throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
+        // A preview neither reads employee records nor retains supplied personal
+        // data. Repeat current authority immediately before returning its result.
+        await records.company(await records.actor(parts[1]))
+        return json(result)
+      }
+      throw new PayrollError('not_found',404)
+    }
     let response: Response
     if (ui && parts.join('/') === 'workspace' && !post)
       return workspacePage(session, companies)

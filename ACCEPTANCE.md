@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 29 | 64 | 98 |
+| Core | 5 | 30 | 63 | 98 |
 | Agent surface | 0 | 0 | 7 | 7 |
 | Later | 0 | 1 | 6 | 7 |
-| Full target | 5 | 30 | 77 | 112 |
+| Full target | 5 | 31 | 76 | 112 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -162,7 +162,7 @@ Core · target · **partial** · Rules D-6
 
 #### ENV-006 — Explainable gross-to-net engine
 
-Core · target · **missing** · Rules D-1, D-2
+Core · target · **partial** · Rules D-1, D-2
 
 **Requirement.** Calculate hourly and exempt/nonexempt salary, multiple rates, FLSA regular-rate overtime including nondiscretionary bonuses/commissions, daily/double time where applicable, piece/per-class pay, tips, imputed income, taxable fringe benefits, pre/post-tax deductions and employer taxes. Calculation covers federal, all 50 states, DC and the large-local file in ENV-097, including PA EIT/LST, Ohio municipalities, NYC/Yonkers, Indiana counties, Michigan cities and Kentucky occupational taxes; any other location follows ENV-066's fail-closed rule. Support reviewed custom earning/deduction codes and recurring or one-time amounts with explicit taxability. Use decimal/currency-safe rounding, annual accumulators and effective tax tables; show every stub line's inputs, rule and rate. Missing state/local account numbers or TPA grants never alter correct calculation or delay net pay (D-1). Name approved California meal/rest-period premium codes separately from hours and calculate the legally required regular-rate treatment. ENV-082's tip-tax insufficiency is a statutory uncollected-tax outcome, never a zero/negative-net wage hold or employee debt created by the engine. Show wages, tips already held, paycheck tips, actual cash due and uncollected taxes separately; pay all cash lawfully due on payday, including an honest completed zero-cash statement when withholding uses all available wages.
 
@@ -175,8 +175,8 @@ Core · target · **missing** · Rules D-1, D-2
 6. Preview the ENV-082 $2.13-by-20-hours tip-credit server and require an approvable run, correct withholding-order breakdown and payday completion without a fabricated negative payout or zero-dollar ACH.
 7. An excessive unlawful garnishment still blocks.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete explainable gross-to-net engine behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented.
+**Evidence.** `tests/calculation-runtime.mjs` — calculationJourney, invoked by `tests/runtime.mjs` in push Verify: authenticated hypothetical preview, dated federal amounts and caps, eight ordinary state withholding components, weighted multiple-rate overtime, approved California meal and rest premiums with a production bonus, ordered federal tip-tax shortage, named unmapped coverage holds, unsafe deduction refusal and unchanged replay after Worker restart. API: `docs/payroll-calculation.md`.
+**Gap.** Still unproved: complete gross-to-net calculation and cent-level official goldens for federal, all 50 states, DC and every ENV-097 gating authority, including every ENV-098 program, annual cap and effective boundary; complete earning and deduction taxability, daily and special-rule overtime, historical checks after a table update, reviewed custom codes, pending-account pay and assigned or new-employer SUI controls; actual human approval, complete stub and register, lawful cash or zero-cash payday completion and official reporting of tip-tax shortfalls. The current owner-only door is a stateless hypothetical calculation with no payment authority; complete payroll preparation and delegated authority remain owed. Complete net remains unavailable while any location or program is unmapped. The 688-entry large-local file remains engineering work; Symmetry reconciliation is field proof R-5 and never a licensing hold.
 
 #### ENV-076 — Nonresident aliens and person-specific tax exemptions
 
