@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { ordinaryW4 } from './industry-fixture.mjs'
+import { privateValue } from './privacy-recorder.mjs'
 
 /** A single native money-preparation journey; proposals never stand for actual collected contributions. */
 export async function retirementBenefitsJourney({origin,cookie,sql,settings,restart}) {
@@ -20,6 +21,7 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
  const save=async e=>{const r=await data(door,{version,election:e},201);version=r.version;return r}
  const approve=async()=>{const r=await data(door+'/review');await data(door+'/approve',{version:r.version,reviewToken:r.reviewToken});return r}
  const request=(sourceRef='synthetic-envelope-19005',pay=payroll(),extra={})=>({version:0,electionVersion:version,sourceRef,payroll:pay,...extra})
+ privateValue('synthetic-envelope-19003')
  const record=await save(election())
  assert.equal((await call(door+'/preview',request())).status,409,'unreviewed plan and election cannot prepare a deduction')
  const review=await data(door+'/review')
@@ -34,6 +36,8 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
  assert.ok(amount.sources.some(s=>s.url==='https://www.irs.gov/pub/irs-drop/n-25-67.pdf'))
  const beforeReplay=await data(door)
  assert.equal((await call(door+'/preview',input)).status,409)
+ assert.equal((await call(door+'/preview',{...input,payroll:{...input.payroll,payDate:'2026-10-31'}})).status,409,'changing a captured date requires a versioned correction, never a second source')
+ assert.equal((await call(door+'/preview',{...input,providerAccepted:true})).status,400)
  assert.equal((await call(door,{version:0,election:election()})).status,409)
  assert.deepEqual(await data(door),beforeReplay,'replayed source capture changes no retained version or proposal')
  // Correcting a reviewed source immediately makes pending proposals stale and requires exact new review.
@@ -46,10 +50,16 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
  const corrected=await data(door+'/preview',request(input.sourceRef,input.payroll,{version:1,correctionReason:'Corrected exact signed election before collection'}),201)
  assert.equal(corrected.id,first.id);assert.equal(corrected.version,2)
  assert.deepEqual([corrected.data.result.contribution.employeeCents,corrected.data.result.contribution.employerMatchCents],[15000,6000])
- assert.equal(corrected.data.electionVersion,2)
+ assert.equal(corrected.data.electionVersion,2);assert.equal(corrected.data.correctsVersion,1)
+ assert.deepEqual(corrected.data.impact,{employeeDifferenceCents:-25000,employerMatchDifferenceCents:0})
  const history=await data(door)
+ assert.equal(history.proposals.find(p=>p.version===1).preparationCurrent,false);assert.equal(history.proposals.find(p=>p.version===2).preparationCurrent,true)
  assert.equal(history.proposals.length,2);assert.equal(history.proposals.find(p=>p.version===1).data.result.contribution.employeeCents,40000)
  await restart();assert.deepEqual(await data(door),history,'encrypted source versions, exact decisions and proposal history survive restart')
+ const sourceOnly={...changed,prior:{...changed.prior,sourceRef:'synthetic-envelope-corrected-register'}}
+ await save(sourceOnly)
+ assert.ok((await data(door)).proposals.every(p=>!p.preparationCurrent),'a source-only correction invalidates affected preparation even when amounts do not change')
+ assert.equal((await call(door+'/preview',request())).status,409)
  // Independent goldens from IRS Notices 2024-80 and 2025-67, not the implementation's tables.
  // Each case uses actual native election review and the calculation preview door.
  const cases=[
@@ -78,6 +88,9 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
   assert.equal(r.rothCatchUpRequired,c.rothRequired??false,c.name)
   assert.equal(r.collected,false);assert.equal(r.providerAccepted,false)
  }
+ await data(door+'/approve',{version,withdraw:true})
+ assert.equal((await call(door+'/preview',request('synthetic-envelope-withdrawn'))).status,409)
+ assert.ok((await data(door)).proposals.every(p=>!p.preparationCurrent),'withdrawal invalidates pending preparation')
  // No custom limits, missing accumulators, unsupported plans or unreviewed source can bypass preparation.
  const invalid=[{...election(),taxYear:2027},{...election(),eligible:false},{...election(),prior:undefined},{...election(),annualLimitCents:99999999},{...election(),match:{...election().match,rateBasisPoints:10001}}]
  const preInvalid=await data(door)
@@ -120,6 +133,7 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
  await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) SELECT '${freshId}','${freshHash}',operator_id,operator_version,'native',${Date.now()},${Date.now()+3600000} FROM oa_sessions WHERE token_hash='${ownerHash}'`)
  cookie=cookie.split('=')[0]+'='+freshToken
  assert.equal((await call(door+'/preview',request('synthetic-envelope-revoked-review'))).status,409,'a new current session cannot reuse review bound to earlier company authority')
+ assert.ok((await data(door)).proposals.every(p=>!p.preparationCurrent),'retained proposals do not regain live preparation authority')
  const proofToken=randomBytes(32).toString('base64url'),proofHash=await hashToken(settings.SESSION_SECRET,'link',proofToken)
  await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at) SELECT 'synthetic-envelope-retirement-proof','${proofHash}',id,operator_id,operator_version,'credentials:mint','/app',${Date.now()},${Date.now()+600000} FROM oa_sessions WHERE id='${freshId}'`)
  assert.equal((await call('/auth/confirm',{token:proofToken})).status,303)

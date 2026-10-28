@@ -578,7 +578,7 @@
       "executable": false
     },
     "docs/retirement-preparation.md": {
-      "sha256": "a833a7d43dd24fd11e0d7529073a04a3a3f5851fcfee93d63d7352d6c476a5f1",
+      "sha256": "330ca4c789edfa77fd56991202ebe3b03076cadbb2aeddf7ed585a33199b1473",
       "executable": false
     },
     "docs/run-earnings-intake.md": {
@@ -2042,7 +2042,7 @@
       "executable": false
     },
     "src/envelope/benefits/retirement-records.ts": {
-      "sha256": "019e5355b5e5fbdebe2b1c80ec0f2f1ca552130294f9f7a8b82a6b3b3c7c22cf",
+      "sha256": "6f8dae63be940959b958d805c2459c1d18d2c83bc155ff13935bee56e54806e3",
       "executable": false
     },
     "src/envelope/benefits/retirement.ts": {
@@ -3878,7 +3878,7 @@
       "executable": false
     },
     "tests/retirement-benefits-runtime.mjs": {
-      "sha256": "cc6876685b163a57a9f47651c297af3dd5bbbdc71a372f9999c8f976cd8a29bf",
+      "sha256": "eb36fe640e01a27dc751f670d104f7d0bb134b80eb627c09ffe4d8f3fa2e1771",
       "executable": false
     },
     "tests/run-intake.mjs": {
@@ -3886,7 +3886,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "c4a9909a3129c039825ec9a6ab7aa36dd434ab8fea9c26df50c0ffba786ed4a3",
+      "sha256": "3f2229d995f0cb277dd156a2f4e4b1338a86d47392832bd6d021e617ba8349b4",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3902,7 +3902,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "167c3a024e274c1cedc1c67c94bb180f36eb25d96a01976728b48c96c255320f",
+      "sha256": "2cb8c4e389b481ac574f987d4e37fe21ed83d509ebafd2924a1135e514eb57fd",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
