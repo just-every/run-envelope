@@ -371,7 +371,7 @@ ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055 on this transport.
 
 Open Settings, choose the company and open Agent credentials. A current native
 company owner explicitly answers standard, money, commitment, external,
-sensitive, destructive, accounts, access and security. A new company has no
+sensitive, destructive, accounts, access, security and gated. A new company has no
 answers selected. Sponsored credentials can be issued before policy setup, but
 no tool executes until every class has an answer. Discovery still works.
 
@@ -379,6 +379,8 @@ Each class can allow calls within existing authority, hold for human review,
 hold for human approval or block calls. Review and approval are safe holds:
 this native increment does not implement a policy approval queue. They do not
 supply a human payroll decision, a grant, provider consent or outbound authority.
+A gated step always belongs to a person, whatever its class answer. Adding a new
+class makes an older incomplete policy unset until the owner answers every class.
 The existing exact human approval and owner-only explicit reference-event
 consent remain separate. No automatic outbound action or retry is introduced.
 

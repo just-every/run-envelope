@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { chromium } from '@playwright/test'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 
-const answers = {standard:'autonomous',money:'autonomous',commitment:'autonomous',external:'autonomous',sensitive:'autonomous',destructive:'autonomous',accounts:'autonomous',access:'autonomous',security:'autonomous'}
+const answers = {standard:'autonomous',money:'autonomous',commitment:'autonomous',external:'autonomous',sensitive:'autonomous',destructive:'autonomous',accounts:'autonomous',access:'autonomous',security:'autonomous',gated:'autonomous'}
 // Existing native-agent journeys explicitly configure their company before use.
 export async function answerAgentPolicy({origin,cookie,company,worker=globalThis}) {
   const r=await worker.fetch(origin+'/api/envelope/companies/'+company+'/agents/class-policy',{method:'POST',headers:{cookie,origin,'content-type':['application','json'].join('/')},body:JSON.stringify({version:0,...answers})})

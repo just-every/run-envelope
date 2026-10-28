@@ -510,7 +510,7 @@
       "executable": false
     },
     "docs/payroll-agents.md": {
-      "sha256": "885deb98c303b36406b6bd8e3b98a5d06765d23ad116660243a77e420f835723",
+      "sha256": "1e357f8bf9b5a48b5ad0935718895cdf9092b1b5142ea7fed049fc6bcfab35cd",
       "executable": false
     },
     "docs/payroll-allocations.md": {
@@ -2042,11 +2042,11 @@
       "executable": false
     },
     "src/envelope/agent-pages.tsx": {
-      "sha256": "9ad85e0e7366e615041d13cd765b2c768c8e6ebff3caee19fdab82a4ee0c9210",
+      "sha256": "d0f2244076f649651d0ec33d034594101369f8fff7486fce92ba2cb72609da4f",
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "bf8d91bda1d6a018ada98e880d3fdff22ed16cf15e5546c8165e21d9f52ec9ac",
+      "sha256": "3f76abdf7cc03af17ac8b7bce143d879051f57c4b1bf94848b190d2d814436dd",
       "executable": false
     },
     "src/envelope/agents.ts": {
@@ -3682,7 +3682,7 @@
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
-      "sha256": "2419b5f492ecea3adf7d56f90dafcb9c8ea679d681a78970646f9b8681315ed8",
+      "sha256": "d53feb5b3cbebf71ab656f6146b3cb1cb6154e85326bc421ae8ef55502132ea4",
       "executable": false
     },
     "tests/agent-policy-worker.mjs": {
