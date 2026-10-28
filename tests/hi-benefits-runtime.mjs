@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { ordinaryW4 } from './industry-fixture.mjs'
+import { privateValue } from './privacy-recorder.mjs'
 
 // One native-door money sanity journey. Expected amounts are worked from the
 // DLIR 2026 notice and PHC cost-sharing instructions, independently of rule data.
@@ -11,6 +12,8 @@ export async function hiBenefitsJourney({ origin, cookie, sql, settings, restart
   const data = async (path, body, status = 200, who = cookie) => {
     const r = await call(path,body,who); assert.equal(r.status,status,path+' '+await r.clone().text()); return r.json()
   }
+  privateValue('synthetic-envelope-9303')
+  privateValue('Synthetic signed wage register for the exact proposed periods')
   const company = await data('/api/envelope/companies',{name:'Synthetic Hawaii employer',ein:'00-0009301'},201)
   const base = '/api/envelope/companies/'+company.id
   const location = await data(base+'/locations',{name:'Honolulu workplace',state:'HI'},201)
@@ -49,6 +52,7 @@ export async function hiBenefitsJourney({ origin, cookie, sql, settings, restart
   const split = await preview(tdi,[period(100000,{through:'2026-10-07'}),period(100000,{from:'2026-10-08',payDate:'2026-10-16'})])
   assert.deepEqual(split.periods.map(p=>p.proposedEmployeeCents),[500,250]);assert.equal(split.proposedEmployeeCents,750)
   await refuse(door+'/preview',request(tdi,[period(200000,{requestedEmployeeCents:751})]),'hi_requested_share_above_cap')
+  await refuse(door+'/plans',plan('synthetic-envelope-tdi-illegal','tdi',{employeeBasisPoints:5001}),'hi_unlawful_cost_share')
   const cost = await save(plan('synthetic-envelope-tdi-cost','tdi',{premiums:[premium('2026-10-05',{premiumCents:40})]}))
   assert.equal((await preview(cost,[period(200000)])).proposedEmployeeCents,20)
   const prior = await save(plan('synthetic-envelope-tdi-prior','tdi',{premiums:[premium('2026-10-05',{grossBeforeCents:100000,employeeBeforeCents:500})]}))
@@ -61,6 +65,7 @@ export async function hiBenefitsJourney({ origin, cookie, sql, settings, restart
   assert.deepEqual(monthly.periods.map(p=>p.proposedDependentCents),[10000,0]);assert.equal(monthly.periods[1].employerRemainingDependentPremiumCents,10000)
   assert.equal((await preview(phc,[period(3000000)])).proposedEmployeeCents,30000)
   await refuse(door+'/preview',request(phc,[period(100000,{requestedEmployeeCents:1501})]),'hi_requested_share_above_cap')
+  await refuse(door+'/preview',request(phc,[period(100000,{requestedDependentCents:10001})]),'hi_requested_share_above_cap')
   const a = await save(plan('synthetic-envelope-phc-a','phc',{planType:'7a',dependentEmployerBasisPoints:0}))
   assert.equal((await preview(a,[period(100000)])).proposedDependentCents,20000)
   await refuse(door+'/plans',plan('synthetic-envelope-phc-illegal','phc',{dependentEmployerBasisPoints:4999}),'hi_plan_allocation_required')
@@ -135,6 +140,11 @@ export async function hiBenefitsJourney({ origin, cookie, sql, settings, restart
   await sql("UPDATE oa_sessions SET revoked_at=1 WHERE id='synthetic-envelope-hi-owner'")
   assert.equal((await call(door,undefined,ownerCookie)).status,401)
   assert.equal((await call(door+'/preview',request(phc,[period(100000)]),ownerCookie)).status,401)
+  const audit = await data(base+'/audit')
+  for (const action of ['workspace.hi-benefit-plan.recorded','workspace.hi-benefit-plan.reviewed','workspace.hi-benefit-plan.approved','workspace.hi-benefit-preview.recorded']) {
+    const event = audit.find(e=>e.action===action)
+    assert.ok(event,action);assert.equal(event.actorId,native.operator_id);assert.ok(event.occurredAt);assert.ok(event.version)
+  }
   const stored=JSON.stringify(await sql("SELECT cipher FROM env_workspace_versions WHERE kind IN ('hi-benefit-plan','hi-benefit-preview')"))
   assert.ok(!stored.includes('synthetic-envelope-9303'));assert.ok(!stored.includes('Synthetic signed wage register'))
   // The native privacy inventory owns these new encrypted records too. An

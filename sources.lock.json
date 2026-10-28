@@ -481,6 +481,10 @@
       "sha256": "ae0c4ca04ad928ea15d4f03a30173f691440fcfb6ef6b83e7854c1c6ee7fb37b",
       "executable": false
     },
+    "docs/hawaii-plan-shares.md": {
+      "sha256": "46d8d7662a6056d301cf6814440c393be7964761dc8b61f4c1ac5ac3d6b78325",
+      "executable": false
+    },
     "docs/industry-forms.md": {
       "sha256": "289277f589aaa90a81a58600dbeadbd0a84f713da3b884b385474bcf57cb24f0",
       "executable": false
@@ -2035,6 +2039,10 @@
     },
     "src/envelope/automation/work.ts": {
       "sha256": "a7c6e9ae6eeee359e3be8cb492698f41e9d1675b2b70edb5ac9b949a8cef6df3",
+      "executable": false
+    },
+    "src/envelope/benefits/hi-plan-shares.ts": {
+      "sha256": "6ccc6b0ff45ef8c3bfa06a013a1ded89a9386718aff3087ebe7480e31741222a",
       "executable": false
     },
     "src/envelope/bonus-runs.ts": {
@@ -3811,6 +3819,10 @@
     },
     "tests/fixtures/sides/willow-native-capture.json": {
       "sha256": "8e91e1da13d870d33704c0d78eeab809292a6e84deb24e39e4ce9641fe76919c",
+      "executable": false
+    },
+    "tests/hi-benefits-runtime.mjs": {
+      "sha256": "f3a4f2d48e5120ea8a6b1a16e7c45424cb2749ee89df280074b84b62efed0776",
       "executable": false
     },
     "tests/human-proof-fixture.mjs": {
