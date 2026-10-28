@@ -216,7 +216,7 @@ export class RunIntake {
   async preview(actor: Actor, input: Input) {
     await this.store.authority(actor, 'rates:propose', undefined, true)
     const id = objectId(input.id), expected = revision(input.version)
-    const existing = (await this.rows(actor)).find((r) => r.id === id)
+    const existing = (await this.store.list<RunInput>(actor, 'run-intake', undefined, true, true, id))[0]
     const provider = input.providerCapture ? await providerInput(input.providerCapture, existing?.data.providerCapture) : undefined
     const namespace = provider?.namespace ?? text(input.namespace, 120)
     if ((existing?.version ?? 0) !== expected)
