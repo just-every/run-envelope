@@ -83,3 +83,39 @@ and [DOL state unemployment provisions, January 2026](https://oui.doleta.gov/une
 The latter is an inventory source, not a substitute for an assigned employer rate.
 The licensed vendor reconciliation remains field proof R-5 and does not gate
 calculation engineering or completion.
+
+## Expanded retained components
+
+The ordinary withholding corpus also includes California, North Carolina,
+Kentucky, Michigan, Indiana, Colorado, Idaho, Iowa, Delaware, Kansas, Minnesota,
+Missouri, North Dakota, Virginia, Wisconsin, Oregon and Utah. Alaska, Florida,
+Nevada, South Dakota, Tennessee and Wyoming join the cited no-wage-income-tax
+entries. This is component coverage; all 51 complete-state determinations remain
+unproved. The coverage door lists each mapped component with its case identifier.
+The journey fails if any mapped component lacks its independent golden case.
+
+Each state keeps its own period constants and rounding. Colorado follows DR 1098
+in cents. Iowa follows the 2026 formula's period deductions and separately rounded
+allowance. Idaho uses its July period thresholds. Kansas uses the published
+period tables rather than scaling annual thresholds. North Carolina and Missouri
+use their specified whole-dollar methods. California uses the expressly permitted
+annual Method B. Wisconsin retains fractional cents through its deduction phaseout.
+
+The retained Idaho edition starts July 23, and Utah's starts June 1. Earlier
+proposed checks for those states remain unmapped. Oregon's 2026 formula gives an
+$8,750 federal subtraction cap while FAQ 3 still says $8,500: checks in the
+conflicting interval remain held pending source clarification. No interpretation
+or reduced scope is invented. Its low-base applicability is also held where the
+retained table supplies no applicable row. Other Oregon programs remain separate.
+
+The `2025-01` edition supports retained federal historical calculations. Historical
+state tables remain unmapped; 2026 state component coverage and SUI assumptions
+never carry into 2025. The result carries the requested coverage edition.
+
+The program inventory retains the January 2026 DOL reference wage bases and base
+new-employer rates for all 51 states, with conditional bases and rate years. It
+never applies them as an assigned employer rate. Industry factors, surcharges,
+non-UI taxes and current state-law determinations remain required. The export
+explicitly retains WA L&I, OR WBF, NY DBL and PFL, Hawaii capped plan shares and
+OH, ND and WY compensation obligations rather than omitting them behind an
+income-tax-only denominator. This inventory is unfinished calculation work.

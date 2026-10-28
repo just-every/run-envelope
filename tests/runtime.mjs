@@ -294,7 +294,7 @@ try {
   if (!selected || selected.includes('new-hires')) await newHireJourney({ origin, cookie, advanceClock:async instant=>{assert.ok(clockEntrypoint,'New-hire journey requires its pinned clock');assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
   if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql,settings})
   if (!selected || selected.includes('multi-company')) await multiCompanyJourney({ origin, cookie, sql, settings })
-  if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })
