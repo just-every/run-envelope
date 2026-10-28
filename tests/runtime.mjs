@@ -52,7 +52,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
-    'firm', 'industry,calculation,hi-benefits,retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
+    'firm', 'industry,calculation,hi-benefits', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
