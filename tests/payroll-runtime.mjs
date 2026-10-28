@@ -32,6 +32,20 @@ export default {
     const db = env.DB, company = new URL(request.url).pathname.split('/')[4]
     let injected = false
     const wrapped = new Proxy(db, {get(target,property) {
+      if (property === 'prepare' && fault === 'authority-timeout') return query => {
+        const statement = target.prepare(query)
+        if (!query.startsWith('SELECT 1 WHERE')) return statement
+        const wrap = value => new Proxy(value, {get(target,property) {
+          if (property === 'bind') return (...args) => wrap(target.bind(...args))
+          if (property === 'first') return async (...args) => {
+            await new Promise(resolve => setTimeout(resolve,2200))
+            return target.first(...args)
+          }
+          const method = target[property]
+          return typeof method === 'function' ? method.bind(target) : method
+        }})
+        return wrap(statement)
+      }
       if (property === 'batch') return async statements => {
         if (injected) return target.batch(statements)
         injected = true
@@ -1084,6 +1098,8 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
         await diagnose(undefined,actors.accountant.cookie,403)
         await data('/api/envelope/companies/'+b+'/operations/diagnose',{consent:true},cookie,403)
         await data(diagnosticDoor,{consent:true},'',401)
+        const authorityUnavailable=await diagnose('authority-timeout',cookie,503)
+        assert.equal(authorityUnavailable.error,'diagnostic_authority_unavailable')
       })
     } finally {
       const columns=Object.keys(foreignDiagnosticGrant)
