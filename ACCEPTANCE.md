@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 30 | 63 | 98 |
+| Core | 5 | 31 | 62 | 98 |
 | Agent surface | 0 | 0 | 7 | 7 |
 | Later | 0 | 1 | 6 | 7 |
-| Full target | 5 | 31 | 76 | 112 |
+| Full target | 5 | 32 | 75 | 112 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -634,7 +634,7 @@ Core · target · **missing** · Rules D-3, D-5
 
 #### ENV-019 — Pre-tax deductions, retirement and state savings
 
-Core · target · **missing** · Rules D-4
+Core · target · **partial** · Rules D-4
 
 **Requirement.** Apply reviewed Section 125 health premiums, HSA/FSA, pretax/Roth 401(k), SIMPLE IRA, catch-up and employer-match rules, including annual limits, applicable age/income treatment and plan effective dates. Reconcile elections, per-run contributions, employer match, census and corrections with Guideline, Human Interest, Vestwell, Betterment at Work and Ubiquity. Determine and manage applicable auto-IRA registrations/exemptions and contributions for CalSavers, OregonSaves, Illinois Secure Choice and other mandated programs. Enrollment/plan advice belongs to Willow/recordkeepers; payroll must remit and prove acceptance.
 
@@ -642,8 +642,8 @@ Core · target · **missing** · Rules D-4
 1. Through deductions and recordkeeper connections, change an election, cross an annual limit, process catch-up/match and a corrected prior run, then reconcile accepted contribution files/funds at each named provider's official edge.
 2. Register a California employer without an exempt plan and process an opt-out; unapproved setup or rejected contributions remain held/open with due dates.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete benefits, retirement and state savings behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented.
+**Evidence.** `tests/retirement-benefits-runtime.mjs` retirementBenefitsJourney: native exact-version election review and held contribution previews; independent 2025 and 2026 combined traditional and Roth limits, other-plan prior contributions, age and income catch-up, employer match and annual caps; corrected sources invalidate pending preparation; replay, restart, foreign-company, agent, non-owner, changed authority and erased-worker refusals. `docs/retirement-preparation.md` defines the bounded public doors and source editions.
+**Gap.** Still unproved: Section 125, HSA and FSA, SIMPLE IRA, complete eligibility and effective-plan coverage; corrected settled payroll; contribution and census synchronization and accepted files and funds at Guideline, Human Interest, Vestwell, Betterment at Work and Ubiquity; mandated auto-IRA registration, exemption and contribution outcomes including California opt-out. Native proposals establish neither collected deductions nor provider acceptance. Owner-authorized rail, employer tenant and provider access are not established; official-schema reconciliation remains implementation work. The standing conservative default restricts these new preparation doors to the current native owner; scoped staff and agent preparation and provider boundaries remain owed pending applicable scope approval.
 
 #### ENV-091 — Commuter, dependent-care and HRA reimbursement treatment
 

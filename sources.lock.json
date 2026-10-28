@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f0183c810e35bd6b63cbd0a38a54363ec98429e162723ce12f0b93d995587fd1",
+      "sha256": "7c45dbe79892234788a09d0ccf12dbc9fbcbb57d151ecedec98466c21b5096c3",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "67ca6e9aa4ceb3986641634b658f3eb9f7dd5db13f7aa2a9dd24006b26a6d47c",
+      "sha256": "8119230b0818a142b38729a5b0377949acc361458778b2448dd5a7068b559d50",
       "executable": false
     },
     "deploy-demo.json": {
@@ -370,7 +370,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "66d29dd13eb5c1d0c68962b6e0b842a38cb441356dd4cf30eb00edd86d99aa36",
+      "sha256": "f49f15d2da699297daf7fff1c0782e6ac1742a5f1f1186f0cc1138d2114fe6bb",
       "executable": false
     },
     "docs/contract/acceptance-before-cleanup.md": {
@@ -575,6 +575,10 @@
     },
     "docs/private-inputs.md": {
       "sha256": "ec3bfea2f6377c922fee8c0db3a8de0b52d43782e672c00a9f16d4c39b3cb46b",
+      "executable": false
+    },
+    "docs/retirement-preparation.md": {
+      "sha256": "a833a7d43dd24fd11e0d7529073a04a3a3f5851fcfee93d63d7352d6c476a5f1",
       "executable": false
     },
     "docs/run-earnings-intake.md": {
@@ -2037,6 +2041,14 @@
       "sha256": "a7c6e9ae6eeee359e3be8cb492698f41e9d1675b2b70edb5ac9b949a8cef6df3",
       "executable": false
     },
+    "src/envelope/benefits/retirement-records.ts": {
+      "sha256": "019e5355b5e5fbdebe2b1c80ec0f2f1ca552130294f9f7a8b82a6b3b3c7c22cf",
+      "executable": false
+    },
+    "src/envelope/benefits/retirement.ts": {
+      "sha256": "c61d8278d48a83ece92c22135b3dcc1271e9a672e7922aac481d1f4e5e717247",
+      "executable": false
+    },
     "src/envelope/bonus-runs.ts": {
       "sha256": "746a3729eeeef7fd6eb94385995feb7681f3d3c6690613889a2521a1f24792cb",
       "executable": false
@@ -2094,7 +2106,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "dd6a14d72cee9478dde7406e8881ede1a6d7cb50905689fb43ee306ac0ba9751",
+      "sha256": "af49db7881063eb7247296363dda1f5ded64d954c60e4dbb1b2aa860226aaa52",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2202,7 +2214,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "56fb5e6fa570a6535a319a0b7ab748e802967eee606ed1fc78908912630ec351",
+      "sha256": "32dd8026fff4bcaa40e40017aaadfbf325a349863a3d8bb05a97600754ca39f1",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2514,7 +2526,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "305fc97c4318c36968ae8d969bda1f93ab8e02f92efeb097ba41d2bb4bc50b46",
+      "sha256": "f2af431957d85805178420efa8253cf6524fdcc650be8e92e475539482525ad8",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3865,12 +3877,16 @@
       "sha256": "e14ecf5d5f575fead2c44afc624ecc47398c7f8622942534651df4c7b70701b5",
       "executable": false
     },
+    "tests/retirement-benefits-runtime.mjs": {
+      "sha256": "cc6876685b163a57a9f47651c297af3dd5bbbdc71a372f9999c8f976cd8a29bf",
+      "executable": false
+    },
     "tests/run-intake.mjs": {
       "sha256": "d72b5ca53ccfae5002d53ba6268363999b53f37339358c907218ef09f3bc8cab",
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "ec64cff64e278d37b45f31f646ba76255c578f14277d5312d5b4660fe7d7c9bc",
+      "sha256": "c4a9909a3129c039825ec9a6ab7aa36dd434ab8fea9c26df50c0ffba786ed4a3",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3886,7 +3902,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "2d77174b1aeffa2868e41426255588a33e10836144143dbe43f53fe5307f6468",
+      "sha256": "167c3a024e274c1cedc1c67c94bb180f36eb25d96a01976728b48c96c255320f",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

@@ -1,3 +1,4 @@
+import { retirementContribution, type RetirementElection } from '../benefits/retirement'
 import { validDate } from '../industry/classification'
 import { calculateIndustryPay } from '../industry/calculate'
 import { roundRatio,validCents } from '../industry/federal-withholding'
@@ -88,4 +89,13 @@ export function calculationPreview(input:PreviewInput){
     federal,state,tipTaxes:tip,federalEmployerTaxes:combinedFederalEmployer,sui,deductions,federalGarnishmentLimitCents:federalGarnishmentLimit,
     netCashCents:holds.length?null:disposable-deducted,holds,coverage:stateCoverage(input.edition),
     limitations:['Proposed calculation only; no money moves and no historical payroll record is changed.','The complete 51-state programs and the 688-entry large-local file remain in the denominator.','No supplied account number, provider grant or client approval creates payment authority.']}
+}
+
+/** Retained retirement proposals expose their wage effects separately from the ordinary payroll estimate. */
+export function retirementCalculationPreview(input: PreviewInput, election: RetirementElection) {
+  const ordinaryPayrollPreview = calculationPreview(input)
+  if (input.tips.heldCents || input.tips.paycheckCents || input.deductions.length) throw new Error('retirement_special_payroll_unavailable')
+  const contribution = retirementContribution(election,ordinaryPayrollPreview.grossCashCents,input.payDate,input.from,input.through)
+  return { ordinaryPayrollPreview, contribution, paymentReady:false, netCashCents:null,
+    limitation:'Retirement wage effects are proposed separately. The ordinary payroll estimate has not applied these deductions; no complete pay, settled correction or provider outcome is recorded.' }
 }
