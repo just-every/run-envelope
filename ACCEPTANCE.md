@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 30 | 63 | 98 |
+| Core | 5 | 31 | 62 | 98 |
 | Agent surface | 0 | 0 | 7 | 7 |
 | Later | 0 | 1 | 6 | 7 |
-| Full target | 5 | 31 | 76 | 112 |
+| Full target | 5 | 32 | 75 | 112 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -660,7 +660,7 @@ Core · target · **missing** · From ENV-019
 
 #### ENV-093 — Hawaii TDI and Prepaid Health Care employee shares
 
-Core · target · **missing** · From ENV-019
+Core · target · **partial** · From ENV-019
 
 **Requirement.** For Hawaii TDI and Prepaid Health Care, import the approved actual plan, premium/rate, eligibility and documented waiver from Willow/authorized benefits administrator or insurer. Cap TDI employee share at the lawful cost share, 0.5% of weekly wages and the official year's maximum weekly deduction; the employer may cover all cost. Cap the PHC employee share at the lesser of 50% of premium and 1.5% of monthly gross earnings, with required employer/dependent shares determined by the approved plan type; retain annually required HC-5 waiver evidence where applicable. A generic percentage deduction cannot evade these ceilings or substitute for a valid plan.
 
@@ -668,8 +668,8 @@ Core · target · **missing** · From ENV-019
 1. Import approved HI TDI/PHC plans and premium evidence, preview low/high weekly wages and multiple pay periods in one month and compare cumulative lawful capped employee and employer shares to official DLIR rules.
 2. Attempt an above-cap deduction, expired HC-5 waiver and missing plan: require correction/owned evidence without inventing coverage; inspect corrected stubs, remittance and year/effective-rule history.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete benefits, retirement and state savings behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented.
+**Evidence.** `tests/hi-benefits-runtime.mjs` hiBenefitsJourney through the private company evidence and calculation APIs: independently worked 2026 DLIR weekly and monthly goldens, half-cost and wage ceilings, split weeks and multiple monthly periods, prior collections, plan-specific dependent allocation, owner-paid premiums, missing evidence and expired HC-5 refusals, exact source corrections, stale review, replay, encrypted restart, scoped and revoked access, and eligible erasure with stale capture refusal. `docs/hawaii-plan-shares.md` describes the held evidence boundary.
+**Gap.** Native reviewed evidence and proposed 2026 shares only. Still unproved: actual approved-plan authenticity and complete eligibility; authorized Willow, benefits administrator and insurer synchronization; complete source and migration custody; corrected paid stubs, actual deductions and refunds, employer funding and accepted insurer remittance; full year and effective-rule history. Existing carrier, calculation catalog and owner-authorized company and payment-rail holds remain unchanged. Native evidence review does not establish plan approval or coverage. Conservative interim default: configured native owner only, with no automatic outbound, destructive or payment action; scoped delegation and provider boundaries remain owed under the standing scope policy.
 
 #### ENV-094 — New York DBL plan contributions
 

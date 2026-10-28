@@ -5,6 +5,8 @@ import { fence, auditStatement, requireAction, type Actor } from '../access'
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'hi-benefit-plan'
+  | 'hi-benefit-preview'
   | 'provider-deletion-request'
   | 'notice-worker-link'
   | 'run-input'

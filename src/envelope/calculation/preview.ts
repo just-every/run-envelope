@@ -1,3 +1,4 @@
+import type { HiPreviewRequest } from '../benefits/hi-plan-shares'
 import { validDate } from '../industry/classification'
 import { calculateIndustryPay } from '../industry/calculate'
 import { roundRatio,validCents } from '../industry/federal-withholding'
@@ -7,6 +8,7 @@ import { weeklyEarnings,type WorkWeek } from './earnings'
 import { stateWithholding, stateCoverage } from './states'
 
 export interface PreviewInput {
+  hiBenefits?:HiPreviewRequest
   edition:'2025-01'|'2026-01';payDate:string;from:string;through:string;frequency:'weekly'|'biweekly'|'semimonthly'|'monthly'
   workState:string;residentState:string;locality:string
   remuneration:{kind:'hourly';weeks:WorkWeek[]}|{kind:'salary';cashCents:number;exempt:true}
@@ -22,7 +24,7 @@ const noTaxFacts={employerKind:'business',entityType:'corporation',workerRole:'e
 
 /** A stateless proposed calculation, never an approval, pay instruction or persisted check. */
 export function calculationPreview(input:PreviewInput){
-  if(!input || Object.keys(input).some(k=>!['edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
+  if(!input || Object.keys(input).some(k=>!['hiBenefits','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
   const year=input.edition==='2025-01'?'2025':'2026'
   if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || input.payDate<input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
   if(typeof input.workState!=='string'||typeof input.residentState!=='string'||!input.workState.trim()||!input.residentState.trim()||input.workState.length>80||input.residentState.length>80)reject('work_and_residence_locations_required')
