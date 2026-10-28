@@ -55,6 +55,8 @@ export function calculationPreview(input:PreviewInput, retirement?:ExtendedRetir
     gross=checked(r.cashCents)
   }else reject('supported_remuneration_required')
   if(nyDbl && nyDbl.rows.reduce((n,w)=>n+w.wagesCents,0)!==gross) reject('dbl_wages_do_not_match_preview')
+  if(nyDbl && earnings && (earnings.weeks.length!==nyDbl.rows.length || earnings.weeks.some(week=>
+    !nyDbl.rows.some(row=>row.weekFrom===week.from && row.wagesCents===week.grossCents)))) reject('dbl_weekly_wages_do_not_match_preview')
   const p=periods[input.frequency] as PayPeriods
   let federal:ReturnType<typeof calculateIndustryPay>
   try { federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate}) } catch(error) {
