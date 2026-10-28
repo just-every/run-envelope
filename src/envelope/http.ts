@@ -1,3 +1,4 @@
+import { ExtendedRetirement } from './benefits/extended-retirement'
 import { calculationPreview, type PreviewInput } from './calculation/preview'
 import { stateCoverage } from './calculation/states'
 import { accountingResponse } from './accounting/http'
@@ -471,13 +472,29 @@ export async function payrollResponse(
       if(parts[2]==='calculation-coverage' && !post) return json(stateCoverage())
       if(parts[2]==='calculation-preview' && post){
         let result
-        try { result=calculationPreview(value as unknown as PreviewInput) }
-        catch(error){ throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
+        try {
+          let retirement
+          if (value.extendedRetirement) {
+            const selection=value.extendedRetirement as Record<string,unknown>
+            if (Object.keys(selection).some(k=>!['personId','setupId','setupVersion','request'].includes(k))) throw new PayrollError('unsupported_retirement_input')
+            retirement=(await new ExtendedRetirement(new WorkspaceStore(records)).preview(actor,String(selection.personId),{setupId:selection.setupId,setupVersion:selection.setupVersion,request:selection.request},false)).result
+          }
+          result=calculationPreview(value as unknown as PreviewInput,retirement)
+        }
+        catch(error){ if(error instanceof PayrollError)throw error; throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
         // A preview neither reads employee records nor retains supplied personal
         // data. Repeat current authority immediately before returning its result.
         await records.company(await records.actor(parts[1]))
         return json(result)
       }
+      throw new PayrollError('not_found',404)
+    }
+    if (!ui && parts[0]==='companies' && parts[2]==='people' && parts[4]==='benefits' && parts[5]==='extended-retirement') {
+      const actor=await records.actor(parts[1]),benefits=new ExtendedRetirement(new WorkspaceStore(records)),personId=parts[3]
+      if (parts.length===6) return json(post ? await benefits.save(actor,personId,value) : await benefits.list(actor,personId),post?201:200)
+      if (parts.length===7 && parts[6]==='preview' && post) return json(await benefits.preview(actor,personId,value),201)
+      if (parts.length===8 && parts[6]==='review' && !post) return json(await benefits.review(actor,personId,parts[7]))
+      if (parts.length===8 && parts[6]==='decision' && post) return json(await benefits.decide(actor,personId,parts[7],value))
       throw new PayrollError('not_found',404)
     }
     let response: Response

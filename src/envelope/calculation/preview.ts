@@ -1,3 +1,4 @@
+import type { ExtendedRetirementProposal } from '../benefits/extended-retirement'
 import { validDate } from '../industry/classification'
 import { calculateIndustryPay } from '../industry/calculate'
 import { roundRatio,validCents } from '../industry/federal-withholding'
@@ -7,6 +8,7 @@ import { weeklyEarnings,type WorkWeek } from './earnings'
 import { stateWithholding, stateCoverage } from './states'
 
 export interface PreviewInput {
+  extendedRetirement?: {personId:string;setupId:string;setupVersion:number;request:unknown}
   edition:'2025-01'|'2026-01';payDate:string;from:string;through:string;frequency:'weekly'|'biweekly'|'semimonthly'|'monthly'
   workState:string;residentState:string;locality:string
   remuneration:{kind:'hourly';weeks:WorkWeek[]}|{kind:'salary';cashCents:number;exempt:true}
@@ -21,15 +23,18 @@ const checked=(n:unknown)=>{if(!validCents(n)||n>100000000)reject('invalid_previ
 const noTaxFacts={employerKind:'business',entityType:'corporation',workerRole:'employee',workKind:'nonagricultural',seasonal:false,taxResidency:'resident',claims:[]} as const
 
 /** A stateless proposed calculation, never an approval, pay instruction or persisted check. */
-export function calculationPreview(input:PreviewInput){
-  if(!input || Object.keys(input).some(k=>!['edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
+export function calculationPreview(input:PreviewInput, retirement?:ExtendedRetirementProposal){
+  if(!input || Object.keys(input).some(k=>!['extendedRetirement','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
   const year=input.edition==='2025-01'?'2025':'2026'
   if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || input.payDate<input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
   if(typeof input.workState!=='string'||typeof input.residentState!=='string'||!input.workState.trim()||!input.residentState.trim()||input.workState.length>80||input.residentState.length>80)reject('work_and_residence_locations_required')
   if(!input.yearToDate || !['socialSecurityWagesCents','medicareWagesCents','futaWagesCents','suiWagesCents'].every(k=>validCents(input.yearToDate[k as keyof PreviewInput['yearToDate']]))) reject('complete_year_to_date_required')
   if(!input.tips || ![input.tips.heldCents,input.tips.paycheckCents,input.tips.furnishedCents].every(validCents) || !Array.isArray(input.deductions) || input.deductions.length>20) reject('complete_tips_and_deductions_required')
+  if (input.extendedRetirement && !retirement) reject('reviewed_retirement_proposal_required')
+  if (retirement && retirement.payDate !== input.payDate) reject('retirement_pay_date_mismatch')
   const holds:{code:string;location:string;reason:string;nextAction:string}[]=[]
   const hold=(code:string,location:string,reason:string)=>holds.push({code,location:location||'Unassigned location',reason,nextAction:'Request official-source mapping or correct the inputs; keep this employee held.'})
+  if(retirement)hold('retirement-payroll-integration-pending',input.workState,'Retirement amounts are separate held proposals; deductions, taxable wages and payment are not changed.')
   if(input.workState!==input.residentState)hold('multistate-allocation-unmapped',input.workState+' and '+input.residentState,'Cross-state sourcing and resident credits require a mapped allocation.')
   if(typeof input.locality!=='string'||input.locality!=='none')hold('locality-unmapped',String(input.locality??''),'A mapped work and residence locality is required. Unknown local tax is never zero tax.')
   const r=input.remuneration
@@ -84,6 +89,7 @@ export function calculationPreview(input:PreviewInput){
   return {edition:input.edition,payDate:input.payDate,status:holds.length?'held':'calculated-preview',paymentReady:false,approval:'unavailable',dispatch:'unavailable',
     assumptions:{worker:'Ordinary resident employee of a taxable corporation, with no federal exemption',taxability:'Ordinary taxable cash wages; no pre-tax benefits, imputed income or special wage exclusions',companyEntity:'Hypothetical assumption; no actual company tax-entity determination is read or changed'},
     federalRatesBasisPoints:{socialSecurity:620,medicare:145,additionalMedicare:90,futaBeforeCredits:600},
+    ...(retirement?{extendedRetirement:retirement}:{}),
     earnings,grossCashCents:gross,heldTipsCents:input.tips.heldCents,paycheckTipsCents:input.tips.paycheckCents,newCashBeforeTaxCents:newCash,
     federal,state,tipTaxes:tip,federalEmployerTaxes:combinedFederalEmployer,sui,deductions,federalGarnishmentLimitCents:federalGarnishmentLimit,
     netCashCents:holds.length?null:disposable-deducted,holds,coverage:stateCoverage(input.edition),
