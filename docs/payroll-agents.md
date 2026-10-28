@@ -392,9 +392,9 @@ incomplete answers refuse without a configuration change. Saving answers keeps
 an existing Pause in effect. Every change records the human actor separately
 from the agent call history.
 
-The current native hourly preparation and masked record reads carry standard;
-compensation reads and reports carry sensitive; bonus earnings preparation
-carries money; credential rotation carries security. Presenting a human review
+The current native hourly and bonus earnings preparation and masked record
+reads carry standard; compensation reads and reports carry sensitive;
+credential rotation carries security. Presenting a human review
 link carries standard and grants no human authority. Notice processing carries
 sensitive and external, and exact approved reply dispatch carries commitment
 and external. Classes are server declarations, never caller-supplied authority.
