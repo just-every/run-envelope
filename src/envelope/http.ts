@@ -861,6 +861,9 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'locations' && post) {
         const location = await records.createLocation(actor, value)
         response = ui ? redirect(base) : json(location, 201)
+      } else if (tail.join('/') === 'case-policy' && post) {
+        const result=await new TaxNoticeCases(new WorkspaceStore(records)).setPolicy(actor,value)
+        response=ui?redirect(base+'/grants'):json(result)
       } else if (tail.join('/') === 'paper-policy' && post) {
         const result=await new PaperOnboarding(new WorkspaceStore(records)).setPolicy(actor,value)
         response=ui?redirect(base+'/grants'):json(result)
@@ -880,6 +883,7 @@ export async function payrollResponse(
                 await auth.listOperators(request),
                 url.searchParams.get('operator') ?? undefined,
                 await new WorkspaceStore(records).paperPolicy(actor),
+                await new WorkspaceStore(records).casePolicy(actor),
               )
             : json(grants)
         }

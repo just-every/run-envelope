@@ -328,6 +328,69 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(industryDoor+'/checks',{...lockedCheck,id:'synthetic-envelope-identity-changed'},409)
   const instructions=await data(instructionDoor);assert.deepEqual(instructions.map(r=>r.data.kind),['release','modification','2800C']);assert.ok(instructions.every(r=>r.createdBy===owner && r.approvedBy===owner && Number.isFinite(r.createdAt) && Number.isFinite(r.approvedAt)));assert.equal(instructions[2].data.maximumAllowances,1);assert.equal(instructions[0].data.priorVersion,2)
   for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+instructionDoor.replace('/api/','/app/'));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(proof,'withholding-instruction-history-'+width+'.png'),fullPage:true})}
+  // A payroll team handles one notice with separate evidence and review powers.
+  const staff={}
+  const sensitiveFields=['tax','ssn','bank','compensation']
+  for (const [role,powers] of [['preparer',['cases:intake','cases:investigate','cases:review']],['reviewer',['cases:review']],['custodian',['cases:download']]]) {
+    const id='synthetic-envelope-case-'+role,secret=randomBytes(32).toString('base64url'),hashed=await hashToken(settings.SESSION_SECRET,'session',secret)
+    await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${id}','${id}' || char(64) || 'example.com','Notice ${role}','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('${id}','${hashed}','${id}',1,'native',${Date.parse('2026-10-27T00:00:00Z')},${Date.parse('2026-11-01T00:00:00Z')})`)
+    await data(base+'/grants',{operatorId:id,version:0,role:'accountant',locations:[location.id],fields:sensitiveFields,actions:['notices:read','notices:write',...powers]})
+    staff[role]={id,cookie:localCookieName('operator_session_local',origin)+'='+secret}
+  }
+  const teamNotice=await data(base+'/notices',{locationId:location.id,reference:'Synthetic delegated notice',body:original.toString()},201,staff.preparer.cookie),teamDoor=base+'/notices/'+teamNotice.id+'/case'
+  await data(teamDoor,input,201,staff.preparer.cookie)
+  assert.equal((await data(teamDoor,undefined,200,staff.reviewer.cookie))[0].createdBy,staff.preparer.id)
+  const beforePolicy=await data(teamDoor+'/review',undefined,200,staff.reviewer.cookie)
+  await data(base+'/case-policy',{version:0,requireSeparateReviewer:true},403,staff.preparer.cookie)
+  await data(base+'/case-policy',{version:0,requireSeparateReviewer:true})
+  await data(teamDoor+'/approve',{version:1,reviewToken:beforePolicy.reviewToken},409,staff.reviewer.cookie)
+  await data(teamDoor+'/review',undefined,403,staff.preparer.cookie)
+  await data(teamDoor+'/evidence',{...evidence,version:1},200,staff.preparer.cookie)
+  const teamReview=await data(teamDoor+'/review',undefined,200,staff.reviewer.cookie)
+  await data(teamDoor+'/approve',{version:teamReview.version,reviewToken:teamReview.reviewToken},200,staff.reviewer.cookie)
+  let teamRow=(await data(teamDoor,undefined,200,staff.preparer.cookie))[0]
+  assert.equal(teamRow.createdBy,staff.preparer.id);assert.equal(teamRow.approvedBy,staff.reviewer.id);assert.equal(teamRow.data.evidence[0].recordedBy,staff.preparer.id);assert.equal(teamRow.resolved,false);assert.equal(teamRow.payrollChanged,false)
+  for(const staffer of [staff.preparer,staff.reviewer]) await data(teamDoor+'/original/1/0',undefined,403,staffer.cookie)
+  const teamOriginal=await call(teamDoor+'/original/1/0',undefined,staff.custodian.cookie);assert.equal(teamOriginal.status,200);assert.deepEqual(Buffer.from(await teamOriginal.arrayBuffer()),original)
+  await data(teamDoor+'/evidence',{...evidence,version:2,reference:'synthetic-envelope-no-investigation'},403,staff.reviewer.cookie)
+  await data(teamDoor,{...correction,version:2},403,staff.custodian.cookie)
+  await data(teamDoor+'/link-rate',{version:2,ruleId:rule.id,ruleVersion:2},403,staff.reviewer.cookie)
+  await data(base+'/rules/review/'+rule.id,undefined,403,staff.reviewer.cookie)
+  const otherLocation=await data(base+'/locations',{name:'Unassigned notice workplace',state:'OH'},201)
+  const otherNotice=await data(base+'/notices',{locationId:otherLocation.id,reference:'Synthetic unassigned notice',body:original.toString()},201),otherDoor=base+'/notices/'+otherNotice.id+'/case'
+  await data(otherDoor,input,201)
+  const caseCount=async()=>await sql(`SELECT COUNT(*) AS count FROM env_workspace_versions WHERE company_id='${company.id}' AND kind='tax-notice-case'`)
+  const unchanged=await caseCount()
+  for(const staffer of Object.values(staff)) {
+    await data(otherDoor,undefined,403,staffer.cookie)
+    await data(otherDoor+'/review',undefined,403,staffer.cookie)
+    await data(otherDoor+'/original/1/0',undefined,403,staffer.cookie)
+    await data(otherDoor,{...correction,version:1},403,staffer.cookie)
+  }
+  assert.deepEqual(await caseCount(),unchanged,'Out-of-location attempts retain no new case version')
+  const staffContext=await browser.newContext();await staffContext.addCookies([{name:staff.preparer.cookie.split('=')[0],value:staff.preparer.cookie.split('=')[1],url:origin}]);const staffPage=await staffContext.newPage()
+  await staffPage.setViewportSize({width:1440,height:1000});await staffPage.goto(origin+teamDoor.replace('/api/','/app/'))
+  assert.equal(await staffPage.getByRole('link',{name:'Download retained notice original',exact:true}).count(),0)
+  assert.ok((await staffPage.locator('main').innerText()).includes(staff.reviewer.id))
+  for(const width of [1440,390]) {await staffPage.setViewportSize({width,height:1000});assert.equal(await staffPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await staffPage.screenshot({path:join(proof,'notice-delegated-case-'+width+'.png'),fullPage:true})}
+  await staffContext.close()
+  await capture('case-review-policy',base.replace('/api/','/app/')+'/grants')
+  await data(teamDoor,{...correction,version:2},201,staff.preparer.cookie)
+  const revokedReview=await data(teamDoor+'/review',undefined,200,staff.reviewer.cookie)
+  await data(base+'/grants',{operatorId:staff.reviewer.id,version:1,revoke:true})
+  for(const target of [teamDoor,teamDoor+'/review',teamDoor+'/original/1/0']) await data(target,undefined,401,staff.reviewer.cookie)
+  await data(teamDoor+'/approve',{version:revokedReview.version,reviewToken:revokedReview.reviewToken},401,staff.reviewer.cookie)
+  assert.equal((await data(teamDoor))[0].approvedBy,null,'Revocation leaves the pending case unreviewed')
+  await data(base+'/grants',{operatorId:staff.custodian.id,version:1,role:'accountant',locations:[location.id],fields:['tax','ssn','compensation'],actions:['notices:read','cases:download']})
+  await data(teamDoor,undefined,401,staff.custodian.cookie)
+  const renewedToken=randomBytes(32).toString('base64url'),renewedHash=await hashToken(settings.SESSION_SECRET,'session',renewedToken)
+  await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-case-custodian-renewed','${renewedHash}','${staff.custodian.id}',1,'native',${Date.parse('2026-10-29T00:00:30Z')},${Date.parse('2026-11-01T00:00:00Z')})`)
+  staff.custodian.cookie=localCookieName('operator_session_local',origin)+'='+renewedToken
+  await data(teamDoor,undefined,403,staff.custodian.cookie);await data(teamDoor+'/original/1/0',undefined,403,staff.custodian.cookie)
+  const caseAudit=await sql(`SELECT actor_id,action,target_id,version,occurred_at FROM env_audit WHERE company_id='${company.id}' AND target_id='${teamNotice.id}'`)
+  assert.ok(caseAudit.some(e=>e.actor_id===staff.preparer.id && e.action==='workspace.tax-notice-case.recorded' && e.version===1 && e.occurred_at>0))
+  assert.ok(caseAudit.some(e=>e.actor_id===staff.reviewer.id && e.action==='workspace.tax-notice-case.approved' && e.version===2 && e.occurred_at>0))
+  assert.ok(caseAudit.some(e=>e.actor_id===staff.custodian.id && e.action==='notice.case.original.read' && e.version===1 && e.occurred_at>0))
   const foreign=await data('/api/envelope/companies',{name:'Synthetic foreign notice employer',ein:'00-0002526'},201)
   assert.equal((await call(door.replace(company.id,foreign.id))).status,403)
   assert.equal((await call(door,undefined,'')).status,401)
