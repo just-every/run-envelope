@@ -252,6 +252,30 @@ export async function safeInputsBrowser({context,f}) {
   const admitted=await member.request.post(context.origin+'/auth/confirm',{headers:{origin:context.origin},data:{token:new URL(invitation).searchParams.get('token')},maxRedirects:0})
   assert.equal(admitted.status(),303)
   for(const path of [door+'/artifacts/'+hostile.id,door+'/artifacts/'+pdf.id])assert.equal((await member.request.get(context.origin+path)).status(),403,'a signed-in member without a company grant cannot download')
+  // One public-door regression: native member authority and registered dispatch stay intact.
+  const memberSession=await (await member.request.get(context.origin+'/auth/session')).json()
+  assert.equal(memberSession.operator.role,'member')
+  const grant=await owner.request.post(context.origin+f.base+'/grants',{headers:{origin:context.origin},data:{operatorId:memberSession.operator.id,version:0,role:'viewer',locations:['*'],fields:[],actions:[]}})
+  assert.equal(grant.status(),200,'the native member receives a viewer grant with no permissions')
+  const dispatchChecks=[]
+  for(const [label,client] of [['member',member],['owner',owner]])for(const prefix of ['/api/','/app/']) {
+   for(const action of ['unknown-action','constructor','hasOwnProperty']) {
+    const response=await client.request.post(context.origin+door.replace('/api/',prefix)+'/'+action,{headers:{origin:context.origin},data:{}})
+    const body=await response.text()
+    dispatchChecks.push({label,prefix,action,status:response.status()})
+    for(const secret of ['900-69-0001',...Object.entries(context.settings).filter(([key])=>/SECRET|KEY|TOKEN/.test(key)).map(([,value])=>value)])
+     if(typeof secret==='string'&&secret.length>5)assert.ok(!body.includes(secret),'unknown dispatch discloses no private or binding value')
+   }
+  }
+  console.log('Claims dispatch public-door statuses: '+JSON.stringify(dispatchChecks))
+  for(const check of dispatchChecks)assert.equal(check.status,404,check.label+' '+check.prefix+' '+check.action+' uses unknown-action answer')
+  const legitimate=await owner.request.post(context.origin+door+'/escalate',{headers:{origin:context.origin},data:{version:imported.version,reason:'Synthetic dispatch sanity check'}})
+  assert.equal(legitimate.status(),200,'a registered action still succeeds')
+  const escalation=await legitimate.json()
+  assert.equal(escalation.version,imported.version+1,'registered action creates its real revision')
+  const denied=await member.request.post(context.origin+door+'/escalate',{headers:{origin:context.origin},data:{version:escalation.version,reason:'Synthetic unauthorized dispatch'}})
+  assert.equal(denied.status(),403,'a registered action retains its company-owner authority check')
+  console.log('Claims dispatch public-door sanity passed: inherited names refused, registered action works, authority preserved')
   const personDoor=f.base+'/people/'+f.person.id,privatePaths=[]
   await f.data('/auth/magic-link',{email:f.operator.email,returnTo:'/app/envelope'},202)
   const ownerLink=new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&'))
