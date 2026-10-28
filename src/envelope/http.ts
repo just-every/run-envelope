@@ -35,6 +35,7 @@ import { SourceIntake } from './intake/sources'
 import { sourcePage } from './intake/pages'
 import { LeaveLedger, leaveBucket, leaveId } from './leave/ledger'
 import { leavePage } from './leave/pages'
+import { AgentPolicy, AgentPolicyError, policyCall, toolClasses } from './agent-policy'
 import { AgentSettings, AgentTools } from './agents'
 import { Lifecycle } from './lifecycle'
 import { Providers } from './providers'
@@ -201,10 +202,10 @@ export async function payrollResponse(
       const reportRoute = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/reports\/(proposals|bonus-runs)$/.exec(url.pathname)
       if (reportRoute && request.method !== 'POST') {
         if ([...url.searchParams.keys()].some(k=>!['limit','after'].includes(k) || url.searchParams.getAll(k).length!==1)) throw new PayrollError('invalid_report_query')
-        const result=await (reportRoute[2]==='bonus-runs' ? bonusReport.bind(null,agent) : agent.proposalReport.bind(agent))({companyId:reportRoute[1],
+        const result=await policyCall<unknown>(agent,reportRoute[2]==='bonus-runs' ? 'reports.bonuses' : 'reports.proposals','rest',()=> (reportRoute[2]==='bonus-runs' ? bonusReport.bind(null,agent) : agent.proposalReport.bind(agent))({companyId:reportRoute[1],
           ...(url.searchParams.has('limit') ? {limit:url.searchParams.get('limit')} : {}),
           ...(url.searchParams.has('after') ? {after:url.searchParams.get('after')} : {}),
-        })
+        }))
         return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
       }
       const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts|bonus-runs)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
@@ -216,10 +217,10 @@ export async function payrollResponse(
           if (request.headers.get('content-type')?.split(';')[0] !== 'application/json') throw new PayrollError('unsupported_content_type',415)
           const value=await input(request)
           if (Object.hasOwn(value,'companyId')) throw new PayrollError('invalid_bonus_input')
-          return json(await prepareBonus(agent,{...value,companyId}),201)
+          return json(await policyCall(agent,'bonus.prepare','rest',()=>prepareBonus(agent,{...value,companyId})),201)
         }
         if (draftId && request.method !== 'POST') {
-          const result=await readBonus(agent,{companyId,runId:draftId})
+          const result=await policyCall(agent,'bonus.read','rest',()=>readBonus(agent,{companyId,runId:draftId}))
           return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
         }
         throw new PayrollError('agent_tool_denied',403)
@@ -228,10 +229,10 @@ export async function payrollResponse(
         if ([...url.searchParams.keys()].some(k => !['limit', 'after'].includes(k)) ||
             [...url.searchParams.keys()].some(k => url.searchParams.getAll(k).length !== 1))
           throw new PayrollError('invalid_record_query')
-        const result = await agent.records({companyId,
+        const result = await policyCall(agent,'records.list','rest',()=>agent.records({companyId,
           ...(url.searchParams.has('limit') ? {limit: url.searchParams.get('limit')} : {}),
           ...(url.searchParams.has('after') ? {after: url.searchParams.get('after')} : {}),
-        })
+        }))
         return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
       }
       if (resource === 'drafts' && !draftId && request.method === 'POST') {
@@ -240,11 +241,11 @@ export async function payrollResponse(
           throw new PayrollError('unsupported_content_type', 415)
         const value = await input(request)
         if (Object.hasOwn(value, 'companyId')) throw new PayrollError('invalid_draft_input')
-        return json(await agent.prepare({...value, companyId}), 201)
+        return json(await policyCall(agent,'draft.prepare','rest',()=>agent.prepare({...value, companyId})), 201)
       }
       if (resource === 'drafts' && draftId && request.method !== 'POST') {
         if (url.search) throw new PayrollError('invalid_draft_input')
-        const result = await agent.readDraft({companyId, draftId})
+        const result = await policyCall(agent,'draft.read','rest',()=>agent.readDraft({companyId, draftId}))
         return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
       }
       throw new PayrollError('agent_tool_denied', 403)
@@ -373,6 +374,7 @@ export async function payrollResponse(
             .map(({ name, description, properties, required }) => ({
               name,
               description,
+              _meta: {classes: toolClasses[name]},
               inputSchema: {
                 type: 'object',
                 properties,
@@ -393,7 +395,7 @@ export async function payrollResponse(
         const args = params.arguments as Input
         if (!args || typeof args !== 'object' || Array.isArray(args))
           throw new PayrollError('invalid_mcp_request')
-        const value =
+        const value = await policyCall(agent,String(params.name),'mcp',async()=>
           params.name === 'credentials.rotate'
             ? Object.keys(args).length ? (() => {throw new PayrollError('invalid_input')})() : await agent.rotate()
             : params.name === 'notice.process'
@@ -418,7 +420,7 @@ export async function payrollResponse(
                 ? await agent.readDraft(args)
                 : (() => {
                     throw new PayrollError('agent_tool_denied', 403)
-                  })()
+                  })())
         result = { content: [{ type: 'text', text: JSON.stringify(value) }] }
       } else throw new PayrollError('agent_tool_denied', 403)
       return json({ jsonrpc: '2.0', id: message.id, result })
@@ -894,7 +896,9 @@ export async function payrollResponse(
             : json(issued, 201)
         } else if (tail.length === 1 && !post) {
           const grants = await agents.list(actor),
-            access = await agents.access(actor)
+            access = await agents.access(actor),
+            classPolicy = await new AgentPolicy(records).read(actor),
+            activity = await new AgentPolicy(records).activity(actor,url.searchParams.get('from') ?? undefined,url.searchParams.get('through') ?? undefined)
           response = ui
             ? agentsPage(
                 session,
@@ -904,8 +908,15 @@ export async function payrollResponse(
                 grants,
                 await agents.policy(actor),
                 await new Providers(records).list(actor),
+                classPolicy,activity,
               )
-            : json({ grants, access })
+            : json({ grants, access, classPolicy, activity })
+        } else if (tail.join('/') === 'agents/class-policy' && post) {
+          const result = await new AgentPolicy(records).save(actor,value)
+          response = ui ? redirect(base+'/agents#class-policy') : json(result)
+        } else if (tail.join('/') === 'agents/pause' && post) {
+          const result = await new AgentPolicy(records).save(actor,value,true)
+          response = ui ? redirect(base+'/agents#class-policy') : json(result)
         } else if (tail.join('/') === 'agents/policy' && post) {
           const result = await agents.setPolicy(actor,value)
           response = ui ? redirect(base+'/agents') : json(result)
@@ -1202,7 +1213,7 @@ export async function payrollResponse(
         {
           jsonrpc: '2.0',
           id: rpcId,
-          error: { code: status === 400 ? -32602 : -32000, message: code },
+          error: { code: status === 400 ? -32602 : -32000, message: code, ...(error instanceof AgentPolicyError ? {data:{setupLink:error.setupLink}} : {}) },
         },
         status,
       )
@@ -1216,6 +1227,6 @@ export async function payrollResponse(
     }
     return request.method === 'HEAD'
       ? new Response(null, { status, headers })
-      : json({ error: code }, status)
+      : json({ error: code, ...(error instanceof AgentPolicyError ? {setupLink:error.setupLink} : {}) }, status)
   }
 }

@@ -9,9 +9,9 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Core | 5 | 33 | 60 | 98 |
-| Agent surface | 0 | 0 | 7 | 7 |
+| Agent surface | 0 | 1 | 6 | 7 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 5 | 35 | 72 | 112 |
+| Full target | 5 | 36 | 71 | 112 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1619,7 +1619,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 
 #### SURFACE-006 — Access, security, policy setup, Pause and audit
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-007, BASE-AGENT-009, BASE-AGENT-011
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-007, BASE-AGENT-009, BASE-AGENT-011
 
 **Requirement.** Grants and credentials carry access and security, the company answers every Envelope class before agents act, and every agent call is audited with its classes and decision.
 
@@ -1630,8 +1630,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-007, BASE
 4. Pause agents stops the next payroll call within 60 seconds.
 5. The Agents page's counts by class and decision equal the audit rows for the seeded week.
 
-**Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Evidence.** `tests/agent-policy-runtime.mjs` — agentPolicyJourney, invoked by `tests/runtime.mjs` in the push runtime shard: native company setup starts with every class unanswered; MCP, REST and CLI refuse unset and blocked policies without preparation or secret changes; supported hourly and bonus preparation, compensation reads, reports, separate human review presentation and credential rotation remain within current sponsor and grant powers. Public Settings proves incomplete-answer and non-owner refusals, company isolation, durable Pause across restart, stopped next calls within 60 seconds and suspended authenticated calls fenced even after resume. Attributed class and decision totals equal retained audit rows and the Agents page; selected setup, paused and activity screens are captured at 1440 and 390. Existing preparation, approval and sponsored-notice journeys explicitly configure company policy and retain their authority assertions. Native policy semantics and limits: `docs/payroll-agents.md`.
+**Gap.** Still unproved: complete staff, firm and agent access mutation classification with direction, people count and self-escalation refusal; all step-up and provider credential changes carrying security; complete remaining tools and future transports; full seeded-week policy outcomes and Base conformance. The bounded policy may restrict existing authority only: native company owners configure it, while scoped delegated policy administration and complete provider boundaries remain owed under the conservative owner-only floor. Review and approval policy choices remain safe holds, never exact human payroll approval, consent or a widened grant. Existing exact human approval, owner-only explicit reference sends, no automatic outbound action, no automated retry or destructive recovery, and every account, rail and company hold remain unchanged.
 
 #### SURFACE-007 — A payroll week under two company policies
 
