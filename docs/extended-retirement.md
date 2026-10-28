@@ -137,6 +137,14 @@ and erased-source fences; complete benefit-specific hold, erasure and inactive
 archive restore proof remains owed. No automatic hold release, erasure or
 outbound action is introduced.
 
+The existing native archive journey also includes a reviewed SEP source, its
+employer proposal and the actual approving authority. Actual export and import
+preserve their encrypted records and provenance exactly. The restored worker
+refuses captured credentials, and a new owner sign-in followed by explicit
+read-only history adoption still cannot activate retirement preparation.
+This bounded proof does not establish actual-plan authenticity, complete
+benefit-specific statutory classification or the entire custody transport matrix.
+
 Still owed: independently established actual-plan eligibility and complete
 custody, accepted provider contribution receipts and funds, corrected paid
 payroll, complete pay-stub and year-end integration, and authorized recordkeeper

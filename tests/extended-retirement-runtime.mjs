@@ -192,6 +192,16 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   const currentProposal=await preview(renewed,request(20000))
   assert.equal((await data(door)).proposals.find(row=>row.id===currentProposal.id).preparationCurrent,true)
   assert.equal((await data(door)).proposals.find(row=>row.id===approvedElsewhere.id).preparationCurrent,false)
+  const expiringToken=randomBytes(32).toString('base64url'),expiringHash=await hashToken(settings.SESSION_SECRET,'session',expiringToken),expiringId='synthetic-envelope-9298'
+  await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) SELECT '${expiringId}','${expiringHash}',id,version,'native',${Date.now()},${Date.now()+3600000} FROM oa_operators WHERE role='owner' LIMIT 1`)
+  const expiringCookie=cookie.split('=')[0]+'='+expiringToken,expiringSetup=await save(initial,false)
+  const expiringReview=await data(door+'/review/'+expiringSetup.id,undefined,200,expiringCookie)
+  await data(door+'/decision/'+expiringSetup.id,{version:1,reviewToken:expiringReview.reviewToken},200,expiringCookie)
+  const beforeExpiry=await preview(expiringSetup,request(40000))
+  // Set an expired instant explicitly rather than relying on elapsed test time.
+  await sql(`UPDATE oa_sessions SET expires_at=1 WHERE id='${expiringId}'`)
+  await unchanged(async()=>assert.equal((await call(door+'/preview',body(expiringSetup,request(1)))).status,409))
+  assert.equal((await data(door)).proposals.find(row=>row.id===beforeExpiry.id).preparationCurrent,false)
   const stored=await sql("SELECT cipher FROM env_workspace_versions WHERE kind='extended-retirement'")
   assert.ok(stored.length);assert.ok(stored.every(row=>!row.cipher.includes('signed plan')&&!row.cipher.includes('signed employee')))
   const audit=await data(base+'/audit');assert.ok(audit.some(row=>row.action==='workspace.extended-retirement.approved'));assert.ok(audit.some(row=>row.action==='workspace.extended-retirement-preview.recorded'))

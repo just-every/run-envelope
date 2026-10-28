@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "d052e81afb11bce96cfc4c2bcdf5616788edd29c24c9ac708c42c2635e43eff1",
+      "sha256": "2b8ab0a5d344eb45307cb495592d2d07529c4eb82686682e9b9d36544cc98e5f",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "37a4ca19aaf879815363b51f7d70750d6b6594a69ffb77d83de7136273e06098",
+      "sha256": "00562b46219426db37202b4ab3ab2ff1b29529aa1da11a9dbd4be06d8e433910",
       "executable": false
     },
     "deploy-demo.json": {
@@ -474,7 +474,7 @@
       "executable": false
     },
     "docs/extended-retirement.md": {
-      "sha256": "454287fc93aa1e0e0e9157389dbd0769d111f5698c72973b22cc648bf1dddb6a",
+      "sha256": "47e57b220c545df0c93f6d9ec277b17e6fb6e3693b2a6333bfbce1c80e3f319b",
       "executable": false
     },
     "docs/firm-work.md": {
@@ -499,6 +499,10 @@
     },
     "docs/multiple-companies.md": {
       "sha256": "132a4028cbb54e0886180c10d73eb9c539f657f138f6101b525774d97c27feec",
+      "executable": false
+    },
+    "docs/ny-dbl.md": {
+      "sha256": "44375665ed2e64fd0f7c5a8d9202891160cedfe42ea06ac8d6e014749578ed2e",
       "executable": false
     },
     "docs/paper-onboarding.md": {
@@ -2061,6 +2065,10 @@
       "sha256": "38044a90901fb171714465c88863ca14f04355f781094ba3b5ca73dc18321b0a",
       "executable": false
     },
+    "src/envelope/benefits/ny-dbl.ts": {
+      "sha256": "1be3b342552a92fcc28343ba620f59e9abc1ead4748bf801e7408a62a97e5faa",
+      "executable": false
+    },
     "src/envelope/benefits/retirement-records.ts": {
       "sha256": "6f8dae63be940959b958d805c2459c1d18d2c83bc155ff13935bee56e54806e3",
       "executable": false
@@ -2126,7 +2134,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "033618127989e265dd85871b5edd491750383f1022c121acf5f04a8e508e80ee",
+      "sha256": "d17793b7dd0e95b7ef652774949142718a2c11fcdd384229274d137f97840718",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2234,7 +2242,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "77a676292de6dd5d15276bc26a15d31792fdaa594b16c91bfd35a801f3824154",
+      "sha256": "130dca979f1eb13b01d05e9d00fe71ad0039c51ac1524657fd2bd8f52ea23316",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2546,7 +2554,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "0ac32ea101c6e2fea47f84b4ef812fdda1024bf85df14f660d909152904a5dba",
+      "sha256": "57eec4821eb2c87f0201074324cc13f7e52505714d735ab6eab822b423ca443d",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3738,7 +3746,7 @@
       "executable": false
     },
     "tests/extended-retirement-runtime.mjs": {
-      "sha256": "4ce453aa3f1563da908c656b3dda8e515da48dbcfe3bb5134296827ee5bc692e",
+      "sha256": "22f85d54e5b38d65268414a3d02f80ea1f95dbdc1f692d152df18e746ba052bd",
       "executable": false
     },
     "tests/firm-fixture.mjs": {
@@ -3893,6 +3901,10 @@
       "sha256": "c90c59a18277e069cc99ac095cf442662f06200a096d64f9b6e0c93b8f66d733",
       "executable": false
     },
+    "tests/ny-dbl-runtime.mjs": {
+      "sha256": "a89b284c9f45bc7e01951c9bbe663fce79855a119f22c5cb18d6b047475cf192",
+      "executable": false
+    },
     "tests/payroll-approvals.mjs": {
       "sha256": "4a6abe8fcc6047dbc7aae629a67b05ddb74a318efbeee8af0db0d79a8f9f789d",
       "executable": false
@@ -3914,7 +3926,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "b9fa46d9f3bf472c57d3dc623b68e59d997b75100baa8d7fc3cc1afcb40f35d3",
+      "sha256": "9cf6df8cc229f38d088598c2961352288d0671b264ec4868217eac26de0d65bd",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3930,7 +3942,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "66b77aa2567e3ab49ce8144fea00437e4801c379be3b20fee641b2bb29c1866c",
+      "sha256": "2032b36d712f64b3e63333e3ce021d24d23b1cbe684469fa15d11adda55a745a",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
