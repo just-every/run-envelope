@@ -1,4 +1,5 @@
 import { NyDbl } from './benefits/ny-dbl'
+import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
 import { calculationPreview, type PreviewInput } from './calculation/preview'
 import { stateCoverage } from './calculation/states'
 import { accountingResponse } from './accounting/http'
@@ -478,8 +479,11 @@ export async function payrollResponse(
           result=calculationPreview(value as unknown as PreviewInput,dbl)
         }
         catch(error){ throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
-        // A preview neither reads employee records nor retains supplied personal
-        // data. Repeat current authority immediately before returning its result.
+        if (value.hiBenefits) {
+          const benefits = await new HiPlanShares(new WorkspaceStore(records)).preview(actor,value.hiBenefits as HiPreviewRequest,{from:String(value.from),through:String(value.through),payDate:String(value.payDate),grossCents:result.grossCashCents,workState:String(value.workState)})
+          result = { ...result, hiBenefits:benefits }
+        }
+        // Repeat current authority immediately before returning the result.
         await records.company(await records.actor(parts[1]))
         return json(result)
       }
@@ -533,6 +537,18 @@ export async function payrollResponse(
         else if(tail.length===5 && tail[3]==='evidence' && tail[4]==='approve' && post) response=json(await dbl.store.decide(actor,'ny-dbl-evidence',person,value,person))
         else if(tail.length===4 && tail[3]==='proposals' && post) response=json(await dbl.prepare(actor,person,value),201)
         else if(tail.length===4 && tail[3]==='remittance' && post) throw new PayrollError('dbl_carrier_remittance_unavailable',409)
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0] === 'people' && tail[2] === 'hi-benefits') {
+        const benefits = new HiPlanShares(new WorkspaceStore(records)), personId = tail[1]
+        await benefits.scope(actor,personId)
+        if (tail.length===3 && !post) response=json(await benefits.list(actor,personId))
+        else if (tail.length===4 && tail[3]==='plans' && post) response=json(await benefits.save(actor,personId,value),201)
+        else if (tail.length===4 && tail[3]==='preview' && post) {
+          if (value.personId !== personId) throw new PayrollError('hi_person_mismatch',409)
+          response=json(await benefits.preview(actor,value as unknown as HiPreviewRequest),201)
+        }
+        else if (tail.length===6 && tail[3]==='plans' && tail[5]==='review' && !post) response=json(await benefits.review(actor,personId,tail[4]))
+        else if (tail.length===6 && tail[3]==='plans' && tail[5]==='approve' && post) response=json(await benefits.approve(actor,personId,tail[4],value))
         else throw new PayrollError('not_found',404)
       } else if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
         const payroll = new CompanyPayroll(records)

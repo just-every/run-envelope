@@ -8,6 +8,8 @@ export type Kind =
   | 'ny-dbl-plan'
   | 'ny-dbl-evidence'
   | 'ny-dbl-proposal'
+  | 'hi-benefit-plan'
+  | 'hi-benefit-preview'
   | 'provider-deletion-request'
   | 'notice-worker-link'
   | 'run-input'

@@ -65,6 +65,29 @@ export async function nyDblJourney({origin,cookie,sql,settings,restart}) {
   const twoWeeks=await data(biweekly.door+'/proposals',proposal(20000,{checks:[{reference:'synthetic-envelope-9420',weekFrom:'2026-10-19',wagesCents:20000},{reference:'synthetic-envelope-9421',weekFrom:'2026-10-26',wagesCents:20000}]}),201)
   assert.equal(twoWeeks.result.proposedCents,120)
   assert.deepEqual(twoWeeks.result.rows.map(w=>w.proposedCents),[60,60])
+  // An unchanged total cannot carry an old weekly allocation into a correction.
+  const weeklyPay=(from,wagesCents)=>({from,days:[{day:from,segments:[{hoursHundredths:100,rateCents:wagesCents}]}],productionBonusCents:0,premiums:[]})
+  const biweeklyPreview={edition:'2026-01',payDate:'2026-11-02',from:'2026-10-19',through:'2026-11-01',frequency:'biweekly',workState:'NY',residentState:'NY',locality:'none',
+    remuneration:{kind:'hourly',weeks:[weeklyPay('2026-10-19',20000),weeklyPay('2026-10-26',20000)]},w4:ordinaryW4,stateElection:{filingStatus:'single',allowances:0,additionalCents:0},
+    yearToDate:{socialSecurityWagesCents:0,medicareWagesCents:0,futaWagesCents:0,suiWagesCents:0},tips:{heldCents:0,paycheckCents:0,furnishedCents:0},deductions:[],nyDbl:{personId:biweekly.id,proposalId:twoWeeks.id,version:1}}
+  const unchangedWeeks=await data(base+'/calculation-preview',biweeklyPreview)
+  assert.equal(unchangedWeeks.nyDbl.proposedCents,120)
+  assert.equal(unchangedWeeks.paymentReady,false);assert.equal(unchangedWeeks.netCashCents,null)
+  const correctedWeeks={...biweeklyPreview,remuneration:{kind:'hourly',weeks:[weeklyPay('2026-10-19',10000),weeklyPay('2026-10-26',30000)]}}
+  const beforeMismatch=await snapshot(),mismatch=await call(base+'/calculation-preview',correctedWeeks)
+  assert.equal(mismatch.status,400,'retained proposals cannot override corrected weekly wages')
+  assert.equal((await mismatch.json()).error,'dbl_weekly_wages_do_not_match_preview')
+  const afterMismatch=await snapshot()
+  assert.deepEqual(afterMismatch.slice(0,3),beforeMismatch.slice(0,3),'refused preview changes no evidence, decisions, reviews or proposals')
+  const readAudit=afterMismatch[3].filter(row=>!beforeMismatch[3].some(prior=>prior.id===row.id))
+  assert.deepEqual(readAudit.map(row=>row.action),['workspace.ny-dbl-proposal.read'],'the authorized source read remains audited')
+  await approveEvidence(biweekly,evidence([week(10000),week(30000,{from:'2026-10-26'})],{version:1,source:{origin:'migration',reference:'synthetic-envelope-9422',version:'synthetic-envelope-9423'}}))
+  const updatedProposal=await data(biweekly.door+'/proposals',{id:twoWeeks.id,version:1,evidenceVersion:2,checks:[
+    {reference:'synthetic-envelope-9420',weekFrom:'2026-10-19',wagesCents:10000},{reference:'synthetic-envelope-9421',weekFrom:'2026-10-26',wagesCents:30000}]},201)
+  assert.deepEqual(updatedProposal.result.rows.map(w=>w.proposedCents),[50,60])
+  const correctedPreview=await data(base+'/calculation-preview',{...correctedWeeks,nyDbl:{...correctedWeeks.nyDbl,version:updatedProposal.version}})
+  assert.equal(correctedPreview.nyDbl.proposedCents,110,'corrected 100 and 300 dollar weeks retain their separate statutory ceilings')
+  assert.equal(correctedPreview.status,'held');assert.equal(correctedPreview.paymentReady,false);assert.equal(correctedPreview.netCashCents,null)
   const premium=await person();await approveEvidence(premium,evidence([week(20000)],{attributablePremiumCents:100,priorPremiumOffsetCents:75}))
   const premiumResult=await data(premium.door+'/proposals',proposal(20000),201)
   assert.equal(premiumResult.result.proposedCents,25);assert.equal(premiumResult.result.remainingAttributablePremiumCents,0)

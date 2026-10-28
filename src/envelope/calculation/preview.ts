@@ -1,4 +1,5 @@
 import type { nyDblCalculation } from '../benefits/ny-dbl'
+import type { HiPreviewRequest } from '../benefits/hi-plan-shares'
 import { validDate } from '../industry/classification'
 import { calculateIndustryPay } from '../industry/calculate'
 import { roundRatio,validCents } from '../industry/federal-withholding'
@@ -9,6 +10,7 @@ import { stateWithholding, stateCoverage } from './states'
 
 export interface PreviewInput {
   nyDbl?:{personId:string;proposalId:string;version:number}
+  hiBenefits?:HiPreviewRequest
   edition:'2025-01'|'2026-01';payDate:string;from:string;through:string;frequency:'weekly'|'biweekly'|'semimonthly'|'monthly'
   workState:string;residentState:string;locality:string
   remuneration:{kind:'hourly';weeks:WorkWeek[]}|{kind:'salary';cashCents:number;exempt:true}
@@ -24,7 +26,7 @@ const noTaxFacts={employerKind:'business',entityType:'corporation',workerRole:'e
 
 /** A stateless proposed calculation, never an approval, pay instruction or persisted check. */
 export function calculationPreview(input:PreviewInput,nyDbl?:ReturnType<typeof nyDblCalculation>){
-  if(!input || Object.keys(input).some(k=>!['nyDbl','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
+  if(!input || Object.keys(input).some(k=>!['hiBenefits','nyDbl','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
   const year=input.edition==='2025-01'?'2025':'2026'
   if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || input.payDate<input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
   if(typeof input.workState!=='string'||typeof input.residentState!=='string'||!input.workState.trim()||!input.residentState.trim()||input.workState.length>80||input.residentState.length>80)reject('work_and_residence_locations_required')
@@ -47,6 +49,8 @@ export function calculationPreview(input:PreviewInput,nyDbl?:ReturnType<typeof n
     gross=checked(r.cashCents)
   }else reject('supported_remuneration_required')
   if(nyDbl && nyDbl.rows.reduce((n,w)=>n+w.wagesCents,0)!==gross) reject('dbl_wages_do_not_match_preview')
+  if(nyDbl && earnings && (earnings.weeks.length!==nyDbl.rows.length || earnings.weeks.some(week=>
+    !nyDbl.rows.some(row=>row.weekFrom===week.from && row.wagesCents===week.grossCents)))) reject('dbl_weekly_wages_do_not_match_preview')
   const p=periods[input.frequency] as PayPeriods
   let federal:ReturnType<typeof calculateIndustryPay>
   try { federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate}) } catch(error) {
