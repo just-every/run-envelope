@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 30 | 63 | 98 |
+| Core | 5 | 31 | 62 | 98 |
 | Agent surface | 0 | 0 | 7 | 7 |
-| Later | 0 | 1 | 6 | 7 |
-| Full target | 5 | 31 | 76 | 112 |
+| Later | 0 | 2 | 5 | 7 |
+| Full target | 5 | 33 | 74 | 112 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -660,7 +660,7 @@ Core · target · **missing** · From ENV-019
 
 #### ENV-093 — Hawaii TDI and Prepaid Health Care employee shares
 
-Core · target · **missing** · From ENV-019
+Core · target · **partial** · From ENV-019
 
 **Requirement.** For Hawaii TDI and Prepaid Health Care, import the approved actual plan, premium/rate, eligibility and documented waiver from Willow/authorized benefits administrator or insurer. Cap TDI employee share at the lawful cost share, 0.5% of weekly wages and the official year's maximum weekly deduction; the employer may cover all cost. Cap the PHC employee share at the lesser of 50% of premium and 1.5% of monthly gross earnings, with required employer/dependent shares determined by the approved plan type; retain annually required HC-5 waiver evidence where applicable. A generic percentage deduction cannot evade these ceilings or substitute for a valid plan.
 
@@ -668,8 +668,8 @@ Core · target · **missing** · From ENV-019
 1. Import approved HI TDI/PHC plans and premium evidence, preview low/high weekly wages and multiple pay periods in one month and compare cumulative lawful capped employee and employer shares to official DLIR rules.
 2. Attempt an above-cap deduction, expired HC-5 waiver and missing plan: require correction/owned evidence without inventing coverage; inspect corrected stubs, remittance and year/effective-rule history.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete benefits, retirement and state savings behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented.
+**Evidence.** `tests/hi-benefits-runtime.mjs` hiBenefitsJourney through the private company evidence and calculation APIs: independently worked 2026 DLIR weekly and monthly goldens, half-cost and wage ceilings, split weeks and multiple monthly periods, prior collections, plan-specific dependent allocation, owner-paid premiums, missing evidence and expired HC-5 refusals, exact source corrections, stale review, replay, encrypted restart, scoped and revoked access, and eligible erasure with stale capture refusal. `docs/hawaii-plan-shares.md` describes the held evidence boundary.
+**Gap.** Native reviewed evidence and proposed 2026 shares only. Still unproved: actual approved-plan authenticity and complete eligibility; authorized Willow, benefits administrator and insurer synchronization; complete source and migration custody; corrected paid stubs, actual deductions and refunds, employer funding and accepted insurer remittance; full year and effective-rule history. Existing carrier, calculation catalog and owner-authorized company and payment-rail holds remain unchanged. Native evidence review does not establish plan approval or coverage. Conservative interim default: configured native owner only, with no automatic outbound, destructive or payment action; scoped delegation and provider boundaries remain owed under the standing scope policy.
 
 #### ENV-094 — New York DBL plan contributions
 
@@ -1696,7 +1696,7 @@ Later · target · **missing** · Rules D-4
 
 #### ENV-092 — 403(b), 457(b) and SEP contributions
 
-Later · target · **missing** · From ENV-019 · Rules D-4
+Later · target · **partial** · From ENV-019 · Rules D-4
 
 **Requirement.** Name traditional/Roth 403(b), applicable governmental/nongovernmental 457(b), and SEP employer contributions with actual plan eligibility, annual/combined limits and catch-up rules, including 403(b) 15-years-of-service catch-up, age catch-up and 457(b) special catch-up ordering/exclusions. SEP employer contributions are not ordinary elective deferrals. Use official year-specific W-2 codes E for traditional 403(b), BB for Roth 403(b), G for applicable 457(b) and EE for designated Roth governmental 457(b); SEP reporting follows its actual arrangement, never an invented common code.
 
@@ -1704,8 +1704,8 @@ Later · target · **missing** · From ENV-019 · Rules D-4
 1. Exercise a qualifying nonprofit's 403(b) 15-year/age catch-up ordering and traditional/Roth split, applicable 457(b) catch-up and SEP employer contribution.
 2. Cross each annual/combined limit, reconcile provider receipt and compare E/BB/G/EE or appropriate SEP treatment to IRS instructions; custom codes cannot bypass limits or apply another plan's catch-up.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete benefits, retirement and state savings behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented.
+**Evidence.** Bounded calculation and reporting-data portions of acceptance points 1 and 2: `tests/extended-retirement-runtime.mjs` — extendedRetirementJourney, registered in the industry push shard by `tests/runtime.mjs` and `verification.json`, exercises real private company and worker benefit setup, exact native human review and retained proposals; independent 2025 and 2026 IRS-derived limits, qualified 403(b) service-before-age catch-up and traditional and Roth splits, shared elective and annual-addition limits, governmental and nongovernmental 457(b) combined employer and employee ceilings, age and special catch-up exclusions, SEP employer-only limits, and prepared E, BB, G and EE fields only for applicable arrangements. It checks over-limit and custom-code refusals without changed records, stale review and changed-source invalidation, replay, restart, encryption, attributed audit, foreign-company and non-owner refusals, current-session revocation and bounded local retention classification, explicit release, erasure and stale-source recapture refusal. The existing company calculation-preview door retains jurisdiction holds, ordinary taxes and zero actual deductions while exposing the separate held proposal. Scope and retained official sources: `docs/extended-retirement.md`.
+**Gap.** Still unproved: complete independently established actual-plan eligibility, effective-plan coverage and benefit-specific source custody, scoped staff delegation, statutory holds, lawful erasure and inactive archive restore; accepted provider contribution receipts and funds, corrected settled payroll and complete deduction, pay-stub and year-end integration at each applicable recordkeeper. Owner-authorized rail and company access and recordkeeper access are not established; existing calculation, catalog, rail and filing-authority holds remain unchanged. The interim conservative default restricts these preparation routes to the configured native owner; broader scoped authority and provider boundaries remain owed. Prepared reporting fields are neither delivered W-2 forms nor provider acceptance. Proposed SEP employer contributions never establish employee elective deductions. Neither original acceptance sentence is proved as a complete outcome; no obligation is carved out.
 
 ### Employee, accountant and daily operations
 

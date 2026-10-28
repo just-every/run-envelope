@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f0183c810e35bd6b63cbd0a38a54363ec98429e162723ce12f0b93d995587fd1",
+      "sha256": "5efc4d6cbbec9c76e6b2ef48e03a936dab4cc1a324ac5431a8ff06867cac4792",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "67ca6e9aa4ceb3986641634b658f3eb9f7dd5db13f7aa2a9dd24006b26a6d47c",
+      "sha256": "e68f2e2eb4caca25ff000de4b9e6d953bab79099be8ee728a7f7565b445fd025",
       "executable": false
     },
     "deploy-demo.json": {
@@ -483,6 +483,10 @@
     },
     "docs/getting-started.md": {
       "sha256": "ae0c4ca04ad928ea15d4f03a30173f691440fcfb6ef6b83e7854c1c6ee7fb37b",
+      "executable": false
+    },
+    "docs/hawaii-plan-shares.md": {
+      "sha256": "46d8d7662a6056d301cf6814440c393be7964761dc8b61f4c1ac5ac3d6b78325",
       "executable": false
     },
     "docs/industry-forms.md": {
@@ -2045,6 +2049,10 @@
       "sha256": "7fbf731c5fabb12a28af7f7e5dda362994a473c0cb0803eb32d9de277eb62620",
       "executable": false
     },
+    "src/envelope/benefits/hi-plan-shares.ts": {
+      "sha256": "6ccc6b0ff45ef8c3bfa06a013a1ded89a9386718aff3087ebe7480e31741222a",
+      "executable": false
+    },
     "src/envelope/bonus-runs.ts": {
       "sha256": "746a3729eeeef7fd6eb94385995feb7681f3d3c6690613889a2521a1f24792cb",
       "executable": false
@@ -2102,7 +2110,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "db3f53cfcc4b083867ea1a0b66a0fc4eb2e0804d462997f70ecae6b58fb5bae8",
+      "sha256": "f4dac13bce94745cd08908a17006bac559bba3f588b1f6df6aa7e8279a883ae0",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2210,7 +2218,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "9dd84c2e7305e84acc00b58d6790c5fd5bbd95ee32bcaf54ea2c5c02f6d1fe02",
+      "sha256": "176e1983491b5a47e9549d9381edfc3a37147cb0c75c8b628d5f9f6aa2f7c8ad",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2522,7 +2530,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "73e0ffe54e0e4c727c79cd784f4b3ef778f212be9a2d905017e29802383009f7",
+      "sha256": "4e38b3f58146c49ae544be83e517e2d4ad0fee29d2148bc0c5325376ab1c30e4",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3714,7 +3722,7 @@
       "executable": false
     },
     "tests/extended-retirement-runtime.mjs": {
-      "sha256": "64844d80767ca89d6e8b0ae7a0a1883ab4d999a7e3b3d5562bf54137987af139",
+      "sha256": "9435228a2274cc3169d8c58bc67465f6dc1f50cb3c7c69b259352bea393778b9",
       "executable": false
     },
     "tests/firm-fixture.mjs": {
@@ -3825,6 +3833,10 @@
       "sha256": "8e91e1da13d870d33704c0d78eeab809292a6e84deb24e39e4ce9641fe76919c",
       "executable": false
     },
+    "tests/hi-benefits-runtime.mjs": {
+      "sha256": "f3a4f2d48e5120ea8a6b1a16e7c45424cb2749ee89df280074b84b62efed0776",
+      "executable": false
+    },
     "tests/human-proof-fixture.mjs": {
       "sha256": "878549599d1eb4b4eedd219822874590d5ec1d762863ce571752b6d47f3910ea",
       "executable": false
@@ -3882,7 +3894,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "4872e7727cff02783fe442658f907bb497adbbbff026ebfc2c2b3b06223a4330",
+      "sha256": "31f80f40200e963bdf64ded80eafb21d9966f1f0d4b51cae6b0b5021892345c7",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3898,7 +3910,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "7ae620a967eeba4a336204476f28c56afcf88238f483b1e1a2d8ac3c72b5bb95",
+      "sha256": "6bd4bdc6ea75b54be070aa58fe58155d3661f451deda3681a826e6ff5d24ce34",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

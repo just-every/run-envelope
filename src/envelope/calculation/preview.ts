@@ -1,3 +1,4 @@
+import type { HiPreviewRequest } from '../benefits/hi-plan-shares'
 import type { ExtendedRetirementProposal } from '../benefits/extended-retirement'
 import { validDate } from '../industry/classification'
 import { calculateIndustryPay } from '../industry/calculate'
@@ -8,6 +9,7 @@ import { weeklyEarnings,type WorkWeek } from './earnings'
 import { stateWithholding, stateCoverage } from './states'
 
 export interface PreviewInput {
+  hiBenefits?:HiPreviewRequest
   extendedRetirement?: {personId:string;setupId:string;setupVersion:number;request:unknown}
   edition:'2025-01'|'2026-01';payDate:string;from:string;through:string;frequency:'weekly'|'biweekly'|'semimonthly'|'monthly'
   workState:string;residentState:string;locality:string
@@ -24,7 +26,7 @@ const noTaxFacts={employerKind:'business',entityType:'corporation',workerRole:'e
 
 /** A stateless proposed calculation, never an approval, pay instruction or persisted check. */
 export function calculationPreview(input:PreviewInput, retirement?:ExtendedRetirementProposal){
-  if(!input || Object.keys(input).some(k=>!['extendedRetirement','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
+  if(!input || Object.keys(input).some(k=>!['hiBenefits','extendedRetirement','edition','payDate','from','through','frequency','workState','residentState','locality','remuneration','w4','stateElection','yearToDate','tips','deductions'].includes(k))) reject('unsupported_preview_input')
   const year=input.edition==='2025-01'?'2025':'2026'
   if(!['2025-01','2026-01'].includes(input.edition) || !validDate(input.payDate)||!validDate(input.from)||!validDate(input.through)||input.from>input.through || input.payDate<input.through || !input.payDate.startsWith(year+'-') || !input.from.startsWith(year+'-') || !input.through.startsWith(year+'-') || !Object.hasOwn(periods,input.frequency)) reject('calculation_edition_or_period_unavailable')
   if(typeof input.workState!=='string'||typeof input.residentState!=='string'||!input.workState.trim()||!input.residentState.trim()||input.workState.length>80||input.residentState.length>80)reject('work_and_residence_locations_required')
@@ -51,7 +53,7 @@ export function calculationPreview(input:PreviewInput, retirement?:ExtendedRetir
   try { federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate}) } catch(error) {
     if(!(error instanceof Error)||error.message!=='industry_cash_insufficient_for_regular_wage_withholding')throw error
     hold('regular-wage-cash-insufficient',input.workState,'Regular wage taxes exceed cash wages. Review the election and lawful collection; no negative payout is created.')
-    return {edition:input.edition,payDate:input.payDate,status:'held',paymentReady:false,approval:'unavailable',dispatch:'unavailable',grossCashCents:gross,federal:null,state:null,netCashCents:null,holds,coverage:stateCoverage(input.edition)}
+    return {...(retirement?{extendedRetirement:retirement}:{}),edition:input.edition,payDate:input.payDate,status:'held',paymentReady:false,approval:'unavailable',dispatch:'unavailable',grossCashCents:gross,federal:null,state:null,netCashCents:null,holds,coverage:stateCoverage(input.edition)}
   }
   let state=stateWithholding(input.workState,gross,input.frequency,input.payDate,input.stateElection,federal.employeeTaxes.incomeTaxCents,federal.employeeTaxes.socialSecurityCents+federal.employeeTaxes.medicareCents+federal.employeeTaxes.additionalMedicareCents,input.through)
   if(['CT','MA'].includes(input.workState)&&earnings?.weeks.some(w=>w.overtimeCents||w.productionBonusCents||w.premiums.length))state={...state,withholdingCents:null,reason:input.workState+' supplemental compensation requires its separate official withholding method; the periodic ordinary-wage calculation is not substituted.'}

@@ -1,3 +1,4 @@
+import { privateValue } from './privacy-recorder.mjs'
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
@@ -20,6 +21,7 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
     planReference:'synthetic-envelope-9202 signed plan permits stated elections',electionReference:'synthetic-envelope-9203 signed employee election',eligibilityReference:'synthetic-envelope-9204 nonprofit employment and qualified service',accumulatorReference:'synthetic-envelope-9205 reconciled opening register',aggregationReference:'synthetic-envelope-9206 all shared elective plans and controlled-business additions reviewed',
     opening:{electiveCents:0,planElectiveCents:0,serviceCents:0,ageCents:0,annualAdditionsCents:0},
     service:{enabled:true,qualifyingEmployer:'school',yearsOfService:15,lifetimeUsedBeforeYearCents:0,employerDeferralsBeforeYearCents:7000000}}
+  for(const key of ['planReference','electionReference','eligibilityReference','accumulatorReference','aggregationReference'])privateValue(initial[key])
   const save=async(input,approve=true)=>{
     const body={...input,id:input.id??'synthetic-envelope-retirement-'+(++serial),version:input.version??0}
     const r=await data(door,body,201)
@@ -29,7 +31,7 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   const request=(traditionalCents,rothCents=0,employerCents=0,payDate='2026-10-30')=>({payDate,traditionalCents,rothCents,employerCents})
   const body=(setup,r,extra={})=>({id:'synthetic-envelope-proposal-'+(++serial),version:0,setupId:setup.id,setupVersion:setup.version,request:r,...extra})
   const preview=async(setup,r)=>data(door+'/preview',body(setup,r),201)
-  const unchanged=async(fn)=>{const before=await sql("SELECT COUNT(*) AS n FROM env_workspace_versions WHERE kind IN ('extended-retirement','extended-retirement-preview')");await fn();assert.deepEqual(await sql("SELECT COUNT(*) AS n FROM env_workspace_versions WHERE kind IN ('extended-retirement','extended-retirement-preview')"),before,'Refused preparation writes no benefit record')}
+  const unchanged=async(fn)=>{const before=await data(door);await fn();assert.deepEqual(await data(door),before,'Refused preparation changes no retained setup, proposal, source or decision')}
   const refused=async(setup,r,error)=>unchanged(async()=>assert.deepEqual(await data(door+'/preview',body(setup,r),400),{error}))
 
   const s=await save(initial)
@@ -156,5 +158,31 @@ export async function extendedRetirementJourney({origin,cookie,sql,settings,rest
   const stored=await sql("SELECT cipher FROM env_workspace_versions WHERE kind='extended-retirement'")
   assert.ok(stored.length);assert.ok(stored.every(row=>!row.cipher.includes('signed plan')&&!row.cipher.includes('signed employee')))
   const audit=await data(base+'/audit');assert.ok(audit.some(row=>row.action==='workspace.extended-retirement.approved'));assert.ok(audit.some(row=>row.action==='workspace.extended-retirement-preview.recorded'))
+  // The new encrypted record kinds join the existing local custody graph.
+  // Classification and release are explicit owner actions; there is no timer.
+  const erasing=await data(base+'/people',{name:'Synthetic retirement custody employee',locationId:location.id},201)
+  const erasedDoor=base+'/people/'+erasing.id+'/benefits/extended-retirement',planId='synthetic-envelope-erased-retirement'
+  await data(erasedDoor,{...initial,id:planId,version:0},201)
+  const review=await data(erasedDoor+'/review/'+planId)
+  await data(erasedDoor+'/decision/'+planId,{version:1,reviewToken:review.reviewToken})
+  const captured={id:'synthetic-envelope-erased-proposal',version:0,setupId:planId,setupVersion:1,request:request(10000)}
+  await data(erasedDoor+'/preview',captured,201)
+  const privacy=base+'/people/'+erasing.id+'/privacy',inventory=await data(privacy)
+  for(const kind of ['extended-retirement','extended-retirement-preview'])assert.ok(inventory.retained.some(row=>row.table==='env_workspace_versions'&&row.key.kind===kind))
+  const ownerSessionHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1]),proofToken=randomBytes(32).toString('base64url'),proofHash=await hashToken(settings.SESSION_SECRET,'link',proofToken),proofId='synthetic-envelope-retirement-proof'
+  await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at) SELECT '${proofId}','${proofHash}',id,operator_id,operator_version,'credentials:mint','/app',${Date.now()},${Date.now()+600000} FROM oa_sessions WHERE token_hash='${ownerSessionHash}'`)
+  assert.equal((await call('/auth/confirm',{token:proofToken})).status,303)
+  await data(privacy+'/request',{consent:true,fingerprint:inventory.fingerprint})
+  const select={consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(row=>row.id),legalBasis:'Synthetic reviewed eligible local records; no remaining statutory hold.',custodian:'Native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
+  assert.equal((await call(base+'/people/'+erasing.id+'/erase',{version:inventory.version,...select})).status,409,'Unclassified benefit evidence remains held')
+  await data(privacy+'/retain',select);await data(privacy+'/release',select)
+  assert.equal((await data(base+'/people/'+erasing.id+'/erase',{version:inventory.version,...select})).erased,true)
+  assert.equal((await call(erasedDoor)).status,404)
+  assert.equal((await call(erasedDoor+'/preview',captured)).status,404)
+  assert.equal((await call(erasedDoor,{...initial,id:planId,version:0})).status,404)
+  const replacement=await data(base+'/people',{name:'Synthetic new retirement employee',locationId:location.id},201),replacementDoor=base+'/people/'+replacement.id+'/benefits/extended-retirement'
+  assert.equal((await call(replacementDoor,{...initial,id:planId,version:0})).status,409,'Erased source identifiers cannot be captured again for another worker')
+  assert.deepEqual(await data(replacementDoor),{setups:[],proposals:[]})
+  const erasedAudit=await data(base+'/audit');assert.ok(!erasedAudit.some(row=>row.targetId===erasing.id||row.targetId===planId||row.targetId===captured.id))
   console.log('EXTENDED-RETIREMENT passed: reviewed year-specific 403(b), both 457(b) arrangements and SEP proposals, combined limits, ordering, reporting, unchanged refusals, source corrections, replay, restart and current private authority')
 }

@@ -59,7 +59,7 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=industry,calculation,extended-retirement pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=industry,calculation,extended-retirement,hi-benefits pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=multi-company pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=accounting pnpm run test:runtime"
       ]
