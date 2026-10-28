@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 30 | 63 | 98 |
+| Core | 5 | 31 | 62 | 98 |
 | Agent surface | 0 | 0 | 7 | 7 |
 | Later | 0 | 1 | 6 | 7 |
-| Full target | 5 | 31 | 76 | 112 |
+| Full target | 5 | 32 | 75 | 112 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -673,7 +673,7 @@ Core · target · **missing** · From ENV-019
 
 #### ENV-094 — New York DBL plan contributions
 
-Core · target · **missing** · From ENV-019 · Rules D-4
+Core · target · **partial** · From ENV-019 · Rules D-4
 
 **Requirement.** Beside Hawaii TDI, support New York DBL as an actual approved plan/carrier obligation, separate from NY PFL. For a statutory DBL plan the employer may pay all costs or collect up to 0.5% of wages, capped at $0.60 per week; retain weekly allocation across payroll frequencies and prevent contributions exceeding the actual plan premium/cost to be offset. Reconcile the actual carrier invoice, employer balance and any necessary capped collection/refund rather than routing DBL as tax-agency withholding. Pay the authorized private carrier or NYSIF as the insurer, or honor evidenced Board-approved self-insurance under its actual plan/custody rules. On an employee's documented multi-employer adjustment request, use verified supplied earnings to proportion contributions so their statutory-plan combined total does not exceed $0.60/week; do not browse another employer tenant. An enhanced plan exceeding statutory contributions requires the actual accepted plan, lawful agreement and human-reviewed legal basis; a custom deduction cannot bypass the cap. Carry plan, rates/elections, prior weekly/cumulative collection and recipient into a midyear switch.
 
@@ -685,8 +685,8 @@ Core · target · **missing** · From ENV-019 · Rules D-4
 5. Switch midweek with $0.40 already collected and cap the new statutory collection at the remaining $0.20.
 6. An unsupported above-cap enhanced-plan election is refused until actual accepted-plan/agreement evidence is reviewed; keep DBL and PFL deductions/recipients separately inspectable.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete benefits, retirement and state savings behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented.
+**Evidence.** `tests/ny-dbl-runtime.mjs` — nyDblJourney, loaded by `tests/runtime.mjs` in the industry push shard: native source-bound statutory plan and worker premium preparation with exact human source review; independent WCB-derived $100 and $200 weekly goldens of 50 and 60 cents, two-week 120 cents, same-week split checks sharing 60 cents across restart, remaining attributable premium capped at 25 cents, supplied documented concurrent $200 and $100 earnings yielding 40 and 20 cent proposals without foreign tenant reads, and a migrated 40 cent opening collection leaving at most 20 cents. The same journey proves source correction history and stale-review refusal, replay without duplicate reservation, employer-paid zero proposals, unsupported enhanced plans and tax-agency recipients refused without writes, separately identified DBL results in the held native calculation preview, current-owner and revoked-session refusals, encrypted source references, attributed decisions, and eligible local erasure of the new worker evidence and proposal graph with stale replay refused. Product schema and statutory sources: `docs/ny-dbl.md`.
+**Gap.** Still unproved: genuine approved plan and carrier or Board-approved self-insurance evidence; complete authoritative carrier or Willow source import and migration custody for plans, elections, premiums, prior weekly and cumulative collections and recipients; source authenticity and legal sufficiency of supplied concurrent earnings and employee requests; actual capped collection and refund, corrected paid stubs, employer funding and accepted private-carrier or NYSIF remittance with invoice and balance reconciliation; lawful accepted enhanced-plan and agreement support; complete separate PFL calculation and recipient outcomes; and complete statutory holds, inactive archive restore, older-archive and source-replay custody. Owner-authorized rail and company access and carrier access are not established. Interim conservative default: configured native installation owner with current company authority may review supplied evidence and prepare only; no delegated or agent authority, outbound action, collection, funding or remittance is authorized. The standing CT scope policy of 27 October permits this conservative interim floor and supplies no completion evidence; scoped delegation and the provider boundaries remain unproved. Proposed contributions establish neither collected funds nor insurance coverage. Every original acceptance outcome remains owed; no scope is carved out.
 
 #### ENV-069 — Unemployment claim response and agency follow-through
 

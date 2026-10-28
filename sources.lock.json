@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f0183c810e35bd6b63cbd0a38a54363ec98429e162723ce12f0b93d995587fd1",
+      "sha256": "b8a24b2c4cc1d0babd3e523066beae285e36588fad7255698d9750f36eb70e63",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "67ca6e9aa4ceb3986641634b658f3eb9f7dd5db13f7aa2a9dd24006b26a6d47c",
+      "sha256": "ac3446f33e8a0e7c2d97f15784b42041b4cc28e59d55a3e7db2a1bbeccbd65d4",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2102,7 +2102,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "885d8abdbacdb493a6077b5dcc8b09e5ddf90b01ea1946cf1bb4efb5901a39e4",
+      "sha256": "76f177749e4d6d7052c600f28e856c7a2824607b7a284bb91a681d329b1ccb11",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -3862,7 +3862,7 @@
       "executable": false
     },
     "tests/ny-dbl-runtime.mjs": {
-      "sha256": "5e53ec94c66d6d165708106cea3aff1c2202ca13ba051605ea8f9131de108c25",
+      "sha256": "90c938599df19d6c2817e9c885fc52544713de4280cc0e904e4a8ec792a36221",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
@@ -3882,7 +3882,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "d2985792bed54883110b72aea4099c26f94d448f5afad62fcfad05b33982c59e",
+      "sha256": "59c7509f1c283217733d21735b04e2719a702d0d82d90abc2b6d645f6194b3fa",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {

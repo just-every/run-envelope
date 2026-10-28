@@ -17,7 +17,7 @@ export async function nyDblJourney({origin,cookie,sql,settings,restart}) {
   privateValue(plan.source.reference)
   const savedPlan=await data(plans,plan,201)
   const reviewPlan=async()=>{const r=await data(plans+'/'+savedPlan.id+'/review');await data(plans+'/'+savedPlan.id+'/approve',{version:r.version,reviewToken:r.reviewToken});return r}
-  const snapshot=()=>sql("SELECT * FROM env_workspace_versions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_workspace_decisions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_workspace_reviews ORDER BY token_hash; SELECT * FROM env_audit ORDER BY id")
+  const snapshot=()=>Promise.all(["SELECT * FROM env_workspace_versions ORDER BY company_id,kind,object_id,version", "SELECT * FROM env_workspace_decisions ORDER BY company_id,kind,object_id,version", "SELECT * FROM env_workspace_reviews ORDER BY token_hash", "SELECT * FROM env_audit ORDER BY id"].map(sql))
   const refused=async(path,body,status=400,who=cookie,extra={})=>{const before=await snapshot(),r=await call(path,body,who,extra);assert.equal(r.status,status,await r.clone().text());assert.deepEqual(await snapshot(),before,'unsafe DBL request writes nothing');return r}
   for(const bad of [{program:'NY-PFL'},{type:'enhanced'},{type:'self-insured'},{recipient:{...plan.recipient,kind:'tax-agency'}},{rateBasisPoints:100},{weeklyCapCents:100}]) await refused(plans,{...plan,id:'synthetic-envelope-refused',...bad},bad.program||bad.type?409:400)
   let seq=0
@@ -87,6 +87,9 @@ export async function nyDblJourney({origin,cookie,sql,settings,restart}) {
   const calculated=await data(base+'/calculation-preview',calc)
   assert.equal(calculated.nyDbl.proposedCents,50);assert.equal(calculated.netCashCents,null);assert.equal(calculated.status,'held')
   assert.ok(calculated.holds.some(h=>h.code==='state-programs-unmapped'));assert.ok(calculated.holds.some(h=>h.code==='ny-dbl-preparation-only'))
+  const cashShort=await data(base+'/calculation-preview',{...calc,w4:{...ordinaryW4,step4cExtraWithholdingCents:100000}})
+  assert.equal(cashShort.nyDbl.proposedCents,50);assert.equal(cashShort.netCashCents,null)
+  assert.ok(cashShort.holds.some(h=>h.code==='regular-wage-cash-insufficient'))
   await refused(p.door+'/remittance',{proposalId:first.id},409)
   await refused(p.door+'/proposals',{...proposal(100),requestedCents:100})
   // Corrections retain history and invalidate the old source review and preparation.

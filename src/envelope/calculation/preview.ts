@@ -52,7 +52,7 @@ export function calculationPreview(input:PreviewInput,nyDbl?:ReturnType<typeof n
   try { federal=calculateIndustryPay({payDate:input.payDate,cashGrossCents:gross,housingAllowanceCents:0,shareholderHealthInsuranceCents:0,periodsPerYear:p,facts:{...noTaxFacts,claims:[]},w4:input.w4,yearToDate:input.yearToDate}) } catch(error) {
     if(!(error instanceof Error)||error.message!=='industry_cash_insufficient_for_regular_wage_withholding')throw error
     hold('regular-wage-cash-insufficient',input.workState,'Regular wage taxes exceed cash wages. Review the election and lawful collection; no negative payout is created.')
-    return {edition:input.edition,payDate:input.payDate,status:'held',paymentReady:false,approval:'unavailable',dispatch:'unavailable',grossCashCents:gross,federal:null,state:null,netCashCents:null,holds,coverage:stateCoverage(input.edition)}
+    return {edition:input.edition,payDate:input.payDate,status:'held',paymentReady:false,approval:'unavailable',dispatch:'unavailable',grossCashCents:gross,nyDbl,federal:null,state:null,netCashCents:null,holds,coverage:stateCoverage(input.edition)}
   }
   let state=stateWithholding(input.workState,gross,input.frequency,input.payDate,input.stateElection,federal.employeeTaxes.incomeTaxCents,federal.employeeTaxes.socialSecurityCents+federal.employeeTaxes.medicareCents+federal.employeeTaxes.additionalMedicareCents,input.through)
   if(['CT','MA'].includes(input.workState)&&earnings?.weeks.some(w=>w.overtimeCents||w.productionBonusCents||w.premiums.length))state={...state,withholdingCents:null,reason:input.workState+' supplemental compensation requires its separate official withholding method; the periodic ordinary-wage calculation is not substituted.'}
