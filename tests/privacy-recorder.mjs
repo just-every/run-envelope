@@ -9,6 +9,15 @@ const sensitive = new Set(['000-00-0001', '000000002', 'synthetic-envelope-1',
   'synthetic-envelope-2', 'synthetic-envelope-3', 'synthetic-envelope-510', 'synthetic-envelope-512'])
 const violations = []
 const installations = new Set()
+// The real static-site HTTP server has no Worker to register its origin.
+// Limit this registration to its exact loopback origin for its lifetime.
+export function recordPublicSite(origin) {
+  const url = new URL(origin)
+  assert.equal(url.protocol, 'http:');assert.equal(url.hostname, '127.0.0.1')
+  assert.equal(url.origin, origin)
+  installations.add(origin)
+  return () => installations.delete(origin)
+}
 const counts = { outbound: 0, browserRequests: 0, browserLogs: 0, workerLogs: 0, bundles: 0, privateInputs: 0 }
 function inspect(value, channel) {
   const serialized = typeof value === 'string' ? value : JSON.stringify(value)

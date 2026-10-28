@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "2b8ab0a5d344eb45307cb495592d2d07529c4eb82686682e9b9d36544cc98e5f",
+      "sha256": "2deca92d66076ebadb88e58fe56df5ec83af8fbd2dd43e90a74154111852419e",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "00562b46219426db37202b4ab3ab2ff1b29529aa1da11a9dbd4be06d8e433910",
+      "sha256": "05ab5786990f053d7f2c531668cb62a4ebd3ada5c9edef16fa9227f24f8bcb66",
       "executable": false
     },
     "deploy-demo.json": {
@@ -586,7 +586,7 @@
       "executable": false
     },
     "docs/private-inputs.md": {
-      "sha256": "ec3bfea2f6377c922fee8c0db3a8de0b52d43782e672c00a9f16d4c39b3cb46b",
+      "sha256": "bb9d0a74ad02efe82e291a491f1ad40f2ee8cd913887a0d7e14e68619fa6260d",
       "executable": false
     },
     "docs/retirement-preparation.md": {
@@ -3718,7 +3718,7 @@
       "executable": false
     },
     "tests/claims-browser.mjs": {
-      "sha256": "230b53ee37e69d8c3fe946eda3a3b0d911e2dacacd5588dfd5a306c03984b791",
+      "sha256": "34df109f97c09fa41d4dee32589e725ed3d7054410100ff45afd4df9df81f58b",
       "executable": false
     },
     "tests/claims-fixture.mjs": {
@@ -3909,12 +3909,16 @@
       "sha256": "4a6abe8fcc6047dbc7aae629a67b05ddb74a318efbeee8af0db0d79a8f9f789d",
       "executable": false
     },
+    "tests/payroll-doors.mjs": {
+      "sha256": "87423a180507ad738aa854c28a661c1c4012442edfa9ff44d900befe35b92001",
+      "executable": false
+    },
     "tests/payroll-runtime.mjs": {
-      "sha256": "b3194ad7e5cb8ed6d670e15e60ededf641002ee4e2dfbdb13d00704361d21825",
+      "sha256": "de298c771dc928037643f690ecdc6a0ad5b2cf263620587b91985e9b4c06e582",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
-      "sha256": "e14ecf5d5f575fead2c44afc624ecc47398c7f8622942534651df4c7b70701b5",
+      "sha256": "2b3a19fb7df2defe55b00a071384fdfdfb5c9862775b33321410066714e30aa9",
       "executable": false
     },
     "tests/retirement-benefits-runtime.mjs": {
@@ -3926,7 +3930,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "ebdc1899d28865e67f16b32baae0e865234be55b3a0fc7d2022bca534e99243a",
+      "sha256": "6f90be772a100cc0914c8df685523dd4aa08ef8dea2634871d4635ea01c4790c",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {

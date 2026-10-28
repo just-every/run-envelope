@@ -4935,7 +4935,9 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     await noWrite(async()=>{
       for(const path of paths)for(const method of ['GET','HEAD']) {
         const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin}})
-        assert.equal(response.status,status==='signed-out'?(path.startsWith('/app/')?303:401):status,method+' private tax original refusal')
+        const expected=status===401 && path.startsWith('/app/')?303:status
+        assert.equal(response.status,expected,method+' '+path+' private tax original refusal')
+        if(expected===303)assert.match(response.headers.get('location'),/^\/signin\?/)
         assert.equal(response.headers.get('cache-control'),'no-store')
         assert.equal(response.headers.get('content-disposition'),null,'a refusal is never an attachment')
         const body=await response.text()
@@ -4944,7 +4946,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
       }
     })
   }
-  await refuseOriginals('','signed-out')
+  await refuseOriginals('',401)
   for(const who of [outsider,preparer,reviewer,wrongFields,otherNativeOwner])await refuseOriginals(who,403)
   await refuseOriginals(wrongLocation,404)
   await refuseOriginals(cookie,404,originalPaths.map(path=>path.replace(company.id,foreign.id)))

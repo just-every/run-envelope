@@ -341,10 +341,11 @@ export async function safeInputsBrowser({context,f}) {
    '/auth/invite/cancel','/auth/operator/status','/auth/operator/role','/auth/session/revoke','/auth/step-up',
    '/auth/providers/unlink','/auth/providers/relink','/auth/settings/business','/auth/setup-complete','/auth/email','/auth/display-name',
    '/auth/dependencies/setup','/auth/dependencies/relink','/auth/dependencies/unlink'])]
+  const targetSession=(await context.sql("SELECT id FROM oa_sessions WHERE operator_id='"+f.operator.id+"' AND revoked_at IS NULL ORDER BY created_at LIMIT 1"))[0].id
   const privateBefore=await payrollSnapshot(context.sql),inventory=[]
   for(const path of privateDoors)for(const method of ['GET','HEAD','POST']) {
    const response=await visitor.request.fetch(context.origin+path,{method,maxRedirects:0,headers:{origin:context.origin},
-    ...(method==='POST'?{data:{version:1,reason:'Synthetic unauthorized mutation'}}:{})})
+    ...(method==='POST'?{data:{version:1,operatorId:f.operator.id,sessionId:targetSession,reason:'Synthetic unauthorized mutation'}}:{})})
    const body=await response.text(),location=response.headers().location
    assert.ok([400,401,403,404,405].includes(response.status()) || response.status()===303 && location?.startsWith('/signin'),method+' '+path+' refuses a signed-out visitor: '+response.status())
    for(const value of [...planted,payload])assert.ok(!body.includes(value),method+' '+path+' contains no payroll content')

@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { readFile, readdir } from 'node:fs/promises'
 import { extname, join } from 'node:path'
+import { recordPublicSite } from './privacy-recorder.mjs'
 
 // Finite native route inventory, read from the dispatch branches in the named
 // files. Braces expand alternatives; identifiers come from retained fixtures.
@@ -68,10 +69,10 @@ export function payrollDoors(f, claim, notice) {
 }
 
 export async function payrollSnapshot(sql) {
- const tables = await sql("SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'env_*' ORDER BY name")
+ const tables = await sql("SELECT name FROM sqlite_master WHERE type='table' AND (name GLOB 'env_*' OR name GLOB 'oa_*') ORDER BY name")
  const digest = createHash('sha256')
  for (const {name} of tables) {
-  assert.match(name, /^env_[a-z_]+$/)
+  assert.match(name, /^(?:env|oa)_[a-z_]+$/)
   digest.update(name).update(JSON.stringify(await sql('SELECT * FROM ' + name + ' ORDER BY rowid')))
  }
  return digest.digest('hex')
@@ -107,7 +108,7 @@ export async function publicSiteBrowser({browser, privateValues, proof, audits, 
   response.end(request.method === 'HEAD' ? undefined : await readFile(file))
  })
  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
- const origin = 'http://127.0.0.1:' + server.address().port, visitor = await browser.newContext(), requests = [], cookies = []
+ const origin = 'http://127.0.0.1:' + server.address().port, unregister = recordPublicSite(origin), visitor = await browser.newContext(), requests = [], cookies = []
  visitor.on('request', request => requests.push(request.url()))
  visitor.on('response', response => {if (response.headers()['set-cookie']) cookies.push(new URL(response.url()).pathname)})
  try {
@@ -134,5 +135,5 @@ export async function publicSiteBrowser({browser, privateValues, proof, audits, 
   assert.deepEqual(cookies, [], 'no public resource sets a cookie')
   assert.ok(requests.every(url => new URL(url).origin === origin), 'built public pages make no third-party request before interaction')
   console.log('Public built documents exercised: ' + documents.join(', '))
- } finally {await visitor.close();await new Promise(resolve => server.close(resolve))}
+ } finally {await visitor.close();await new Promise(resolve => server.close(resolve));unregister()}
 }
