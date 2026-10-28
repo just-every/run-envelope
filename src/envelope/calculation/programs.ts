@@ -24,9 +24,10 @@ const required:Record<string,string[]>={
  WA:['L&I risk classes and employee and employer shares','L&I salaried hours election','PFML','WA Cares'],
  OH:['BWC applicability and reporting'],ND:['WSI applicability and reporting'],WY:['DWS compensation applicability and reporting'],
 }
-export function programInventory(state:string){
+export function programInventory(state:string,taxYear=2026){
  if(!Object.hasOwn(wageBases,state))return null
- return {status:'unmapped',amountCents:null,
+ return {status:'unmapped',amountCents:null,requestedTaxYear:taxYear,
+   futaCreditReduction:{taxYear,status:'unmapped',finalSource:null,scheduleA:'unmapped'},
    unemploymentReference:{source:'https://oui.doleta.gov/unemploy/content/sigpros/2020-2029/January2026.pdf',retrievedAt:'2026-10-28',effectiveOn:'2026-01-01',
      wageBaseDollars:wageBases[state],newEmployerBasePercent:newEmployerBase[state],
      qualification:state==='MI'?'Higher base for delinquent employers':state==='NE'||state==='RI'?'Higher base for designated high-tax employer group':'Subject employer and current assigned or industry-based rate must be established',

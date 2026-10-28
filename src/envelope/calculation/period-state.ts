@@ -1,5 +1,6 @@
 import {roundRatio,validCents} from '../industry/federal-withholding'
 export const periodStateSources:Record<string,string>={
+ GA:'https://dor.georgia.gov/document/document/2026-employers-tax-guide-updated-september-2026/download',
  UT:'https://tax.utah.gov/forms-pubs/pub-14/',
  CO:'https://tax.colorado.gov/sites/tax/files/documents/DR_1098_Colorado_Withholding_Worksheet_for_Employees.pdf',
  ID:'https://tax.idaho.gov/wp-content/uploads/pubs/EPB00744/EPB00744_07-23-2026.pdf',
@@ -11,7 +12,14 @@ export function periodState(state:string,wages:number,frequency:'weekly'|'biweek
  if(!Object.hasOwn(periodStateSources,state))return null
  const periods={weekly:52,biweekly:26,semimonthly:24,monthly:12}[frequency]
  let amount:number,detail:Record<string,unknown>
- if(state==='UT'){
+ if(state==='GA'){
+   if(!exactKeys(election,['filingStatus','dependents','additionalCents'])||!['single','head_household','married_single_income','married_two_incomes'].includes(String(election.filingStatus))||!validCents(election.dependents)||!validCents(election.additionalCents))throw new Error('georgia_g4_certificate_required')
+   const values={weekly:[28846,57692,9615],biweekly:[57692,115385,19231],semimonthly:[62500,125000,20833],monthly:[125000,250000,41667]}[frequency]
+   const standard=values[election.filingStatus==='married_single_income'?1:0],dependent=BigInt(election.dependents)*BigInt(values[2])
+   const taxable=positive(BigInt(wages)-BigInt(standard)-dependent)
+   amount=roundRatio(taxable*499n,10000n)+election.additionalCents
+   detail={method:'2026 September guide percentage method, Table E',standardDeductionCents:standard,dependentDeductionCents:dependent.toString(),taxablePeriodWagesCents:taxable.toString(),rateBasisPoints:499,additionalCents:election.additionalCents}
+ }else if(state==='UT'){
    if(!exactKeys(election,['certificate','filingStatus'])||election.certificate!=='modern-w4'||!['single','married','head_household'].includes(String(election.filingStatus)))throw new Error('utah_modern_certificate_required')
    const [allowance,threshold]={weekly:{single:[9,180],married:[19,360]},biweekly:{single:[19,360],married:[37,719]},semimonthly:{single:[20,390],married:[40,779]},monthly:{single:[40,779],married:[81,1558]}}[frequency][election.filingStatus==='married'?'married':'single']
    const gross=BigInt(wages)*445n,credit=positive(BigInt(allowance)*1000000n-positive(BigInt(wages)-BigInt(threshold)*100n)*130n)

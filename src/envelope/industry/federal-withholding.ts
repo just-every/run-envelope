@@ -108,5 +108,14 @@ export function federalIncomeTax(input: {
     incomeTaxCents: safeNumber(BigInt(roundRatio(afterCredits > 0n ? afterCredits : 0n, BigInt(periodsPerYear) * 100n)) + BigInt(extra)),
     adjustedAnnualWagesCents: safeNumber(annual), nonresidentAdjustmentCents,
     sourceId: withholdingSource(taxYear).id,
+    calculation: {
+      method:'Publication 15-T Worksheet 1A',taxYear,periodsPerYear,taxableWagesCents,
+      w4Version:w4.version,filingStatus:w4.filingStatus,
+      table:modern && w4.step2Checked ? 'Step 2 checkbox' : 'Standard',
+      nonresidentAdjustmentCents,adjustedAnnualWagesCents:safeNumber(annual),
+      annualBracketFloorCents:Math.round(row[0]*100),annualBracketBaseCents:Math.round(row[1]*100),
+      rateBasisPoints:row[2]*100,annualCreditsCents:modern?w4.step3AnnualCreditsCents:0,
+      extraWithholdingCents:extra,rounding:'Nearest cent, half up, after annual credits and division by actual payroll periods.',
+    },
   }
 }

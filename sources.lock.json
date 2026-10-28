@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "b8cd27f6ff331cee5aae207cd0e61fb86f0b0d3784bbb9666b668b4d30fc1a49",
+      "sha256": "4e8a1bad13fcaac10e6ade9fa41c4d84ce701ceb53a84307d9d889f448eee862",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3caa3e289ddd698ce1a3784b3a3317a85379f0e56de1def8713da4855cd6ac46",
+      "sha256": "c0fa5374652595bdb8938087c52ff22cd94bb4439e253264a46d34c2bfce00b6",
       "executable": false
     },
     "deploy-demo.json": {
@@ -514,7 +514,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "ad55a922fdae3507788ad8bf76dec1ebb576e841d111ec04ad8bc77321655c14",
+      "sha256": "7f845dc110f726f3506ba23c647ac620322c15e914464276ef0c6a18a141ffec",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2041,8 +2041,12 @@
       "sha256": "746a3729eeeef7fd6eb94385995feb7681f3d3c6690613889a2521a1f24792cb",
       "executable": false
     },
+    "src/envelope/calculation/alabama.ts": {
+      "sha256": "65fa7e5643ad4999c2687a3b112b41f22f8e3ff14a5ef7ad1e4228bbaaf30370",
+      "executable": false
+    },
     "src/envelope/calculation/annual-state.ts": {
-      "sha256": "39b3ca5d971a3fdaf93fe829ebb49a937dbdfb9ad273741edf04995671d1e7f8",
+      "sha256": "40b8e5f391636928843118f0108072e93453091d87332a1697791ccb7024c188",
       "executable": false
     },
     "src/envelope/calculation/bracket-state.ts": {
@@ -2053,24 +2057,28 @@
       "sha256": "59a6f3551c31924746cf1bd822dfad29a175282ad231d3e42ac3f5d4a9b96b9b",
       "executable": false
     },
+    "src/envelope/calculation/mississippi.ts": {
+      "sha256": "8b29a0dc0c63bc35910238970027fae3f2c7bfee6a3967bbf1f83b1620eba30b",
+      "executable": false
+    },
     "src/envelope/calculation/oregon.ts": {
-      "sha256": "2aa4e91bec3c84f14288b6077a166f188811bd7bb98cf27c7d1e17b67d77a639",
+      "sha256": "d6eef75e257a99410d1646e26224cac60a85e7964868e176418bb8bcd934b543",
       "executable": false
     },
     "src/envelope/calculation/period-state.ts": {
-      "sha256": "3bcbdfe53bf0b0cca2b915d2a7a3d249b7483a508bed9d2cc35f49ea9318b7aa",
+      "sha256": "0611a56f1b0d93d0e89e331ce658d0da34e423527982ddf0ca16c5e030c4f3b4",
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "ce3d1ada9a92f151566e08386179de8bc6bfd610c4e93386490306566a6d00dd",
+      "sha256": "77ad98c765dac8b8d2d471fc49160b47f387c1dd0a5f2be631cca558ef460d46",
       "executable": false
     },
     "src/envelope/calculation/programs.ts": {
-      "sha256": "cbf372aef907e482bfcf052899c230f775ce1ec1f6e199c17866aac4b558171e",
+      "sha256": "7c8219842a978ad9ac88a5fcc223f89f7fc3435e58935d8a48f2646203bb8d6f",
       "executable": false
     },
     "src/envelope/calculation/states.ts": {
-      "sha256": "44b04ff1d14a34fa00768f1e118c774e17966d566d5305039e2b49d2443a49a7",
+      "sha256": "9640ad0e9bbbbb91d9466303aa11d22cad2176f844a40e6342907d08491442a1",
       "executable": false
     },
     "src/envelope/claims/form-fields.tsx": {
@@ -2190,7 +2198,7 @@
       "executable": false
     },
     "src/envelope/industry/calculate.ts": {
-      "sha256": "11b2aefd36ed8ebc0498ada12190f3fb44203a87bc2eae99e480f8b4f402e9fb",
+      "sha256": "b4f04b5f0905337649d4f7cf697c90635b54774170c9494373e541e6ed33e46c",
       "executable": false
     },
     "src/envelope/industry/classification.ts": {
@@ -2198,7 +2206,7 @@
       "executable": false
     },
     "src/envelope/industry/federal-withholding.ts": {
-      "sha256": "8b24e76f1e6115bd00098857af0665ce3618a6a05c4e8ceabdb1f401c787180c",
+      "sha256": "875f16c4db355b9b30ab3150308ed08fca09972aeb1f908cc32ae55be2819190",
       "executable": false
     },
     "src/envelope/industry/form-input.ts": {
@@ -2230,7 +2238,7 @@
       "executable": false
     },
     "src/envelope/industry/types.ts": {
-      "sha256": "82e3ddcdd6b7ded0a44c7211060e258a33f288a25480400ff9b9e85c5f794368",
+      "sha256": "ca191967132bfa783c917775e7c258dcd4b92fc2e4349ec5677b13ab05b6b4a4",
       "executable": false
     },
     "src/envelope/installation-data.tsx": {
@@ -3630,7 +3638,7 @@
       "executable": false
     },
     "tests/calculation-runtime.mjs": {
-      "sha256": "2dc32386dadfbfe9ff81c9e51aef935f4ae7ac84588a1c687cd624739db7a7b1",
+      "sha256": "532323cd9e95e34d46f2e2fa825d794409828acfae1156c69f4c94e60171c753",
       "executable": false
     },
     "tests/claims-browser.mjs": {

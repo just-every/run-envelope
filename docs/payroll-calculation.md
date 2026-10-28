@@ -88,7 +88,8 @@ calculation engineering or completion.
 
 The ordinary withholding corpus also includes California, North Carolina,
 Kentucky, Michigan, Indiana, Colorado, Idaho, Iowa, Delaware, Kansas, Minnesota,
-Missouri, North Dakota, Virginia, Wisconsin, Oregon and Utah. Alaska, Florida,
+Missouri, North Dakota, Virginia, Wisconsin, Oregon, Utah, Alabama, South
+Carolina, DC, Nebraska, Mississippi and Georgia. Alaska, Florida,
 Nevada, South Dakota, Tennessee and Wyoming join the cited no-wage-income-tax
 entries. This is component coverage; all 51 complete-state determinations remain
 unproved. The coverage door lists each mapped component with its case identifier.
@@ -119,3 +120,14 @@ non-UI taxes and current state-law determinations remain required. The export
 explicitly retains WA L&I, OR WBF, NY DBL and PFL, Hawaii capped plan shares and
 OH, ND and WY compensation obligations rather than omitting them behind an
 income-tax-only denominator. This inventory is unfinished calculation work.
+
+The result includes the federal worksheet, annual adjusted wages, selected bracket,
+rate, credits and rounding rule. State components retain their bracket or rate
+basis. Inputs assume an ordinary resident corporate employee with ordinary cash
+wages; no family, visa, agricultural or other special exemption is inferred.
+Georgia uses the retained September guide for proposed checks from October 28.
+Mississippi requires the actual certificate exemption amount. Nebraska currently
+requires zero allowances; nonzero elections need the minimum-withholding rules.
+Every supported component is exercised by one of 37 independent cent-level
+golden cases within the public-door calculation journey. These cases do not
+prove complete jurisdiction calculation, legal compliance or actual payday.

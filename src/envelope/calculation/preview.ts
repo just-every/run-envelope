@@ -76,6 +76,8 @@ export function calculationPreview(input:PreviewInput){
   // A 2.7% floor is not an employer-specific SUI determination.
   hold('sui-rate-review-required',input.workState,'The current assigned or NAICS-specific new-employer SUI rate must be supplied by a reviewed rule edition.')
   return {edition:input.edition,payDate:input.payDate,status:holds.length?'held':'calculated-preview',paymentReady:false,approval:'unavailable',dispatch:'unavailable',
+    assumptions:{worker:'Ordinary resident employee of a taxable corporation, with no federal exemption',taxability:'Ordinary taxable cash wages; no pre-tax benefits, imputed income or special wage exclusions',companyEntity:'Hypothetical assumption; no actual company tax-entity determination is read or changed'},
+    federalRatesBasisPoints:{socialSecurity:620,medicare:145,additionalMedicare:90,futaBeforeCredits:600},
     earnings,grossCashCents:gross,heldTipsCents:input.tips.heldCents,paycheckTipsCents:input.tips.paycheckCents,newCashBeforeTaxCents:newCash,
     federal,state,tipTaxes:tip,federalEmployerTaxes:combinedFederalEmployer,sui,deductions,federalGarnishmentLimitCents:federalGarnishmentLimit,
     netCashCents:holds.length?null:disposable-deducted,holds,coverage:stateCoverage(input.edition),

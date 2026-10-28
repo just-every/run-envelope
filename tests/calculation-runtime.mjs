@@ -15,6 +15,9 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  const preview=await data(door,fixture)
  assert.deepEqual(preview.federal.employeeTaxes,{incomeTaxCents:7808,socialSecurityCents:6200,medicareCents:1450,additionalMedicareCents:0})
  assert.equal(preview.federal.netCashCents,84542)
+ assert.equal(preview.federal.withholding.calculation.rateBasisPoints,1200)
+ assert.equal(preview.federal.withholding.calculation.annualBracketFloorCents,1990000)
+ assert.equal(preview.federal.withholding.calculation.adjustedAnnualWagesCents,4340000)
  assert.equal(preview.paymentReady,false);assert.equal(preview.dispatch,'unavailable')
  assert.equal(preview.coverage.total,51);assert.equal(preview.coverage.complete,false)
  assert.equal(new Set(preview.coverage.states.map(s=>s.state)).size,51)
@@ -34,6 +37,12 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
   ['KY',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},3274],
   ['MI',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4250],
   ['IN',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},2950],
+  ['NE',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},3606],
+  ['MS',{filingStatus:'S',exemptionCents:600000,additionalCents:0},2600],
+  ['GA',{filingStatus:'single',dependents:0,additionalCents:0},3551],
+  ['AL',{filingStatus:'S',dependents:0,additionalCents:0},4148],
+  ['SC',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4738],
+  ['DC',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},5731],
   ['UT',{certificate:'modern-w4',filingStatus:'single'},4450],
   ['WI',{filingStatus:'single',allowances:0,additionalAllowances:0,additionalCents:0},4444],
   ['OR',{filingStatus:'single',allowances:0,additionalCents:0},6963],
@@ -112,6 +121,7 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  }
  const historicalInput={...fixture,edition:'2025-01',payDate:'2025-10-30',from:'2025-10-20',through:'2025-10-26'}
  const historical=await data(door,historicalInput)
+ assert.ok(historical.coverage.states.every(s=>s.programInventory.futaCreditReduction.taxYear===2025 && s.programInventory.futaCreditReduction.status==='unmapped'))
  assert.equal(historical.coverage.mappedWithholdingComponents,0,'The 2026 state inventory is not carried into a historical tax year')
  assert.deepEqual(historical.federal.employeeTaxes,{incomeTaxCents:8080,socialSecurityCents:6200,medicareCents:1450,additionalMedicareCents:0})
  await data(door,fixture)
@@ -133,5 +143,6 @@ export async function calculationJourney({origin,cookie,sql,restart,settings}) {
  const before=await sql('SELECT COUNT(*) AS n FROM env_workspace_versions')
  await data(door,fixture)
  assert.deepEqual(await sql('SELECT COUNT(*) AS n FROM env_workspace_versions'),before,'A hypothetical preview creates no payroll authority or retained employee record')
+ console.log('CALCULATION-CORPUS',JSON.stringify({states:coverage.total,withholdingGoldens:cases.length,completeStates:coverage.completeStates,complete:coverage.complete}))
  console.log('CALCULATION-PREVIEW passed: dated federal and bounded state components, weighted weekly earnings, approved California premiums, tip-tax shortage, explicit coverage holds and unsafe deductions through the native API')
 }
