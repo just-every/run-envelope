@@ -158,6 +158,9 @@ export function extendedRetirementCalculation(setup: ExtendedRetirementSetup, ra
     providerAcceptance:'unavailable', collectedCents:0, employeeDeductionCents:0 }
 }
 export type ExtendedRetirementProposal = ReturnType<typeof extendedRetirementCalculation>
+interface RetainedProposal {
+  request: unknown; setupId: string; setupVersion: number; result: ExtendedRetirementProposal
+}
 const kinds = ['extended-retirement','extended-retirement-preview'] as const
 export class ExtendedRetirement {
   constructor(public store: WorkspaceStore) {}
@@ -165,40 +168,72 @@ export class ExtendedRetirement {
     if (actor.session.kind !== 'native' || actor.session.operator.role !== 'owner' || actor.grant.role !== 'owner' || actor.session.operator.email.trim().toLowerCase() !== this.store.records.env.OWNER_EMAIL.trim().toLowerCase()) throw new PayrollError('retirement_native_owner_required',403)
     return this.store.authority(actor,'records:read',personId,true)
   }
+  private privacyFence(actor: Actor, personId: string) {
+    return {sql:"NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=? AND status='held')",args:[actor.company,personId]}
+  }
+  private approvalAuthority(actor: Actor) {
+    // Bind to the decision's actual session, not another unused review token.
+    // Archived or legacy approval history does not create current authority.
+    return {sql:`FROM env_workspace_decisions d JOIN env_workspace_decision_authority a
+      ON a.company_id=d.company_id AND a.kind=d.kind AND a.object_id=d.object_id AND a.version=d.version AND a.decision=d.decision
+      JOIN oa_sessions s ON s.id=a.session_id
+      JOIN oa_operators o ON o.id=d.actor_id JOIN env_grants g ON g.company_id=d.company_id AND g.operator_id=d.actor_id
+      WHERE d.company_id=? AND d.kind='extended-retirement' AND d.decision='approved'
+      AND s.operator_id=o.id AND s.operator_version=o.version AND s.kind='native'
+      AND s.revoked_at IS NULL AND s.expires_at>unixepoch('subsec')*1000 AND o.status='active' AND o.role='owner'
+      AND lower(trim(o.email))=? AND g.version=a.grant_version AND g.revoked_at IS NULL AND g.role='owner'`,
+      args:[actor.company,this.store.records.env.OWNER_EMAIL.trim().toLowerCase()]}
+  }
+  private preparationFence(actor: Actor, personId: string, setup: Revision<ExtendedRetirementSetup>) {
+    const approval=this.approvalAuthority(actor),privacy=this.privacyFence(actor,personId)
+    return {sql:`${privacy.sql} AND EXISTS(SELECT 1 ${approval.sql} AND d.object_id=? AND d.version=?)`,
+      args:[...privacy.args,...approval.args,setup.id,setup.version]}
+  }
   async list(actor: Actor, personId: string) {
     await this.scope(actor,personId)
     const setups = await this.store.list<ExtendedRetirementSetup>(actor,kinds[0],personId,true)
-    const proposals = await this.store.list(actor,kinds[1],personId,true)
-    return {setups,proposals:proposals.map(row=>({...row,sourceStatus:row.sourcesCurrent?'current':'changed-repreview-required'}))}
+    const proposals = await this.store.list<RetainedProposal>(actor,kinds[1],personId,true)
+    const authority=this.approvalAuthority(actor),privacy=this.privacyFence(actor,personId)
+    const approvals=await this.store.records.statement(`SELECT d.object_id AS id,d.version ${authority.sql} AND ${privacy.sql}`,[...authority.args,...privacy.args]).all<{id:string;version:number}>()
+    const active=new Set(approvals.results.map(row=>JSON.stringify([row.id,row.version])))
+    return {setups,proposals:proposals.map((row,i)=>{
+      const preparationCurrent=Boolean(row.sourcesCurrent && active.has(JSON.stringify([row.data.setupId,row.data.setupVersion]))
+        && proposals.findIndex(other=>other.id===row.id)===i)
+      return {...row,preparationCurrent,sourceStatus:preparationCurrent?'current':'changed-repreview-required'}
+    })}
   }
   async save(actor: Actor, personId: string, raw: Input) {
     await this.scope(actor,personId)
     const data = setupInput(raw)
-    return this.store.append(actor,kinds[0],objectId(raw.id),revision(raw.version),data,personId,true)
+    return this.store.append(actor,kinds[0],objectId(raw.id),revision(raw.version),data,personId,true,{noPrivacyHold:personId})
   }
   async review(actor: Actor, personId: string, id: string) {
     await this.scope(actor,personId)
-    return this.store.review<ExtendedRetirementSetup>(actor,kinds[0],id,personId)
+    return this.store.review<ExtendedRetirementSetup>(actor,kinds[0],id,personId,this.privacyFence(actor,personId))
   }
   async decide(actor: Actor, personId: string, id: string, raw: Input) {
     await this.scope(actor,personId)
-    return this.store.decide(actor,kinds[0],id,raw,personId,raw.withdraw === true)
+    return this.store.decide(actor,kinds[0],id,raw,personId,raw.withdraw === true,raw.withdraw === true ? undefined : this.privacyFence(actor,personId),true)
   }
   async preview(actor: Actor, personId: string, raw: Input, persist = true) {
     shape(raw,persist ? ['id','version','setupId','setupVersion','request'] : ['setupId','setupVersion','request'])
     await this.scope(actor,personId)
     const setup = await this.store.find<ExtendedRetirementSetup>(actor,kinds[0],objectId(raw.setupId),personId,true)
     if (setup.version !== revision(raw.setupVersion) || !setup.approvedBy || setup.withdrawnBy || !setup.sourcesCurrent) throw new PayrollError('current_reviewed_retirement_evidence_required',409)
+    const authority=this.preparationFence(actor,personId,setup)
+    const currentAuthority=()=>this.store.records.statement('SELECT 1 WHERE '+authority.sql,authority.args).first()
+    if (!await currentAuthority()) throw new PayrollError('retirement_review_authority_inactive',409)
     const result = extendedRetirementCalculation(setup.data,raw.request)
     if (!persist) {
       // Repeat live authority and exact source checks before returning private values.
       await this.scope(await this.store.records.actor(actor.company),personId)
       const current = await this.store.find(actor,kinds[0],setup.id,personId,true)
       if (current.version !== setup.version || current.withdrawnBy || !current.sourcesCurrent) throw new PayrollError('retirement_evidence_changed',409)
+      if (!await currentAuthority()) throw new PayrollError('retirement_review_authority_inactive',409)
       return {result,source:{id:setup.id,version:setup.version}}
     }
     const data = {request:raw.request,setupId:setup.id,setupVersion:setup.version,result}
-    const saved = await this.store.append(actor,kinds[1],objectId(raw.id),revision(raw.version),data,personId,true,{objects:[{kind:kinds[0],id:setup.id,version:setup.version,approved:true}]})
+    const saved = await this.store.append(actor,kinds[1],objectId(raw.id),revision(raw.version),data,personId,true,{noPrivacyHold:personId,condition:authority,objects:[{kind:kinds[0],id:setup.id,version:setup.version,approved:true}]})
     return {...saved,...data}
   }
 }

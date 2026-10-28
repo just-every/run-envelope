@@ -474,7 +474,7 @@
       "executable": false
     },
     "docs/extended-retirement.md": {
-      "sha256": "514259d0ba39941f9db8df7a2e93ba799484d3982ccff1bf3f7a893cab3f11a6",
+      "sha256": "454287fc93aa1e0e0e9157389dbd0769d111f5698c72973b22cc648bf1dddb6a",
       "executable": false
     },
     "docs/firm-work.md": {
@@ -763,6 +763,10 @@
     },
     "migrations/core/0036_automation_tasks.sql": {
       "sha256": "6c22bd832d03f1375e053a7f84f09e4231fb669a2cc6fab2dd2e92cf91c4f578",
+      "executable": false
+    },
+    "migrations/core/0037_workspace_decision_authority.sql": {
+      "sha256": "57d3b52c5715787e24a62ea80df33d5969cb53ffd8adaa26372582cf6077f98e",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -2050,7 +2054,7 @@
       "executable": false
     },
     "src/envelope/benefits/extended-retirement.ts": {
-      "sha256": "569811b8688ee659a9a2946a3c7ab5bb9efc2b66031714b452227d9c64948005",
+      "sha256": "15a40f5005ecb15a426820d18bc898cafdc3932140fc990458eb0164c295e1fc",
       "executable": false
     },
     "src/envelope/benefits/hi-plan-shares.ts": {
@@ -2542,7 +2546,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "bc328983ddacc423f8d386c024c6143b185679ddad9508752088657daca62c7c",
+      "sha256": "0ac32ea101c6e2fea47f84b4ef812fdda1024bf85df14f660d909152904a5dba",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3658,7 +3662,7 @@
       "executable": false
     },
     "tests/archive-adoption.mjs": {
-      "sha256": "565efa819e29652f7ecc60b07ca4f2c1c5266773ccfffd24ac8c55c550a4a477",
+      "sha256": "60e27f422c6ceb2207c96c004f6a3a5f60c3840cf85e49dfb7a8fe99757ed829",
       "executable": false
     },
     "tests/archive-authority.mjs": {
@@ -3686,7 +3690,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "7165030b4412b5dd32860fa8e0375f516469983334e6a68e9131bdc5bb042bc1",
+      "sha256": "0eac566ff35b82ca8ca36e9e1f8ebfa3ebd84255f68b9152c92dfbfa26ab2e72",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -3734,7 +3738,7 @@
       "executable": false
     },
     "tests/extended-retirement-runtime.mjs": {
-      "sha256": "06b2f2b5454d3ae4112f1bb203fc0c329ba17f81f6c9a1f0845dc0c4bee9f897",
+      "sha256": "4ce453aa3f1563da908c656b3dda8e515da48dbcfe3bb5134296827ee5bc692e",
       "executable": false
     },
     "tests/firm-fixture.mjs": {

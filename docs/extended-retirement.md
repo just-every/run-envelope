@@ -116,7 +116,21 @@ Prepared reporting fields are not delivered W-2 forms or provider acceptance.
 A corrected setup invalidates earlier pending preparations even before the new
 version is approved. Old review tokens cannot approve a corrected version.
 Proposals pin their source version and worker record. History stays visible as
-history, with changed sources explicitly marked. Revoked sessions and foreign
+history, with changed sources explicitly marked. New preparation also requires
+the actual approving native session, current configured-owner identity and the
+same current company grant revision. An unused review from another session
+cannot substitute for the session that made the decision. Revocation, expiry,
+identity changes and changed grants invalidate preparation even after a new
+sign-in. A replacement source revision and fresh human review are required;
+legacy decisions without retained approval provenance supply no live authority.
+The retained proposal list reports `preparationCurrent` separately from history.
+
+A held privacy request freezes new setup revisions, reviews, approvals and both
+standalone and company calculation previews for that worker. Restricted retained
+reads and explicit withdrawal remain available. Refused preparation leaves the
+retention inventory unchanged. Approval provenance is immutable history within
+the same worker custody graph and follows its explicit local retention release
+and erasure. Revoked sessions and foreign
 company or worker references cannot retrieve the private evidence. Records
 use the existing encrypted workspace, access audit, worker dependency inventory
 and erased-source fences; complete benefit-specific hold, erasure and inactive

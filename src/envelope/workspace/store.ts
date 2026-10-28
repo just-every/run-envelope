@@ -435,6 +435,7 @@ export class WorkspaceStore {
     personId?: string,
     withdraw = false,
     condition?: SourceFence,
+    retainAuthority = false,
   ) {
     const row = await this.find(actor, kind, id, personId, true)
     if (kind==='paper-onboarding') await this.paperAuthority(actor,'paper:review',personId)
@@ -500,6 +501,11 @@ export class WorkspaceStore {
               ]),
         ],
       ),
+      ...(retainAuthority ? [this.records.statement(
+        `INSERT INTO env_workspace_decision_authority(company_id,kind,object_id,version,decision,session_id,grant_version)
+        SELECT company_id,kind,object_id,version,decision,?,? FROM env_workspace_decisions WHERE change_id=?`,
+        [actor.session.id,actor.grant.version,event],
+      )] : []),
       auditStatement(
         this.records.env,
         actor,

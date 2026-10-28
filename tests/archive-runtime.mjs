@@ -8,6 +8,7 @@ import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileRecords } from '@runeditrun/rer/modules/portability/files'
 import { archiveFixture } from './archive-fixture.mjs'
+import { extendedRetirementArchiveFixture } from './extended-retirement-runtime.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
 import { unrelatedPersonArchive, unrelatedCorrectionArchive, foreignFundingArchive, rewrittenArchive } from './archive-relationships.mjs'
 import { archiveEditions } from './archive-editions.mjs'
@@ -119,6 +120,7 @@ export async function archiveJourney(context) {
     await context.upgrade()
     assert.deepEqual(populated(await snapshot(persist)),populated(priorState),'reapplying migrations is non-destructive')
   })
+  fixture.extendedRetirement=await extendedRetirementArchiveFixture(context,fixture.companies[0],fixture.retainedPersonId)
   console.log('ARCHIVE-UPGRADE passed: populated prior schema, unknown notice obligations, unchanged ciphertext and authority history, idempotent native migration')
   const temporary = await mkdtemp(join(tmpdir(), 'envelope-archive-'))
   try {
@@ -133,6 +135,8 @@ export async function archiveJourney(context) {
       assert.equal(before.env_workspace_versions.filter(row=>row.kind==='run-intake' && row.object_id===source.id).length,2,
         'the earlier archive really contains both source capture editions before erasure')
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
+    assert.ok(before.env_workspace_decision_authority.some(row=>row.object_id===fixture.extendedRetirement.setupId),'The actual archive contains retirement approval provenance')
+    for(const id of [fixture.extendedRetirement.setupId,fixture.extendedRetirement.proposalId])assert.ok(before.env_workspace_versions.some(row=>row.object_id===id),'Retirement sources and employer proposals are real encrypted archive records')
     for (const year of fixture.years) {
       for (const returnId of [year.originalReturnId, year.correctedReturnId])
         assert.ok(before.env_workspace_versions.some(row => row.kind === 'industry-return' && row.object_id === returnId), 'original and corrected prepared returns remain retained')
@@ -283,11 +287,11 @@ export async function archiveJourney(context) {
     await context.withRestoredWorker(state(target), async () => {
       const outboundBefore = context.edge.mails.length
       const company = '/api/envelope/companies/' + fixture.companies[0]
-      const requests = [[company, 'GET'], [company + '/notices', 'POST']]
+      const requests = [[company, 'GET'], [company + '/notices', 'POST'],[fixture.extendedRetirement.door,'GET'],[fixture.extendedRetirement.door+'/preview','POST']]
       for (const [path, method] of requests) {
         const response = await context.worker.fetch(context.origin + path, { method,
           headers: { cookie: context.cookie, origin: context.origin, 'content-type': 'application\u002fjson' },
-          ...(method === 'POST' ? { body: JSON.stringify({ reference: 'synthetic-envelope-replay', body: 'Former-session replay' }) } : {}) })
+          ...(method === 'POST' ? { body: JSON.stringify(path.endsWith('/preview') ? fixture.extendedRetirement.capture : { reference: 'synthetic-envelope-replay', body: 'Former-session replay' }) } : {}) })
         assert.equal(response.status, 401, 'the real restored Worker refuses prior installation authority')
         assert.deepEqual(await response.json(), { error: 'authentication_required' })
       }
