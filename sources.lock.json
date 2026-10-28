@@ -373,6 +373,10 @@
       "sha256": "66d29dd13eb5c1d0c68962b6e0b842a38cb441356dd4cf30eb00edd86d99aa36",
       "executable": false
     },
+    "docs/commuter-dependent-care.md": {
+      "sha256": "54a7f6c18facff9a07abf640a9b442aa18a4afade56660b207691b7b7af4b430",
+      "executable": false
+    },
     "docs/contract/acceptance-before-cleanup.md": {
       "sha256": "4763f2c9c020227c844832851824d9af79cf3c6324246e0168b3265c88808cea",
       "executable": false
@@ -2037,6 +2041,14 @@
       "sha256": "a7c6e9ae6eeee359e3be8cb492698f41e9d1675b2b70edb5ac9b949a8cef6df3",
       "executable": false
     },
+    "src/envelope/benefits/commuter-dependent-care.ts": {
+      "sha256": "0f37ff9ae0cc107ad4e10513f5b8c12ebc523dc8c428198639905484143771d8",
+      "executable": false
+    },
+    "src/envelope/benefits/http.ts": {
+      "sha256": "45b304cac68b0926252d5df225d796fe4f9b4bd1b0edb40e2eaed0bb8b1c7b7c",
+      "executable": false
+    },
     "src/envelope/bonus-runs.ts": {
       "sha256": "746a3729eeeef7fd6eb94385995feb7681f3d3c6690613889a2521a1f24792cb",
       "executable": false
@@ -2094,7 +2106,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "dd6a14d72cee9478dde7406e8881ede1a6d7cb50905689fb43ee306ac0ba9751",
+      "sha256": "f49f5e6a0277227d9303823afbb14d7fe4c1d6c21bdcdb2bbda427e94e19cbef",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2202,7 +2214,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "56fb5e6fa570a6535a319a0b7ab748e802967eee606ed1fc78908912630ec351",
+      "sha256": "cf25ba648d4fb9cc5d5c50b7d29b802e5fdc41fa18c14b7958fb5997c59cf426",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2514,7 +2526,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "305fc97c4318c36968ae8d969bda1f93ab8e02f92efeb097ba41d2bb4bc50b46",
+      "sha256": "46113072a853b186d8ba785feaef4d1d991ff83cceed6166a5adbf8b023d53ee",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3701,6 +3713,10 @@
       "sha256": "89574c19ee83ea3813c1c536162cab7368e395257414cc009ebc63ada94f3e0f",
       "executable": false
     },
+    "tests/commuter-benefits-runtime.mjs": {
+      "sha256": "6ef73faba298f1cfdf1745e55c08def458bb8452dce6fe7676b2d24df14127a6",
+      "executable": false
+    },
     "tests/earnings-intake.mjs": {
       "sha256": "e2e962880de1217a4248884b6f1888c45dacbc99174f5baa619fa716a452777f",
       "executable": false
@@ -3870,7 +3886,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "ec64cff64e278d37b45f31f646ba76255c578f14277d5312d5b4660fe7d7c9bc",
+      "sha256": "9c89419fd041d3d01cb90ba750af2d0194ef7445aadd7238d8c6a0904e82619a",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3886,7 +3902,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "2d77174b1aeffa2868e41426255588a33e10836144143dbe43f53fe5307f6468",
+      "sha256": "9e4a666913817a867cfc6646cc42b3709cc661526c90c75897e878dffd8d3656",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

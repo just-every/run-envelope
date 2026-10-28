@@ -1,5 +1,7 @@
 import { calculationPreview, type PreviewInput } from './calculation/preview'
 import { stateCoverage } from './calculation/states'
+import { benefitsResponse } from './benefits/http'
+import { CommuterDependentCare } from './benefits/commuter-dependent-care'
 import { accountingResponse } from './accounting/http'
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
@@ -456,6 +458,8 @@ export async function payrollResponse(
     verificationLanguage = (url.searchParams.get('lang') ?? value.lang ?? (request.headers.get('accept-language')?.startsWith('es') ? 'es' : 'en')) === 'es' ? 'es' : 'en'
     const claim = await claimsResponse({ ui, post, parts, value, records, session, companies })
     if (claim) return claim
+    const benefits = await benefitsResponse(ui, post, parts, value, records)
+    if (benefits) return benefits
     const industry = await industryResponse({ ui, post, parts, value, records, session, companies })
     if (industry) return industry
     const accounting = await accountingResponse({ ui, post, parts, value, records, session, companies })
@@ -471,10 +475,14 @@ export async function payrollResponse(
       if(parts[2]==='calculation-coverage' && !post) return json(stateCoverage())
       if(parts[2]==='calculation-preview' && post){
         let result
-        try { result=calculationPreview(value as unknown as PreviewInput) }
-        catch(error){ throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
-        // A preview neither reads employee records nor retains supplied personal
-        // data. Repeat current authority immediately before returning its result.
+        try {
+          const calculation=value as unknown as PreviewInput
+          const prepared=calculation.benefits?await new CommuterDependentCare(new WorkspaceStore(records)).prepare(actor,calculation.payDate,calculation.benefits):undefined
+          result=calculationPreview(calculation,prepared)
+        }
+        catch(error){ if(error instanceof PayrollError)throw error;throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
+        // Repeat current authority immediately before exposing the result. Benefit
+        // inputs are read from private versions, never advanced by this preview.
         await records.company(await records.actor(parts[1]))
         return json(result)
       }
