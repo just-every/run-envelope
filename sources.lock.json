@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "cb6c032b6fc600af4192695594d73792e048de241a7d6818fb78ceb1504a0987",
+      "sha256": "8afb7d08037ab98b54b91fd8f4b513584991ffbb08b01946083ff6fd98dee790",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "87aee343cf72f6a11e31310f181571f16447310087a4795f019945ab9ac444ff",
+      "sha256": "17da6b98056483a572da8b3ad92275a5387ad9f1f299c31a8da176bcd3c55d9d",
       "executable": false
     },
     "deploy-demo.json": {
@@ -355,6 +355,10 @@
     },
     "deploy.json": {
       "sha256": "9fbd3eb711e1126cefea798fcf46da73743037debdf29c455c413b0215ad27cc",
+      "executable": false
+    },
+    "docs/accounting-preparation.md": {
+      "sha256": "3e6b9d83f442ad48e7c9cdc26f6c26f8c96fb623741402dc73f39e6f46ca71a5",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -1477,6 +1481,14 @@
       "sha256": "6ee8e5fbe47c7d4daf5528555a305b115147920e7803c492ae0d3b851c510020",
       "executable": false
     },
+    "src/envelope/accounting/http.tsx": {
+      "sha256": "8695bdff221b89a049d67a180fce70636a728575c9a32770730a08e9e6700f2a",
+      "executable": false
+    },
+    "src/envelope/accounting/journals.ts": {
+      "sha256": "aad2c3828a670e17eaa468957ec6c98da57559c512092876e7aac06bb6c55fd6",
+      "executable": false
+    },
     "src/envelope/agent-pages.tsx": {
       "sha256": "ce839fe73a255781eb14462c8148241db0c01c6ce2fbff8ad2c80ba2575a6d98",
       "executable": false
@@ -1594,7 +1606,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "a88b34fd2106a0f055bd7e41ceaa992678c555342eb2cbb5408a83b944cf178c",
+      "sha256": "34e5d5a0affa8eace8dfc79f8b93e330d38cab70c67ba4a3065938fde2315ad1",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -1718,7 +1730,7 @@
       "executable": false
     },
     "src/envelope/pages.tsx": {
-      "sha256": "55c92b213507906f2afd0f44c6295fdaa96efd3b52384b0fa69a0fd4fa52f74f",
+      "sha256": "5a3c9ac74fa26340bb69019c47803cc8a44de6e2a3c58e4ccb871aa80fb28bf1",
       "executable": false
     },
     "src/envelope/people/hire-pages.tsx": {
@@ -1906,7 +1918,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "57d319827336b978be227aba944f0eb55ff8ee8f7311e268a128361cd13bb864",
+      "sha256": "917eb0d019560cb50c910f91ff59b899a1c07e327eb6c350d4d51aae18f675c2",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -2997,6 +3009,10 @@
       "sha256": "23896ba1331530dc43fb39deb60e5f6432a7a88fc09cbf80499c6f88a84411b2",
       "executable": false
     },
+    "tests/accounting-runtime.mjs": {
+      "sha256": "beb01eee30ba24f1ab8bdb05a04ad01a7e11fe083cb8ae5e32794d0efe72925f",
+      "executable": false
+    },
     "tests/archive-adoption.mjs": {
       "sha256": "565efa819e29652f7ecc60b07ca4f2c1c5266773ccfffd24ac8c55c550a4a477",
       "executable": false
@@ -3230,7 +3246,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "b3edaf4347768a3daececa77d197cf87e7fd08e79e0f7ea27114dcb4ecff1a17",
+      "sha256": "a8c8ff0c81b41c1fbb86b2114b229c4b8c7972f5117d3350cb99fb7c64687242",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3246,7 +3262,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "5075267fdb50ca9808a5076cde09eb87c4958b5d81b9ef4d00facda3a252576f",
+      "sha256": "677b6e4879cba7bcff4bac4602566ebb753bdddc029242f158db7741f6d75190",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
