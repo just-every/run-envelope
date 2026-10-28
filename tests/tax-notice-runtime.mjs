@@ -81,7 +81,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await capture('reopened')
   // A separately reviewed official-source SUI edition can be linked, never self-approved by a notice.
   const owner=(await data(base+'/grants')).find(g=>g.role==='owner').operatorId,backup='synthetic-envelope-2526',token=randomBytes(32).toString('base64url'),hash=await hashToken(settings.SESSION_SECRET,'session',token)
-  await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${backup}','synthetic-envelope-2526@example.com','Notice backup','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-notice-session','${hash}','${backup}',1,'native',${Date.parse('2026-10-27T00:00:00Z')},${Date.parse('2026-11-01T00:00:00Z')})`)
+  await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${backup}','synthetic-envelope-2526' || char(64) || 'example.com','Notice backup','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('synthetic-envelope-notice-session','${hash}','${backup}',1,'native',${Date.parse('2026-10-27T00:00:00Z')},${Date.parse('2026-11-01T00:00:00Z')})`)
   await data(base+'/grants',{operatorId:backup,version:0,role:'payroll-admin',locations:['*'],fields:['tax','compensation'],actions:['records:read','records:write','rates:propose','rates:approve','notices:read','notices:write','notices:approve']})
   const who=localCookieName('operator_session_local',origin)+'='+token
   for(const path of [door,door+'/review',door+'/original/1/0']) assert.equal((await call(path,undefined,who)).status,403,'Delegated notice scope does not gain the conservative owner case permission')
@@ -334,7 +334,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   for (const [role,powers] of [['preparer',['cases:intake','cases:investigate','cases:review']],['reviewer',['cases:review']],['custodian',['cases:download']]]) {
     const id='synthetic-envelope-case-'+role,secret=randomBytes(32).toString('base64url'),hashed=await hashToken(settings.SESSION_SECRET,'session',secret)
     await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES ('${id}','${id}' || char(64) || 'example.com','Notice ${role}','member','active',1,1); INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('${id}','${hashed}','${id}',1,'native',${Date.parse('2026-10-27T00:00:00Z')},${Date.parse('2026-11-01T00:00:00Z')})`)
-    await data(base+'/grants',{operatorId:id,version:0,role:'accountant',locations:[location.id],fields:sensitiveFields,actions:['notices:read','notices:write',...powers]})
+    await data(base+'/grants',{operatorId:id,version:0,role:'accountant',locations:[location.id],fields:sensitiveFields,actions:['records:read','notices:read','notices:write',...powers]})
     staff[role]={id,cookie:localCookieName('operator_session_local',origin)+'='+secret}
   }
   const teamNotice=await data(base+'/notices',{locationId:location.id,reference:'Synthetic delegated notice',body:original.toString()},201,staff.preparer.cookie),teamDoor=base+'/notices/'+teamNotice.id+'/case'
@@ -342,7 +342,10 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   assert.equal((await data(teamDoor,undefined,200,staff.reviewer.cookie))[0].createdBy,staff.preparer.id)
   const beforePolicy=await data(teamDoor+'/review',undefined,200,staff.reviewer.cookie)
   await data(base+'/case-policy',{version:0,requireSeparateReviewer:true},403,staff.preparer.cookie)
-  await data(base+'/case-policy',{version:0,requireSeparateReviewer:true})
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+base.replace('/api/','/app/')+'/grants')
+  const casePolicyForm=page.locator('form[action$="/case-policy"]')
+  await casePolicyForm.locator('[name="requireSeparateReviewer"]').selectOption('true')
+  const [policySaved]=await Promise.all([page.waitForResponse(r=>r.request().method()==='POST' && r.url().endsWith('/case-policy')),page.waitForNavigation({waitUntil:'load'}),casePolicyForm.getByRole('button',{name:'Save notice case review policy',exact:true}).click()]);assert.equal(policySaved.status(),303)
   await data(teamDoor+'/approve',{version:1,reviewToken:beforePolicy.reviewToken},409,staff.reviewer.cookie)
   await data(teamDoor+'/review',undefined,403,staff.preparer.cookie)
   await data(teamDoor+'/evidence',{...evidence,version:1},200,staff.preparer.cookie)
@@ -369,7 +372,10 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   }
   assert.deepEqual(await caseCount(),unchanged,'Out-of-location attempts retain no new case version')
   const staffContext=await browser.newContext();await staffContext.addCookies([{name:staff.preparer.cookie.split('=')[0],value:staff.preparer.cookie.split('=')[1],url:origin}]);const staffPage=await staffContext.newPage()
-  await staffPage.setViewportSize({width:1440,height:1000});await staffPage.goto(origin+teamDoor.replace('/api/','/app/'))
+  await staffPage.setViewportSize({width:1440,height:1000});await staffPage.goto(origin+base.replace('/api/','/app/')+'/notices')
+  await staffPage.getByRole('link',{name:'Synthetic delegated notice',exact:true}).click()
+  for(const width of [1440,390]) {await staffPage.setViewportSize({width,height:1000});assert.equal(await staffPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await staffPage.screenshot({path:join(proof,'notice-delegated-entry-'+width+'.png'),fullPage:true})}
+  await staffPage.setViewportSize({width:1440,height:1000});await staffPage.getByRole('link',{name:'Manage notice evidence and deadlines',exact:true}).click()
   assert.equal(await staffPage.getByRole('link',{name:'Download retained notice original',exact:true}).count(),0)
   assert.ok((await staffPage.locator('main').innerText()).includes(staff.reviewer.id))
   for(const width of [1440,390]) {await staffPage.setViewportSize({width,height:1000});assert.equal(await staffPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await staffPage.screenshot({path:join(proof,'notice-delegated-case-'+width+'.png'),fullPage:true})}
@@ -389,8 +395,33 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   await data(teamDoor,undefined,403,staff.custodian.cookie);await data(teamDoor+'/original/1/0',undefined,403,staff.custodian.cookie)
   const caseAudit=await sql(`SELECT actor_id,action,target_id,version,occurred_at FROM env_audit WHERE company_id='${company.id}' AND target_id='${teamNotice.id}'`)
   assert.ok(caseAudit.some(e=>e.actor_id===staff.preparer.id && e.action==='workspace.tax-notice-case.recorded' && e.version===1 && e.occurred_at>0))
+  assert.ok(caseAudit.some(e=>e.actor_id===staff.reviewer.id && e.action==='notice.case.read' && e.version===1 && e.occurred_at>0))
   assert.ok(caseAudit.some(e=>e.actor_id===staff.reviewer.id && e.action==='workspace.tax-notice-case.approved' && e.version===2 && e.occurred_at>0))
   assert.ok(caseAudit.some(e=>e.actor_id===staff.custodian.id && e.action==='notice.case.original.read' && e.version===1 && e.occurred_at>0))
+  // A held worker's case stays private, and eligible erasure retires its intake source.
+  const linkedPerson=await data(base+'/people',{name:'Synthetic delegated notice worker',locationId:location.id},201)
+  const ownerTokenHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1])
+  const ownerSession=(await sql(`SELECT id,operator_id,operator_version FROM oa_sessions WHERE token_hash='${ownerTokenHash}'`))[0]
+  await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) VALUES ('synthetic-envelope-case-proof','synthetic-envelope-case-proof','${ownerSession.id}','${ownerSession.operator_id}',${ownerSession.operator_version},'credentials:mint','/app',unixepoch('subsec')*1000,unixepoch('subsec')*1000+600000,unixepoch('subsec')*1000)`)
+  const teamSource=await data(base+'/notices/'+teamNotice.id)
+  await data(base+'/notices/'+teamNotice.id+'/people',{personId:linkedPerson.id,digest:teamSource.digest,consent:true},201)
+  const privacyDoor=base+'/people/'+linkedPerson.id+'/privacy',inventory=await data(privacyDoor)
+  assert.equal(inventory.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='tax-notice-case' && r.key.object_id===teamNotice.id).length,3)
+  await data(privacyDoor+'/request',{consent:true,fingerprint:inventory.fingerprint})
+  for(const target of [teamDoor,teamDoor+'/review',teamDoor+'/original/1/0']) await data(target,undefined,403,staff.preparer.cookie)
+  await data(teamDoor,{...correction,version:3},403,staff.preparer.cookie)
+  await data(privacyDoor+'/release',{consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(r=>r.id),legalBasis:'Unpermitted delegated release'},403,staff.preparer.cookie)
+  const heldDownload=await call(teamDoor+'/original/1/0');assert.equal(heldDownload.status,200);assert.deepEqual(Buffer.from(await heldDownload.arrayBuffer()),original)
+  await data(base+'/people/'+linkedPerson.id+'/erase',{version:inventory.version,consent:true,fingerprint:inventory.fingerprint},409)
+  const custodyRelease={consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(r=>r.id),legalBasis:'Synthetic reviewed expired retention with no continuing hold.',custodian:'Native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
+  await data(privacyDoor+'/retain',custodyRelease)
+  await data(privacyDoor+'/release',custodyRelease)
+  await data(base+'/people/'+linkedPerson.id+'/erase',{...custodyRelease,version:inventory.version})
+  for(const target of [teamDoor,teamDoor+'/review',teamDoor+'/original/1/0',teamDoor+'/original/2/1']) await data(target,undefined,403)
+  await data(teamDoor,{...correction,version:3},403)
+  await data(base+'/notices',{locationId:location.id,reference:'Synthetic delegated notice',body:original.toString()},409,staff.preparer.cookie)
+  assert.deepEqual(await sql(`SELECT object_id FROM env_workspace_versions WHERE company_id='${company.id}' AND kind='tax-notice-case' AND object_id='${teamNotice.id}'`),[])
+  const erasedAudit=await data(base+'/audit');assert.equal(erasedAudit.some(r=>r.targetId===teamNotice.id || r.targetId===linkedPerson.id),false,'Case decisions and original reads anonymize erased targets')
   const foreign=await data('/api/envelope/companies',{name:'Synthetic foreign notice employer',ein:'00-0002526'},201)
   assert.equal((await call(door.replace(company.id,foreign.id))).status,403)
   assert.equal((await call(door,undefined,'')).status,401)
@@ -402,5 +433,5 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   const counts=await sql(`SELECT (SELECT COUNT(*) FROM env_notice_dispatches) AS dispatches,(SELECT COUNT(*) FROM env_workspace_versions WHERE kind='earnings-run') AS runs`)
   assert.deepEqual(counts,[{dispatches:0,runs:4}],'Notice calculation retains four run versions and no outbound send')
  } finally {await browser.close()}
- console.log('TAX-NOTICE-CASES passed: original custody, checked extraction and correction, exact review, deposit evidence, honest nonzero disposition, replay, overdue and reopening, exact reviewed SUI linkage, capped employer liability and current owner refusals; legacy worker-matched IRS instruction review, lower-election refusal, higher elections and reviewed modification or release; selected screens at 1440 and 390. Calculated legacy and current-form comparisons, modification and release passed; actual payroll payment and independent agency closure remain unproved.')
+ console.log('TAX-NOTICE-CASES passed: original custody, checked extraction and correction, exact review, deposit evidence, honest nonzero disposition, replay, overdue and reopening, exact reviewed SUI linkage, capped employer liability and current owner refusals; legacy worker-matched IRS instruction review, lower-election refusal, higher elections and reviewed modification or release; selected screens at 1440 and 390. Calculated legacy and current-form comparisons, modification and release passed; delegated casework, distinct review, original grants, revocation, held custody and eligible erasure with retired intake replay passed. Actual payroll payment and independent agency closure remain unproved.')
 }
