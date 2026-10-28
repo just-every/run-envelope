@@ -2795,8 +2795,14 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     assert.equal(bulk.data.diff.people[1].afterEarningsCents,37500,'re-preview includes newly recorded minutes')
     await data(door + '/pay-change/' + change.id + '/approve',{version:bulk.version,reviewToken:bulk.reviewToken})
     const ownerId = (await sql("SELECT id FROM oa_operators WHERE email='owner@example.com'"))[0].id
-    assert.ok((await data(base + '/audit')).some((e) => e.action === 'workspace.pay-change.approved' &&
+    const bulkAudit = await data(base + '/audit')
+    assert.ok(bulkAudit.some((e) => e.action === 'workspace.pay-change.approved' &&
       e.targetId === change.id && e.version === bulk.version && e.actorId === ownerId), 'the audit door names the reviewed bulk version and its approver')
+    assert.deepEqual(
+      [bulkAudit[0].action,bulkAudit[0].targetId,bulkAudit[0].version,bulkAudit[0].actorId],
+      ['workspace.pay-change.approved',change.id,bulk.version,ownerId],
+      'the latest appended audit event stays first when the clock gives many events the same timestamp',
+    )
     await data(door + '/earnings-run',{...hoursPeriod,id:'synthetic-envelope-134',version:0},201)
     const applied = (await data(door)).runs.find((r) => r.id === 'synthetic-envelope-134')
     assert.equal(applied.data.people.find((p) => p.id === a.id).earningsCents,763889)
