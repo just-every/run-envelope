@@ -1,3 +1,4 @@
+import { answerAgentPolicy } from './agent-policy-runtime.mjs'
 // Shared by the existing emitted-Worker runtime journey; no fake app/auth routes.
 // Only synthetic identity sessions are fixtures. Every payroll record, grant,
 // review, read and denial uses the actual HTTP application and migrated D1.
@@ -809,6 +810,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
         're-granting must not revive a revoked session',
       ),
     )
+    await answerAgentPolicy({origin,cookie,company:a})
     // AGENT-DRAFTS: issue through native settings, then use the real MCP transport.
     const credentialInput = {
       name: 'synthetic-envelope-14',
@@ -1451,6 +1453,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       sponsorCookie,
       201,
     )
+    await answerAgentPolicy({origin,cookie:sponsorCookie,company:sponsoredCompany.id})
     const sponsored = await data(
       base + '/' + sponsoredCompany.id + '/agents',
       {
@@ -3281,6 +3284,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
   const company=(await data(base,{name:'Brightside Colorado Studio',ein:'00-0000052'},cookie,201)).id,
     other=(await data(base,{name:'Northpaw separate client',ein:'00-0000053'},cookie,201)).id,
     api=base+'/'+company, ui='/app/envelope/companies/'+company
+  await answerAgentPolicy({origin,cookie,company})
   const ca=await data(api+'/locations',{name:'California client office',state:'CA'},cookie,201), co=await data(api+'/locations',{name:'Colorado studio',state:'CO'},cookie,201)
   const allActions=['records:read','rates:propose','notices:read','notices:write','notices:approve','notices:dispatch']
   const sponsors={}
