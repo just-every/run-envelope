@@ -983,7 +983,8 @@ export async function payrollResponse(
         else if (tail.length===4 && ['approve','withdraw'].includes(tail[3]) && post) {const result=await onboarding.decide(actor,personId,value,tail[3]==='withdraw');response=ui?redirect(back):json(result)}
         else if (tail.length===6 && tail[3]==='original' && !post) {
           const original=await onboarding.original(actor,personId,tail[4],tail[5])
-          response=new Response(original,{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"'}})
+          response=new Response(original,{headers:{...headers,'content-type':['application','octet-stream'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"',
+            'content-security-policy':"sandbox; default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",'x-download-options':'noopen'}})
         } else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='verification') {
         const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'+(verificationLanguage==='es'?'?lang=es':'')

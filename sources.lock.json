@@ -2242,7 +2242,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "130dca979f1eb13b01d05e9d00fe71ad0039c51ac1524657fd2bd8f52ea23316",
+      "sha256": "afe11e56638fd3e0a9fdddffc14c60b5c906314bd543a2b15998380ae4f8c164",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -3718,7 +3718,7 @@
       "executable": false
     },
     "tests/claims-browser.mjs": {
-      "sha256": "f773baee217759891d9f644cb97b5e5b2fe9b73843d845c7db803cdb3880baac",
+      "sha256": "230b53ee37e69d8c3fe946eda3a3b0d911e2dacacd5588dfd5a306c03984b791",
       "executable": false
     },
     "tests/claims-fixture.mjs": {
@@ -3910,7 +3910,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "24eb2fdea305a2cd9e23bda3ad2e72a8ff38b3af96de29c2beabe9605be8d1bb",
+      "sha256": "b3194ad7e5cb8ed6d670e15e60ededf641002ee4e2dfbdb13d00704361d21825",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
@@ -3926,7 +3926,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "31263143ba8df8aba3f895f338188d5093038f6cab6294059cb950c1a2b515e0",
+      "sha256": "ebdc1899d28865e67f16b32baae0e865234be55b3a0fc7d2022bca534e99243a",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {

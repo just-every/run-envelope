@@ -369,7 +369,7 @@ try {
         response.on('end',()=>{const headers=new Headers();for(let i=0;i<response.rawHeaders.length;i+=2)headers.append(response.rawHeaders[i],response.rawHeaders[i+1]);resolve(new Response([204,304].includes(response.statusCode)?null:Buffer.concat(chunks),{status:response.statusCode,headers}))})
       });recordPrivateInput(url,init.body);request.on('error',reject);request.end(init.body)
     })}
-    try{await claimsWorker.ready;await claimsJourney({worker:transport,origin:claimsOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql,settings,edge})}
+    try{await claimsWorker.ready;await claimsJourney({worker:transport,origin:claimsOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,edge})}
     finally{await claimsWorker.dispose();worker=await launch(settings);await waitForWorker()}
   }
   if (!selected || selected.includes('identity')) {
