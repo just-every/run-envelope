@@ -88,18 +88,34 @@ export function retirementContribution(e: RetirementElection, grossCents: number
   const additionsRemaining = Math.max(0,Math.min(rule.additions,p.planCompensationCents+grossCents)-p.planAnnualAdditionsCents)
   const regularRoom = Math.min(regularRemaining,additionsRemaining,grossCents)
   // Traditional first is the declared allocation order. Never convert an elected traditional amount to Roth.
-  const regularTraditional = Math.min(e.traditionalCents,regularRoom)
-  const regularRoth = Math.min(e.rothCents,regularRoom-regularTraditional)
+  let regularTraditional = Math.min(e.traditionalCents,regularRoom)
+  let regularRoth = Math.min(e.rothCents,regularRoom-regularTraditional)
   let catchRoom = Math.min(Math.max(0,catchUpLimit-p.catchUpCents),grossCents-regularTraditional-regularRoth)
-  const catchTraditional = rothCatchUpRequired ? 0 : Math.min(e.traditionalCents-regularTraditional,catchRoom)
+  let catchTraditional = rothCatchUpRequired ? 0 : Math.min(e.traditionalCents-regularTraditional,catchRoom)
   catchRoom -= catchTraditional
-  const catchRoth = e.rothAllowed ? Math.min(e.rothCents-regularRoth,catchRoom) : 0
+  let catchRoth = e.rothAllowed ? Math.min(e.rothCents-regularRoth,catchRoom) : 0
+  const matchCompensationCents = Math.min(grossCents,Math.max(0,rule.compensation-p.planCompensationCents))
+  const matchFor = (eligible: number) => roundRatio(BigInt(Math.min(eligible,
+    Math.floor(matchCompensationCents*e.match.compensationBasisPoints/10000)))*BigInt(e.match.rateBasisPoints),10000n)
+  // The additions limit includes the match, but excludes permitted catch-up.
+  // Reclassify only the elected character, preserving traditional-first regular allocation.
+  const regularCents = regularTraditional+regularRoth
+  const employeeBeforeMatch = regularCents+catchTraditional+catchRoth
+  let low = 0, high = Math.min(catchUpLimit-p.catchUpCents-catchTraditional-catchRoth,
+    regularRoth+(rothCatchUpRequired ? 0 : regularTraditional))
+  while (low < high) {
+    const shift = Math.floor((low+high)/2)
+    const match = matchFor(e.match.includesCatchUp ? employeeBeforeMatch : regularCents-shift)
+    if (regularCents-shift+match <= additionsRemaining) high = shift
+    else low = shift+1
+  }
+  const rothShift = Math.min(regularRoth,low), traditionalShift = low-rothShift
+  regularRoth -= rothShift; catchRoth += rothShift
+  regularTraditional -= traditionalShift; catchTraditional += traditionalShift
   const traditionalCents = regularTraditional+catchTraditional, rothCents = regularRoth+catchRoth
   const employeeCents = traditionalCents+rothCents, catchUpCents = catchTraditional+catchRoth
-  const matchCompensationCents = Math.min(grossCents,Math.max(0,rule.compensation-p.planCompensationCents))
   const matchEligible = e.match.includesCatchUp ? employeeCents : employeeCents-catchUpCents
-  const matchBase = Math.min(matchEligible,Math.floor(matchCompensationCents*e.match.compensationBasisPoints/10000))
-  const requestedMatch = roundRatio(BigInt(matchBase)*BigInt(e.match.rateBasisPoints),10000n)
+  const requestedMatch = matchFor(matchEligible)
   const employerMatchCents = Math.min(requestedMatch,Math.max(0,additionsRemaining-regularTraditional-regularRoth))
   const unallocatedCents = e.traditionalCents+e.rothCents-employeeCents
   return { taxYear:e.taxYear,ageAtYearEnd:age,limits:{electiveCents:rule.elective,catchUpCents:catchUpLimit,annualAdditionsCents:rule.additions,compensationCents:rule.compensation},
@@ -108,7 +124,7 @@ export function retirementContribution(e: RetirementElection, grossCents: number
     proposedFederalIncomeTaxWagesCents:grossCents-traditionalCents,proposedFicaWagesCents:grossCents,
     priorCombinedDeferralsCents:priorTotal,proposedCombinedDeferralsCents:priorTotal+employeeCents,
     proposedPlanAnnualAdditionsCents:p.planAnnualAdditionsCents+employeeCents-catchUpCents+employerMatchCents,
-    allocationOrder:'Traditional then Roth within the regular limit, followed by permitted elected catch-up; no automatic Roth conversion.',
+    allocationOrder:'Traditional then Roth within the regular limit, with permitted elected catch-up accounting for employer match in annual additions; no automatic Roth conversion.',
     sources:retirementSources(e.taxYear),status:'held-proposal',collected:false,providerAccepted:false,
     holds:[...(unallocatedCents ? ['Election exceeds available compensation or combined limits, or requires a reviewed Roth catch-up election.'] : []),
       'Preparation only. Complete plan eligibility, nondiscrimination and payroll deduction review, contribution remittance and provider acceptance remain required.'] }

@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "7c45dbe79892234788a09d0ccf12dbc9fbcbb57d151ecedec98466c21b5096c3",
+      "sha256": "21c7bc616261b3c4305420bb6ddec2d13d75a293e99d81f8c0031af32c78e631",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "8119230b0818a142b38729a5b0377949acc361458778b2448dd5a7068b559d50",
+      "sha256": "0901bb89399a0676f258db189cbbc24d6fa8225ac7ad253bb1e3be27761e76b8",
       "executable": false
     },
     "deploy-demo.json": {
@@ -481,6 +481,10 @@
       "sha256": "ae0c4ca04ad928ea15d4f03a30173f691440fcfb6ef6b83e7854c1c6ee7fb37b",
       "executable": false
     },
+    "docs/hawaii-plan-shares.md": {
+      "sha256": "46d8d7662a6056d301cf6814440c393be7964761dc8b61f4c1ac5ac3d6b78325",
+      "executable": false
+    },
     "docs/industry-forms.md": {
       "sha256": "289277f589aaa90a81a58600dbeadbd0a84f713da3b884b385474bcf57cb24f0",
       "executable": false
@@ -578,7 +582,7 @@
       "executable": false
     },
     "docs/retirement-preparation.md": {
-      "sha256": "330ca4c789edfa77fd56991202ebe3b03076cadbb2aeddf7ed585a33199b1473",
+      "sha256": "a94983e7db8f634227d9c9447f0b5dcae2140a2987bbd59ac11e1d9c3a27a96e",
       "executable": false
     },
     "docs/run-earnings-intake.md": {
@@ -2041,12 +2045,16 @@
       "sha256": "a7c6e9ae6eeee359e3be8cb492698f41e9d1675b2b70edb5ac9b949a8cef6df3",
       "executable": false
     },
+    "src/envelope/benefits/hi-plan-shares.ts": {
+      "sha256": "6ccc6b0ff45ef8c3bfa06a013a1ded89a9386718aff3087ebe7480e31741222a",
+      "executable": false
+    },
     "src/envelope/benefits/retirement-records.ts": {
       "sha256": "6f8dae63be940959b958d805c2459c1d18d2c83bc155ff13935bee56e54806e3",
       "executable": false
     },
     "src/envelope/benefits/retirement.ts": {
-      "sha256": "c61d8278d48a83ece92c22135b3dcc1271e9a672e7922aac481d1f4e5e717247",
+      "sha256": "9ef3052f23602e8e4a8616fcf594f36a69dd751bc2033e5964f02df9d66b2b3d",
       "executable": false
     },
     "src/envelope/bonus-runs.ts": {
@@ -2106,7 +2114,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "af49db7881063eb7247296363dda1f5ded64d954c60e4dbb1b2aa860226aaa52",
+      "sha256": "cabbfc85a35ee4ec0a154e62c52d61aaf0e516024a68248e47aea5a28dbafebd",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2214,7 +2222,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "32dd8026fff4bcaa40e40017aaadfbf325a349863a3d8bb05a97600754ca39f1",
+      "sha256": "0d4eb86f768d989ae3d76d772dcf70b924b787279bfd854e7598a821074196aa",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2526,7 +2534,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "f2af431957d85805178420efa8253cf6524fdcc650be8e92e475539482525ad8",
+      "sha256": "408904b19e9e9e4f019687d1578ac8a4a1d3755dede7c5948d6519cdbad23dd0",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -3825,6 +3833,10 @@
       "sha256": "8e91e1da13d870d33704c0d78eeab809292a6e84deb24e39e4ce9641fe76919c",
       "executable": false
     },
+    "tests/hi-benefits-runtime.mjs": {
+      "sha256": "f3a4f2d48e5120ea8a6b1a16e7c45424cb2749ee89df280074b84b62efed0776",
+      "executable": false
+    },
     "tests/human-proof-fixture.mjs": {
       "sha256": "878549599d1eb4b4eedd219822874590d5ec1d762863ce571752b6d47f3910ea",
       "executable": false
@@ -3878,7 +3890,7 @@
       "executable": false
     },
     "tests/retirement-benefits-runtime.mjs": {
-      "sha256": "eb36fe640e01a27dc751f670d104f7d0bb134b80eb627c09ffe4d8f3fa2e1771",
+      "sha256": "b751582d08bd22abf968d8dae96bde7bd1b52787d27aa53b20826610b716b548",
       "executable": false
     },
     "tests/run-intake.mjs": {
@@ -3886,7 +3898,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "3f2229d995f0cb277dd156a2f4e4b1338a86d47392832bd6d021e617ba8349b4",
+      "sha256": "7dc696a480780f60707bd82bbe5ea3015c35b97d63bc45ad2a697e738e05146e",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -3902,7 +3914,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "2cb8c4e389b481ac574f987d4e37fe21ed83d509ebafd2924a1135e514eb57fd",
+      "sha256": "15888ebec88b7f14ae4b4c41bbd2dd2ed4090a33da077581b7213966dd393723",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

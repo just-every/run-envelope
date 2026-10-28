@@ -28,6 +28,8 @@ The 2025 edition uses [IRS Notice 2024-80](https://www.irs.gov/pub/irs-drop/n-24
 
 Combined traditional and Roth elective deferrals include the explicit other-plan amount. Catch-up eligibility uses age at calendar year end and reviewed plan permission. The enhanced age range is 60 through 63; 2026 sponsor wages above the prior-year threshold require elected Roth catch-up. Employer match uses the remaining annual compensation cap and annual additions room; catch-up is excluded from annual additions. Existing excesses require correction, rather than treating a negative remaining balance as permission.
 
+When regular deferrals would leave insufficient annual additions room for the match, eligible elected contributions use remaining catch-up treatment to accommodate that match. The proposal retains each elected traditional and Roth amount without conversion, respects unused catch-up capacity and any Roth-only requirement, and recalculates a match that excludes catch-up from the resulting regular amount. Employer match itself remains subject to the annual additions ceiling.
+
 ## Remaining ENV-019 work
 
 Section 125, HSA and FSA, SIMPLE IRA, complete eligibility and effective-plan coverage, corrected settled payroll, census synchronization, accepted contribution files and funds for Guideline, Human Interest, Vestwell, Betterment at Work and Ubiquity, and mandated auto-IRA registration, exemption, contribution and California opt-out outcomes remain owed. No owner-authorized payment rail, employer tenant or provider access is established here. Official-schema provider reconciliation and broader native preparation remain implementation work; absent access does not prove them. ENV-091 through ENV-094 keep their separate contracted arrangements.

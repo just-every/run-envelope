@@ -77,6 +77,13 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
   {name:'prior catch-up consumes remaining room',e:{birthDate:'1970-01-01',traditionalCents:20000,rothCents:0},prior:{traditionalCents:3240000,catchUpCents:790000,planAnnualAdditionsCents:2450000},want:[10000,0,10000,6000,10000]},
   {name:'match respects annual compensation',prior:{planCompensationCents:35990000},want:[20000,20000,0,600,0]},
   {name:'match respects annual additions',prior:{planAnnualAdditionsCents:7199000},e:{traditionalCents:500,rothCents:0},want:[500,0,0,500,0]},
+  {name:'age fifty-five annual additions catch-up preserves match',e:{birthDate:'1971-01-01'},prior:{planAnnualAdditionsCents:7190000},want:[20000,20000,36000,6000,0],additions:7200000},
+  {name:'annual additions cannot use ineligible catch-up',prior:{planAnnualAdditionsCents:7190000},want:[10000,0,0,0,30000],additions:7200000},
+  {name:'exhausted catch-up cannot free match room',e:{birthDate:'1971-01-01'},prior:{traditionalCents:800000,catchUpCents:800000,planAnnualAdditionsCents:7190000},want:[10000,0,0,0,30000],additions:7200000},
+  {name:'high wages cannot reclassify traditional as catch-up',e:{birthDate:'1971-01-01',priorYearSponsorFicaWagesCents:15000001,rothCents:0},prior:{planAnnualAdditionsCents:7190000},want:[10000,0,0,0,10000],rothRequired:true,additions:7200000},
+  {name:'elected Roth catch-up frees match room for high wages',e:{birthDate:'1971-01-01',priorYearSponsorFicaWagesCents:15000001,traditionalCents:0,rothCents:40000},prior:{planAnnualAdditionsCents:7190000},want:[0,40000,36000,6000,0],rothRequired:true,additions:7200000},
+  {name:'match excluding catch-up uses reclassified regular amount',e:{birthDate:'1971-01-01',match:{rateBasisPoints:10000,compensationBasisPoints:600,includesCatchUp:false}},prior:{planAnnualAdditionsCents:7190000},want:[20000,20000,35000,5000,0],additions:7200000},
+  {name:'catch-up never expands annual additions for employer match',e:{birthDate:'1971-01-01'},prior:{planAnnualAdditionsCents:7200000},want:[20000,20000,40000,0,0],additions:7200000},
   {name:'plan excludes catch-up from match',e:{birthDate:'1970-01-01',traditionalCents:10000,rothCents:0,match:{rateBasisPoints:5000,compensationBasisPoints:600,includesCatchUp:false}},prior:{traditionalCents:2450000,planAnnualAdditionsCents:2450000},want:[10000,0,10000,0,0]},
   {name:'compensation caps proposed deductions',e:{traditionalCents:90000,rothCents:90000},want:[90000,10000,0,6000,80000]},
  ]
@@ -86,6 +93,7 @@ export async function retirementBenefitsJourney({origin,cookie,sql,settings,rest
   const proposal=await data(door+'/preview',request('synthetic-envelope-case-'+i,payroll(y,c.gross??100000)),201),r=proposal.data.result.contribution
   assert.deepEqual([r.traditionalCents,r.rothCents,r.catchUpCents,r.employerMatchCents,r.unallocatedCents],c.want,c.name)
   assert.equal(r.rothCatchUpRequired,c.rothRequired??false,c.name)
+  if(c.additions!==undefined)assert.equal(r.proposedPlanAnnualAdditionsCents,c.additions,c.name)
   assert.equal(r.collected,false);assert.equal(r.providerAccepted,false)
  }
  await data(door+'/approve',{version,withdraw:true})
