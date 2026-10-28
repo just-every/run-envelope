@@ -62,7 +62,8 @@ export async function nyDblJourney({origin,cookie,sql,settings,restart}) {
   }
   const biweekly=await person()
   await approveEvidence(biweekly,evidence([week(20000),week(20000,{from:'2026-10-26'})]))
-  const twoWeeks=await data(biweekly.door+'/proposals',proposal(20000,{checks:[{reference:'synthetic-envelope-9420',weekFrom:'2026-10-19',wagesCents:20000},{reference:'synthetic-envelope-9421',weekFrom:'2026-10-26',wagesCents:20000}]}),201)
+  const biweeklyInput=proposal(20000,{checks:[{reference:'synthetic-envelope-9420',weekFrom:'2026-10-19',wagesCents:20000},{reference:'synthetic-envelope-9421',weekFrom:'2026-10-26',wagesCents:20000}]})
+  const twoWeeks=await data(biweekly.door+'/proposals',biweeklyInput,201)
   assert.equal(twoWeeks.result.proposedCents,120)
   assert.deepEqual(twoWeeks.result.rows.map(w=>w.proposedCents),[60,60])
   const premium=await person();await approveEvidence(premium,evidence([week(20000)],{attributablePremiumCents:100,priorPremiumOffsetCents:75}))
@@ -90,6 +91,33 @@ export async function nyDblJourney({origin,cookie,sql,settings,restart}) {
   const cashShort=await data(base+'/calculation-preview',{...calc,w4:{...ordinaryW4,step4cExtraWithholdingCents:100000}})
   assert.equal(cashShort.nyDbl.proposedCents,50);assert.equal(cashShort.netCashCents,null)
   assert.ok(cashShort.holds.some(h=>h.code==='regular-wage-cash-insufficient'))
+  const biweeklyCalc={...calc,payDate:'2026-11-06',through:'2026-11-01',frequency:'biweekly',
+    nyDbl:{personId:biweekly.id,proposalId:twoWeeks.id,version:1}}
+  const hourlyWeeks=(amounts)=>({kind:'hourly',weeks:amounts.map((wagesCents,i)=>{
+    const from=['2026-10-19','2026-10-26'][i]
+    return {from,days:[{day:from,segments:[{hoursHundredths:1000,rateCents:wagesCents/10}]}],productionBonusCents:0,premiums:[]}
+  })})
+  const matchingWeeks=await data(base+'/calculation-preview',{...biweeklyCalc,remuneration:hourlyWeeks([20000,20000])})
+  assert.equal(matchingWeeks.nyDbl.proposedCents,120)
+  const mismatchedWeeks=await refused(base+'/calculation-preview',{...biweeklyCalc,remuneration:hourlyWeeks([10000,30000])})
+  assert.equal((await mismatchedWeeks.json()).error,'dbl_weekly_wages_do_not_match_preview')
+  await refused(base+'/calculation-preview',{...biweeklyCalc,remuneration:hourlyWeeks([10000,30000]),w4:{...ordinaryW4,step4cExtraWithholdingCents:100000}})
+  const reversed=hourlyWeeks([20000,20000]);reversed.weeks.reverse()
+  assert.equal((await data(base+'/calculation-preview',{...biweeklyCalc,remuneration:reversed})).nyDbl.proposedCents,120)
+  await refused(base+'/calculation-preview',{...biweeklyCalc,remuneration:hourlyWeeks([40000])})
+  const unallocated=await refused(base+'/calculation-preview',{...biweeklyCalc,remuneration:{kind:'salary',exempt:true,cashCents:40000}})
+  assert.equal((await unallocated.json()).error,'dbl_weekly_wages_required')
+  assert.deepEqual((await data(biweekly.door)).proposals.find(row=>row.id===twoWeeks.id).data.result,twoWeeks.result)
+  await approveEvidence(biweekly,evidence([week(10000),week(30000,{from:'2026-10-26'})],{version:1}))
+  await refused(base+'/calculation-preview',{...biweeklyCalc,remuneration:hourlyWeeks([10000,30000])})
+  const revisedWeeks=await data(biweekly.door+'/proposals',{
+    id:twoWeeks.id,version:1,evidenceVersion:2,
+    checks:biweeklyInput.checks.map((check,i)=>({...check,wagesCents:[10000,30000][i]})),
+  },201)
+  assert.deepEqual(revisedWeeks.result.rows.map(row=>row.proposedCents),[50,60])
+  const revisedPreview=await data(base+'/calculation-preview',{...biweeklyCalc,remuneration:hourlyWeeks([10000,30000]),nyDbl:{...biweeklyCalc.nyDbl,version:2}})
+  assert.equal(revisedPreview.nyDbl.proposedCents,110)
+  assert.equal(revisedPreview.paymentReady,false);assert.equal(revisedPreview.netCashCents,null)
   await refused(p.door+'/remittance',{proposalId:first.id},409)
   await refused(p.door+'/proposals',{...proposal(100),requestedCents:100})
   // Corrections retain history and invalidate the old source review and preparation.

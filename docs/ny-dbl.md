@@ -81,7 +81,11 @@ All paths below are relative to `./api/envelope/companies/{companyId}`.
   encryption, attributed audit, worker custody and erasure fences.
 - `POST ./calculation-preview` accepts an optional `nyDbl` reference with
   `personId`, `proposalId` and exact `version`. The referenced weeks and wages
-  must match this preview. Its separately inspectable DBL result preserves all
+  must match this preview week by week, even when corrected earnings leave total
+  gross unchanged. A salary total can bind only a single complete workweek;
+  longer periods require actual weekly earnings. Correct and review the source
+  and prepare a new proposal version before previewing changed weekly wages.
+  Its separately inspectable DBL result preserves all
   unresolved jurisdiction and payroll holds. No proposed DBL amount is labeled
   a PFL amount or tax-agency liability.
 - `POST ./people/{personId}/ny-dbl/remittance` refuses with

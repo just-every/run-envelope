@@ -163,12 +163,13 @@ export class NyDbl {
         condition:reviewInputFence(actor.company,pins),noPrivacyHold:person})
     return {...saved,result}
   }
-  async calculation(actor: Actor, person: string, id: string, version: number) {
+  async calculation<T>(actor: Actor, person: string, id: string, version: number, preview: (result: ReturnType<typeof nyDblCalculation>) => T) {
     await this.scope(actor,person)
     const row = await this.store.find<Proposal>(actor,'ny-dbl-proposal',id,person,true)
-    if (row.version !== version || !row.sourcesCurrent) fail('dbl_proposal_stale',409)
+    if (row.version !== version || !row.sourcesCurrent) throw new Error('dbl_proposal_stale')
     await this.inputs(actor,person,row.data.evidenceVersion)
+    const result = preview(row.data.result)
     await this.store.list(actor,'ny-dbl-proposal',person,true,true,id)
-    return row.data.result
+    return result
   }
 }

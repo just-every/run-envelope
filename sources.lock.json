@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "0a06a703b3a84e801a0e49a9d20fc27334ad0b37cd9e8eb0cd82f0668facc559",
+      "sha256": "cc767399c81ae6178b5e12e792948a3730eca7ffdf4d418bfa5370bd3cd930c4",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "73cb09abbf6dcacc1eac0a2726848c9c0369adcbcff39c1a82dd20b8f746a586",
+      "sha256": "23913a381e05e9336ecafc1b465c639648105b25ca90a8dc586151f8420b6667",
       "executable": false
     },
     "deploy-demo.json": {
@@ -502,7 +502,7 @@
       "executable": false
     },
     "docs/ny-dbl.md": {
-      "sha256": "44375665ed2e64fd0f7c5a8d9202891160cedfe42ea06ac8d6e014749578ed2e",
+      "sha256": "2b52ad1354ed00be97b7922951bc5dff6843e99ecc064d3b52342701d5536271",
       "executable": false
     },
     "docs/paper-onboarding.md": {
@@ -2062,7 +2062,7 @@
       "executable": false
     },
     "src/envelope/benefits/ny-dbl.ts": {
-      "sha256": "1be3b342552a92fcc28343ba620f59e9abc1ead4748bf801e7408a62a97e5faa",
+      "sha256": "4df91c2ae9ccdc7aeaff56a4963c48563747fa7e40cbfc1eec4fe7b780229937",
       "executable": false
     },
     "src/envelope/benefits/retirement-records.ts": {
@@ -2130,7 +2130,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "79714d2561754929e0e98cc3251ffd84863baf0762a3eeb0e127076d0165d222",
+      "sha256": "25946289b36bacf542b89ea0358411b2eee7476a2ecc3781004b40a884b7a660",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2238,7 +2238,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "130dca979f1eb13b01d05e9d00fe71ad0039c51ac1524657fd2bd8f52ea23316",
+      "sha256": "c5cd1bc9a4f0aafe5c85ed26e9b8c76097aa78b1dab1b299214571651ee25238",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -3898,7 +3898,7 @@
       "executable": false
     },
     "tests/ny-dbl-runtime.mjs": {
-      "sha256": "90c938599df19d6c2817e9c885fc52544713de4280cc0e904e4a8ec792a36221",
+      "sha256": "3aa7022e4e3325461fef0973a71383d5496554b4dfa5fcacc23e6e329fe41bb8",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

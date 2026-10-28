@@ -1,5 +1,5 @@
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
-import { ExtendedRetirement } from './benefits/extended-retirement'
+import { ExtendedRetirement, type ExtendedRetirementProposal } from './benefits/extended-retirement'
 import { RetirementRecords } from './benefits/retirement-records'
 import { NyDbl } from './benefits/ny-dbl'
 import { calculationPreview, type PreviewInput } from './calculation/preview'
@@ -476,15 +476,17 @@ export async function payrollResponse(
       if(parts[2]==='calculation-preview' && post){
         let result
         try {
-          let retirement
+          let retirement: ExtendedRetirementProposal | undefined
           if (value.extendedRetirement) {
             const selection=value.extendedRetirement as Record<string,unknown>
             if (Object.keys(selection).some(k=>!['personId','setupId','setupVersion','request'].includes(k))) throw new PayrollError('unsupported_retirement_input')
             retirement=(await new ExtendedRetirement(new WorkspaceStore(records)).preview(actor,String(selection.personId),{setupId:selection.setupId,setupVersion:selection.setupVersion,request:selection.request},false)).result
           }
           const ref = value.nyDbl as {personId:string;proposalId:string;version:number} | undefined
-          const dbl = ref ? await new NyDbl(new WorkspaceStore(records)).calculation(actor,ref.personId,ref.proposalId,ref.version) : undefined
-          result=calculationPreview(value as unknown as PreviewInput,retirement,dbl)
+          result = ref
+            ? await new NyDbl(new WorkspaceStore(records)).calculation(actor,ref.personId,ref.proposalId,ref.version,
+              dbl=>calculationPreview(value as unknown as PreviewInput,retirement,dbl))
+            : calculationPreview(value as unknown as PreviewInput,retirement)
         }
         catch(error){ if(error instanceof PayrollError)throw error; throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
         if (value.hiBenefits) {
