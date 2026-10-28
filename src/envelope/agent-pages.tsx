@@ -34,7 +34,7 @@ export function agentsPage(
         <Card title="Agent policy settings">
           <p>{classPolicy.answers ? 'Every class has an explicit company answer.' : 'Agents are held until the company answers every class. No answer is selected for you.'}</p>
           <p>{classPolicy.paused ? 'Agents are paused. Payroll calls and credential rotation are stopped.' : 'Agents are subject to the current company policy and their existing grants.'}</p>
-          <p>Policy can restrict a grant. It cannot grant access, approve payroll or authorize an outside send. Review and approval choices hold calls for a person; no automatic approval is available here.</p>
+          <p>Policy can restrict a grant. It cannot grant access, approve payroll or authorize an outside send. Review and approval choices hold calls for a person; no automatic approval is available here. Gated steps always belong to a person; class policy cannot complete them.</p>
           {actor.grant.role === 'owner' && actor.session.kind === 'native' && <>
             <form method="post" action={base+'/class-policy'}>
               <Hidden name="version" value={classPolicy.version} />

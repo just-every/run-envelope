@@ -4,7 +4,7 @@ import type { Input, Records } from './records'
 import type { AgentTools } from './agents'
 import { PayrollError, date } from './security'
 
-export const agentClasses = ['standard', 'money', 'commitment', 'external', 'sensitive', 'destructive', 'accounts', 'access', 'security'] as const
+export const agentClasses = ['standard', 'money', 'commitment', 'external', 'sensitive', 'destructive', 'accounts', 'access', 'security', 'gated'] as const
 export const policyDecisions = ['autonomous', 'review', 'approval', 'blocked'] as const
 export type ClassAnswers = Record<typeof agentClasses[number], typeof policyDecisions[number]>
 // These facts describe today's native doors. A proposal cannot approve payroll.
@@ -36,7 +36,9 @@ export class AgentPolicy {
   async read(actor: Actor) {
     const f = fence(actor)
     const row = await this.records.statement(`SELECT version,answers,paused FROM env_agent_class_policy WHERE company_id=? AND ${f.sql}`, [actor.company,...f.args]).first<PolicyRow>()
-    return {version: row?.version ?? 0, answers: row?.answers ? JSON.parse(row.answers) as ClassAnswers : null, paused: Boolean(row?.paused), classes: agentClasses}
+    const answers = row?.answers ? JSON.parse(row.answers) as ClassAnswers : null
+    const complete = answers && agentClasses.every(c=>policyDecisions.includes(answers[c]))
+    return {version: row?.version ?? 0, answers: complete ? answers : null, paused: Boolean(row?.paused), classes: agentClasses}
   }
   async save(actor: Actor, input: Input, pauseOnly = false) {
     this.owner(actor)
@@ -90,6 +92,7 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
     if (row?.paused) return 'agents_paused'
     if (!row?.answers) return 'policy_unset'
     const answers = JSON.parse(row.answers) as ClassAnswers
+    if (agentClasses.some(c=>!policyDecisions.includes(answers[c]))) return 'policy_unset'
     if (classes.some(c=>answers[c as keyof ClassAnswers]==='blocked')) return 'policy_blocked'
     if (classes.some(c=>answers[c as keyof ClassAnswers]==='approval')) return 'policy_approval_required'
     if (classes.some(c=>answers[c as keyof ClassAnswers]==='review')) return 'policy_review_required'
