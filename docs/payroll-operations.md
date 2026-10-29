@@ -73,7 +73,9 @@ The current configured native owner may explicitly POST `{"consent":true}` to
 the read-only health route. Consent authorizes only this local diagnostic,
 never a send, retry, hold release or business-record repair. Current native
 session and company authority are checked before work, in the database writes
-and reads, after the probes and before the response. Staff, agents, signed-out
+and reads, after the probes and before the response. Authority checks share
+the probe deadline; unavailable authority returns an explicit 503 refusal and
+cannot establish diagnostic health. Staff, agents, signed-out
 callers and owners without that company's authority are refused.
 
 The diagnostic writes a random non-business challenge and its AES-GCM ciphertext

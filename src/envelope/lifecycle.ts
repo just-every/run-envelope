@@ -96,13 +96,6 @@ export class Lifecycle {
     this.owner(actor)
     if (Object.keys(input).some(k => k !== 'consent') || input.consent !== true)
       throw new PayrollError('explicit_diagnostic_consent_required')
-    const currentOwner = async () => {
-      const f = fence(actor)
-      if (!await this.records.statement(`SELECT 1 WHERE ${f.sql}`, f.args).first())
-        throw new PayrollError('payroll_access_denied', 403)
-    }
-    await currentOwner()
-    const id = crypto.randomUUID(), checkedAt = Date.now(), f = fence(actor)
     // A deadline does not cancel D1. The transaction deletes its own sentinel
     // before commit, including when the caller has already stopped waiting.
     const bounded = async <T>(work: () => Promise<T>, timeout = 2000) => {
@@ -116,6 +109,14 @@ export class Lifecycle {
         return {state:error instanceof Error && error.message === 'diagnostic_timeout' ? 'timeout' as const : 'failed' as const,value:null}
       } finally { clearTimeout(timer) }
     }
+    const currentOwner = async () => {
+      const f = fence(actor)
+      const current = await bounded(() => this.records.statement(`SELECT 1 WHERE ${f.sql}`, f.args).first())
+      if (current.state !== 'completed') throw new PayrollError('diagnostic_authority_unavailable',503)
+      if (!current.value) throw new PayrollError('payroll_access_denied',403)
+    }
+    await currentOwner()
+    const id = crypto.randomUUID(), checkedAt = Date.now(), f = fence(actor)
     const started = await bounded(() => auditStatement(this.records.env,actor,id,'operations.diagnostic.started',id,1).run())
     if (!started.value) {
       await currentOwner()
