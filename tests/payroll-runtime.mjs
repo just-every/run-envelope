@@ -5,7 +5,7 @@ import { answerAgentPolicy } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 import { randomBytes,createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
 import { privateValue } from './privacy-recorder.mjs'
@@ -4759,7 +4759,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   await data(door+'/approve',{version:1,reviewToken:review.reviewToken})
   row=(await data(door))[0];assert.equal(row.paperworkReviewed,true);assert.equal(row.payable,false)
   assert.equal(row.createdBy,row.approvedBy);assert.ok(row.createdBy);assert.ok(row.createdAt);assert.ok(row.approvedAt)
-  const bytes=await call(door+'/original/1/federal');assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),['application','pdf'].join('/'));assert.match(bytes.headers.get('content-disposition'),/^attachment/);assert.equal(Buffer.from(await bytes.arrayBuffer()).toString('base64'),pdf)
+  const bytes=await call(door+'/original/1/federal');assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),['application','octet-stream'].join('/'));assert.match(bytes.headers.get('content-disposition'),/^attachment/);assert.equal(Buffer.from(await bytes.arrayBuffer()).toString('base64'),pdf)
   // A district move appends rather than replacing the signed source and decision.
   const moved={...input,version:1,state:{...input.state,effectiveFrom:'2026-07-01',original:{...original,signedOn:'2026-06-30'},fields:{...input.state.fields,schoolDistrictName:'Synthetic Worthington',schoolDistrictNumber:'2516'}}}
   await data(door,moved,201)
@@ -4795,11 +4795,11 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   await sql(`UPDATE env_workspace_reviews SET expires_at=1 WHERE kind='paper-onboarding' AND object_id='paper-${person.id}' AND version=3`)
   await noWrite(async()=>{await data(door+'/approve',{version:3,reviewToken:reviewOwner.reviewToken},409)})
   await noWrite(async()=>{await data(door,{...legacy,version:3,federal:{...legacy.federal,original:{...original,signedOn:'2026-01-01'}}},400)})
+  const uploadedPdf=Buffer.concat([Buffer.from('%PDF-1.4\n'+'% Synthetic signed paper 1925\n'.repeat(6000)),Buffer.from([0,128,255]),Buffer.from('\n%%EOF')])
   const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   try {
     const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}])
     const page=await context.newPage(),screen=door.replace('/api/','/app/'),folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
-    const uploadedPdf=Buffer.from('%PDF-1.4\n'+'% Synthetic signed paper 1925\n'.repeat(6000)+'%%EOF')
     privateValue(uploadedPdf.toString('base64').slice(0,128))
     await mkdir(folder,{recursive:true})
     const capture=async(label,path=screen,status=200)=>{
@@ -4915,6 +4915,48 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     const original=await call(door+'/original/5/'+form,undefined,downloader)
     assert.equal(original.status,200);assert.equal(Buffer.from(await original.arrayBuffer()).toString('base64'),pdf)
   }
+  // Tax-form custody through both native document and API download doors. The
+  // retained replacement has binary bytes and differs from the first original.
+  const originalPaths=[]
+  for(const version of [1,4,5])for(const form of ['federal','state'])for(const prefix of ['/api/','/app/']) {
+    const path=(door+'/original/'+version+'/'+form).replace('/api/',prefix)
+    originalPaths.push(path)
+    for(const method of ['GET','HEAD']) {
+      const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:downloader,origin}})
+      assert.equal(response.status,200,method+' current separately scoped download')
+      assert.equal(response.headers.get('cache-control'),'no-store')
+      assert.equal(response.headers.get('content-type'),['application','octet-stream'].join('/'))
+      assert.match(response.headers.get('content-disposition'),/^attachment; filename="signed-paper\.pdf"$/)
+      assert.equal(response.headers.get('x-content-type-options'),'nosniff')
+      assert.equal(response.headers.get('x-download-options'),'noopen')
+      assert.equal(response.headers.get('set-cookie'),null)
+      assert.match(response.headers.get('content-security-policy'),/^sandbox; default-src 'none';/)
+      const actual=Buffer.from(await response.arrayBuffer())
+      assert.deepEqual(actual,method==='HEAD'?Buffer.alloc(0):version===4?uploadedPdf:Buffer.from(pdf,'base64'),'each retained version serves its exact original bytes')
+    }
+  }
+  const refuseOriginals=async(who,status,paths=originalPaths)=>{
+    await noWrite(async()=>{
+      for(const path of paths)for(const method of ['GET','HEAD']) {
+        const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin}})
+        const expected=status===401 && path.startsWith('/app/')?303:status
+        assert.equal(response.status,expected,method+' '+path+' private tax original refusal')
+        if(expected===303)assert.match(response.headers.get('location'),/^\/signin\?/)
+        assert.equal(response.headers.get('cache-control'),'no-store')
+        assert.equal(response.headers.get('content-disposition'),null,'a refusal is never an attachment')
+        const body=await response.text()
+        for(const value of [input.tin,pdf,uploadedPdf.toString('base64'),'%PDF-1.4','Synthetic signed paper original for fixture 1925'])assert.ok(!body.includes(value),'a refused original contains no private form data')
+        if(method==='HEAD')assert.equal(body,'')
+      }
+    })
+  }
+  await refuseOriginals('',401)
+  for(const who of [outsider,preparer,reviewer,wrongFields,otherNativeOwner])await refuseOriginals(who,403)
+  await refuseOriginals(wrongLocation,404)
+  await refuseOriginals(cookie,404,originalPaths.map(path=>path.replace(company.id,foreign.id)))
+  const signedOutDownload=await signIn(downloadId)
+  assert.equal((await call('/auth/signout',{},signedOutDownload)).status,204)
+  await refuseOriginals(signedOutDownload,401)
   const staffAudit=await data(base+'/audit')
   for(const [action,actorId,targetId,version] of [
     ['workspace.paper-onboarding.recorded',preparerId,'paper-'+person.id,5],
@@ -4927,7 +4969,8 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   try {
     const folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
     for(const [label,who] of [['entry',preparer],['reviewer',reviewer],['originals',downloader],['grants',cookie]]) {
-      const context=await staffBrowser.newContext(),parts=who.split('=');await context.addCookies([{name:parts[0],value:parts[1],url:origin}])
+      const context=await staffBrowser.newContext(),parts=who.split('='),outbound=[];await context.addCookies([{name:parts[0],value:parts[1],url:origin}])
+      context.on('request',request=>{if(new URL(request.url()).origin!==origin)outbound.push(request.url())})
       const page=await context.newPage()
       for(const width of [1440,390]) {
         await page.setViewportSize({width,height:1000})
@@ -4935,10 +4978,18 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
         await page.locator('details').evaluateAll(elements=>elements.forEach(element=>element.open=true))
         for(const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim().length>1,'paper and grant controls have visible labels: '+await control.getAttribute('href'))
-        if(label==='originals') {assert.equal(await page.getByRole('link',{name:'Download signed state original',exact:true}).count(),5);assert.equal(await page.getByRole('button',{name:'Record signed paper version',exact:true}).count(),0)}
+        if(label==='originals') {
+          assert.equal(await page.getByRole('link',{name:'Download signed state original',exact:true}).count(),5);assert.equal(await page.getByRole('button',{name:'Record signed paper version',exact:true}).count(),0)
+          const link=page.getByRole('link',{name:'Download signed federal original',exact:true}).first()
+          await link.focus()
+          const [download]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Enter')])
+          assert.equal(download.suggestedFilename(),'signed-paper.pdf')
+          assert.deepEqual(await readFile(await download.path()),Buffer.from(pdf,'base64'))
+        }
         if(label==='reviewer') assert.equal(await page.getByRole('link',{name:/Download signed/}).count(),0)
         await page.screenshot({path:join(folder,'paper-staff-'+label+'-'+width+'.png'),fullPage:true})
       }
+      assert.deepEqual(outbound,[],'private paper screens and downloads make no third-party request')
       await context.close()
     }
   } finally {await staffBrowser.close()}
@@ -4952,6 +5003,12 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     await data(door+'/original/5/state',undefined,401,downloader)
     await data(door,undefined,401,downloader)
   })
+  await refuseOriginals(downloader,401)
+  await refuseOriginals(await signIn(downloadId),403)
+  await data(base+'/grants',{operatorId:downloadId,version:2,role:'preparer',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:download']})
+  const renewedDownloader=await signIn(downloadId)
+  assert.equal((await call(door+'/original/4/state',undefined,renewedDownloader)).status,200,'a fresh session needs the renewed explicit download grant')
+  await refuseOriginals(downloader,401)
   await data(base+'/grants',{operatorId:reviewerId,version:2,role:'payroll-admin',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:review']})
   const oldReviewer=reviewer;reviewer=await signIn(reviewerId)
   await noWrite(async()=>{
@@ -4984,7 +5041,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     assert.ok([401,403].includes(denied.status),'agent credentials gain no paper authority')
     assert.equal((await denied.text()).includes(input.tin),false)
   }
-  const stored=JSON.stringify(await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}'`));assert.equal(stored.includes(input.tin),false);assert.equal(stored.includes(pdf),false)
+  const stored=JSON.stringify(await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}'`));assert.equal(stored.includes(input.tin),false);assert.equal(stored.includes(pdf),false);assert.equal(stored.includes(uploadedPdf.toString('base64')),false)
   const custody=await data(base+'/people/'+person.id+'/privacy');assert.equal(custody.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='paper-onboarding').length,7)
   assert.equal((await data(base)).people.length,2,'updates never create another worker')
   console.log('PAPER-ONBOARDING passed: no-contact employee and contractor paper intake, signed originals, exact review, masked reads, historical federal elections, PA and Ohio certificates, district move, encrypted custody, unsigned and foreign refusals; no payable or IRS authority claimed')
