@@ -27,7 +27,7 @@ Runs on macOS, Linux or Windows with WSL2, with git. The installer brings Node
 when it is missing, and rer brings pnpm. Local mail is silently suppressed.
 
 Read [RUN-LOCALLY.md](RUN-LOCALLY.md), [OPERATIONS.md](OPERATIONS.md) and
-[AGENTS.md](AGENTS.md). Node 22.20.0, pnpm 10.12.4 and `@runeditrun/rer` 0.2.85
+[AGENTS.md](AGENTS.md). Node 22.20.0, pnpm 10.12.4 and `@runeditrun/rer` 0.2.91
 are pinned. `rer check` validates the command and contract declarations;
 `rer verify` runs the foundation's checks. No payroll functionality is implied.
 

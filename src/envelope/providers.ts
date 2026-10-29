@@ -16,7 +16,7 @@ export const externalFlows = {
   resend: {
     recipient: 'Resend and the exact human-reviewed email recipient', url: 'https://api.resend.com/emails',
     purpose: 'Deliver only an exact unexpired human-approved tax-notice reply',
-    fields: ['approved sender', 'approved recipient', 'approved subject', 'approved redacted reply'],
+    fields: ['approved sender', 'approved recipient', 'approved subject', 'approved redacted reply', 'agent and sponsor attribution'],
     custody: 'Owner-provided API credential encrypted in company storage; delivery metadata/content held by Resend under owner terms',
   },
 } as const

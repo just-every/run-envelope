@@ -1,3 +1,4 @@
+import { replyBody } from './notices'
 import type { Session } from '../modules/operator-auth/index.mjs'
 import { fields, type Actor } from './access'
 import type { Company } from './records'
@@ -49,16 +50,16 @@ export function noticePage(session:Session,companies:Company[],actor:Actor,notic
   const base=companyPath(actor.company), canWrite=actor.grant.role==='owner' || actor.grant.actions.includes('notices:write'), canApprove=actor.grant.role==='owner' || actor.grant.actions.includes('notices:approve')
   return page(session,'Notice review',companies,actor.company,<>
     {actor.session.kind==='native' && (actor.grant.role==='owner' || (fields.every(field=>actor.grant.fields.includes(field)) && ['cases:intake','cases:investigate','cases:review','cases:download'].some(power=>actor.grant.actions.includes(power)))) && <a className="btn" href={base+'/notices/'+notice.id+'/case'}>Manage notice evidence and deadlines</a>}
-    <Card title="Recorded notice"><p className="evidence-text">{notice.reference}</p><p className="notice-text evidence-text">{redact(notice.body)}</p><p className="evidence-text">Notice ID: {notice.id}. MCP notice.process reads only redacted notice text, never payroll records or credentials.</p></Card>
+    <Card title="Recorded notice"><p className="evidence-text">{notice.reference}</p><p className="notice-text evidence-text">{redact(notice.body)}</p><p className="evidence-text">Notice ID: {notice.id}. Agent extraction reads only redacted notice text, never payroll records or credentials.</p></Card>
     <Card title="Untrusted model proposals">
       {notice.analyses.length ? notice.analyses.map(a => <div key={String(a.id)}><h3 className="evidence-text">Summary</h3><p className="evidence-text">{String(a.summary)}</p><p className="evidence-text">Source citation: {String(a.sourceReference ?? 'Retained notice original')}</p><h3 className="evidence-text">Proposed reply — not approved</h3><p className="evidence-text">{String(a.proposedReply)}</p></div>) : <p className="evidence-text">No model result. A missing connection remains unavailable; no result is invented.</p>}
     </Card>
     <Card title="Exact reply versions">
       {notice.replies.length ? notice.replies.map(r => <div key={String(r.id)}>
         <h3 className="evidence-text">{String(r.data.subject)}</h3>
-        <p className="evidence-text">From {String(r.data.sender)} to {String(r.data.to)} · version {Number(r.version)}</p><p className="evidence-text notice-text">{String(r.data.body)}</p>
-        <p className="evidence-text">Reply ID: {String(r.id)}. Digest: {String(r.digest)}. {r.approvalRevokedAt ? 'Approval withdrawn' : r.approvedBy ? `Human approval by ${r.approvedBy}, expires ${new Date(Number(r.approvalExpiresAt)).toISOString()}` : 'Not approved'}.</p>
-        <p className="evidence-text">{r.dispatchState==='accepted' ? 'Provider accepted; delivery unconfirmed' : r.dispatchState==='unknown' || r.dispatchState==='pending' ? 'Unknown or pending send — held for human reconciliation; do not resend' : r.dispatchState==='rejected' ? 'Provider rejected; human repair required' : 'Not dispatched'}. {Boolean(r.providerReceipt) && 'Receipt: '+r.providerReceipt}</p>
+        <p className="evidence-text">From {String(r.data.sender)} to {String(r.data.to)} · version {Number(r.version)}</p><p className="evidence-text notice-text">{replyBody(r.data)}</p>
+        <p className="evidence-text">Reply ID: {String(r.id)}. Digest: {String(r.digest)}. {r.approvalRevokedAt ? 'Approval withdrawn' : r.approvedBy ? `Human approval by ${r.approverName ?? r.approvedBy}, expires ${new Date(Number(r.approvalExpiresAt)).toISOString()}` : 'Not approved'}.</p>
+        <p className="evidence-text">{r.dispatchState==='accepted' ? 'Provider accepted; delivery unconfirmed' : r.dispatchState==='unknown' || r.dispatchState==='pending' ? 'Unknown or pending send — held for human reconciliation; do not resend' : r.dispatchState==='rejected' ? 'Provider rejected; human repair required' : 'Not dispatched'}. {Boolean(r.providerReceipt) && 'Receipt: '+r.providerReceipt}</p>{Boolean(r.dispatchedByLabel) && <p className="evidence-text">Sent by {String(r.dispatchedByLabel)}.</p>}
         {canApprove && !r.approvedBy && <p className="evidence-text"><a className="btn" href={base+'/notice-replies/'+r.id+'/review'}>Review exact reply version {Number(r.version)}</a></p>}
         {canApprove && Boolean(r.approvedBy) && !r.approvalRevokedAt && !r.dispatchState && <form method="post" action={base+'/notice-replies/'+r.id+'/withdraw'}><Hidden name="version" value={Number(r.version)} /><Submit>Withdraw exact reply approval</Submit></form>}
         {canWrite && !r.dispatchState && <details><summary>Edit into an unapproved version</summary><ReplyForm action={base+'/notices/'+notice.id+'/replies'} id={String(r.id)} version={Number(r.version)} data={r.data} /></details>}
@@ -81,7 +82,7 @@ export function replyReviewPage(session:Session,companies:Company[],actor:Actor,
   const base=companyPath(actor.company), returnTo=base+'/notice-replies/'+reply.id+'/review'
   return page(session,'Review exact notice reply',companies,actor.company,<Card title="Your explicit approval is required">
     <p className="evidence-text">Only this immutable version and digest may be sent. An edit, provider change, expiry, withdrawal or authority removal prevents dispatch. This is correspondence, never payroll payment or a signed tax filing.</p>
-    <p className="evidence-text">From {reply.data.sender} to {reply.data.to}</p><h3 className="evidence-text">{reply.data.subject}</h3><p className="evidence-text notice-text">{reply.data.body}</p><p className="evidence-text">Version {reply.version} · digest {reply.digest}</p>
+    <p className="evidence-text">From {reply.data.sender} to {reply.data.to}</p><h3 className="evidence-text">{reply.data.subject}</h3><p className="evidence-text notice-text">{replyBody(reply.data)}</p><p className="evidence-text">Version {reply.version} · digest {reply.digest}</p>
     <form method="post" action="/auth/step-up"><Hidden name="action" value="credentials:mint" /><Hidden name="returnTo" value={returnTo} /><Submit>Send sensitive-change confirmation</Submit></form>
     <form method="post" action={base+'/notice-replies/'+reply.id+'/approve'}>
       <Hidden name="version" value={reply.version} /><Hidden name="digest" value={reply.digest} /><Hidden name="reviewToken" value={reply.reviewToken} />

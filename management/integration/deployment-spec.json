@@ -225,6 +225,12 @@
     },
     {
       "binding": "DB",
+      "name": "0037_business_settings.sql",
+      "sha256": "a16f736a781aa3fe02a2e090c993f8c360c904f9fb6d86126acdab6e1f24e773",
+      "sql": "CREATE TABLE bs_settings (\n  singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n  rev INTEGER NOT NULL DEFAULT 0,\n  document TEXT,\n  applied_at TEXT,\n  stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN(0,1)),\n  token TEXT NOT NULL DEFAULT ''\n);\nCREATE TABLE bs_overrides (\n  field TEXT PRIMARY KEY CHECK(field IN('display_name','owner_name','brand_color','logo','timezone')),\n  value TEXT NOT NULL,\n  actor TEXT NOT NULL,\n  changed_at TEXT NOT NULL\n);\nCREATE TABLE bs_logo (\n  singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n  sha256 TEXT NOT NULL,\n  type TEXT NOT NULL,\n  bytes BLOB NOT NULL\n);\nCREATE TABLE bs_team (\n  email TEXT PRIMARY KEY,\n  operator_id TEXT,\n  invite INTEGER NOT NULL,\n  state TEXT NOT NULL CHECK(state IN('invited','active','inactive','conflict'))\n);\nCREATE TABLE bs_audit (\n  id INTEGER PRIMARY KEY,\n  actor TEXT NOT NULL,\n  action TEXT NOT NULL,\n  field TEXT,\n  changed_at TEXT NOT NULL\n);\n-- An INSERT of NULL fails the transaction if a concurrent write invalidated its fence.\nCREATE TABLE bs_assert (value INTEGER NOT NULL);\n"
+    },
+    {
+      "binding": "DB",
       "name": "0037_workspace_decision_authority.sql",
       "sha256": "57d3b52c5715787e24a62ea80df33d5969cb53ffd8adaa26372582cf6077f98e",
       "sql": "-- Retain exact approval authority as history without reviving archived sessions.\n-- Existing decisions have no inferred authority; fresh preparation needs review.\nCREATE TABLE env_workspace_decision_authority (\n company_id TEXT NOT NULL, kind TEXT NOT NULL, object_id TEXT NOT NULL,\n version INTEGER NOT NULL, decision TEXT NOT NULL,\n session_id TEXT NOT NULL, grant_version INTEGER NOT NULL,\n PRIMARY KEY(company_id,kind,object_id,version,decision),\n FOREIGN KEY(company_id,kind,object_id,version,decision)\n   REFERENCES env_workspace_decisions(company_id,kind,object_id,version,decision)\n);\n\nCREATE TRIGGER env_workspace_decision_authority_update BEFORE UPDATE ON env_workspace_decision_authority\nBEGIN SELECT RAISE(ABORT,'immutable_approval_authority'); END;\nCREATE TRIGGER env_workspace_decision_authority_delete BEFORE DELETE ON env_workspace_decision_authority\nWHEN NOT EXISTS(SELECT 1 FROM env_privacy_guard WHERE company_id=OLD.company_id AND table_name='env_workspace_decision_authority')\nBEGIN SELECT RAISE(ABORT,'immutable_approval_authority'); END;\nCREATE TRIGGER env_workspace_decision_authority_privacy_insert AFTER INSERT ON env_workspace_decision_authority\nBEGIN INSERT INTO env_privacy_epochs(company_id,version) VALUES(NEW.company_id,1) ON CONFLICT(company_id) DO UPDATE SET version=version+1; END;\nCREATE TRIGGER env_workspace_decision_authority_privacy_delete AFTER DELETE ON env_workspace_decision_authority\nBEGIN INSERT INTO env_privacy_epochs(company_id,version) VALUES(OLD.company_id,1) ON CONFLICT(company_id) DO UPDATE SET version=version+1; END;\n"
@@ -237,15 +243,45 @@
     },
     {
       "binding": "DB",
+      "name": "0038_business_people.sql",
+      "sha256": "51aa39622d866b987d71b6e37c9a8300e7f24c54a55611edaab669ed051b01cd",
+      "sql": "ALTER TABLE bs_settings ADD COLUMN owner_id TEXT CHECK(owner_id IS NULL OR owner_id <> '');\nALTER TABLE bs_team ADD COLUMN business_id TEXT CHECK(business_id IS NULL OR business_id <> '');\nALTER TABLE bs_team ADD COLUMN business_role TEXT CHECK(business_role IS NULL OR business_role IN('admin','member'));\nCREATE UNIQUE INDEX bs_team_business_id ON bs_team(business_id) WHERE business_id IS NOT NULL;\n"
+    },
+    {
+      "binding": "DB",
       "name": "0039_agent_audit_finalization.sql",
       "sha256": "7e12b24e92ea6e3e3c0be942bb73f2cca9d466db761ffed2e8f278d32aac1a4c",
       "sql": "-- Attribution is immutable. A pending call may record one terminal decision;\n-- an interrupted process leaves a truthful pending row rather than no history.\nCREATE TRIGGER env_agent_call_audit_immutable_update BEFORE UPDATE ON env_agent_call_audit\nWHEN OLD.decision!='pending' OR NEW.decision='pending'\n OR NEW.id IS NOT OLD.id OR NEW.company_id IS NOT OLD.company_id\n OR NEW.credential_id IS NOT OLD.credential_id OR NEW.sponsor_id IS NOT OLD.sponsor_id\n OR NEW.tool IS NOT OLD.tool OR NEW.transport IS NOT OLD.transport\n OR NEW.classes IS NOT OLD.classes OR NEW.occurred_at IS NOT OLD.occurred_at\nBEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\nCREATE TRIGGER env_agent_call_audit_immutable_delete BEFORE DELETE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\n"
     },
     {
       "binding": "DB",
+      "name": "0039_agent_door.sql",
+      "sha256": "016d8a98b964385f5c4a13447361c3c783910a76aaf4606b0e0081482bc819cc",
+      "sql": "CREATE TABLE IF NOT EXISTS agent_door_state (\n  id INTEGER PRIMARY KEY CHECK(id=1), envelope TEXT, local_document TEXT,\n  local_revision INTEGER NOT NULL DEFAULT 0, local_paused INTEGER NOT NULL DEFAULT 0,\n  decision_lock TEXT, decision_until INTEGER\n);\nCREATE TABLE IF NOT EXISTS agent_door_agents (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, specialist TEXT, sponsor TEXT NOT NULL,\n  sponsor_name TEXT NOT NULL, revoked INTEGER NOT NULL DEFAULT 0,\n  window INTEGER NOT NULL DEFAULT 0, requests INTEGER NOT NULL DEFAULT 0\n);\nCREATE TABLE IF NOT EXISTS agent_door_audit (\n  sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, at TEXT NOT NULL,\n  agent TEXT NOT NULL, classes TEXT NOT NULL, row TEXT NOT NULL, evidence TEXT\n);\nCREATE INDEX IF NOT EXISTS agent_door_audit_agent ON agent_door_audit(agent,sequence);\nCREATE TABLE IF NOT EXISTS agent_door_calls (\n  agent TEXT NOT NULL, key TEXT NOT NULL, digest TEXT NOT NULL, decision_id TEXT NOT NULL,\n  created_at INTEGER NOT NULL, state TEXT NOT NULL, outcome TEXT, PRIMARY KEY(agent,key)\n);\nCREATE TABLE IF NOT EXISTS agent_door_approvals (\n  id TEXT PRIMARY KEY, state TEXT NOT NULL, saved TEXT NOT NULL, approvals TEXT NOT NULL DEFAULT '[]',\n  result TEXT, version INTEGER NOT NULL DEFAULT 0\n);\nCREATE TABLE IF NOT EXISTS agent_door_reviews (\n  id TEXT PRIMARY KEY, state TEXT NOT NULL, saved TEXT NOT NULL, marked_by TEXT, marked_at TEXT\n);\nCREATE TABLE IF NOT EXISTS agent_door_events (\n  sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, uri TEXT NOT NULL, event TEXT NOT NULL\n);\nCREATE INDEX IF NOT EXISTS agent_door_events_uri ON agent_door_events(uri,sequence);\nCREATE TABLE IF NOT EXISTS agent_door_usage (\n  decision_id TEXT PRIMARY KEY, at INTEGER NOT NULL, seed TEXT NOT NULL, specialist TEXT, agent TEXT NOT NULL,\n  classes TEXT NOT NULL\n);\nCREATE INDEX IF NOT EXISTS agent_door_usage_day ON agent_door_usage(at);\n"
+    },
+    {
+      "binding": "DB",
       "name": "0040_operation_sentinels.sql",
       "sha256": "94c0b1b02178a92e5e46a2b013272d48a6c4b1339929a9098b87f15009a97630",
       "sql": "-- Isolated non-business diagnostic data. No worker, job or delivery authority.\n-- Successful diagnostics remove their own random sentinel in one transaction.\nCREATE TABLE env_operation_sentinels (\n id TEXT PRIMARY KEY,\n company_id TEXT NOT NULL REFERENCES env_companies(id),\n probe_value TEXT NOT NULL,\n cipher TEXT NOT NULL,\n created_at INTEGER NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0041_business_agent_bindings.sql",
+      "sha256": "3bd9bb74a0881fe35b0994b01b6cbbec9f68e5cd6316d266da8d93d490c3f45b",
+      "sql": "-- A native sponsor explicitly issues each scoped grant through the existing\n-- step-up protected lifecycle. Business subjects never select a grant by email.\nCREATE TABLE env_business_agent_bindings (\n agent_id TEXT NOT NULL, grant_id TEXT NOT NULL REFERENCES env_agent_grants(id),\n sponsor_id TEXT NOT NULL REFERENCES oa_operators(id),\n PRIMARY KEY(agent_id,grant_id)\n);\n-- Original native audit identities survive secret rotation and expiry.\nALTER TABLE env_agent_access ADD COLUMN door_agent_id TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_agent_name TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_operation_id TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_consent TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_approvers TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0042_agent_door_policy_attribution.sql",
+      "sha256": "1c4a1c924d991a980cc8e4c0315abc5521dc44b691fad9ead9e95d0a40b0641f",
+      "sql": "-- Keep the real signed principal alongside the native grant's durable identity.\nALTER TABLE env_agent_call_audit ADD COLUMN door_agent_id TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_agent_name TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_operation_id TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_consent TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_approvers TEXT;\nCREATE TRIGGER env_agent_call_door_attribution_immutable_update BEFORE UPDATE ON env_agent_call_audit\nWHEN NEW.door_agent_id IS NOT OLD.door_agent_id OR NEW.door_agent_name IS NOT OLD.door_agent_name\n OR NEW.door_operation_id IS NOT OLD.door_operation_id OR NEW.door_consent IS NOT OLD.door_consent\n OR NEW.door_approvers IS NOT OLD.door_approvers\nBEGIN SELECT RAISE(ABORT,'immutable_agent_call_attribution'); END;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0043_agent_operation_lookup.sql",
+      "sha256": "652caf1917184bd85d6312f86cba0ba4d76d2ed9904c54dc563aadc16a1de276",
+      "sql": "-- Native operators can reconcile a shared decision with its original company\n-- activity without scanning every client's retained week.\nCREATE INDEX env_agent_call_operation ON env_agent_call_audit(company_id,door_operation_id,occurred_at);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
@@ -261,8 +297,7 @@
     "MAIL_FROM": "",
     "MAIL_RELAY_URL": "",
     "MAIL_ACCOUNT_ID": "",
-    "IDENTITY_PROVIDER": "",
-    "OWNER_EMAIL": ""
+    "IDENTITY_PROVIDER": ""
   },
   "secretNames": [
     "SESSION_SECRET",

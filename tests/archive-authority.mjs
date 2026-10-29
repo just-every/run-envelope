@@ -1,4 +1,4 @@
-import { answerAgentPolicy } from './agent-policy-runtime.mjs'
+import { answerAgentPolicy, agentMessage } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 
 // Create live source authority through the native doors. The archive journey
@@ -52,9 +52,8 @@ export async function archiveAuthority(context, company, notice) {
   }, 201)
   assert.ok(agent.id && agent.token, 'native issuance must return an actual agent credential')
   const active = await worker.fetch(origin + '/api/envelope/mcp', { method: 'POST',
-    headers: { authorization: 'Bearer ' + agent.token, origin, 'content-type': mime },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 53, method: ['tools', 'call'].join('/'),
-      params: { name: 'records.list', arguments: { companyId: company.id } } }) })
+    headers: {'MCP-Protocol-Version':'2025-11-25', authorization: 'Bearer ' + agent.token, origin, 'content-type': mime },
+    body: JSON.stringify(agentMessage(['tools', 'call'].join('/'),{ name: 'records.list', arguments: { companyId: company.id } })) })
   assert.equal(active.status, 200, 'the sponsored bearer works before the archive is made')
   const activeRecords = JSON.parse((await active.json()).result.content[0].text).records
   assert.ok(activeRecords.some(row => row.id === company.people[0].id), 'the live bearer reads its native scoped worker')
@@ -82,10 +81,9 @@ export async function archiveAuthority(context, company, notice) {
       version: exact.version, digest: exact.digest, reviewToken: exact.reviewToken, minutes: 60,
     })
     const execute = () => worker.fetch(origin + '/api/envelope/mcp', { method: 'POST',
-      headers: { authorization: 'Bearer ' + agent.token, origin, 'content-type': mime },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 530, method: ['tools', 'call'].join('/'),
-        params: { name: 'reply.dispatch', arguments: { companyId: company.id, replyId: item.id,
-          version: item.version, digest: item.digest } } }) })
+      headers: {'MCP-Protocol-Version':'2025-11-25', authorization: 'Bearer ' + agent.token, origin, 'content-type': mime },
+      body: JSON.stringify(agentMessage(['tools', 'call'].join('/'),{ name: 'reply.dispatch', arguments: { companyId: company.id, replyId: item.id,
+          version: item.version, digest: item.digest } })) })
     const dispatched = await execute()
     assert.equal(dispatched.status, 200, await dispatched.clone().text())
     const result = JSON.parse((await dispatched.json()).result.content[0].text)
