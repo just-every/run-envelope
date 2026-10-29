@@ -86,8 +86,9 @@ export class AgentPolicy {
         AND (?='owner' OR a.actor_id=?) AND ${f.sql} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args) : this.records.statement('SELECT 1 WHERE 0'),
       migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.classes,a.facts,a.created_at AS occurredAt
         FROM env_installation_classified_actions a JOIN oa_operators o ON o.id=a.actor_id
-        WHERE a.created_at>=? AND a.created_at<? AND ?='native' AND EXISTS(SELECT 1 FROM oa_bootstrap WHERE claim_id=?) AND ${f.sql}
-        ORDER BY a.created_at DESC,a.id DESC LIMIT 200`,[Date.parse(start),Date.parse(end)+86400000,actor.session.kind,actor.session.operator.id,...f.args]) : this.records.statement('SELECT 1 WHERE 0'),
+        WHERE a.created_at>=? AND a.created_at<? AND ?='native' AND EXISTS(SELECT 1 FROM oa_bootstrap b JOIN oa_operators current_owner ON current_owner.id=b.claim_id
+          WHERE b.claim_id=? AND current_owner.role='owner' AND current_owner.status='active' AND lower(trim(current_owner.email))=?) AND ${f.sql}
+        ORDER BY a.created_at DESC,a.id DESC LIMIT 200`,[Date.parse(start),Date.parse(end)+86400000,actor.session.kind,actor.session.operator.id,this.records.env.OWNER_EMAIL.trim().toLowerCase(),...f.args]) : this.records.statement('SELECT 1 WHERE 0'),
     ])
     const decoded=(c:Record<string,unknown>): Record<string,unknown> & {classes:string[];facts:Record<string,unknown>}=>({...c,classes:JSON.parse(String(c.classes)),facts:JSON.parse(String(c.facts))})
     return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
