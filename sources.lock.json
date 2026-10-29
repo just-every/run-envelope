@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "42ac2b762095b056e318f59b219621ef257d0be45fa0a46a3e1745726041e05c",
+      "sha256": "99893dd0f7189e04fbb6d63311ceae70b9079047abac03ddd4a38992be8e2265",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "8e3bf907251f06314f6c79cfcb57764a34966595e85631a392840b277bd3b54c",
+      "sha256": "835822bb1a2dc4e7c88f1310ef28a8f466a3fd91ca791bee98fd40767f69d3e4",
       "executable": false
     },
     "deploy-demo.json": {
@@ -550,7 +550,7 @@
       "executable": false
     },
     "docs/payroll-operations.md": {
-      "sha256": "8ee738354177f44de25f7b5a0b6b02b6b3caa0135ad6477ada40501cbe037d7e",
+      "sha256": "9f5690f38e0e0cedb6a33d5de662e462ce7c815b77d3deefdae0403433502c38",
       "executable": false
     },
     "docs/payroll-pay-items.md": {
@@ -622,7 +622,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "e67c8790ea2442740f88127dcae4decc5068c05bc8970a429fb0f5fda9050d1c",
+      "sha256": "670d904b571d58067672f96885a77380881940a0cc1c80ea7628752fbadbb443",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -785,8 +785,16 @@
       "sha256": "3d8d480dc8c6e0164e35723f35a79bd664f6784d80187a3393aedf34bb99b9d7",
       "executable": false
     },
+    "migrations/core/0040_operation_sentinels.sql": {
+      "sha256": "94c0b1b02178a92e5e46a2b013272d48a6c4b1339929a9098b87f15009a97630",
+      "executable": false
+    },
     "migrations/core/0041_grant_revision_audit.sql": {
       "sha256": "842b6a651271ebe0fff8164843b43603f0931d721065aaa3be76cc575fb8655d",
+      "executable": false
+    },
+    "migrations/core/0042_grant_scope_direction.sql": {
+      "sha256": "a01e015a0256a9ba262231abe420a838e263ad09be8c488f6ee167e6c281c4d6",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1118,7 +1126,7 @@
       "executable": false
     },
     "RELEASE.json": {
-      "sha256": "d2686f8e37e64d5aa5a78075b99d5f928fbec6609daabf348b7d7bf07890c423",
+      "sha256": "157b90961a3211958dd7b5ce08770ea95de0552c87ef481e8485bcc0de09e67f",
       "executable": false
     },
     "rer-project.json": {
@@ -1886,7 +1894,7 @@
       "executable": false
     },
     "src/auth.server.ts": {
-      "sha256": "e78ce2374a17206ba044bc05a17d1367fe57f611c2fe695cbd1eaa2285d1f583",
+      "sha256": "98b1e99167b6a9b2e6339bd24f0d94d95f0525f67654231ccb0a1e11136eb9ee",
       "executable": false
     },
     "src/base/actor.ts": {
@@ -2054,7 +2062,7 @@
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "6a4c5a534cc13ea2b9e542ccd6c2f80406fae5e890d892f9d8a822315f12ed0d",
+      "sha256": "a009243277245a2e9eeb47a7ddf272dd2cccad591cdc408d93f5bbe08eed137e",
       "executable": false
     },
     "src/envelope/agents.ts": {
@@ -2262,7 +2270,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "a68eba9e2c22bd4c4d0795f2db002d961e21d08ff32161c368da808323e3fc5a",
+      "sha256": "c6e461b3e9dba397be3520809989f420f587904804ea1a20e22f6ddbb7c9eacf",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2270,7 +2278,7 @@
       "executable": false
     },
     "src/envelope/identity-audit.ts": {
-      "sha256": "b165313d1b4b54822bb04a9fe4a8625eba3e83bc7c9617b33b7c0f745e371135",
+      "sha256": "e2d15b9f8060e3f16a1376d0a0a2498ce2c5a095b3dc6df2f1e2528892272c95",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -2378,7 +2386,7 @@
       "executable": false
     },
     "src/envelope/lifecycle.ts": {
-      "sha256": "99e14852263366d2509896a5e37d9f96af5fa25324914dcaaddf7747f5abf80f",
+      "sha256": "2e5ef805b4d77ba47eac72bbe54840cff9ae341128362b9c76868dee11ba8e51",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -2446,7 +2454,7 @@
       "executable": false
     },
     "src/envelope/security.ts": {
-      "sha256": "30e0d5677a7ba369741517ac156a989b7ea9302d4c667ac87cd02bb98b037fa7",
+      "sha256": "dee1d6e923c6639709150c6aa5bece2626f10b47e5483dcd373a9942fe8cf35b",
       "executable": false
     },
     "src/envelope/setup.ts": {
@@ -3694,7 +3702,7 @@
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
-      "sha256": "1908c63a0055ca3bfa4212221bb989ea50a0c11a8b754bbf1f7ad720bf4eeac9",
+      "sha256": "41a7f414908f49c4954aac03bbc51df016d3a12666915240e38481010ef271d4",
       "executable": false
     },
     "tests/agent-policy-worker.mjs": {
@@ -3946,11 +3954,11 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "1ccf41f51de7d47a074f36fa0cceede6f685640f85d0871d01b1a5bb1562aa11",
+      "sha256": "4ff0fc21f838d452395cbf0f3154ea0250dd3a6c9dbab9c2adcd748213d29bce",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
-      "sha256": "2b3a19fb7df2defe55b00a071384fdfdfb5c9862775b33321410066714e30aa9",
+      "sha256": "abecf27e99302941af31ea1072d6759dcc73c056d955e64adf0649d756b3df49",
       "executable": false
     },
     "tests/retirement-benefits-runtime.mjs": {
@@ -3962,7 +3970,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "20a574a863e80776e2c208e5c2fcd61dbb43271e593edd7a08ce52410d6d622c",
+      "sha256": "d54bf5b7305132831984fcae575768ae8b2d0789c3eac052c7829f7d323f6cdd",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {

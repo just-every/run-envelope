@@ -232,6 +232,22 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.ok(native.some(c=>c.targetId===disposable.id&&c.action==='agent.issued'&&c.classes.includes('access')&&c.classes.includes('security')&&c.facts.direction==='grant'))
     assert.ok(native.some(c=>c.targetId===disposable.id&&c.action==='agent.revoked'&&c.facts.direction==='revoke'))
     assert.deepEqual((await data('/api/envelope/companies/'+foreign.id+'/agents')).activity.changes.filter(c=>['grant.changed','provider.declared','agent.issued'].includes(c.action)),[],'native class facts stay in their company')
+    // Company role labels confer no extra powers: compare the retained scopes.
+    const colleagueId='synthetic-envelope-9613'
+    const roleGrant={operatorId:colleagueId,role:'payroll-admin',locations:['*'],fields:['compensation'],actions:['records:read','rates:propose']}
+    await data(base+'/grants',{...roleGrant,version:0})
+    const narrowedRole={...roleGrant,role:'viewer',locations:[location.id],fields:[],actions:['records:read']}
+    await data(base+'/grants',{...narrowedRole,version:1})
+    await data(base+'/grants',{...narrowedRole,role:'accountant',version:2})
+    await data(base+'/grants',{...roleGrant,role:'preparer',version:3})
+    await data(base+'/grants',{...roleGrant,role:'viewer',actions:['records:read','audit:read'],version:4})
+    const roleChanges=(await data(base+'/agents')).activity.changes.filter(c=>c.targetId===colleagueId)
+    for(const [version,direction] of [[2,'narrow'],[3,'unchanged'],[4,'widen'],[5,'widen-and-narrow']]) {
+      const event=(await sql(`SELECT id FROM env_audit WHERE company_id='${company.id}' AND target_id='${colleagueId}' AND version=${version}`))[0]
+      const change=roleChanges.find(c=>c.id===event.id)
+      assert.equal(change?.facts.direction,direction,'company role transition version '+version)
+      assert.equal(change?.facts.peopleCount,1)
+    }
     // Seed the rest of one fixed UTC week through real calls, with real D1 time
     // supplied by the test-only clock rather than the machine's civil date.
     const expectedDays=['2026-10-28']
@@ -271,6 +287,50 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'settings fit the desktop')
     for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),'touched controls have visible labels')
     assert.ok(await page.locator('#class-policy').evaluate(n=>[...n.querySelectorAll('p,label,button,select')].every(e=>parseFloat(getComputedStyle(e).fontSize)>=13)))
+    // Installation role direction uses the role before the guarded mutation.
+    const roleDirection=async(role,direction)=>{
+      const beforeIds=new Set((await data(base+'/agents')).activity.installation.map(c=>c.id))
+      await data('/auth/operator/role',{operatorId:colleagueId,role})
+      const entry=(await data(base+'/agents')).activity.installation.find(c=>c.action==='operators.role'&&!beforeIds.has(c.id))
+      assert.equal(entry?.facts.direction,direction,'installation promotion or demotion to '+role)
+      assert.equal(entry?.facts.peopleCount,1)
+    }
+    await roleDirection('admin','widen')
+    await roleDirection('member','narrow')
+    await roleDirection('owner','widen')
+    await roleDirection('admin','narrow')
+    await roleDirection('owner','widen')
+    const nativeSignIn=async operatorId=>{
+      const operator=(await sql(`SELECT version FROM oa_operators WHERE id='${operatorId}'`))[0]
+      const token=randomBytes(32).toString('base64url'),hash=await hashToken(settings.SESSION_SECRET,'link',token)
+      await sql(`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at)
+        VALUES('${randomBytes(12).toString('hex')}','${hash}','magic','${operatorId}',${operator.version},'/app',${clockNow},${clockNow+600000})`)
+      const signed=await call('/auth/confirm',{token},'')
+      assert.equal(signed.status,303,await signed.clone().text())
+      return signed.headers.get('set-cookie').split(';')[0]
+    }
+    const otherOwner=await nativeSignIn(colleagueId),otherHash=await hashToken(settings.SESSION_SECRET,'session',otherOwner.split('=')[1])
+    await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
+      SELECT 'synthetic-envelope-9614',token_hash,id,operator_id,operator_version,'credentials:mint','/app',${clockNow},${clockNow+600000},${clockNow} FROM oa_sessions WHERE token_hash='${otherHash}'`)
+    const originalOwner=(await sql('SELECT claim_id AS id FROM oa_bootstrap'))[0].id
+    const beforeDemotion=await effects()
+    await data('/auth/operator/role',{operatorId:originalOwner,role:'member'},200,otherOwner)
+    assert.equal((await call(base+'/agents')).status,401,'demotion invalidates the old native session')
+    const demotedCookie=await nativeSignIn(originalOwner)
+    const demotedView=await data(base+'/agents',undefined,200,demotedCookie)
+    assert.equal((await sql(`SELECT role FROM env_grants WHERE company_id='${company.id}' AND operator_id='${originalOwner}'`))[0].role,'owner','company access remains independent of installation ownership')
+    assert.deepEqual(demotedView.activity.installation,[],'a demoted bootstrap owner with company access cannot read installation administration')
+    await context.clearCookies()
+    await context.addCookies([{name:demotedCookie.split('=')[0],value:demotedCookie.split('=')[1],url:origin}])
+    await page.goto(origin+ui)
+    await page.getByText('Human access and security changes',{exact:true}).click()
+    assert.ok(!(await page.locator('main').innerText()).includes('installation operators.'),'the rendered Agents page also withholds installation history')
+    assert.deepEqual(await effects(),beforeDemotion,'audit reads after demotion change no payroll or agent records')
+    for(const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000})
+      await page.screenshot({path:join(proof,'agent-policy-demoted-owner-'+width+'.png'),fullPage:true})
+    }
+
   } finally {await browser.close()}
   console.log('AGENT-POLICY passed: explicit unanswered company classes; MCP, REST and CLI refusal and allowed preparation; security rotation; current scope and sponsor; durable Pause, suspended calls and resume fencing; attributed audit and exact public totals over seven fixed UTC dates; 1440 and 390 settings proof')
 }

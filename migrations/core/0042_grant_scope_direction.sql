@@ -1,0 +1,12 @@
+-- Non-owner company roles are labels; their explicit scopes define authority.
+-- Preserve revision-only invalidation and derive direction from changed powers.
+DROP TRIGGER env_grants_class_update;
+CREATE TRIGGER env_grants_class_update AFTER UPDATE ON env_grants
+WHEN NEW.version!=OLD.version AND NEW.change_id IS NOT NULL AND NEW.change_id IS NOT OLD.change_id
+BEGIN
+ INSERT INTO env_access_changes VALUES(NEW.company_id,NEW.operator_id,'human',NEW.change_id,NEW.operator_id,NEW.version,
+ CASE WHEN NEW.revoked_at IS NOT NULL THEN 'revoke'
+      WHEN OLD.revoked_at IS NOT NULL THEN 'grant'
+      WHEN (EXISTS(SELECT 1 FROM json_each(NEW.actions) n WHERE NOT EXISTS(SELECT 1 FROM json_each(OLD.actions) o WHERE o.value=n.value)) OR EXISTS(SELECT 1 FROM json_each(NEW.fields) n WHERE NOT EXISTS(SELECT 1 FROM json_each(OLD.fields) o WHERE o.value=n.value)) OR (NOT EXISTS(SELECT 1 FROM json_each(OLD.locations) WHERE value='*') AND EXISTS(SELECT 1 FROM json_each(NEW.locations) n WHERE NOT EXISTS(SELECT 1 FROM json_each(OLD.locations) o WHERE o.value=n.value)))) AND (EXISTS(SELECT 1 FROM json_each(OLD.actions) n WHERE NOT EXISTS(SELECT 1 FROM json_each(NEW.actions) o WHERE o.value=n.value)) OR EXISTS(SELECT 1 FROM json_each(OLD.fields) n WHERE NOT EXISTS(SELECT 1 FROM json_each(NEW.fields) o WHERE o.value=n.value)) OR (NOT EXISTS(SELECT 1 FROM json_each(NEW.locations) WHERE value='*') AND EXISTS(SELECT 1 FROM json_each(OLD.locations) n WHERE NOT EXISTS(SELECT 1 FROM json_each(NEW.locations) o WHERE o.value=n.value)))) THEN 'widen-and-narrow'
+      WHEN (EXISTS(SELECT 1 FROM json_each(NEW.actions) n WHERE NOT EXISTS(SELECT 1 FROM json_each(OLD.actions) o WHERE o.value=n.value)) OR EXISTS(SELECT 1 FROM json_each(NEW.fields) n WHERE NOT EXISTS(SELECT 1 FROM json_each(OLD.fields) o WHERE o.value=n.value)) OR (NOT EXISTS(SELECT 1 FROM json_each(OLD.locations) WHERE value='*') AND EXISTS(SELECT 1 FROM json_each(NEW.locations) n WHERE NOT EXISTS(SELECT 1 FROM json_each(OLD.locations) o WHERE o.value=n.value)))) THEN 'widen' WHEN (EXISTS(SELECT 1 FROM json_each(OLD.actions) n WHERE NOT EXISTS(SELECT 1 FROM json_each(NEW.actions) o WHERE o.value=n.value)) OR EXISTS(SELECT 1 FROM json_each(OLD.fields) n WHERE NOT EXISTS(SELECT 1 FROM json_each(NEW.fields) o WHERE o.value=n.value)) OR (NOT EXISTS(SELECT 1 FROM json_each(NEW.locations) WHERE value='*') AND EXISTS(SELECT 1 FROM json_each(OLD.locations) n WHERE NOT EXISTS(SELECT 1 FROM json_each(NEW.locations) o WHERE o.value=n.value)))) THEN 'narrow' ELSE 'unchanged' END,1);
+END;
