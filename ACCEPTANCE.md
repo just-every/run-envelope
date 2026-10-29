@@ -1797,7 +1797,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 5. Under "money autonomous up to $500, approval up to $10,000, blocked above", a $400 off-cycle payout runs, a $6,000 bonus run waits with no effect and a $20,000 run is refused.
 
 **Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Gap.** The CORE door does not register a money-moving native tool. Uncalculated earnings preparations do not pay wages, move tax or reserve provider spend; this complete target remains unproved.
 
 #### SURFACE-003 — Filings, authorizations and correspondence carry commitment and external
 
@@ -1813,7 +1813,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 5. A filing or reply an agent completes reads "<agent> for <person>" in the filing record, the activity view and exports; after a person approves an agent's prepared filing, the record shows the person as approver and the agent as preparer.
 
 **Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Gap.** The CORE door classifies exact human-reviewed correspondence as commitment and external. Filing, authorization, cancellation and the complete target journey remain unproved; correspondence acceptance is not a filing receipt.
 
 #### SURFACE-004 — Sensitive reads and destructive erasure
 
@@ -1827,7 +1827,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-003, BASE
 3. An erasure request and the release of an eligible hold carry destructive · sensitive with the item count.
 
 **Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Gap.** The CORE door classifies its scoped compensation and notice reads as sensitive. The target resource catalogue, broad staff/private reads and agent destructive-erasure flow remain unproved.
 
 #### SURFACE-005 — Registrations and gated steps
 
@@ -1841,7 +1841,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 3. A provider answer that requires a person (KYB or a signature) makes the call gated before any effect.
 
 **Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Gap.** No target registration or gated native agent service is registered. Human installation, sign-in, provider declaration, exact payroll approval and custody doors keep their original purposes.
 
 #### SURFACE-006 — Access, security, policy setup, Pause and audit
 
@@ -1874,7 +1874,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-013 · Ru
 6. A missing local account in the week holds only that remittance under both policies.
 
 **Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Gap.** The CORE conformance journey proves only the twelve implemented native tools under autonomous and held policies. The full payroll week, target resources, events, prompts, funded payroll and agency filings remain unproved.
 
 ## Later
 

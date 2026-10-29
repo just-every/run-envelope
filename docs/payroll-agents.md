@@ -19,7 +19,7 @@ secret lifetime of 1–24 hours (`hours`). Omitting the review date creates the
 short-lived grant used by earlier clients. A secret appears once, in a no-store
 response. Only a keyed digest is stored. `envelope.credentials.rotate` replaces that
 digest and returns the replacement encrypted to the caller’s RSA-OAEP-256 public
-key (see the shared door guide). The decrypted secret expires expiring within 24 hours and before the original
+key (see the shared door guide). The decrypted secret expires within 24 hours and before the original
 review date. Rotation cannot extend the grant, restore an expired/revoked bearer
 or survive sponsor removal/current-scope changes. Rotate before expiry; an
 expired secret requires fresh human issuance. Concurrent rotations have one
@@ -46,7 +46,7 @@ same-origin POSTs. The equivalent native forms are under
 `/app/envelope/companies/:company`.
 
 - `GET /agents`: permitted declarations and latest 200 access events, no secrets.
-- `POST /agents`: `{name,hours,reviewDate?,actions,fields,locations,providers?,models?}`.
+- `POST /agents`: `{name,hours,reviewDate?,actions,fields,locations,providers?,models?,businessAgentId?}`.
   Returns `{id,token,expiresAt,secretExpiresAt,sponsorId}` once.
 - `POST /agents/:id/revoke`: `{version}`, compare-and-swap revocation.
 - `POST /agents/policy`: owner-only `{version,ownerOnly}` with audit.
@@ -73,36 +73,34 @@ human-approved correspondence. Empty lists grant nothing and never inherit a
 runtime credential. No agent approves, changes bank details, pays wages or signs
 or files a tax return.
 
-## Stateless MCP endpoint
+## Shared MCP endpoint
 
-`POST /api/envelope/mcp` requires `Authorization: Bearer <secret>`, JSON-RPC 2.0
-and JSON (64 KB maximum). Cross-origin browsers and cookie-only requests are
-refused. The durable limit is 120 authenticated requests per minute per grant.
-`initialize` uses protocol `2025-03-26`; `notifications/initialized` returns 202.
-`tools/list` lists only permitted tools. `tools/call` takes `{name,arguments}`.
+`POST /mcp` and `/api/envelope/mcp` use the same shared protocol. Negotiate
+`2026-07-28` or `2025-11-25` and send its required protocol and method/name
+headers. Local native credentials and signed Business credentials keep their
+own purposes. Cookie-only and cross-origin agent calls refuse. The native
+120-request-per-minute limit still applies to native credential authentication.
 
-- `credentials.rotate`: `{}`; permitted only while this bearer, grant and sponsor
-  remain current. Save the returned secret securely; never put it in a notice,
-  model context, URL, log or screenshot.
-- `envelope.records.list`: `{companyId}`, at most 100 scoped person IDs/names/location
-  IDs/versions, with no private values or pay rates.
-- `envelope.draft.prepare`: `{companyId,personId,minutes,periodStart,periodEnd,payDate,
-  sourceRef,requestKey}`; minutes 1–44,640. Persists an immutable input proposal
-  referencing a current person and latest reviewed rate effective at period
-  start. Same key/inputs returns the same proposal; different inputs conflict.
-- `envelope.draft.read`: `{companyId,draftId}`, scoped proposal/rate/source references and
-  stale-person indication. An input proposal is **uncalculated, not approved**.
-- `envelope.notices.process`: `{companyId,noticeId}`, actual encrypted source notice to
-  declared OpenAI; redacted output is an **untrusted proposal**, never authority.
-- `envelope.notices.reply`: `{companyId,replyId,version,digest}`, only an exact current
-  unexpired human-approved notice reply, with current sponsor/approver/location/
-  provider authority. It is not a payroll-payment or signed-filing tool.
+The complete canonical registry, scopes, classes and limits are documented in
+[the shared door guide](agent-door.md). Mutations require `idempotency_key`;
+hourly and bonus preparations also retain their native `requestKey`. Credential
+rotation requires the caller's RSA-OAEP-256 public key and returns encrypted
+delivery, never a plaintext bearer. Preserve the private key outside the agent's
+model context and retained results.
 
-Authenticated transport openings and permitted actions are attributed to grant
-and sponsor. Authority and bearer digest are checked again in reads/writes and
-before outbound work. The original AGENT-DRAFTS journey suspends a request after
-its authenticated access event, revokes it via settings, and proves no write.
-The SPONSORED-NOTICES journey covers current-scope non-owner sponsors, rotation,
+Tool refusals use a successful JSON-RPC transport with `isError` and typed
+`com.runeditrun/error` metadata. `decision_busy` and `call_in_progress` mean no
+effect was admitted by that attempt. Wait for the active operation to settle
+before explicitly repeating a safe request; never blindly resend an uncertain
+provider outcome. Undeclared MCP arguments are ignored and recorded in audit;
+they cannot approve a preparation or lower its server-computed class. Strict
+native REST input validation remains in force.
+
+Authority is re-read before classification, replay and native reads/writes or
+outbound work. Native SQL fences retain secret, grant, sponsor, company policy,
+location, field and provider checks. Shared operation IDs, signed agent names,
+sponsors, consent and named approvers reconcile with native activity. The
+SPONSORED-NOTICES journey covers current-scope non-owner sponsors, rotation,
 injection confinement, human-only exact correspondence and durable unknowns.
 
 Archive policy excludes active secret digests, company grants, provider

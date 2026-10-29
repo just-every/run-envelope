@@ -4,7 +4,9 @@ export async function rotationKey(value: unknown) {
   try {
     const jwk=value as {kty:string;n:string;e:string}
     if(jwk?.kty!=='RSA'||jwk.e!=='AQAB'||!/^[A-Za-z0-9_-]{342,1024}$/.test(jwk.n))throw new Error()
-    return await crypto.subtle.importKey('jwk',{...jwk,alg:'RSA-OAEP-256',ext:true},{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt'])
+    const key=await crypto.subtle.importKey('jwk',{...jwk,alg:'RSA-OAEP-256',ext:true},{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt'])
+    if((key.algorithm as RsaKeyAlgorithm).modulusLength<2048)throw new Error()
+    return key
   } catch {throw new ToolRefusal('invalid_rotation_key','invalid_rotation_key',{native_status:400})}
 }
 /** Base retains outcomes for replay. Only encrypted delivery may enter it;

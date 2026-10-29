@@ -416,13 +416,13 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await capture('bonus-human-approved',screen,'approver-b')
     await release(bonus.id,1,'run_not_payable')
     await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${foreign.id}'`)
-    assert.equal((await mcpStatus(await foreignCall('bonus.read'))),403)
+    assert.equal((await mcpStatus(await foreignCall('bonus.read'))),401)
     console.log('BONUS-PREPARATION passed: native encrypted exact bonus earnings via CLI and conversational MCP, cross-transport idempotency, no foreign credential or scope escalation, separately authenticated passkey approval and client attribution, calculation holds and no release; 1440 and 390.')
 
     await data(base+'/agents/'+agent.id+'/revoke',{version:1},200,humans.admin.cookie)
-    await tool('reports.bonuses',{companyId:company.id},403)
-    await tool('bonus.read',{companyId:company.id,runId:bonus.id},403)
-    await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},403)
+    await tool('reports.bonuses',{companyId:company.id},401)
+    await tool('bonus.read',{companyId:company.id,runId:bonus.id},401)
+    await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},401)
     assert.equal((await bonusCli('bonus-status')).code,1)
     await refused(door+'/earnings-run/'+waRun+'/approve',{version,reviewToken:pendingPresentation.reviewToken,...pendingProof},'presenting_client_revoked',cookie,{},403)
 
@@ -735,7 +735,9 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       assert.doesNotMatch(await held.text(),/25000|Synthetic Seattle cook|synthetic-envelope-915/,'held reads disclose no bonus compensation')
     }
     const heldMcp=await fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name:'bonus.read',arguments:{companyId:company.id,runId:custodyRun.id}}))})
-    assert.equal(heldMcp.status,403)
+    assert.equal(await mcpStatus(heldMcp),401)
+    assert.match(heldMcp.headers.get('www-authenticate'),/Bearer/,'a custody-inadmissible native credential receives the shared authentication challenge')
+    assert.doesNotMatch(await heldMcp.text(),/25000|Synthetic Seattle cook|synthetic-envelope-915/,'held MCP result discloses no bonus compensation')
     await capture('bonus-custody-held',screen,'approver-b')
     console.log('BONUS-CUSTODY passed: suspended REST and MCP preparations lose authority after revocation; native inventory retains the actual bonus derivative, and an explicit privacy hold denies agent preview and report reads and human access without compensation disclosure; 1440 and 390.')
 

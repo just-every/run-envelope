@@ -101,6 +101,7 @@
       "browser": false,
       "hosted": true,
       "commands": [
+        "pnpm run build",
         "pnpm run typecheck"
       ]
     }

@@ -36,7 +36,9 @@ the original native scope and expiry.
 
 Every mutation requires `idempotency_key`. Keep `requestKey` for the native
 hourly/bonus preparation key too. Replaying the same key cannot repeat an effect;
-changed arguments conflict. Record mutations expose native revision preconditions
+changed arguments conflict. Overlapping admissions may refuse with `decision_busy`
+or `call_in_progress` and no effect from that attempt. Reconcile the completed
+operation before repeating a request. Record mutations expose native revision preconditions
 and exact native targets and summaries. A preparation cannot approve wages, pay
 people, remit tax, file returns, create an outside account or satisfy a human's
 step-up. Native review and exact-version authority remain separate from company

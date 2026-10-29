@@ -1572,7 +1572,8 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
         streamController.enqueue(new TextEncoder().encode(complete.slice(-1)))
         streamController.close()
         const refused = await pending
-        assert.equal(refused.status, transport==='rest'?409:401, await refused.clone().text())
+        assert.equal(refused.status, transport==='rest'?403:401, await refused.clone().text())
+        if(transport==='rest')assert.equal((await refused.clone().json()).error,'insufficient_scope','the shared door narrows the retained native admission before any effect')
         assert.deepEqual(
           await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts'),
           beforeRace,
