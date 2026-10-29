@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "8878f09ff87d6bbc5eb73b90c03cd4152276f1dbd9a4a8f6691b4203734f5ea6",
+      "sha256": "53e3fda6f07d17fd4c4b0a33ebe49aecf5241bb70b3c061fc7036830985b13c3",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "07ccafc32de3720e9f8746f40f34f8907f5eb21329782a77520387a95c32870c",
+      "sha256": "33e615cf0a8ca851d1af91018b7b657de9936793b96285cf4063bac13cb29187",
       "executable": false
     },
     "deploy-demo.json": {
@@ -789,6 +789,10 @@
       "sha256": "3d8d480dc8c6e0164e35723f35a79bd664f6784d80187a3393aedf34bb99b9d7",
       "executable": false
     },
+    "migrations/core/0042_grant_revision_audit.sql": {
+      "sha256": "842b6a651271ebe0fff8164843b43603f0931d721065aaa3be76cc575fb8655d",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "5dce7856fac22b695fc39b505e90971b52044c076d2935837a57c73bf01b427e",
       "executable": false
@@ -1118,7 +1122,7 @@
       "executable": false
     },
     "RELEASE.json": {
-      "sha256": "5d51760a84af3d0bd574c8d8268c8aff3ee1efa70a5e007dc08686ed5e1521c5",
+      "sha256": "d29b316a1f69a3af320376445b91dfe1e0191f89c7f3f1d80534fc2122098175",
       "executable": false
     },
     "rer-project.json": {
