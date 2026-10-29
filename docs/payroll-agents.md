@@ -33,6 +33,8 @@ even when the sponsor has the requested power. The access class policy must
 permit a reduction. The grant version changes atomically, so already-open calls
 using the previous version lose their fence. The response contains the retained
 scope, version, direction and affected people count, without a new secret.
+Repeating the retained scope records an unchanged decision and retains the
+version; it cannot restore a removed power or invalidate another current call.
 
 Native staff and firm-accountant grants retain the access class, the actual
 direction of the change and one affected person. Mixed changes explicitly say
