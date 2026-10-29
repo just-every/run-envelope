@@ -299,6 +299,10 @@ export async function payrollResponse(
               properties: {}, required: [],
             },
             {
+              name:'credentials.restrict',action:'restrict',description:'Reduce only this credential’s existing actions, fields or locations. Cannot add powers or change another grant.',
+              properties:{actions:{type:'array',items:{type:'string'}},fields:{type:'array',items:{type:'string'}},locations:{type:'array',items:{type:'string'}}},required:[],
+            },
+            {
               name: 'notice.process', action: 'notices:process', description: 'Extract an untrusted proposal from a saved notice using only the declared OpenAI model. Never approves or invokes model tools.',
               properties: {companyId:{type:'string'},noticeId:{type:'string'}}, required:['companyId','noticeId'],
             },
@@ -370,7 +374,7 @@ export async function payrollResponse(
               required: ['companyId', 'draftId'],
             },
           ]
-            .filter((t) => t.action === 'rotate' || scopes.includes(t.action))
+            .filter((t) => ['rotate','restrict'].includes(t.action) || scopes.includes(t.action))
             .map(({ name, description, properties, required }) => ({
               name,
               description,
@@ -398,6 +402,8 @@ export async function payrollResponse(
         const value = await policyCall(agent,String(params.name),'mcp',async()=>
           params.name === 'credentials.rotate'
             ? Object.keys(args).length ? (() => {throw new PayrollError('invalid_input')})() : await agent.rotate()
+            : params.name === 'credentials.restrict'
+              ? await agent.restrict(args)
             : params.name === 'notice.process'
               ? await processNotice(agent,args)
               : params.name === 'reply.dispatch'
@@ -420,7 +426,7 @@ export async function payrollResponse(
                 ? await agent.readDraft(args)
                 : (() => {
                     throw new PayrollError('agent_tool_denied', 403)
-                  })())
+                  })(),args)
         result = { content: [{ type: 'text', text: JSON.stringify(value) }] }
       } else throw new PayrollError('agent_tool_denied', 403)
       return json({ jsonrpc: '2.0', id: message.id, result })

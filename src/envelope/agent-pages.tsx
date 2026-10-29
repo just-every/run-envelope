@@ -64,7 +64,10 @@ export function agentsPage(
         <p>Class and decision totals count every audited tool call in these UTC dates. A call with two classes counts once in each class. The latest 200 calls are shown below; transport discovery is separate from tool activity.</p>
         {activity.counts.length ? activity.counts.map((count,i)=><p key={i} data-agent-count={String(count.class)+':'+String(count.decision)}>{String(count.class)} · {String(count.decision)}: {String(count.count)}</p>) : <p>No tool activity in this period.</p>}
         <details><summary>Attributed calls</summary>
-          {activity.calls.map(call=><p key={String(call.id)}>{String(call.agentName)} for {String(call.sponsorName)} · {String(call.tool)} · {(call.classes as string[]).join(', ')} · {String(call.decision)} · {new Date(Number(call.occurredAt)).toISOString()}</p>)}
+          {activity.calls.map(call=><p key={String(call.id)}>{String(call.agentName)} for {String(call.sponsorName)} · {String(call.tool)} · {call.classes.join(', ')} · {String(call.decision)}{call.facts.direction ? ` · ${call.facts.direction} · ${call.facts.peopleCount} person` : ''} · {new Date(Number(call.occurredAt)).toISOString()}</p>)}
+        </details>
+        <details><summary>Human access and security changes</summary>
+          {activity.changes.map(change=><p key={String(change.id)}>{String(change.actorName)} · {String(change.action)} · {change.classes.join(', ')}{change.facts.direction ? ` · ${change.facts.direction} · ${change.facts.peopleCount} person` : ''} · {new Date(Number(change.occurredAt)).toISOString()}</p>)}
         </details>
       </Card>
       <Card title="Named sponsorship">

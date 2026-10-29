@@ -60,7 +60,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
   try {
     const context=await browser.newContext(),page=await context.newPage(),at=cookie.indexOf('=')
     await context.addCookies([{name:cookie.slice(0,at),value:cookie.slice(at+1),url:origin}])
-    const capture=async label=>{for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+ui);await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})}}
+    const capture=async label=>{for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+ui);await page.evaluate(()=>document.fonts.ready);if(label==='agent-policy-activity')await page.getByText('Human access and security changes',{exact:true}).click();await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})}}
     await capture('agent-policy-unset')
     await page.setViewportSize({width:1440,height:1000})
     for(const key of Object.keys(answers)) {
@@ -96,6 +96,42 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     const limited=await data(base+'/agents',{name:'Synthetic read-only agent',hours:1,actions:['records:read'],locations:['*'],fields:[]},201)
     assert.equal((await mcp('draft.prepare',{...input,companyId:company.id},limited.token)).status,403)
     assert.deepEqual((await effects()).map(r=>({...r,credentials:0,hashes:''})),scopedBefore.map(r=>({...r,credentials:0,hashes:''})))
+    // A bearer may reduce its own authority, never enlarge it or edit another grant.
+    const disposable=await issue(), own=async(args,status=200)=>{
+      const r=await mcp('credentials.restrict',args,disposable.token),body=await r.json()
+      assert.equal(r.status,status,JSON.stringify(body))
+      return status===200?JSON.parse(body.result.content[0].text):body.error
+    }
+    const unchangedGrant=()=>sql(`SELECT actions,fields,locations,version FROM env_agent_grants WHERE id='${disposable.id}'`)
+    const originalGrant=await unchangedGrant()
+    assert.equal((await own({actions:['pay:release']},403)).message,'self_escalation')
+    assert.deepEqual(await unchangedGrant(),originalGrant,'policy cannot add a payroll power')
+    await configure({access:'blocked'})
+    assert.equal((await own({actions:['records:read']},403)).message,'policy_blocked')
+    assert.deepEqual(await unchangedGrant(),originalGrant,'blocked restriction has no effect')
+    await configure()
+    const reduced=await own({actions:['records:read'],fields:[],locations:[location.id]})
+    assert.equal(reduced.direction,'narrow');assert.equal(reduced.peopleCount,1)
+    assert.deepEqual(reduced.actions,['records:read'])
+    assert.equal((await mcp('records.list',{companyId:company.id},disposable.token)).status,200)
+    assert.equal((await mcp('draft.prepare',{...input,companyId:company.id},disposable.token)).status,403)
+    const afterNarrow=await unchangedGrant()
+    assert.equal((await own({actions:['records:read','drafts:prepare'],fields:['compensation'],locations:['*']},403)).message,'self_escalation')
+    assert.deepEqual(await unchangedGrant(),afterNarrow,'previous powers cannot be restored by the bearer')
+    assert.equal((await own({credentialId:credential.id,actions:[]},400)).message,'invalid_agent_scope')
+    await data(base+'/agents/'+disposable.id+'/revoke',{version:reduced.version})
+    assert.equal((await mcp('records.list',{companyId:company.id},disposable.token)).status,403)
+    const accessCalls=(await data(base+'/agents')).activity.calls.filter(c=>c.credentialId===disposable.id&&c.tool==='credentials.restrict')
+    assert.ok(accessCalls.some(c=>c.decision==='executed'&&c.classes.join()==='access'&&c.facts.direction==='narrow'&&c.facts.peopleCount===1))
+    assert.ok(accessCalls.some(c=>c.decision==='self_escalation'&&c.facts.direction==='widen'))
+    // Native provider changes remain owner-only, classed security and secret-free.
+    await data(base+'/providers',{id:'openai',version:0,enabled:true,consent:true,secret:'synthetic-envelope-9610'},201)
+    await data(base+'/providers',{id:'openai',version:1,enabled:true,consent:true,secret:'synthetic-envelope-9611'},201)
+    await data(base+'/providers',{id:'openai',version:2,enabled:false,removeCredential:true},201)
+    const secured=(await data(base+'/agents')).activity.changes.filter(c=>c.action==='provider.declared')
+    assert.equal(secured.length,3)
+    assert.ok(secured.every(c=>c.classes.join()==='security'&&c.actorName))
+    assert.ok(!JSON.stringify(secured).includes('synthetic-envelope-9611'),'audit never exposes provider secrets')
     // A company answers its own policy; another company's setup changes nothing here.
     await answerAgentPolicy({origin,cookie,company:foreign.id})
     await configure({standard:'blocked',security:'blocked',money:'blocked',sensitive:'blocked'})
@@ -172,8 +208,22 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.equal((await mcp('records.list',{companyId:company.id},staff.token)).status,200)
     const staffView=await data(base+'/agents',undefined,200,staffCookie)
     assert.ok(staffView.activity.calls.every(c=>c.sponsorId===staffId))
+    const beforeProviderRefusal=await sql(`SELECT version,secret_cipher FROM env_external_providers WHERE company_id='${company.id}'`)
+    await data(base+'/providers',{id:'openai',version:3,enabled:true,consent:true,secret:'synthetic-envelope-9612'},403,staffCookie)
+    assert.deepEqual(await sql(`SELECT version,secret_cipher FROM env_external_providers WHERE company_id='${company.id}'`),beforeProviderRefusal)
     await data(base+'/grants',{...grant,version:1,actions:[]})
     const revokedBefore=await effects();assert.equal((await mcp('records.list',{companyId:company.id},staff.token)).status,403);assert.deepEqual(await effects(),revokedBefore)
+    // Firm accountants use the same native grants, including widening and narrowing.
+    await data(base+'/grants',{...grant,version:2,role:'accountant',fields:['compensation'],actions:['records:read','rates:propose']})
+    await data(base+'/grants',{...grant,version:3,role:'accountant',fields:['compensation'],actions:['records:read','rates:propose','audit:read']})
+    await data(base+'/grants',{...grant,version:4,role:'accountant',fields:[],actions:['records:read']})
+    await data(base+'/grants',{...grant,version:5,revoke:true})
+    const native=(await data(base+'/agents')).activity.changes
+    const grantChanges=native.filter(c=>c.targetId===staffId)
+    for(const direction of ['grant','widen','narrow','revoke'])assert.ok(grantChanges.some(c=>c.classes.join()==='access'&&c.facts.direction===direction&&c.facts.peopleCount===1))
+    assert.ok(native.some(c=>c.targetId===disposable.id&&c.action==='agent.issued'&&c.classes.includes('access')&&c.classes.includes('security')&&c.facts.direction==='grant'))
+    assert.ok(native.some(c=>c.targetId===disposable.id&&c.action==='agent.revoked'&&c.facts.direction==='revoke'))
+    assert.deepEqual((await data('/api/envelope/companies/'+foreign.id+'/agents')).activity.changes.filter(c=>['grant.changed','provider.declared','agent.issued'].includes(c.action)),[],'native class facts stay in their company')
     // Seed the rest of one fixed UTC week through real calls, with real D1 time
     // supplied by the test-only clock rather than the machine's civil date.
     const expectedDays=['2026-10-28']
@@ -205,6 +255,11 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     await capture('agent-policy-activity')
     await page.setViewportSize({width:1440,height:1000});await page.goto(origin+ui)
     for(const [key,total] of Object.entries(totals))assert.ok((await page.locator(`[data-agent-count="${key}"]`).innerText()).endsWith(': '+total))
+    await page.getByText('Human access and security changes',{exact:true}).click()
+    const humanChanges=await page.locator('details').filter({has:page.getByText('Human access and security changes',{exact:true})}).innerText()
+    assert.ok(humanChanges.includes('grant.changed · access · widen · 1 person'))
+    assert.ok(humanChanges.includes('grant.changed · access · narrow · 1 person'))
+    assert.ok(humanChanges.includes('provider.declared · security'))
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'settings fit the desktop')
     for(const control of await page.locator('button,a,summary').all())if(await control.isVisible())assert.ok((await control.innerText()).trim(),'touched controls have visible labels')
     assert.ok(await page.locator('#class-policy').evaluate(n=>[...n.querySelectorAll('p,label,button,select')].every(e=>parseFloat(getComputedStyle(e).fontSize)>=13)))

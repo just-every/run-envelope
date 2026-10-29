@@ -32,7 +32,8 @@
     "0027_dependency_key_custody.sql",
     "0028_worker_privacy.sql",
     "0029_privacy_requests.sql",
-    "0040_operation_sentinels.sql"
+    "0040_operation_sentinels.sql",
+    "0041_native_action_classes.sql"
   ],
   "breaking": false,
   "agentUpdateInstructions": "Install the pinned dependencies and use the native rer commands. Keep the original payroll record encryption key for backup recovery. Review CONTRACT.md and ACCEPTANCE.md for implemented behavior before using payroll workflows."

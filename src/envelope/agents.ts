@@ -88,7 +88,7 @@ export class AgentSettings {
       this.records.statement(`INSERT INTO env_agent_policy(company_id,owner_only,version,change_id) SELECT ?,?,1,? WHERE ${f.sql} AND COALESCE((SELECT version FROM env_agent_policy WHERE company_id=?),0)=?
         ON CONFLICT(company_id) DO UPDATE SET owner_only=excluded.owner_only,version=env_agent_policy.version+1,change_id=excluded.change_id WHERE env_agent_policy.version=? RETURNING version`,
         [actor.company,input.ownerOnly === true || input.ownerOnly === 'true' ? 1 : 0,id,...f.args,actor.company,version,version]),
-      this.records.statement(`UPDATE env_agent_grants SET revoked_at=?,version=version+1 WHERE company_id=? AND revoked_at IS NULL AND EXISTS(SELECT 1 FROM env_agent_policy WHERE company_id=? AND owner_only=1 AND change_id=?) AND sponsor_id NOT IN (SELECT operator_id FROM env_grants WHERE company_id=? AND role='owner' AND revoked_at IS NULL)`,[Date.now(),actor.company,actor.company,id,actor.company]),
+      this.records.statement(`UPDATE env_agent_grants SET revoked_at=?,revocation_id=?,version=version+1 WHERE company_id=? AND revoked_at IS NULL AND EXISTS(SELECT 1 FROM env_agent_policy WHERE company_id=? AND owner_only=1 AND change_id=?) AND sponsor_id NOT IN (SELECT operator_id FROM env_grants WHERE company_id=? AND role='owner' AND revoked_at IS NULL)`,[Date.now(),id,actor.company,actor.company,id,actor.company]),
       auditStatement(this.records.env,actor,id,'agent.policy',actor.company,version+1,'EXISTS(SELECT 1 FROM env_agent_policy WHERE change_id=?)',[id]),
     ])
     if (!result[0].results.length) throw new PayrollError('policy_or_authority_changed',409)
@@ -144,7 +144,7 @@ export class AgentSettings {
       .replaceAll('/', '_')
       .replaceAll('=', '')
     const id = uuid(),
-      event = uuid(),
+      event = id,
       now = Date.now(),
       expiresAt = input.reviewDate ? new Date(date(input.reviewDate)+'T23:59:59.999Z').getTime() : now + hours * 3600000,
       secretExpiresAt = Math.min(expiresAt, now + hours * 3600000)
@@ -314,6 +314,31 @@ export class AgentTools {
     if (!result[1].results.length) throw new PayrollError('agent_authority_revoked',403)
     this.grant.token_hash = hash
     return {id:this.grant.id,token,secretExpiresAt,expiresAt:this.grant.expires_at}
+  }
+  restriction(input: Input) {
+    const keys = ['actions','fields','locations'] as const
+    if (!Object.keys(input).length || Object.keys(input).some(k=>!keys.includes(k as typeof keys[number])) ||
+      keys.some(k=>input[k] !== undefined && (!Array.isArray(input[k]) || (input[k] as unknown[]).some(v=>typeof v!=='string'))))
+      throw new PayrollError('invalid_agent_scope')
+    const before = Object.fromEntries(keys.map(k=>[k,JSON.parse(this.grant[k]) as string[]]))
+    const after = Object.fromEntries(keys.map(k=>[k,input[k] === undefined ? before[k] : [...new Set(input[k] as string[])]]))
+    const widens = keys.some(k=>after[k].some(v=>!before[k].includes(v) && !(k==='locations' && before[k].includes('*'))))
+    const narrows = keys.some(k=>before[k].some(v=>!after[k].includes(v) && !(k==='locations' && after[k].includes('*'))))
+    return {after,direction:widens ? (narrows ? 'widen-and-narrow' : 'widen') : narrows ? 'narrow' : 'unchanged',widens}
+  }
+  async restrict(input: Input) {
+    const {after,direction,widens} = this.restriction(input)
+    if (widens) throw new PayrollError('self_escalation',403)
+    const f=this.fence(), next=this.grant.version+1
+    const result=await this.env.DB.batch([
+      this.log('access:restrict',this.grant.id),
+      this.env.DB.prepare(`UPDATE env_agent_grants SET actions=?,fields=?,locations=?,version=version+1 WHERE id=? AND ${f.sql} RETURNING version`)
+        .bind(JSON.stringify(after.actions),JSON.stringify(after.fields),JSON.stringify(after.locations),this.grant.id,...f.args),
+    ])
+    if (!result[1].results.length) throw new PayrollError('agent_authority_revoked',403)
+    // A current call completes under the reduced grant; suspended old calls fail.
+    this.grant={...this.grant,version:next,actions:JSON.stringify(after.actions),fields:JSON.stringify(after.fields),locations:JSON.stringify(after.locations)}
+    return {id:this.grant.id,version:next,direction,peopleCount:1,...after}
   }
   allow(action: string, company: unknown) {
     if (company !== this.grant.company_id || !JSON.parse(this.grant.actions).includes(action))

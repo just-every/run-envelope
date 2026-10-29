@@ -24,6 +24,27 @@ or survive sponsor removal/current-scope changes. Rotate before expiry; an
 expired secret requires fresh human issuance. Concurrent rotations have one
 winner; old in-flight requests fail their repeated digest fence.
 
+`credentials.restrict` accepts optional arrays `actions`, `fields` and
+`locations`, with at least one present. It can reduce only the calling
+credential's existing scope. Omitted arrays retain their current values;
+an empty array removes that scope. It cannot edit a different credential or
+restore a removed power. Widening returns `self_escalation` and changes nothing,
+even when the sponsor has the requested power. The access class policy must
+permit a reduction. The grant version changes atomically, so already-open calls
+using the previous version lose their fence. The response contains the retained
+scope, version, direction and affected people count, without a new secret.
+
+Native staff and firm-accountant grants retain the access class, the actual
+direction of the change and one affected person. Mixed changes explicitly say
+`widen-and-narrow`; changing a role is conservatively treated as both directions.
+Issuing an agent grant carries access and security; revocation carries access.
+A sponsorship restriction counts distinct affected sponsors, rather than the
+number of credentials they hold. Provider credential replacement and verified
+native authenticator registration carry security. These facts are computed from
+the stored change and stay separate from the original immutable audit rows.
+The Agents activity disclosure shows attributed human changes separately from
+the agent-call totals. Historical facts confer no restored authority.
+
 ## Scope and human settings API
 
 All routes use `/api/envelope/companies/:company`, a current human session and
