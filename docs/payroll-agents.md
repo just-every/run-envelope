@@ -24,33 +24,19 @@ or survive sponsor removal/current-scope changes. Rotate before expiry; an
 expired secret requires fresh human issuance. Concurrent rotations have one
 winner; old in-flight requests fail their repeated digest fence.
 
-## Shared company door availability
+## Shared company door
 
-Base's shared agent-door and Business-settings source is included with additive
-migrations. It is not connected to Envelope's production request handler yet.
-The current supported agent interface remains the scoped local-credential MCP
-and REST interface described below; a Business access token does not authenticate
-to those native interfaces. No signed company-policy adoption, shared approval
-page or shared-door conformance is claimed by including the source.
+The production Worker mounts Base's shared CORE door before ordinary application
+authentication. See [the shared door guide](agent-door.md) for the live registry,
+Business-to-native grant binding, supported MCP versions, policy, native limits
+and refusal behavior. The older single-message, unprefixed MCP request shape has
+been replaced by the shared protocol. The native REST API below remains scoped
+and retains its existing company restrictions.
 
-Credential rotation replaces only the calling Envelope credential's secret.
-It cannot rotate a Business access token, select somebody else's credential,
-extend the underlying grant or create a person's approval. A Business-token
-journey therefore cannot truthfully demonstrate that local-credential operation.
-The shared verifier must support a native local-credential lifecycle before the
-complete current interface can move to that door with truthful conformance.
-
-The current target names `envelope.runs.review_link`,
-`envelope.bank.request_change` and `envelope.contractors.record_payment` also
-contain underscores that the pinned Base registry rejects. The existing native
-run-review handoff cannot be registered under its contracted name until the
-shared registry accepts it or the contract owner supplies a replacement name.
-The copied shared runtime is retained without a seed-specific validation bypass.
-
-The target payroll-administrator surface in CONTRACT.md remains a target.
-Preparing earnings or notice proposals does not pay wages, remit tax, file a
-return or establish an agency receipt. Provider spend caps are not enforced by
-the copied door; no provider cost or spend allowance is registered here.
+The contracted `envelope.runs.review_link` name is accepted by the runtime. The
+other target-only bank and contractor verbs remain unregistered because their
+native agent services are not implemented. No payroll outcome is inferred from
+an internal proposal or an accepted correspondence submission.
 
 ## Scope and human settings API
 

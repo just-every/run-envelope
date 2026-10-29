@@ -11,6 +11,7 @@ import { setupStateResponse } from './base/setup-state'
 import { authResponse, runtimeBindings, type Bindings } from './auth.server'
 import { identity, alternative } from './identity'
 import { operatorAuth } from './auth.server'
+import { agentResponse } from './envelope/door'
 import { payrollResponse } from './envelope/http'
 
 const api = new Hono<{ Bindings: Bindings }>()
@@ -29,6 +30,8 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
+    const agent = await agentResponse(request, runtimeBindings(env))
+    if (agent) return rejectedResponse(request, agent)
     const auth = await authResponse(request, env)
     if (auth) return auth
     const payroll = await payrollResponse(request, runtimeBindings(env), operatorAuth(runtimeBindings(env)))

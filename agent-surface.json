@@ -1,0 +1,452 @@
+{
+  "schema": "rer-agent-surface/1",
+  "seed": "envelope",
+  "specialist": "payroll",
+  "capabilities": [
+    "tools",
+    "policy",
+    "pause",
+    "audit",
+    "idempotency"
+  ],
+  "tools": [
+    {
+      "name": "envelope.credentials.rotate",
+      "scope": "credentials:rotate",
+      "readOnly": false,
+      "classes": [
+        "security"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ],
+      "sponsorEscalation": false
+    },
+    {
+      "name": "envelope.notices.process",
+      "scope": "notices:process",
+      "readOnly": false,
+      "classes": [
+        "sensitive",
+        "external"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.notices.reply",
+      "scope": "dispatch:execute",
+      "readOnly": false,
+      "classes": [
+        "commitment",
+        "external"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.bonus.prepare",
+      "scope": "drafts:prepare",
+      "readOnly": false,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "SURFACE-002",
+        "ENV-030"
+      ]
+    },
+    {
+      "name": "envelope.bonus.read",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.runs.review_link",
+      "scope": "drafts:read",
+      "readOnly": false,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.records.list",
+      "scope": "records:read",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.draft.prepare",
+      "scope": "drafts:prepare",
+      "readOnly": false,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "SURFACE-002",
+        "ENV-030"
+      ]
+    },
+    {
+      "name": "envelope.reports.bonuses",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.reports.proposals",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.draft.read",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    },
+    {
+      "name": "envelope.workspace.snapshot",
+      "scope": "records:read",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006"
+      ]
+    }
+  ],
+  "resources": [],
+  "notTools": [
+    {
+      "clauses": [
+        "ENV-053"
+      ],
+      "reason": "import-door"
+    },
+    {
+      "clauses": [
+        "ENV-050"
+      ],
+      "reason": "installation"
+    },
+    {
+      "clauses": [
+        "ENV-034"
+      ],
+      "reason": "screen"
+    }
+  ],
+  "witness": {
+    "tool": "envelope.workspace.snapshot",
+    "args": {}
+  },
+  "escalations": [],
+  "journey": [
+    {
+      "id": "workspace-snapshot",
+      "tool": "envelope.workspace.snapshot",
+      "args": {},
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "records-list",
+      "tool": "envelope.records.list",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "tool": "envelope.draft.prepare",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "personId": {
+          "$fixture": "person",
+          "pointer": ""
+        },
+        "periodStart": "2026-10-01",
+        "periodEnd": "2026-10-07",
+        "payDate": "2026-10-09",
+        "sourceRef": "native-conformance",
+        "requestKey": {
+          "$fixture": "key",
+          "pointer": ""
+        },
+        "minutes": 480
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "draft-read",
+      "tool": "envelope.draft.read",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "draftId": {
+          "$from": "draft",
+          "pointer": "/id"
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "bonus",
+      "tool": "envelope.bonus.prepare",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "personId": {
+          "$fixture": "person",
+          "pointer": ""
+        },
+        "periodStart": "2026-10-01",
+        "periodEnd": "2026-10-07",
+        "payDate": "2026-10-09",
+        "sourceRef": "native-conformance",
+        "requestKey": {
+          "$fixture": "key",
+          "pointer": ""
+        },
+        "amountCents": 50000
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "bonus-read",
+      "tool": "envelope.bonus.read",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "runId": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "reports-proposals",
+      "tool": "envelope.reports.proposals",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "reports-bonuses",
+      "tool": "envelope.reports.bonuses",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "run-review",
+      "tool": "envelope.runs.review_link",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "runId": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "notice-process",
+      "tool": "envelope.notices.process",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "noticeId": {
+          "$fixture": "notice",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        },
+        {
+          "class": "external"
+        }
+      ]
+    },
+    {
+      "id": "reply-dispatch",
+      "tool": "envelope.notices.reply",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "replyId": {
+          "$fixture": "reply",
+          "pointer": ""
+        },
+        "version": {
+          "$fixture": "replyVersion",
+          "pointer": ""
+        },
+        "digest": {
+          "$fixture": "replyDigest",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "commitment"
+        },
+        {
+          "class": "external"
+        }
+      ]
+    },
+    {
+      "id": "credentials-rotate",
+      "tool": "envelope.credentials.rotate",
+      "args": {},
+      "expect": [
+        {
+          "class": "security"
+        }
+      ]
+    }
+  ],
+  "spend": {
+    "none": true
+  },
+  "verification": {
+    "owner": {
+      "initializer": "tests/agent-door/owner.mjs",
+      "bindings": {
+        "MAIL_FROM": {
+          "module": "tests/agent-door/mail-from.mjs"
+        },
+        "ENVELOPE_RECORD_KEY": {
+          "module": "tests/agent-door/record-key.mjs"
+        }
+      }
+    },
+    "agent": {
+      "initializer": "tests/agent-door/agent.mjs"
+    },
+    "fixtures": {
+      "module": "tests/agent-door/fixtures.mjs"
+    },
+    "network": {
+      "module": "tests/agent-door/network.mjs",
+      "origins": [
+        "https://api.openai.com",
+        "https://api.resend.com"
+      ]
+    }
+  }
+}

@@ -10,7 +10,7 @@ import { agentProvider, providerSecret, email, redact, externalFlows, type Provi
 
 interface Notice {id:string;locationId:string;reference:string;cipher:string;digest:string}
 interface Reply {id:string;version:number;noticeId:string;providerVersion:number;cipher:string;digest:string;locationId:string}
-export interface ReplyData {sender:string;to:string;subject:string;body:string}
+export interface ReplyData {sender:string;to:string;subject:string;body:string;preparedBy?:{agentId:string;sponsorId:string;grantId:string;label:string}}
 const uuid = () => crypto.randomUUID()
 const latestReply = `(SELECT MAX(version) FROM env_notice_replies WHERE company_id=r.company_id AND id=r.id)=r.version`
 function documentText(value:unknown,max=12000) {
@@ -86,6 +86,15 @@ export class Notices {
     if (!provider) throw new PayrollError('provider_not_declared',409)
     const secret=await providerSecret(this.records.env,actor.company,provider)
     const payload:ReplyData={sender:provider.sender,to:email(input.to),subject:redact(text(input.subject,200),[secret]),body:redact(documentText(input.body),[secret])}
+    const prepared=await this.records.statement(`SELECT door_agent_id AS agentId,sponsor_id AS sponsorId,credential_id AS grantId,door_agent_name AS label
+      FROM env_agent_access WHERE company_id=? AND target_id=? AND action='notices:process'
+      AND door_agent_id IS NOT NULL AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 1`,[actor.company,noticeId,...f.args]).first<NonNullable<ReplyData['preparedBy']>>()
+    if(prepared) {
+      payload.preparedBy=prepared
+      // The visible attribution is part of the exact native human-reviewed body,
+      // encrypted bytes and digest, rather than appended after approval.
+      payload.body+='\n\n'+prepared.label
+    }
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
     const result=await this.records.env.DB.batch([
@@ -209,6 +218,8 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
   if (!row) throw new PayrollError('exact_approved_reply_required',403)
   const provider=await agentProvider(agent,'resend',row.provider_version), secret=await providerSecret(agent.env,company,provider), key=await recordKey(agent.env.ENVELOPE_RECORD_KEY),
     payload:ReplyData=JSON.parse(await unseal(key,JSON.stringify([company,'reply',id,version]),row.cipher))
+  if(agent.doorContext && (!payload.preparedBy || payload.preparedBy.agentId!==agent.doorContext.agent.id || payload.preparedBy.sponsorId!==agent.doorContext.person.id || payload.preparedBy.grantId!==agent.grant.id))
+    throw new PayrollError('reviewed_agent_attribution_required',409)
   const execution=uuid(), now=Date.now()
   // This statement is the execution eligibility linearization point: exact latest
   // immutable item, current approver and sponsor scopes, unexpired approval/provider.
