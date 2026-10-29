@@ -66,15 +66,16 @@ export class AgentPolicy {
     if (!row[0].results.length) throw new PayrollError('policy_or_authority_changed',409)
     return this.read(actor)
   }
-  async activity(actor: Actor, from?: string, through?: string) {
+  async activity(actor: Actor, from?: string, through?: string, operation = '') {
     if (actor.grant.role !== 'owner' && !actor.grant.actions.includes('records:read')) throw new PayrollError('sponsor_scope_denied',403)
     const today = new Date().toISOString().slice(0,10)
     const end = date(through ?? today), start = date(from ?? new Date(Date.parse(end) - 6*86400000).toISOString().slice(0,10))
     if (start>end || Date.parse(end)-Date.parse(start)>31*86400000) throw new PayrollError('invalid_audit_period')
-    const f = fence(actor), filter = `a.company_id=? AND a.occurred_at>=? AND a.occurred_at<? AND (?='owner' OR a.sponsor_id=?) AND ${f.sql}`,
-      args = [actor.company,Date.parse(start),Date.parse(end)+86400000,actor.grant.role,actor.session.operator.id,...f.args]
+    if(operation && !/^[A-Za-z0-9-]{1,200}$/.test(operation))throw new PayrollError('invalid_operation_query')
+    const f = fence(actor), filter = `a.company_id=? AND (?='' OR a.door_operation_id=?) AND a.occurred_at>=? AND a.occurred_at<? AND (?='owner' OR a.sponsor_id=?) AND ${f.sql}`,
+      args = [actor.company,operation,operation,Date.parse(start),Date.parse(end)+86400000,actor.grant.role,actor.session.operator.id,...f.args]
     const [calls, counts] = await this.records.env.DB.batch<Record<string,unknown>>([
-      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,COALESCE(a.door_agent_name,g.name) AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt
+      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,COALESCE(a.door_agent_name,g.name) AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt,a.door_operation_id AS operationId
         FROM env_agent_call_audit a JOIN env_agent_grants g ON g.id=a.credential_id JOIN oa_operators o ON o.id=a.sponsor_id
         WHERE ${filter} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args),
       this.records.statement(`SELECT c.value AS class,a.decision,COUNT(*) AS count FROM env_agent_call_audit a,json_each(a.classes) c WHERE ${filter} GROUP BY c.value,a.decision ORDER BY c.value,a.decision`,args),

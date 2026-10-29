@@ -1,3 +1,4 @@
+import { agentRest } from './door/rest'
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
 import { ExtendedRetirement } from './benefits/extended-retirement'
 import { RetirementRecords } from './benefits/retirement-records'
@@ -187,69 +188,7 @@ export async function payrollResponse(
         status: 405,
         headers: { ...headers, allow: 'GET, HEAD, POST' },
       })
-    if (url.pathname.startsWith('/api/envelope/v1/')) {
-      if (request.headers.has('cookie'))
-        throw new PayrollError('ambiguous_authentication', 403)
-      if (request.headers.get('sec-fetch-site') === 'cross-site' ||
-          (request.headers.has('origin') && request.headers.get('origin') !== env.AUTH_ORIGIN))
-        throw new PayrollError('invalid_origin', 403)
-      const bearer = request.headers.get('authorization')
-      if (!bearer?.startsWith('Bearer '))
-        throw new PayrollError('agent_authentication_required', 401)
-      const agent = await AgentTools.authenticate(env, bearer.slice(7))
-      const opened = await agent.log('transport.rest.v1', agent.grant.id).run()
-      if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked', 403)
-      const reportRoute = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/reports\/(proposals|bonus-runs)$/.exec(url.pathname)
-      if (reportRoute && request.method !== 'POST') {
-        if ([...url.searchParams.keys()].some(k=>!['limit','after'].includes(k) || url.searchParams.getAll(k).length!==1)) throw new PayrollError('invalid_report_query')
-        const result=await policyCall<unknown>(agent,reportRoute[2]==='bonus-runs' ? 'reports.bonuses' : 'reports.proposals','rest',()=> (reportRoute[2]==='bonus-runs' ? bonusReport.bind(null,agent) : agent.proposalReport.bind(agent))({companyId:reportRoute[1],
-          ...(url.searchParams.has('limit') ? {limit:url.searchParams.get('limit')} : {}),
-          ...(url.searchParams.has('after') ? {after:url.searchParams.get('after')} : {}),
-        }))
-        return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
-      }
-      const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts|bonus-runs)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
-      if (!route) throw new PayrollError('agent_tool_denied', 403)
-      const [, companyId, resource, draftId] = route
-      if (resource === 'bonus-runs') {
-        if (url.search) throw new PayrollError('invalid_bonus_input')
-        if (!draftId && request.method === 'POST') {
-          if (request.headers.get('content-type')?.split(';')[0] !== 'application/json') throw new PayrollError('unsupported_content_type',415)
-          const value=await input(request)
-          if (Object.hasOwn(value,'companyId')) throw new PayrollError('invalid_bonus_input')
-          return json(await policyCall(agent,'bonus.prepare','rest',()=>prepareBonus(agent,{...value,companyId})),201)
-        }
-        if (draftId && request.method !== 'POST') {
-          const result=await policyCall(agent,'bonus.read','rest',()=>readBonus(agent,{companyId,runId:draftId}))
-          return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
-        }
-        throw new PayrollError('agent_tool_denied',403)
-      }
-      if (resource === 'records' && !draftId && request.method !== 'POST') {
-        if ([...url.searchParams.keys()].some(k => !['limit', 'after'].includes(k)) ||
-            [...url.searchParams.keys()].some(k => url.searchParams.getAll(k).length !== 1))
-          throw new PayrollError('invalid_record_query')
-        const result = await policyCall(agent,'records.list','rest',()=>agent.records({companyId,
-          ...(url.searchParams.has('limit') ? {limit: url.searchParams.get('limit')} : {}),
-          ...(url.searchParams.has('after') ? {after: url.searchParams.get('after')} : {}),
-        }))
-        return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
-      }
-      if (resource === 'drafts' && !draftId && request.method === 'POST') {
-        if (url.search) throw new PayrollError('invalid_draft_input')
-        if (request.headers.get('content-type')?.split(';')[0] !== 'application/json')
-          throw new PayrollError('unsupported_content_type', 415)
-        const value = await input(request)
-        if (Object.hasOwn(value, 'companyId')) throw new PayrollError('invalid_draft_input')
-        return json(await policyCall(agent,'draft.prepare','rest',()=>agent.prepare({...value, companyId})), 201)
-      }
-      if (resource === 'drafts' && draftId && request.method !== 'POST') {
-        if (url.search) throw new PayrollError('invalid_draft_input')
-        const result = await policyCall(agent,'draft.read','rest',()=>agent.readDraft({companyId, draftId}))
-        return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
-      }
-      throw new PayrollError('agent_tool_denied', 403)
-    }
+    if (url.pathname.startsWith('/api/envelope/v1/')) return await agentRest(request,env,()=>input(request))
     if (request.headers.has('authorization'))
       throw new PayrollError('human_session_required', 403)
     session = await auth.getSession(request)
@@ -725,7 +664,7 @@ export async function payrollResponse(
           const grants = await agents.list(actor),
             access = await agents.access(actor),
             classPolicy = await new AgentPolicy(records).read(actor),
-            activity = await new AgentPolicy(records).activity(actor,url.searchParams.get('from') ?? undefined,url.searchParams.get('through') ?? undefined)
+            activity = await new AgentPolicy(records).activity(actor,url.searchParams.get('from') ?? undefined,url.searchParams.get('through') ?? undefined,url.searchParams.get('operation') ?? '')
           response = ui
             ? agentsPage(
                 session,

@@ -1,7 +1,8 @@
 # Envelope's shared company agent door
 
 Envelope serves one Base door at `/mcp` and the alias `/api/envelope/mcp`.
-It supports MCP 2026-07-28 and 2025-11-25. Use discovery and the canonical
+The existing `/api/envelope/v1` agent REST routes invoke that same door and
+retain their native REST vocabulary. It supports MCP 2026-07-28 and 2025-11-25. Use discovery and the canonical
 OAuth metadata; send the negotiated protocol and method/name headers. Tools
 have JSON input/output schemas, scopes, computed classes and contract citations.
 Refusals use `code` and MCP `com.runeditrun/error` metadata.
@@ -68,11 +69,16 @@ including at native SQL effects. Neither policy supplies missing native authorit
 Native access records retain the signed agent, sponsor, originating operation,
 consent and named approvers alongside the original grant ID. For shared-door
 correspondence, native extraction attribution is incorporated into the saved
-reply as a separate attribution field **before** human review, encryption and hashing; dispatch checks that exact
-agent and sponsor. It never appends unreviewed text after approval.
+reply as a separate attribution field **before** human review, encryption and hashing; dispatch preserves that preparer and separately records the actual sending
+agent and sponsor in native activity and the outbound attribution header. It never appends unreviewed text after approval.
 
 Installation, archive import, device clients and a person's own authentication
 or payroll approval screens retain their own doors. There is no agent queue
 executor, resource catalogue, streaming event feed, specialist prompt catalogue,
 full payroll week, funded payment or agency filing claim in this CORE subset.
 The broader SURFACE clauses remain targets until those native jobs are delivered.
+
+Native company activity accepts `?operation=<shared-operation-id>` for reconciliation
+with the shared audit. Native credential and company-policy admission fingerprints
+are retained with local calls, so stale credentials and pending authority cannot
+survive rotation or a native policy change. These fingerprints grant no scope.

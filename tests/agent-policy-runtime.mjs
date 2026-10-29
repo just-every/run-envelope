@@ -35,7 +35,7 @@ export async function mcpStatus(response) {
     assert.equal(response.status,200,'MCP tool refusals retain the successful JSON-RPC transport')
     const error=body.result._meta?.['com.runeditrun/error']
     assert.equal(typeof error?.code,'string','every refusal is typed')
-    const status=error.native_status??({idempotency_conflict:409,revision_conflict:409,invalid_arguments:400,record_unavailable:409,native_agent_grant_required:403,native_agent_grant_revoked:403}[error.code])
+    const status=error.native_status??({idempotency_conflict:409,revision_conflict:409,invalid_arguments:400,record_unavailable:409,native_agent_grant_required:403,native_agent_grant_revoked:403,native_agent_admission_changed:403}[error.code])
     assert.ok(status,'native refusal has a known status: '+error.code)
     return status
   }

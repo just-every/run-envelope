@@ -74,8 +74,8 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
     if (!entry.readOnly) {
       tool.summary=async(args,ctx)=>{const summary=(await effect(env,nativeName,args,ctx))?.summary ?? {items:[entry.description]};if(nativeName==='credentials.rotate')summary.items=[...summary.items??[],'Delivery key SHA-256 '+await digest(JSON.stringify(args.publicKey))];return summary}
       tool.target=async(args,ctx)=>(await effect(env,nativeName,args,ctx))?.target ?? null
-      tool.revision=async(args,ctx)=>(await effect(env,nativeName,args,ctx))?.revision ?? null
-      if(nativeName==='notice.process') tool.revisionType='string'
+      tool.revision=async(args,ctx)=>{const target=await effect(env,nativeName,args,ctx);if(!target)return null;const agent=await nativeAgent(env,ctx,args.companyId);return JSON.stringify([target.revision,agent.grant.version,agent.authenticatedPolicyVersion])}
+      tool.revisionType='string'
     }
     if (nativeName==='credentials.rotate') tool.authority=async(_args,ctx)=>({subject:(await nativeAgent(env,ctx)).grant.id,widens:false})
     return tool

@@ -236,7 +236,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await answerAgentPolicy({origin,cookie,company:company.id})
     const agent = await data(base + '/agents', { name: 'synthetic-envelope-342', hours: 1, actions: ['records:read', 'drafts:prepare', 'drafts:read'],
       locations: ['*'], fields: ['compensation'], providers: [], models: [] }, 201, humans.admin.cookie)
-    const mcp=(method,params)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+agent.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify(agentMessage(method,params))})
+    const mcp=(method,params)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+agent.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage(method,params))})
     const tools = (await (await mcp('tools/list', {})).json()).result.tools.map((t) => t.name)
     assert.equal(tools.some((t) => /approve|release/.test(t)), false, 'no agent tool can approve or release a run')
     const before = await effects()
@@ -354,8 +354,10 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual(reportRows,bonusReport.bonuses,'every paginated MCP row matches the actual CLI report')
     const priorBonusRows=await bonusRows()
     await tool('bonus.prepare',{...bonusInput,amountCents:25001},409)
-    for(const extra of [{approved:true},{human:true},{confirmation:'yes'},{amountCents:0},{amountCents:1.5},{amountCents:100000001}])
-      await tool('bonus.prepare',{...bonusInput,...extra},400)
+    for(const extra of [{approved:true},{human:true},{confirmation:'yes'}])
+      assert.equal((await tool('bonus.prepare',{...bonusInput,...extra})).id,bonus.id,'undeclared human flags are inert on the shared door replay')
+    for(const amountCents of [0,1.5,100000001])
+      await tool('bonus.prepare',{...bonusInput,amountCents,requestKey:crypto.randomUUID()},400)
     assert.deepEqual(await bonusRows(),priorBonusRows,'conflicts and spoofed preparation flags create no run')
     // Revoke a real suspended preparation after transport authentication, before
     // its JSON body finishes. Neither transport may persist the bonus afterward.

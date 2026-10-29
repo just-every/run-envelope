@@ -11,7 +11,7 @@ import { agentProvider, providerSecret, email, redact, externalFlows, type Provi
 interface Notice {id:string;locationId:string;reference:string;cipher:string;digest:string}
 interface Reply {id:string;version:number;noticeId:string;providerVersion:number;cipher:string;digest:string;locationId:string}
 export interface ReplyData {sender:string;to:string;subject:string;body:string;preparedBy?:{agentId:string;sponsorId:string;grantId:string;label:string}}
-export const replyBody=(reply:ReplyData)=>reply.body+(reply.preparedBy?'\n\n'+reply.preparedBy.label:'')
+export const replyBody=(reply:ReplyData)=>reply.body+(reply.preparedBy?'\n\nPrepared by '+reply.preparedBy.label:'')
 const uuid = () => crypto.randomUUID()
 const latestReply = `(SELECT MAX(version) FROM env_notice_replies WHERE company_id=r.company_id AND id=r.id)=r.version`
 function documentText(value:unknown,max=12000) {
@@ -66,7 +66,7 @@ export class Notices {
       auditStatement(this.records.env,actor,event,'notice.read',id,1),
       this.records.statement(`SELECT id,cipher FROM env_notice_analysis WHERE company_id=? AND notice_id=? AND ${f.sql} ORDER BY created_at DESC,id LIMIT 20`,[actor.company,id,...f.args]),
       this.records.statement(`SELECT r.id,r.version,r.notice_id AS noticeId,r.provider_version AS providerVersion,r.cipher,r.digest,
-        a.actor_id AS approvedBy,(SELECT display_name FROM oa_operators WHERE id=a.actor_id) AS approverName,a.expires_at AS approvalExpiresAt,a.revoked_at AS approvalRevokedAt,d.state AS dispatchState,d.provider_receipt AS providerReceipt
+        a.actor_id AS approvedBy,(SELECT display_name FROM oa_operators WHERE id=a.actor_id) AS approverName,a.expires_at AS approvalExpiresAt,a.revoked_at AS approvalRevokedAt,d.state AS dispatchState,d.provider_receipt AS providerReceipt,(SELECT door_agent_name FROM env_agent_access e WHERE e.company_id=r.company_id AND e.target_id=r.id AND e.action='dispatch:execute' ORDER BY e.occurred_at DESC,e.id DESC LIMIT 1) AS dispatchedByLabel
         FROM env_notice_replies r LEFT JOIN env_notice_approvals a ON a.company_id=r.company_id AND a.reply_id=r.id AND a.version=r.version
         LEFT JOIN env_notice_dispatches d ON d.company_id=r.company_id AND d.reply_id=r.id AND d.version=r.version
         WHERE r.company_id=? AND r.notice_id=? AND ${latestReply} AND ${f.sql} ORDER BY r.created_at DESC`,[actor.company,id,...f.args]),
@@ -218,8 +218,6 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
   if (!row) throw new PayrollError('exact_approved_reply_required',403)
   const provider=await agentProvider(agent,'resend',row.provider_version), secret=await providerSecret(agent.env,company,provider), key=await recordKey(agent.env.ENVELOPE_RECORD_KEY),
     payload:ReplyData=JSON.parse(await unseal(key,JSON.stringify([company,'reply',id,version]),row.cipher))
-  if(agent.doorContext && (!payload.preparedBy || payload.preparedBy.agentId!==agent.doorContext.agent.id || payload.preparedBy.sponsorId!==agent.doorContext.person.id || payload.preparedBy.grantId!==agent.grant.id))
-    throw new PayrollError('reviewed_agent_attribution_required',409)
   const execution=uuid(), now=Date.now()
   // This statement is the execution eligibility linearization point: exact latest
   // immutable item, current approver and sponsor scopes, unexpired approval/provider.
@@ -256,7 +254,7 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
     const response=await fetch(externalFlows.resend.url,{
       method:'POST',redirect:'manual',signal:AbortSignal.timeout(30000),
       headers:{authorization:'Bearer '+secret,'content-type':'application/json','Idempotency-Key':'envelope-notice-'+execution},
-      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload)}),
+      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload),...(agent.doorContext?{headers:{'X-RER-Attribution':agent.doorContext.actor.label.replace(/[\r\n]/g,' ')}}:{})}),
     })
     if (response.status>=400 && response.status<500 && ![408,409,429].includes(response.status)) state='rejected'
     if (response.ok) {

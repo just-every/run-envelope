@@ -934,7 +934,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       false,
       'only keyed token digest is stored',
     )
-    const mcp = async (name,args,token=agentToken)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
+    const mcp = async (name,args,token=agentToken)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
     const toolData = async (name, args) => {
       const response = await mcp(name, args)
       assert.equal(response.status, 200, await response.clone().text())
@@ -3489,7 +3489,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await sql(`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES ('${session}','${hash}','${id}',1,'native',${Date.now()},${Date.now()+3600000}); INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) VALUES ('${session}','${hash}','${session}','${id}',1,'credentials:mint','/app',${Date.now()},${Date.now()+600000},${Date.now()})`)
     sponsors[role]={id,session,cookie:localCookieName('operator_session_local',origin)+'='+token}
   }
-  const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const hostileReply='<script>globalThis.syntheticEnvelope584=true</script><img src="https://ungranted.example/pixel">'
   const proof=process.env.ENVELOPE_PROOF_DIR ?? 'test-results/envelope'
   await mkdir(proof,{recursive:true})
@@ -3516,7 +3516,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
       await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
     }
   }
-  const rpc=async(name,args,token)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
+  const rpc=async(name,args,token)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
   const tool=async(name,args,token,status=200) => {
     const r=await rpc(name,args,token)
     assert.equal(await mcpStatus(r),status,await r.clone().text())
@@ -3668,13 +3668,19 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await data(api+'/notice-replies/'+edited.id+'/approve',{...review,digest:'synthetic-envelope-519'},cookie,409)
     await approve(review)
     const exact=(await data(api+'/notices/'+noticeId)).replies[0]
-    const [one,two]=await Promise.all([execute(exact),execute(exact)])
-    assert.ok([one,two].some(r=>r.state==='accepted'))
+    const concurrent=await Promise.all([rpc('reply.dispatch',{companyId:company,replyId:exact.id,version:exact.version,digest:exact.digest},dispatcher.token),rpc('reply.dispatch',{companyId:company,replyId:exact.id,version:exact.version,digest:exact.digest},dispatcher.token)])
+    const concurrentResults=await Promise.all(concurrent.map(async response=>{
+      assert.equal(response.status,200,'shared MCP concurrency uses typed tool results')
+      const body=await response.json(),refusal=body.result?._meta?.['com.runeditrun/error']
+      if(refusal){assert.ok(['decision_busy','call_in_progress'].includes(refusal.code));return null}
+      return agentValue(body)
+    }))
+    assert.ok(concurrentResults.some(result=>result?.state==='accepted'),'one concurrent request completes the native dispatch')
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,1,'concurrent dispatch sends once')
     const emailCall=edge.calls.find(r=>r.url==='https://api.resend.com/emails')
     assert.equal(exact.data.preparedBy.agentId,adminGrant.id,'the reviewed attribution binds the real native client')
     assert.equal(exact.data.preparedBy.sponsorId,sponsors['payroll-admin'].id,'the reviewed attribution binds its real sponsor')
-    assert.deepEqual(emailCall.body,{from:exact.data.sender,to:[exact.data.to],subject:exact.data.subject,text:exact.data.body+'\n\n'+exact.data.preparedBy.label})
+    assert.deepEqual(emailCall.body,{from:exact.data.sender,to:[exact.data.to],subject:exact.data.subject,text:exact.data.body+'\n\nPrepared by '+exact.data.preparedBy.label,headers:{'X-RER-Attribution':'synthetic-envelope-517 for '+sponsors.accountant.id}})
     assert.ok(emailCall.idempotencyKey.startsWith('envelope-notice-'))
     const accepted=await execute(exact)
     assert.equal(accepted.state,'accepted')

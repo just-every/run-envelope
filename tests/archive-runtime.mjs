@@ -1,3 +1,4 @@
+import { agentMessage } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -297,10 +298,10 @@ export async function archiveJourney(context) {
         assert.deepEqual(await response.json(), { error: 'authentication_required' })
       }
       const response = await context.worker.fetch(context.origin + '/api/envelope/mcp', { method: 'POST',
-        headers: { authorization: 'Bearer ' + fixture.authority.agentToken, origin: context.origin, 'content-type': 'application\u002fjson' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 53, method: ['tools', 'call'].join('/'), params: { name: 'reply.dispatch',
+        headers: {'MCP-Protocol-Version':'2025-11-25', authorization: 'Bearer ' + fixture.authority.agentToken, origin: context.origin, 'content-type': 'application\u002fjson' },
+        body: JSON.stringify(agentMessage(['tools', 'call'].join('/'),{ name: 'reply.dispatch',
           arguments: { companyId: fixture.companies[0], replyId: fixture.authority.replyId,
-            version: fixture.authority.replyVersion, digest: fixture.authority.replyDigest } } }) })
+            version: fixture.authority.replyVersion, digest: fixture.authority.replyDigest } })) })
       assert.equal(response.status, 401, 'a previously usable agent bearer cannot dispatch the retained approved reply')
       assert.equal(context.edge.mails.length, outboundBefore, 'restored credential replay makes no external request')
       await archiveAdoption(context, fixture)

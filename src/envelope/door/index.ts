@@ -24,7 +24,7 @@ export function envelopeDoor(env: Bindings) {
       const value=request.headers.get('authorization')?.replace(/^Bearer /,'')
       if (!value) return null
       try { const agent=await AgentTools.authenticate(env,value)
-        return {sponsor:{id:agent.grant.sponsor_id},agent:{id:agent.grant.id,name:agent.grant.name,specialist:'payroll'},scopes:scopes(agent),clientId:agent.grant.id}
+        return {sponsor:{id:agent.grant.sponsor_id},agent:{id:agent.grant.id,name:agent.grant.name,specialist:'payroll'},scopes:await scopes(agent),clientId:agent.grant.id}
       } catch { return null }
     },
     notTools:notTools.map(item=>({reason:item.reason,clauses:[...item.clauses]})),
