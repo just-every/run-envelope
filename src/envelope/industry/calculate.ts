@@ -91,7 +91,7 @@ export function calculateIndustryPay(input: IndustryPayInput): IndustryPayResult
     netCashCents:input.cashGrossCents - totalEmployeeTaxCents,totalEmployeeTaxCents,totalEmployerTaxCents,
     wages:{incomeTaxWagesCents,w2Box1WagesCents:box1,socialSecurityWagesCents,medicareWagesCents,additionalMedicareWagesCents,futaWagesCents},
     employeeTaxes,employerTaxes,withholding:{adjustedAnnualWagesCents:withholding.adjustedAnnualWagesCents,
-      nonresidentAdjustmentCents:withholding.nonresidentAdjustmentCents,sourceId:withholding.sourceId},
+      nonresidentAdjustmentCents:withholding.nonresidentAdjustmentCents,sourceId:withholding.sourceId,...('calculation' in withholding?{calculation:withholding.calculation}:{})},
     classification,formAssignment:classification.formAssignment,
     sources:[...classification.sources,withholdingSource(taxYear),payrollSource],limitations,
   }

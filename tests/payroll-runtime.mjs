@@ -1,17 +1,70 @@
+import { answerAgentPolicy } from './agent-policy-runtime.mjs'
 // Shared by the existing emitted-Worker runtime journey; no fake app/auth routes.
 // Only synthetic identity sessions are fixtures. Every payroll record, grant,
 // review, read and denial uses the actual HTTP application and migrated D1.
 import assert from 'node:assert/strict'
 import { randomBytes,createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
 import { chromium } from '@playwright/test'
-import { privateValue } from './privacy-recorder.mjs'
+import { privateValue, outboundRequestCount } from './privacy-recorder.mjs'
 import { payrollWithoutAiJourney } from './industry-runtime.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 import { runIntakeCases } from './run-intake.mjs'
+
+// Test-only dependency faults wrap the real emitted Worker and local D1. No
+// fault header or alternate dependency implementation ships in the application.
+export async function operationsFaultWorker() {
+  const configPath = resolve('dist/server/wrangler.json')
+  const config = JSON.parse(await readFile(configPath,'utf8'))
+  const target = './' + config.main.replace(/^\.\//,'')
+  const entrypoint = join(dirname(configPath),'operations-test-faults.mjs')
+  await writeFile(entrypoint, `
+import worker from ${JSON.stringify(target)}
+export * from ${JSON.stringify(target)}
+export default {
+  ...worker,
+  async fetch(request,env,context) {
+    const fault = request.headers.get('x-synthetic-operation-fault')
+    if (!fault || !new URL(request.url).pathname.endsWith('/operations/diagnose'))
+      return worker.fetch(request,env,context)
+    const db = env.DB, company = new URL(request.url).pathname.split('/')[4]
+    let injected = false
+    const wrapped = new Proxy(db, {get(target,property) {
+      if (property === 'prepare' && fault === 'authority-timeout') return query => {
+        const statement = target.prepare(query)
+        if (!query.startsWith('SELECT 1 WHERE')) return statement
+        const wrap = value => new Proxy(value, {get(target,property) {
+          if (property === 'bind') return (...args) => wrap(target.bind(...args))
+          if (property === 'first') return async (...args) => {
+            await new Promise(resolve => setTimeout(resolve,2200))
+            return target.first(...args)
+          }
+          const method = target[property]
+          return typeof method === 'function' ? method.bind(target) : method
+        }})
+        return wrap(statement)
+      }
+      if (property === 'batch') return async statements => {
+        if (injected) return target.batch(statements)
+        injected = true
+        if (fault === 'timeout') await new Promise(resolve => setTimeout(resolve,2200))
+        if (fault === 'session-before') await db.prepare("UPDATE oa_sessions SET revoked_at=1 WHERE id='synthetic-envelope-records-owner-session'").run()
+        const result = await target.batch(statements)
+        if (fault === 'grant-after') await db.prepare("UPDATE env_grants SET revoked_at=1 WHERE company_id=? AND role='owner'").bind(company).run()
+        return result
+      }
+      const value = target[property]
+      return typeof value === 'function' ? value.bind(target) : value
+    }})
+    return worker.fetch(request,{...env,DB:wrapped},context)
+  }
+}
+`)
+  return entrypoint
+}
 
 // UUID references are public identifiers, not private numeric pay values.
 const withoutUuidReferences = text => text.replace(/\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b/gi, '')
@@ -809,6 +862,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
         're-granting must not revive a revoked session',
       ),
     )
+    await answerAgentPolicy({origin,cookie,company:a})
     // AGENT-DRAFTS: issue through native settings, then use the real MCP transport.
     const credentialInput = {
       name: 'synthetic-envelope-14',
@@ -1007,6 +1061,171 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       assert.equal(unavailable.jobs.unknown,1)
       assert.equal(unavailable.providerDelivery,'not established')
     } finally { await restart() }
+
+    // Explicit dependency validation preserves the real unknown receiver effect.
+    const diagnosticDoor = company + '/operations/diagnose'
+    const diagnose = async (fault,who=cookie,status=200) => {
+      const response = await fetch(origin+diagnosticDoor,{method:'POST',redirect:'manual',headers:{cookie:who,origin,
+        'content-type':['application','json'].join('/'),...(fault ? {'x-synthetic-operation-fault':fault} : {})},body:JSON.stringify({consent:true})})
+      assert.equal(response.status,status,await response.clone().text())
+      assert.equal(response.headers.get('cache-control'),'no-store')
+      return response.json()
+    }
+    const diagnosticBusinessSnapshot = () => sql(`SELECT
+      (SELECT json_group_array(json_object('id',id,'status',status,'attempt',attempt,'claim',claim_id)) FROM (SELECT * FROM env_webhook_jobs ORDER BY id)) AS jobs,
+      (SELECT json_group_array(json_object('id',id,'outcome',outcome,'finished',finished_at)) FROM (SELECT * FROM env_webhook_attempts ORDER BY id)) AS attempts,
+      (SELECT json_group_array(json_object('company',company_id,'person',person_id,'kind',kind,'cipher',cipher,'version',version)) FROM (SELECT * FROM env_private_records ORDER BY company_id,person_id,kind)) AS records,
+      (SELECT json_group_array(json_object('id',id,'active',active)) FROM (SELECT * FROM env_webhooks ORDER BY id)) AS subscriptions,
+      (SELECT COUNT(*) FROM env_run_drafts) AS drafts`)
+    // Keep the large sample in its own company so the existing business-audit
+    // journey still exercises its original retained events through the API.
+    const sampleCompany=await data(base,{name:'Synthetic diagnostic sample',ein:'00-0000956'},cookie,201)
+    const sampleDoor=base+'/'+sampleCompany.id
+    const sampleLocation=await data(sampleDoor+'/locations',{name:'Synthetic sample location',state:'CA'},cookie,201)
+    for (let n=0;n<27;n++) {
+      const person=await data(sampleDoor+'/people',{name:'Synthetic diagnostic worker '+n,locationId:sampleLocation.id},cookie,201)
+      await data(sampleDoor+'/people/'+person.id+'/private',{kind:'ssn',value:'synthetic-envelope-956-sample-'+n,version:0},cookie,201)
+    }
+    const boundedSample=await data(sampleDoor+'/operations/diagnose',{consent:true})
+    assert.equal(boundedSample.retained.state,'validated-sample')
+    assert.ok(boundedSample.retained.inspected>0)
+    assert.ok(boundedSample.retained.unvalidated>0,'uninspected ciphertexts never become validated')
+    assert.equal(boundedSample.retained.inspected+boundedSample.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${sampleCompany.id}'`))[0].n)
+    const unchangedBusiness = await diagnosticBusinessSnapshot(), sentBeforeDiagnostic = receiverState.received.length, outboundBeforeDiagnostic = outboundRequestCount()
+    const [foreignDiagnosticGrant]=await sql(`SELECT * FROM env_grants WHERE company_id='${b}' AND operator_id='${ownerSession.operator_id}'`)
+    await sql(`DELETE FROM env_grants WHERE company_id='${b}' AND operator_id='${ownerSession.operator_id}'`)
+    try {
+      await noWrite(async()=>{
+        await data(diagnosticDoor,{consent:false},cookie,400)
+        await diagnose(undefined,actors.accountant.cookie,403)
+        await data('/api/envelope/companies/'+b+'/operations/diagnose',{consent:true},cookie,403)
+        await data(diagnosticDoor,{consent:true},'',401)
+        const authorityUnavailable=await diagnose('authority-timeout',cookie,503)
+        assert.equal(authorityUnavailable.error,'diagnostic_authority_unavailable')
+      })
+    } finally {
+      const columns=Object.keys(foreignDiagnosticGrant)
+      const literal=value=>value===null?'NULL':typeof value==='number'?String(value):"'"+value.replaceAll("'","''")+"'"
+      await sql(`INSERT INTO env_grants(${columns.join(',')}) VALUES(${columns.map(c=>literal(foreignDiagnosticGrant[c])).join(',')})`)
+    }
+    const clean = await diagnose()
+    assert.equal(clean.database.state,'healthy')
+    assert.equal(clean.encryptedStorage.state,'healthy')
+    assert.equal(clean.cleanup.state,'verified')
+    assert.equal(clean.retained.state,'validated-sample')
+    assert.ok(clean.retained.authenticated>0)
+    assert.equal(clean.retained.failed,0)
+    assert.equal(clean.retained.inspected+clean.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${a}'`))[0].n)
+    assert.equal(clean.providerDelivery,'not established')
+    assert.equal(clean.status,'attention-required')
+    assert.equal(clean.automaticRetry,false)
+    assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[])
+    const diagnosticAudit=await sql(`SELECT actor_id,action,target_id,version FROM env_audit WHERE action LIKE 'operations.%' ORDER BY rowid`)
+    assert.ok(diagnosticAudit.some(r=>r.action==='operations.diagnostic.started' && r.target_id===clean.id))
+    assert.ok(diagnosticAudit.some(r=>r.action==='operations.ciphertext.inspected'))
+    assert.ok(diagnosticAudit.some(r=>r.action.startsWith('operations.diagnostic.healthy.healthy.verified.validated-sample')))
+    const grantBeforeDiagnostic=(await sql(`SELECT fields,locations FROM env_grants WHERE company_id='${a}' AND role='owner'`))[0]
+    const sessionsBeforeScope=await sql('SELECT id,revoked_at FROM oa_sessions')
+    const restoreDiagnosticSessions=async()=>{
+      await sql(sessionsBeforeScope.map(session=>`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`).join(';'))
+    }
+    try {
+      await sql(`UPDATE env_grants SET fields='[]' WHERE company_id='${a}' AND role='owner'`)
+      await restoreDiagnosticSessions()
+      const excluded=await diagnose()
+      assert.equal(excluded.retained.inspected,0,'ungranted fields are not read even by diagnostics')
+      assert.equal(excluded.retained.state,'unvalidated')
+    } finally {
+      await sql(`UPDATE env_grants SET fields='${grantBeforeDiagnostic.fields}' WHERE company_id='${a}' AND role='owner'`)
+      await restoreDiagnosticSessions()
+    }
+    const inspectedBeforeAuditFailure=(await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n
+    await sql("CREATE TRIGGER synthetic_envelope_diagnostic_audit BEFORE INSERT ON env_audit WHEN NEW.action LIKE 'operations.%' BEGIN SELECT RAISE(ABORT,'synthetic-envelope-956-audit'); END")
+    try {
+      const noAudit=await diagnose()
+      assert.equal(noAudit.database.state,'unhealthy')
+      assert.equal(noAudit.audit,'unavailable')
+      assert.equal(noAudit.retained.inspected,0,'unavailable audit cannot permit content inspection')
+      assert.equal((await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n,inspectedBeforeAuditFailure)
+    } finally { await sql('DROP TRIGGER synthetic_envelope_diagnostic_audit') }
+    const [original] = await sql(`SELECT * FROM env_private_records WHERE company_id='${a}' ORDER BY person_id,kind LIMIT 1`)
+    const recordWhere = `company_id='${a}' AND person_id='${original.person_id}' AND kind='${original.kind}'`
+    await sql(`UPDATE env_private_records SET cipher='synthetic-envelope-956-corrupt' WHERE ${recordWhere}`)
+    try {
+      const corrupt=await diagnose()
+      assert.equal(corrupt.retained.state,'unhealthy')
+      assert.ok(corrupt.retained.failed>0)
+      assert.equal(corrupt.encryptedStorage.state,'healthy','new ciphertext cannot prove retained content healthy')
+      assert.ok(corrupt.nextAction.includes('restore dependency or key access'))
+      assert.doesNotMatch(JSON.stringify(corrupt),/synthetic-envelope-956-corrupt|SyntaxError|person_id|\"cipher\":/)
+    } finally { await sql(`UPDATE env_private_records SET cipher='${original.cipher.replaceAll("'","''")}' WHERE ${recordWhere}`) }
+    await restart({ENVELOPE_RECORD_KEY:randomBytes(32).toString('base64')})
+    try {
+      const wrong=await diagnose()
+      assert.equal(wrong.encryptedStorage.state,'healthy')
+      assert.equal(wrong.retained.state,'unhealthy','valid-format wrong key fails retained authentication')
+      assert.equal(wrong.retained.authenticated,0)
+    } finally { await restart() }
+    await sql("CREATE TRIGGER synthetic_envelope_diagnostic_write BEFORE INSERT ON env_operation_sentinels BEGIN SELECT RAISE(ABORT,'synthetic-envelope-956-write'); END")
+    try {
+      assert.equal((await data(company+'/operations')).database,'reachable')
+      const writeFailure=await diagnose()
+      assert.equal(writeFailure.database.state,'unhealthy','read reachability never proves writes')
+      assert.equal(writeFailure.encryptedStorage.state,'unvalidated')
+      assert.equal(writeFailure.cleanup.state,'verified','failed atomic transaction leaves no sentinel')
+      assert.ok(!JSON.stringify(writeFailure).includes('synthetic-envelope-956-write'))
+    } finally { await sql('DROP TRIGGER synthetic_envelope_diagnostic_write') }
+    await sql('CREATE TRIGGER synthetic_envelope_diagnostic_cleanup BEFORE DELETE ON env_operation_sentinels BEGIN SELECT RAISE(IGNORE); END')
+    try {
+      const failedCleanup=await diagnose()
+      assert.equal(failedCleanup.database.state,'unhealthy')
+      assert.equal(failedCleanup.cleanup.state,'unhealthy')
+      assert.ok(failedCleanup.nextAction.includes('inspect isolated diagnostic cleanup'))
+      assert.equal((await sql('SELECT COUNT(*) AS n FROM env_operation_sentinels'))[0].n,1)
+    } finally {
+      await sql('DROP TRIGGER synthetic_envelope_diagnostic_cleanup')
+      await sql('DELETE FROM env_operation_sentinels')
+    }
+    const timed=await diagnose('timeout')
+    assert.equal(timed.database.state,'unvalidated')
+    assert.ok(timed.database.reason.includes('timeout'))
+    assert.equal(timed.encryptedStorage.state,'unvalidated')
+    assert.equal(timed.cleanup.state,'unvalidated','timeout cannot establish a late transaction outcome')
+    await new Promise(resolve=>setTimeout(resolve,300))
+    assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[],'late isolated transaction cleans itself')
+    for (const fault of ['session-before','grant-after']) {
+      const sessions=await sql('SELECT id,revoked_at FROM oa_sessions')
+      try { await diagnose(fault,cookie,403) }
+      finally {
+        await sql(`UPDATE env_grants SET revoked_at=NULL WHERE company_id='${a}' AND role='owner'`)
+        await sql(sessions.map(session=>`UPDATE oa_sessions SET revoked_at=${session.revoked_at===null?'NULL':session.revoked_at} WHERE id='${session.id}'`).join(';'))
+      }
+      assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[],'revoked authority cannot strand a sentinel')
+    }
+    await sql(`INSERT INTO env_privacy_holds(company_id,record_id,fingerprint,legal_basis,custodian,release_at) VALUES('${a}','synthetic-envelope-956-hold','synthetic-envelope-956','retained source','owner','2099-01-01')`)
+    const inspectedBeforeHold=(await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n
+    try {
+      const held=await diagnose()
+      assert.equal(held.retained.state,'unvalidated')
+      assert.equal(held.retained.inspected,0)
+      assert.equal(held.retained.unvalidated,(await sql(`SELECT COUNT(*) AS n FROM env_private_records WHERE company_id='${a}'`))[0].n)
+      assert.equal((await sql("SELECT COUNT(*) AS n FROM env_audit WHERE action='operations.ciphertext.inspected'"))[0].n,inspectedBeforeHold)
+    } finally { await sql(`DELETE FROM env_privacy_holds WHERE company_id='${a}' AND record_id='synthetic-envelope-956-hold'`) }
+    // GET does not reuse the successful POST sample as a storage-health claim.
+    await noWrite(async()=>{
+      const readOnly=await data(company+'/operations')
+      assert.equal(readOnly.checks.storage.content,'not validated')
+      assert.equal(readOnly.jobs.unknown,1)
+    })
+    assert.deepEqual(await diagnosticBusinessSnapshot(),unchangedBusiness,'diagnostics never alter private values, business state, unknown work or send authority')
+    assert.equal(receiverState.received.length,sentBeforeDiagnostic)
+    assert.equal(outboundRequestCount(),outboundBeforeDiagnostic,'diagnostics make no outbound request')
+    assert.ok(!JSON.stringify(clean).includes(subscription.secret))
+    assert.doesNotMatch(JSON.stringify({clean,boundedSample,diagnosticAudit}),/synthetic-envelope-956-sample-|synthetic-envelope-1\"|synthetic-envelope-2\"|\"cipher\":/)
+    await restart()
+    assert.deepEqual(await sql('SELECT * FROM env_operation_sentinels'),[])
+    assert.equal((await diagnose()).retained.state,'validated-sample','retained authentication works after restart')
+    assert.equal((await data(company+'/operations')).jobs.unknown,1)
 
     await restart()
     assert.equal((await data(hooks)).jobs.find(j=>j.id===job.id).status,'unknown')
@@ -1451,6 +1670,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
       sponsorCookie,
       201,
     )
+    await answerAgentPolicy({origin,cookie:sponsorCookie,company:sponsoredCompany.id})
     const sponsored = await data(
       base + '/' + sponsoredCompany.id + '/agents',
       {
@@ -1563,7 +1783,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     }
     assert.doesNotMatch(
       withoutUuidReferences(JSON.stringify(audit)),
-      /synthetic-envelope-[123](?:"|\b)|00-0000001|2500|25\.00/,
+      /synthetic-envelope-[123](?:"|\b)|00-0000001|(?<!\d)2500(?!\d)|25\.00/,
       'audit contains references, versions and actors, never private values or pay amounts',
     )
     assert.equal(outputLeaks(audit), false)
@@ -1592,8 +1812,9 @@ const outputLeaks = (audit) =>
 
 export async function missingKeyJourney({ origin, cookie, noWrite }) {
   const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
     headless: true,
-    args: ['--use-mock-keychain', '--password-store=basic'],
+    args: ['--no-sandbox', '--use-mock-keychain', '--password-store=basic'],
   })
   try {
     const context = await browser.newContext()
@@ -2795,8 +3016,14 @@ export async function payItemsJourney({ origin, cookie, sql }) {
     assert.equal(bulk.data.diff.people[1].afterEarningsCents,37500,'re-preview includes newly recorded minutes')
     await data(door + '/pay-change/' + change.id + '/approve',{version:bulk.version,reviewToken:bulk.reviewToken})
     const ownerId = (await sql("SELECT id FROM oa_operators WHERE email='owner@example.com'"))[0].id
-    assert.ok((await data(base + '/audit')).some((e) => e.action === 'workspace.pay-change.approved' &&
+    const bulkAudit = await data(base + '/audit')
+    assert.ok(bulkAudit.some((e) => e.action === 'workspace.pay-change.approved' &&
       e.targetId === change.id && e.version === bulk.version && e.actorId === ownerId), 'the audit door names the reviewed bulk version and its approver')
+    assert.deepEqual(
+      [bulkAudit[0].action,bulkAudit[0].targetId,bulkAudit[0].version,bulkAudit[0].actorId],
+      ['workspace.pay-change.approved',change.id,bulk.version,ownerId],
+      'the latest appended audit event stays first when the clock gives many events the same timestamp',
+    )
     await data(door + '/earnings-run',{...hoursPeriod,id:'synthetic-envelope-134',version:0},201)
     const applied = (await data(door)).runs.find((r) => r.id === 'synthetic-envelope-134')
     assert.equal(applied.data.people.find((p) => p.id === a.id).earningsCents,763889)
@@ -3275,6 +3502,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
   const company=(await data(base,{name:'Brightside Colorado Studio',ein:'00-0000052'},cookie,201)).id,
     other=(await data(base,{name:'Northpaw separate client',ein:'00-0000053'},cookie,201)).id,
     api=base+'/'+company, ui='/app/envelope/companies/'+company
+  await answerAgentPolicy({origin,cookie,company})
   const ca=await data(api+'/locations',{name:'California client office',state:'CA'},cookie,201), co=await data(api+'/locations',{name:'Colorado studio',state:'CO'},cookie,201)
   const allActions=['records:read','rates:propose','notices:read','notices:write','notices:approve','notices:dispatch']
   const sponsors={}
@@ -4721,11 +4949,12 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.goto(origin+door.replace('/api/','/app/'));assert.match(await page.locator('main').innerText(),/No signed paper elections recorded/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(folder,'paper-empty-'+width+'.png'),fullPage:true})}
   } finally {await emptyBrowser.close()}
   const pdf=Buffer.from('%PDF-1.4\nSynthetic signed paper original for fixture 1925\n%%EOF').toString('base64')
+  const statePdf=Buffer.concat([Buffer.from('%PDF-1.4\nSynthetic state original 1925\n'),Buffer.from([0,128,255]),Buffer.from('\n%%EOF')]).toString('base64')
   const original={signed:true,signedBy:'Synthetic paper employee',signedOn:'2026-01-01',pdf}
   const input={version:0,attestTranscription:true,workerType:'employee',hiredOn:'2026-01-02',paymentMethod:'paper-check',tin:'900001925',address:'1 Synthetic Street, Columbus OH 43215',
     federal:{form:'W-4',effectiveFrom:'2026-01-02',original,fields:{filingStatus:'single',multipleJobs:'no',dependentCreditCents:200000,otherIncomeCents:0,deductionsCents:0,additionalCents:2500,exempt:'no'}},
-    state:{form:'OH-IT-4',effectiveFrom:'2026-01-02',original,fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:1000,localExemption:'none'}}}
-  privateValue(input.tin);privateValue(pdf)
+    state:{form:'OH-IT-4',effectiveFrom:'2026-01-02',original:{...original,pdf:statePdf},fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:1000,localExemption:'none'}}}
+  privateValue(input.tin);privateValue(pdf);privateValue(statePdf)
   const snapshot=()=>sql(`SELECT (SELECT COUNT(*) FROM env_people) AS people,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_workspace_reviews) AS reviews,(SELECT COUNT(*) FROM env_audit) AS audit`)
   const noWrite=async task=>{const before=await snapshot();await task();assert.deepEqual(await snapshot(),before,'refused onboarding creates no records, decisions, review tokens or audit')}
   await noWrite(async()=>{
@@ -4742,16 +4971,16 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   assert.equal(row.data.state.fields.schoolDistrictNumber,'2503');assert.equal(row.data.state.fields.additionalCents,1000)
   assert.equal(row.data.state.original.attached,true);assert.equal(row.data.state.original.signedBy,original.signedBy)
   assert.equal(row.paperworkReviewed,false);assert.equal(row.payable,false)
-  assert.equal(JSON.stringify(rows).includes(input.tin),false);assert.equal(JSON.stringify(rows).includes(pdf),false)
+  assert.equal(JSON.stringify(rows).includes(input.tin),false);assert.equal(JSON.stringify(rows).includes(pdf),false);assert.equal(JSON.stringify(rows).includes(statePdf),false)
   await noWrite(async()=>{await data(door,input,409);await data(door+'/approve',{version:1,reviewToken:'synthetic-envelope-unreviewed'},409)})
   const review=await data(door+'/review')
-  assert.equal(review.data.tin,'•••••1925');assert.equal(JSON.stringify(review).includes(pdf),false)
+  assert.equal(review.data.tin,'•••••1925');assert.equal(JSON.stringify(review).includes(pdf),false);assert.equal(JSON.stringify(review).includes(statePdf),false)
   await data(door+'/approve',{version:1,reviewToken:review.reviewToken})
   row=(await data(door))[0];assert.equal(row.paperworkReviewed,true);assert.equal(row.payable,false)
   assert.equal(row.createdBy,row.approvedBy);assert.ok(row.createdBy);assert.ok(row.createdAt);assert.ok(row.approvedAt)
-  const bytes=await call(door+'/original/1/federal');assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),['application','pdf'].join('/'));assert.match(bytes.headers.get('content-disposition'),/^attachment/);assert.equal(Buffer.from(await bytes.arrayBuffer()).toString('base64'),pdf)
+  const bytes=await call(door+'/original/1/federal');assert.equal(bytes.status,200);assert.equal(bytes.headers.get('content-type'),['application','octet-stream'].join('/'));assert.match(bytes.headers.get('content-disposition'),/^attachment/);assert.equal(Buffer.from(await bytes.arrayBuffer()).toString('base64'),pdf)
   // A district move appends rather than replacing the signed source and decision.
-  const moved={...input,version:1,state:{...input.state,effectiveFrom:'2026-07-01',original:{...original,signedOn:'2026-06-30'},fields:{...input.state.fields,schoolDistrictName:'Synthetic Worthington',schoolDistrictNumber:'2516'}}}
+  const moved={...input,version:1,state:{...input.state,effectiveFrom:'2026-07-01',original:{...input.state.original,signedOn:'2026-06-30'},fields:{...input.state.fields,schoolDistrictName:'Synthetic Worthington',schoolDistrictNumber:'2516'}}}
   await data(door,moved,201)
   rows=await data(door);assert.deepEqual(rows.map(r=>r.version),[2,1]);assert.deepEqual(rows.map(r=>r.data.state.fields.schoolDistrictNumber),['2516','2503'])
   assert.equal(rows[0].paperworkReviewed,false);assert.equal(rows[1].paperworkReviewed,true)
@@ -4785,11 +5014,13 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   await sql(`UPDATE env_workspace_reviews SET expires_at=1 WHERE kind='paper-onboarding' AND object_id='paper-${person.id}' AND version=3`)
   await noWrite(async()=>{await data(door+'/approve',{version:3,reviewToken:reviewOwner.reviewToken},409)})
   await noWrite(async()=>{await data(door,{...legacy,version:3,federal:{...legacy.federal,original:{...original,signedOn:'2026-01-01'}}},400)})
+  const uploadedPdf=Buffer.concat([Buffer.from('%PDF-1.4\n'+'% Synthetic signed paper 1925\n'.repeat(6000)),Buffer.from([0,128,255]),Buffer.from('\n%%EOF')])
+  const uploadedStatePdf=Buffer.concat([Buffer.from('%PDF-1.4\nSynthetic replacement state 1925\n'),Buffer.from([255,128,0]),Buffer.from('\n%%EOF')])
+  const originalBytes=(version,form)=>version===4 ? form==='federal'?uploadedPdf:uploadedStatePdf : Buffer.from(form==='federal'?pdf:statePdf,'base64')
   const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   try {
     const context=await browser.newContext(),[name,value]=cookie.split('=');await context.addCookies([{name,value,url:origin}])
     const page=await context.newPage(),screen=door.replace('/api/','/app/'),folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
-    const uploadedPdf=Buffer.from('%PDF-1.4\n'+'% Synthetic signed paper 1925\n'.repeat(6000)+'%%EOF')
     privateValue(uploadedPdf.toString('base64').slice(0,128))
     await mkdir(folder,{recursive:true})
     const capture=async(label,path=screen,status=200)=>{
@@ -4816,7 +5047,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     const fields={'hiredOn':'2026-01-02','tin':input.tin,'address':input.address,'federal.effectiveFrom':'2026-09-01','federal.signedBy':'Synthetic paper employee','federal.signedOn':'2026-08-31','federal.fields.additionalCents':'666','state.effectiveFrom':'2026-09-01','state.signedBy':'Synthetic paper employee','state.signedOn':'2026-08-31','state.fields.residenceAddress':'4 Synthetic Street, Columbus OH','state.fields.schoolDistrictName':'Synthetic Columbus','state.fields.schoolDistrictNumber':'2503'}
     for(const [key,value] of Object.entries(fields)) await page.locator('[name="'+key+'"]').fill(value)
     for(const prefix of ['federal','state']) {
-      await page.locator('[name="'+prefix+'.pdf"]').setInputFiles({name:'synthetic-envelope-1925.pdf',mimeType:['application','pdf'].join('/'),buffer:uploadedPdf})
+      await page.locator('[name="'+prefix+'.pdf"]').setInputFiles({name:'synthetic-envelope-1925.pdf',mimeType:['application','pdf'].join('/'),buffer:prefix==='federal'?uploadedPdf:uploadedStatePdf})
       await page.locator('[name="'+prefix+'.signed"]').check()
     }
     await page.locator('[name="attestTranscription"]').check()
@@ -4903,8 +5134,60 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   assert.equal(delegatedRow.data.tin,'•••••1925');assert.equal(JSON.stringify(delegatedRow).includes(pdf),false)
   for(const form of ['federal','state']) {
     const original=await call(door+'/original/5/'+form,undefined,downloader)
-    assert.equal(original.status,200);assert.equal(Buffer.from(await original.arrayBuffer()).toString('base64'),pdf)
+    assert.equal(original.status,200);assert.deepEqual(Buffer.from(await original.arrayBuffer()),originalBytes(5,form))
   }
+  // Tax-form custody through both native document and API download doors. The
+  // retained replacement has binary bytes and differs from the first original.
+  const originalPaths=[]
+  for(const version of [1,4,5])for(const form of ['federal','state'])for(const prefix of ['/api/','/app/']) {
+    const path=(door+'/original/'+version+'/'+form).replace('/api/',prefix)
+    originalPaths.push(path)
+    for(const method of ['GET','HEAD']) {
+      const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:downloader,origin}})
+      assert.equal(response.status,200,method+' current separately scoped download')
+      assert.equal(response.headers.get('cache-control'),'no-store')
+      assert.equal(response.headers.get('content-type'),['application','octet-stream'].join('/'))
+      assert.match(response.headers.get('content-disposition'),/^attachment; filename="signed-paper\.pdf"$/)
+      assert.equal(response.headers.get('x-content-type-options'),'nosniff')
+      assert.equal(response.headers.get('x-download-options'),'noopen')
+      assert.equal(response.headers.get('set-cookie'),null)
+      assert.match(response.headers.get('content-security-policy'),/^sandbox; default-src 'none';/)
+      const actual=Buffer.from(await response.arrayBuffer())
+      assert.deepEqual(actual,method==='HEAD'?Buffer.alloc(0):originalBytes(version,form),'each retained version serves its exact original bytes')
+    }
+  }
+  const refuseOriginals=async(who,status,paths=originalPaths)=>{
+    await noWrite(async()=>{
+      for(const path of paths)for(const method of ['GET','HEAD']) {
+        const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin}})
+        const expected=status===401 && path.startsWith('/app/')?303:status
+        assert.equal(response.status,expected,method+' '+path+' private tax original refusal')
+        if(expected===303)assert.match(response.headers.get('location'),/^\/signin\?/)
+        assert.equal(response.headers.get('cache-control'),'no-store')
+        assert.equal(response.headers.get('content-disposition'),null,'a refusal is never an attachment')
+        const body=await response.text()
+        for(const value of [input.tin,pdf,statePdf,uploadedPdf.toString('base64'),uploadedStatePdf.toString('base64'),'%PDF-1.4','Synthetic signed paper original for fixture 1925','Synthetic state original 1925'])assert.ok(!body.includes(value),'a refused original contains no private form data')
+        if(method==='HEAD')assert.equal(body,'')
+      }
+    })
+  }
+  // Download authority is read-only, including a known retained version.
+  await noWrite(async()=>{
+    for(const who of [cookie,downloader])for(const path of originalPaths) {
+      for(const method of ['POST','PUT','DELETE']) {
+        const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin,'content-type':['application','json'].join('/')},body:JSON.stringify({...input,version:5})})
+        assert.equal(response.status,method==='POST'?404:405,'a retained original cannot be overwritten through its download door')
+        assert.equal(response.headers.get('content-disposition'),null)
+      }
+    }
+  })
+  await refuseOriginals('',401)
+  for(const who of [outsider,preparer,reviewer,wrongFields,otherNativeOwner])await refuseOriginals(who,403)
+  await refuseOriginals(wrongLocation,404)
+  await refuseOriginals(cookie,404,originalPaths.map(path=>path.replace(company.id,foreign.id)))
+  const signedOutDownload=await signIn(downloadId)
+  assert.equal((await call('/auth/signout',{},signedOutDownload)).status,204)
+  await refuseOriginals(signedOutDownload,401)
   const staffAudit=await data(base+'/audit')
   for(const [action,actorId,targetId,version] of [
     ['workspace.paper-onboarding.recorded',preparerId,'paper-'+person.id,5],
@@ -4917,7 +5200,8 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   try {
     const folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
     for(const [label,who] of [['entry',preparer],['reviewer',reviewer],['originals',downloader],['grants',cookie]]) {
-      const context=await staffBrowser.newContext(),parts=who.split('=');await context.addCookies([{name:parts[0],value:parts[1],url:origin}])
+      const context=await staffBrowser.newContext(),parts=who.split('='),outbound=[];await context.addCookies([{name:parts[0],value:parts[1],url:origin}])
+      context.on('request',request=>{if(new URL(request.url()).origin!==origin)outbound.push(request.url())})
       const page=await context.newPage()
       for(const width of [1440,390]) {
         await page.setViewportSize({width,height:1000})
@@ -4925,10 +5209,25 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
         await page.locator('details').evaluateAll(elements=>elements.forEach(element=>element.open=true))
         for(const control of await page.locator('button,a,summary').all()) assert.ok((await control.innerText()).trim().length>1,'paper and grant controls have visible labels: '+await control.getAttribute('href'))
-        if(label==='originals') {assert.equal(await page.getByRole('link',{name:'Download signed state original',exact:true}).count(),5);assert.equal(await page.getByRole('button',{name:'Record signed paper version',exact:true}).count(),0)}
+        if(label==='originals') {
+          assert.equal(await page.getByRole('link',{name:'Download signed state original',exact:true}).count(),5);assert.equal(await page.getByRole('button',{name:'Record signed paper version',exact:true}).count(),0)
+          const link=page.getByRole('link',{name:'Download signed federal original',exact:true}).first()
+          await link.focus()
+          const [download]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Enter')])
+          assert.equal(download.suggestedFilename(),'signed-paper.pdf')
+          assert.deepEqual(await readFile(await download.path()),Buffer.from(pdf,'base64'))
+          for(const form of ['federal','state']) {
+            const replacement=page.locator('a[href$="/original/4/'+form+'"]')
+            await replacement.focus()
+            const [saved]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Enter')])
+            assert.equal(saved.suggestedFilename(),'signed-paper.pdf')
+            assert.deepEqual(await readFile(await saved.path()),originalBytes(4,form),'keyboard download keeps the exact replacement form')
+          }
+        }
         if(label==='reviewer') assert.equal(await page.getByRole('link',{name:/Download signed/}).count(),0)
         await page.screenshot({path:join(folder,'paper-staff-'+label+'-'+width+'.png'),fullPage:true})
       }
+      assert.deepEqual(outbound,[],'private paper screens and downloads make no third-party request')
       await context.close()
     }
   } finally {await staffBrowser.close()}
@@ -4942,6 +5241,12 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     await data(door+'/original/5/state',undefined,401,downloader)
     await data(door,undefined,401,downloader)
   })
+  await refuseOriginals(downloader,401)
+  await refuseOriginals(await signIn(downloadId),403)
+  await data(base+'/grants',{operatorId:downloadId,version:2,role:'preparer',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:download']})
+  const renewedDownloader=await signIn(downloadId)
+  assert.equal((await call(door+'/original/4/state',undefined,renewedDownloader)).status,200,'a fresh session needs the renewed explicit download grant')
+  await refuseOriginals(downloader,401)
   await data(base+'/grants',{operatorId:reviewerId,version:2,role:'payroll-admin',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:review']})
   const oldReviewer=reviewer;reviewer=await signIn(reviewerId)
   await noWrite(async()=>{
@@ -4968,13 +5273,13 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
       await data(door+'/original/1/state',undefined,403,who)
     }
   })
-  const heldOriginal=await call(door+'/original/1/state');assert.equal(heldOriginal.status,200);assert.equal(Buffer.from(await heldOriginal.arrayBuffer()).toString('base64'),pdf)
+  const heldOriginal=await call(door+'/original/1/state');assert.equal(heldOriginal.status,200);assert.equal(Buffer.from(await heldOriginal.arrayBuffer()).toString('base64'),statePdf)
   for(const path of [door,door+'/review',door+'/original/1/state']) {
     const denied=await fetch(origin+path,{headers:{authorization:'Bearer synthetic-envelope-1929',origin},redirect:'manual'})
     assert.ok([401,403].includes(denied.status),'agent credentials gain no paper authority')
     assert.equal((await denied.text()).includes(input.tin),false)
   }
-  const stored=JSON.stringify(await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}'`));assert.equal(stored.includes(input.tin),false);assert.equal(stored.includes(pdf),false)
+  const stored=JSON.stringify(await sql(`SELECT cipher FROM env_workspace_versions WHERE company_id='${company.id}'`));assert.equal(stored.includes(input.tin),false);assert.equal(stored.includes(pdf),false);assert.equal(stored.includes(uploadedPdf.toString('base64')),false)
   const custody=await data(base+'/people/'+person.id+'/privacy');assert.equal(custody.retained.filter(r=>r.table==='env_workspace_versions' && r.key.kind==='paper-onboarding').length,7)
   assert.equal((await data(base)).people.length,2,'updates never create another worker')
   console.log('PAPER-ONBOARDING passed: no-contact employee and contractor paper intake, signed originals, exact review, masked reads, historical federal elections, PA and Ohio certificates, district move, encrypted custody, unsigned and foreign refusals; no payable or IRS authority claimed')

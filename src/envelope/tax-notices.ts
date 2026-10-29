@@ -1,4 +1,4 @@
-import type { Actor } from './access'
+import { auditStatement, type Actor } from './access'
 import type { Input } from './records'
 import { Notices } from './notices'
 import { WorkerPrivacy } from './worker-privacy'
@@ -48,13 +48,20 @@ export async function noticeDocument(input:Input):Promise<Document> {
 /** Human-reviewed source custody. No agency, payment or payroll authority is inferred. */
 export class TaxNoticeCases {
   constructor(public store:WorkspaceStore) {}
-  async authority(actor:Actor,id:string) {
-    new WorkerPrivacy(this.store.records).owner(actor)
+  async authority(actor:Actor,id:string,action='read') {
+    this.store.caseAuthority(actor,action)
     return new Notices(this.store.records).notice(actor,id)
+  }
+  async setPolicy(actor:Actor,input:Input) {
+    new WorkerPrivacy(this.store.records).owner(actor)
+    if (![true,false,'true','false'].includes(input.requireSeparateReviewer as boolean)) throw new PayrollError('invalid_case_policy')
+    return this.store.append(actor,'case-policy','case-review',revision(input.version),{requireSeparateReviewer:checked(input.requireSeparateReviewer)})
   }
   async history(actor:Actor,id:string) {
     await this.authority(actor,id)
     const rows=(await this.store.list<TaxNoticeCase>(actor,'tax-notice-case')).filter(r=>r.id===id)
+    const event=await auditStatement(this.store.records.env,actor,crypto.randomUUID(),'notice.case.read',id,rows[0]?.version ?? 0).run()
+    if (!event.meta.changes) throw new PayrollError('authority_changed',409)
     return rows.map(r=>({...r,data:{...r.data,original:{...r.data.original,pdf:undefined},evidence:r.data.evidence.map(e=>({...e,document:{...e.document,pdf:undefined}}))},
       resolved:false,independentlyVerifiedAgencyDisposition:false,payrollChanged:false,
       overdue:r.data.facts.dueOn<new Date().toISOString().slice(0,10),
@@ -78,7 +85,7 @@ export class TaxNoticeCases {
       state:type==='sui-rate'?choice(input.state,'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ')):'US',ratePercent,effectiveFrom:type==='sui-rate'?date(input.effectiveFrom):''}
   }
   async save(actor:Actor,id:string,input:Input) {
-    const notice=await this.authority(actor,id)
+    const notice=await this.authority(actor,id,'cases:intake')
     await this.employer(actor,input.employerEin)
     if(!checked(input.verifiedExtraction)) throw new PayrollError('human_extraction_verification_required',409)
     const expected=revision(input.version),rows=await this.store.list<TaxNoticeCase>(actor,'tax-notice-case'),prior=rows.find(r=>r.id===id)
@@ -102,6 +109,7 @@ export class TaxNoticeCases {
     return this.store.decide(actor,'tax-notice-case',id,input)
   }
   async evidence(actor:Actor,id:string,input:Input) {
+    await this.authority(actor,id,'cases:investigate')
     const row=await this.current(actor,id)
     await this.employer(actor,input.employerEin)
     if(date(input.periodStart)!==row.data.facts.periodStart || date(input.periodEnd)!==row.data.facts.periodEnd) throw new PayrollError('notice_evidence_period_mismatch',409)
@@ -124,6 +132,7 @@ export class TaxNoticeCases {
     return this.store.append(actor,'tax-notice-case',id,row.version,data,undefined,false,{objects:data.rate?[{kind:'rule',id:data.rate.id,version:data.rate.version,approved:true}]:[]})
   }
   async linkRate(actor:Actor,id:string,input:Input) {
+    new WorkerPrivacy(this.store.records).owner(actor)
     const row=await this.current(actor,id)
     if(row.version!==revision(input.version) || !row.approvedBy || row.withdrawnBy || !row.sourcesCurrent || row.data.facts.type!=='sui-rate') throw new PayrollError('reviewed_rate_case_required',409)
     const rule=await this.store.find<PayrollRule>(actor,'rule',text(input.ruleId),undefined,true),facts=row.data.facts
@@ -157,10 +166,12 @@ export class TaxNoticeCases {
     return {noticeId:row.id,noticeVersion:row.version,originalSha256:row.data.original.sha256,ruleId:rule.id,ruleVersion:rule.version,state:facts.state,ratePercent:facts.ratePercent,wageBaseCents,wageBaseSourceUrl:rule.data.details.wageBaseSourceUrl,wageBaseReference:rule.data.details.wageBaseReference,yearToDateWagesCents,yearToDateEvidence:text(input.suiYearToDateEvidence,1000),currentWagesCents,taxableWagesCents,employerLiabilityCents,employeeDeductionCents:0,paid:false}
   }
   async original(actor:Actor,id:string,version:number,index:number) {
-    await this.authority(actor,id)
+    await this.authority(actor,id,'cases:download')
     const rows=await this.store.list<TaxNoticeCase>(actor,'tax-notice-case'),row=rows.find(r=>r.id===id && r.version===version)
     const doc=index===0?row?.data.original:row?.data.evidence[index-1]?.document
     if(!doc) throw new PayrollError('notice_original_unavailable',404)
+    const event=await auditStatement(this.store.records.env,actor,crypto.randomUUID(),'notice.case.original.read',id,version).run()
+    if (!event.meta.changes) throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(doc.pdf),c=>c.charCodeAt(0))
   }
 }

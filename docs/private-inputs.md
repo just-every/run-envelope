@@ -44,6 +44,23 @@ version cannot overwrite the new value. Reads require the current native session
 and company grant. Native sign-out revokes subsequent downloads. Documentary bank
 custody does not verify an account or authorize a payment.
 
+Signed paper tax forms have a separate original-download permission. A current
+native staff session needs `paper:download` plus the company's applicable location,
+tax and SSN field grants; entry, review, ordinary private-record access and export
+permissions do not imply it. The configured native owner retains the existing
+owner access. Each retrieval checks current authority and records the person,
+form version and accessing identity. Revoking a grant ends its old sessions;
+granting access again requires a fresh session and cannot revive an old one.
+An identifier copied from another company confers no access.
+
+Both native document links and API retrieval return signed originals as binary
+attachments, with `no-store`, MIME sniffing disabled, a sandbox content security
+policy and no inline opening. GET preserves the exact retained bytes, including
+binary content; HEAD uses the same authority and response protection without a
+body. New paper versions append their own federal and state originals; they do
+not overwrite earlier versions. These are retained signed documents, not a claim
+of legal signature verification or payable authority.
+
 Tax notice bodies are limited to 12,000 characters and rendered as escaped text,
 including any script tags or remote image references. The ordinary native JSON
 request boundary rejects invalid UTF-8, malformed objects, unsupported content
@@ -75,6 +92,51 @@ submission. This is bounded interaction evidence, with contrast findings kept
 visible. ENV-057 remains partial. Base BASE-ACCESSIBILITY-001 carries the scripted
 accessibility-tree announcement assertions, and the owner’s VoiceOver or NVDA
 pass is Field proof register row R-6. No human screen-reader pass is claimed here.
+
+## Public and private route inventory
+
+The public surface has two separately exercised deployments. The installed
+Worker supplies the Lobby, setup, sign-in, invitation and confirmation previews,
+identity callbacks, setup state and Base discovery and health responses. The
+Run site supplies the homepage, Run page, documentation, contract and not-found
+document. Public visits do not create a native session or expose payroll values.
+An invitation preview is public; issuing an invitation remains private.
+
+The safe-input journey builds the actual Run site and visits every emitted HTML
+document, including every documentation page and the contract. It records requests,
+response cookies, local and session storage, IndexedDB, caches and service workers
+before interaction. It checks no third-party request or planted private payroll
+value, with browser captures at 1440 and 390. Known accessibility findings remain
+recorded rather than presented as a complete accessibility pass.
+
+`tests/payroll-doors.mjs` records the finite native inventory derived from the
+installed dispatch branches in `src/envelope/http.ts` and its claim, industry,
+accounting, automation and firm dispatchers. `tests/claims-browser.mjs` adds the
+actual links and form actions emitted by populated private records and the native
+identity and dependency settings doors. Signed-out GET, HEAD and POST attempts
+must refuse, disclose no private content and change no retained payroll or native
+identity row. Download history is separately exercised by paperOnboardingJourney
+in `tests/payroll-runtime.mjs`, including current scoped access, original and
+replacement bytes, foreign companies, wrong locations or fields, signed-out and
+revoked sessions, revoked grants and renewed grants that leave old sessions dead.
+The journey recursively reads the populated company, person, notice and claim
+documents and follows their native links. It adds every emitted form action to
+the signed-out inventory, then submits malformed JSON roots, invalid UTF-8,
+duplicate scalar form values and unsupported content through those actual forms
+under current owner authority. Refusals must preserve all retained business and
+identity rows. The dispatcher inventory still supplies routes that no current
+document offers; new route families must extend it and their applicable states.
+
+Federal and state originals carry different bytes, as do their replacement
+versions. GET checks exact bytes independently for each form; HEAD retains the
+same authority and attachment protections without a body. Keyboard downloads
+open the distinct replacement links at both release widths, so a form or version
+mix-up cannot pass by returning an identical fixture. Current owners and scoped
+downloaders also attempt to overwrite and delete retained originals through
+their download links; these unsupported mutations refuse without changing the
+retained records or audit.
+This finite boundary proof does not establish exhaustive structured inputs,
+interaction states, contrast or accessibility-tree announcements.
 
 Notice-reply text remains plain text through exact human review and dispatch;
 stale edits cannot replace the current reply. Protected-response requesters

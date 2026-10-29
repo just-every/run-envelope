@@ -1,3 +1,10 @@
+import { agentPolicyWorker } from './agent-policy-worker.mjs'
+import { agentPolicyJourney } from './agent-policy-runtime.mjs'
+import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
+import { extendedRetirementJourney } from './extended-retirement-runtime.mjs'
+import { retirementBenefitsJourney } from './retirement-benefits-runtime.mjs'
+import { nyDblJourney } from './ny-dbl-runtime.mjs'
+import { calculationJourney } from './calculation-runtime.mjs'
 import { accountingJourney } from './accounting-runtime.mjs'
 import { chromium } from '@playwright/test'
 import { queuedEntrypoint } from '@runeditrun/rer/queued-entry'
@@ -24,6 +31,7 @@ import {
   identityJourney,
   sponsoredJourney,
   payrollJourney,
+  operationsFaultWorker,
   missingKeyJourney,
   allocationJourney,
   scheduleJourney,
@@ -47,9 +55,9 @@ import { firmJourney } from './firm-runtime.mjs'
 // historical-record fixtures in the core journey are not archive source data.
 if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
-    'records,approvals,sponsored,identity',
+    'records,approvals,sponsored,identity', 'agent-policy',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
-    'firm', 'industry', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
+    'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -126,14 +134,15 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
-const clockEntrypoint = clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
+const clockEntrypoint = process.env.ENVELOPE_JOURNEYS === 'agent-policy' ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
+const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
 let output = ''
 async function launch(bindings) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
-    ...(clockEntrypoint ? {entrypoint:clockEntrypoint} : {}),
+    ...((clockEntrypoint ?? operationsEntrypoint) ? {entrypoint:clockEntrypoint ?? operationsEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
     dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
   })
@@ -176,7 +185,7 @@ try {
     body: JSON.stringify({ token: setupToken, displayName: 'Kim Sorensen' }),
   })
   assert.equal(claim.status, 303, await claim.text())
-  const cookie = claim.headers.get('set-cookie').split(';')[0]
+  let cookie = claim.headers.get('set-cookie').split(';')[0]
   assert.equal(
     (await manual('/app', { headers: { cookie } })).headers.get('location'),
     '/setup',
@@ -242,7 +251,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -287,12 +296,18 @@ try {
       await waitForWorker()
     }
   }
+  if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})
   if (selected?.includes('accounting')) await accountingJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('automation')) await automationJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('new-hires')) await newHireJourney({ origin, cookie, advanceClock:async instant=>{assert.ok(clockEntrypoint,'New-hire journey requires its pinned clock');assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)} })
-  if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql,settings})
+  if (!selected || selected.includes('paper-onboarding')) await paperOnboardingJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings})
   if (!selected || selected.includes('multi-company')) await multiCompanyJourney({ origin, cookie, sql, settings })
+  if (selected?.includes('hi-benefits')) await hiBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('extended-retirement')) cookie = await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('retirement')) await retirementBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('firm')) await firmJourney({ origin, cookie, sql, settings })
   if (!selected || selected.includes('income-verification')) await incomeVerificationJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, root:process.cwd(), persist, quiesce:async action=>{await stopWorker();try{return await action()}finally{worker=await launch(settings);await waitForWorker()}} })
@@ -359,7 +374,7 @@ try {
         response.on('end',()=>{const headers=new Headers();for(let i=0;i<response.rawHeaders.length;i+=2)headers.append(response.rawHeaders[i],response.rawHeaders[i+1]);resolve(new Response([204,304].includes(response.statusCode)?null:Buffer.concat(chunks),{status:response.statusCode,headers}))})
       });recordPrivateInput(url,init.body);request.on('error',reject);request.end(init.body)
     })}
-    try{await claimsWorker.ready;await claimsJourney({worker:transport,origin:claimsOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql,settings,edge})}
+    try{await claimsWorker.ready;await claimsJourney({worker:transport,origin:claimsOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,edge})}
     finally{await claimsWorker.dispose();worker=await launch(settings);await waitForWorker()}
   }
   if (!selected || selected.includes('identity')) {

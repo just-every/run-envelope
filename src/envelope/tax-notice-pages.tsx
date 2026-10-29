@@ -8,6 +8,7 @@ import { redact } from './providers'
 type History=Awaited<ReturnType<TaxNoticeCases['history']>>
 export function taxNoticeCasePage(session:Session,companies:Company[],actor:Actor,id:string,history:History,review?:Awaited<ReturnType<TaxNoticeCases['review']>>) {
   const base=companyPath(actor.company)+'/notices/'+id,door=base+'/case',current=history[0],facts=current?.data.facts
+  const allowed=(power:string)=>actor.grant.role==='owner' || actor.grant.actions.includes(power)
   const pdf=()=><label className="field"><span>Original PDF (up to 384 KB)</span><input type="file" name="pdf" accept=".pdf" required/></label>
   const periods=()=><><Field name="employerEin" label="Employer EIN from original"/><Field name="periodStart" label="Period start" type="date" value={facts?.periodStart}/><Field name="periodEnd" label="Period end" type="date" value={facts?.periodEnd}/></>
   return page(session,'Notice evidence and deadlines',companies,actor.company,<>
@@ -31,15 +32,15 @@ export function taxNoticeCasePage(session:Session,companies:Company[],actor:Acto
         {row.data.facts.type==='sui-rate' && <p>SUI rate {row.data.facts.ratePercent}% effective {row.data.facts.effectiveFrom}. {row.data.rate?'Linked reviewed rule '+row.data.rate.id+' version '+row.data.rate.version:'No reviewed rule linked.'} Reviewing this case does not calculate payroll.</p>}
         <details><summary>Inspect source and evidence for version {row.version}</summary>
           <p className="notice-text">Unverified extraction: {redact(row.data.rawExtraction)}</p><p>{redact(row.data.correctionReason)}</p>
-          <p className="notice-text">Original citation: {redact(row.data.original.quote)}</p><a href={door+'/original/'+row.version+'/0'}>Download retained notice original</a>
-          {row.data.evidence.map((e,i)=><div key={e.reference}><p>{e.kind} · {e.reference} · recorded by {e.recordedBy} at {new Date(e.recordedAt).toISOString()}. {e.amountCents===null?'':'Deposit evidence amount $'+(e.amountCents/100).toFixed(2)}</p><p className="notice-text">{redact(e.document.quote)}</p><a href={door+'/original/'+row.version+'/'+(i+1)}>Download {e.kind} original</a></div>)}
+          <p className="notice-text">Original citation: {redact(row.data.original.quote)}</p>{allowed('cases:download') && <a href={door+'/original/'+row.version+'/0'}>Download retained notice original</a>}
+          {row.data.evidence.map((e,i)=><div key={e.reference}><p>{e.kind} · {e.reference} · recorded by {e.recordedBy} at {new Date(e.recordedAt).toISOString()}. {e.amountCents===null?'':'Deposit evidence amount $'+(e.amountCents/100).toFixed(2)}</p><p className="notice-text">{redact(e.document.quote)}</p>{allowed('cases:download') && <a href={door+'/original/'+row.version+'/'+(i+1)}>Download {e.kind} original</a>}</div>)}
         </details>
-        {!index && row.approvedBy && row.data.facts.type==='sui-rate' && !review && <details><summary>Link an exact reviewed SUI edition</summary><a href={companyPath(actor.company)+'/rules'}>Review sourced payroll rules</a><p className="evidence-text">Rule source reference: notice:{id}:{row.data.original.sha256}. Match the state, effective date and percentage above. Linking does not calculate payroll.</p><form method="post" action={door+'/link-rate'}><Hidden name="version" value={row.version}/><Field name="ruleId" label="Reviewed SUI rule ID"/><Field name="ruleVersion" label="Reviewed SUI rule version" type="number"/><Submit>Link exact reviewed SUI rule</Submit></form></details>}
-        {!index && !row.approvedBy && !review && <a className="btn" href={door+'/review'}>Review exact case version</a>}
+        {actor.grant.role==='owner' && !index && row.approvedBy && row.data.facts.type==='sui-rate' && !review && <details><summary>Link an exact reviewed SUI edition</summary><a href={companyPath(actor.company)+'/rules'}>Review sourced payroll rules</a><p className="evidence-text">Rule source reference: notice:{id}:{row.data.original.sha256}. Match the state, effective date and percentage above. Linking does not calculate payroll.</p><form method="post" action={door+'/link-rate'}><Hidden name="version" value={row.version}/><Field name="ruleId" label="Reviewed SUI rule ID"/><Field name="ruleVersion" label="Reviewed SUI rule version" type="number"/><Submit>Link exact reviewed SUI rule</Submit></form></details>}
+        {allowed('cases:review') && !index && !row.approvedBy && !review && <a className="btn" href={door+'/review'}>Review exact case version</a>}
       </article>)}
     </Card>
     {!review && <>
-      {current?.data.status!=='closure-reported' && <Card title={current?'Correct verified case facts':'Record verified case facts'}>
+      {allowed('cases:intake') && current?.data.status!=='closure-reported' && <Card title={current?'Correct verified case facts':'Record verified case facts'}>
         <form method="post" encType={['multipart','form-data'].join('/')} action={door}>
           <Hidden name="version" value={current?.version ?? 0}/><Select name="type" label="Notice type" choices={['sui-rate','deposit-mismatch']} value={facts?.type}/>
           <Field name="agency" label="Agency from original" value={facts?.agency}/>{periods()}<Field name="dueOn" label="Agency response deadline" type="date" value={facts?.dueOn}/>
@@ -49,7 +50,7 @@ export function taxNoticeCasePage(session:Session,companies:Company[],actor:Acto
           <label className="field"><span><input type="checkbox" name="verifiedExtraction" value="true" required/> I checked these facts against the original.</span></label><Submit>Save verified case version</Submit>
         </form>
       </Card>}
-      {current && <Card title="Attach deposit or agency evidence">
+      {allowed('cases:investigate') && current && <Card title="Attach deposit or agency evidence">
         <form method="post" encType={['multipart','form-data'].join('/')} action={door+'/evidence'}>
           <Hidden name="version" value={current.version}/><Select name="kind" label="Evidence kind" choices={['deposit','agency-response','reopening']}/><Field name="reference" label="Unique source reference" maxLength={240}/>{periods()}{pdf()}<Field name="quote" label="Exact evidence quotation" maxLength={4000}/>
           <Field name="amountCents" label="Deposit evidence amount in cents" type="number" required={false}/>

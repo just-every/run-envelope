@@ -1,3 +1,4 @@
+import { policyFence } from './agent-policy'
 import type { Bindings } from '../auth.server'
 import type { Records, Input } from './records'
 import { fence, auditStatement, type Actor } from './access'
@@ -244,6 +245,8 @@ export class AgentSettings {
   }
 }
 export class AgentTools {
+  callPolicyVersion?: number
+  authenticatedPolicyVersion?: number
   constructor(
     public env: Bindings,
     public grant: AgentGrant,
@@ -266,6 +269,7 @@ export class AgentTools {
         .first())
     )
       throw new PayrollError('agent_authority_revoked', 403)
+    tools.authenticatedPolicyVersion = (await env.DB.prepare('SELECT version FROM env_agent_class_policy WHERE company_id=?').bind(row.company_id).first<{version:number}>())?.version ?? 0
     const window = Math.floor(Date.now() / 60000)
     const count = await env.DB.prepare(
       `INSERT INTO oa_limits(key,window,count) SELECT ?,?,1 WHERE ${f.sql}
@@ -278,6 +282,12 @@ export class AgentTools {
     return tools
   }
   fence() {
+    const authority = this.authorityFence()
+    if (this.callPolicyVersion === undefined) return authority
+    const policy = policyFence(this.grant.company_id,this.callPolicyVersion)
+    return {sql: `(${authority.sql}) AND ${policy.sql}`,args:[...authority.args,...policy.args]}
+  }
+  authorityFence() {
     const g = this.grant
     return {
       sql: `EXISTS(SELECT 1 FROM env_agent_grants a JOIN env_agent_credentials c ON c.id=a.id JOIN env_grants s ON s.company_id=a.company_id AND s.operator_id=a.sponsor_id JOIN oa_operators o ON o.id=a.sponsor_id
@@ -302,6 +312,7 @@ export class AgentTools {
       this.env.DB.prepare(`UPDATE env_agent_credentials SET token_hash=?,secret_expires_at=? WHERE id=? AND ${f.sql} RETURNING id`).bind(hash,secretExpiresAt,this.grant.id,...f.args),
     ])
     if (!result[1].results.length) throw new PayrollError('agent_authority_revoked',403)
+    this.grant.token_hash = hash
     return {id:this.grant.id,token,secretExpiresAt,expiresAt:this.grant.expires_at}
   }
   allow(action: string, company: unknown) {

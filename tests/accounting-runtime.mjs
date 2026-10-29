@@ -28,7 +28,7 @@ export async function accountingJourney({ origin, cookie, sql, settings, restart
   const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, headless: true, args: ['--no-sandbox'] })
   const context = await browser.newContext(); await context.addCookies([{ name: cookie.split('=')[0], value: cookie.split('=')[1], url: origin }]); const page = await context.newPage()
   const proof = process.env.ENVELOPE_PROOF_DIR ?? './test-results/envelope'; await mkdir(proof, { recursive: true })
-  const capture = async (label, path = screen) => { for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 1000 }); await page.goto(origin + path); if (width === 1440) assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, label); await page.screenshot({ path: join(proof, 'accounting-' + label + '-' + width + '.png'), fullPage: true }) } }
+  const capture = async (label, path = screen) => { for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 1000 }); await page.goto(origin + path); if (width === 1440) { assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, label); for (const control of await page.locator('button,a').all()) assert.ok((await control.innerText()).trim(), 'all controls have visible words') } await page.screenshot({ path: join(proof, 'accounting-' + label + '-' + width + '.png'), fullPage: true }) } }
   const assertError = async (path, body, status, error) => { const r = await call(path, body); assert.equal(r.status, status); assert.equal((await r.json()).error, error) }
   try {
     await capture('empty')
@@ -117,6 +117,13 @@ export async function accountingJourney({ origin, cookie, sql, settings, restart
     assert.equal(versions.find(r => r.version === 1).data.proposedNetCents, 8000)
     assert.equal(versions.find(r => r.version === 2).approvedBy, null, 'a revised worksheet inherits no preparation approval')
     await assertError(path + '/post',{version:1},409,'journal_sources_changed')
+    // Mappings for each named ledger are native preparation settings, not tested provider adapters.
+    for (const [index, ledger, ledgerUrl] of [[0, 'Pantry', 'https://ledger.example.com/'], [1, 'Xero', 'https://go.xero.com/'], [2, 'NetSuite', 'https://system.netsuite.com/'], [3, 'Sage Intacct', 'https://www.intacct.com/']]) {
+      const id = 'synthetic-envelope-84' + index
+      await data(door + '/connections', { ...mapping, id, ledger, ledgerUrl })
+      const p = await data(door + '/preview', { ...proposal, connectionId: id })
+      assert.equal(p.totalDebitCents, 11000); assert.equal(p.totalCreditCents, 11000); assert.equal(p.ledgerUrl, ledgerUrl)
+    }
     await data(door + '/connections', { ...mapping, version: 1, enabled: false })
     await assertError(door + '/preview', proposal, 409, 'ledger_disconnected')
     await assertError(path + '/post', { version: 1 }, 409, 'journal_sources_changed')

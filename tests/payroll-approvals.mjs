@@ -1,3 +1,4 @@
+import { answerAgentPolicy } from './agent-policy-runtime.mjs'
 // Run approval journey: exact versions, distinct people, voided approvals, no effects.
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
@@ -232,6 +233,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await refused(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 'second_approver_must_differ', humans['approver-a'].cookie)
     await refused(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 'review_stale', humans['approver-b'].cookie)
     await stepUp()
+    await answerAgentPolicy({origin,cookie,company:company.id})
     const agent = await data(base + '/agents', { name: 'synthetic-envelope-342', hours: 1, actions: ['records:read', 'drafts:prepare', 'drafts:read'],
       locations: ['*'], fields: ['compensation'], providers: [], models: [] }, 201, humans.admin.cookie)
     const mcp = (method, params) => fetch(origin + '/api/envelope/mcp', { method: 'POST',

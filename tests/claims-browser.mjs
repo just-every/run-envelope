@@ -4,6 +4,7 @@ import { mkdtemp,writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { portalViewResponse,sidesSubmissionEdge } from './claims-portal-edge.mjs'
+import { payrollDoors, payrollSnapshot, publicSiteBrowser, renderedPayrollDoors, visitorStorage } from './payroll-doors.mjs'
 
 export async function claimsBrowser({context,f,completedDoor,wageDoor,edge}){
  const {default:axe}=await import('axe-core')
@@ -150,6 +151,7 @@ export async function safeInputsBrowser({context,f}) {
     const html=await page.content()
     for(const privateValue of [f.company.name,f.person.name,f.company.ein,'900-69-0001'])assert.ok(!html.includes(privateValue),label+' private response')
     assert.deepEqual(await visitor.cookies(),[])
+    await visitorStorage(visitor,page)
     await capture(label+'-'+width)
    }
    await page.goto(context.origin+'/signin')
@@ -160,6 +162,24 @@ export async function safeInputsBrowser({context,f}) {
    assert.notEqual(await email.evaluate(n=>getComputedStyle(n).outlineStyle),'none','visible keyboard focus')
   }
   assert.ok(requests.every(url=>new URL(url).origin===context.origin),'no third-party request before interaction')
+  // Native public dispatcher states, including machine-readable discovery and
+  // invalid callback refusals. Valid invite and confirmation states run below;
+  // the verified linked callback runs in identityJourney.
+  const nativePublic=['/','/signin','/setup','/setup/state','/health','/auth/invite',
+   '/auth/confirm?token=synthetic-envelope-570','/auth/owner-signin?token=synthetic-envelope-570',
+   '/auth/owner-claim','/.well-known/rer-dependencies','/.well-known/rer-link/jwks',
+   '/.well-known/rer-link/jwks/oidc-provider@1','/.well-known/rer-link/callback',
+   '/auth/dependencies/status','/auth/oidc/auth/start','/auth/oidc/auth/callback','/auth/oidc/auth/logout']
+  const planted=[f.company.name,f.person.name,f.company.ein,'900-69-0001']
+  for(const path of nativePublic)for(const method of ['GET','HEAD']) {
+   const response=await visitor.request.fetch(context.origin+path,{method,maxRedirects:0})
+   assert.ok(response.status()<500,path+' has a bounded public response')
+   const body=await response.text()
+   for(const value of planted)assert.ok(!body.includes(value),path+' exposes no planted private value')
+   assert.equal(response.headers()['set-cookie'],undefined,path+' does not establish a visitor session')
+   if(method==='HEAD')assert.equal(body,'',path+' HEAD has no response body')
+  }
+  await publicSiteBrowser({browser,privateValues:planted,proof,audits,axe})
   for(const path of ['/auth/session','/auth/operators','/api/envelope/companies',f.claims]) {
    const response=await visitor.request.get(context.origin+path)
    assert.equal(response.status(),401,path)
@@ -252,6 +272,30 @@ export async function safeInputsBrowser({context,f}) {
   const admitted=await member.request.post(context.origin+'/auth/confirm',{headers:{origin:context.origin},data:{token:new URL(invitation).searchParams.get('token')},maxRedirects:0})
   assert.equal(admitted.status(),303)
   for(const path of [door+'/artifacts/'+hostile.id,door+'/artifacts/'+pdf.id])assert.equal((await member.request.get(context.origin+path)).status(),403,'a signed-in member without a company grant cannot download')
+  // One public-door regression: native member authority and registered dispatch stay intact.
+  const memberSession=await (await member.request.get(context.origin+'/auth/session')).json()
+  assert.equal(memberSession.operator.role,'member')
+  const grant=await owner.request.post(context.origin+f.base+'/grants',{headers:{origin:context.origin},data:{operatorId:memberSession.operator.id,version:0,role:'viewer',locations:['*'],fields:[],actions:[]}})
+  assert.equal(grant.status(),200,'the native member receives a viewer grant with no permissions')
+  const dispatchChecks=[]
+  for(const [label,client] of [['member',member],['owner',owner]])for(const prefix of ['/api/','/app/']) {
+   for(const action of ['unknown-action','constructor','hasOwnProperty']) {
+    const response=await client.request.post(context.origin+door.replace('/api/',prefix)+'/'+action,{headers:{origin:context.origin},data:{}})
+    const body=await response.text()
+    dispatchChecks.push({label,prefix,action,status:response.status()})
+    for(const secret of ['900-69-0001',...Object.entries(context.settings).filter(([key])=>/SECRET|KEY|TOKEN/.test(key)).map(([,value])=>value)])
+     if(typeof secret==='string'&&secret.length>5)assert.ok(!body.includes(secret),'unknown dispatch discloses no private or binding value')
+   }
+  }
+  console.log('Claims dispatch public-door statuses: '+JSON.stringify(dispatchChecks))
+  for(const check of dispatchChecks)assert.equal(check.status,404,check.label+' '+check.prefix+' '+check.action+' uses unknown-action answer')
+  const legitimate=await owner.request.post(context.origin+door+'/escalate',{headers:{origin:context.origin},data:{version:imported.version,reason:'Synthetic dispatch sanity check'}})
+  assert.equal(legitimate.status(),200,'a registered action still succeeds')
+  const escalation=await legitimate.json()
+  assert.equal(escalation.version,imported.version+1,'registered action creates its real revision')
+  const denied=await member.request.post(context.origin+door+'/escalate',{headers:{origin:context.origin},data:{version:escalation.version,reason:'Synthetic unauthorized dispatch'}})
+  assert.equal(denied.status(),403,'a registered action retains its company-owner authority check')
+  console.log('Claims dispatch public-door sanity passed: inherited names refused, registered action works, authority preserved')
   const personDoor=f.base+'/people/'+f.person.id,privatePaths=[]
   await f.data('/auth/magic-link',{email:f.operator.email,returnTo:'/app/envelope'},202)
   const ownerLink=new URL(context.edge.mails.at(-1).text.match(/https?:[^\s"<>]+/)[0].replaceAll('&amp;','&'))
@@ -287,6 +331,34 @@ export async function safeInputsBrowser({context,f}) {
   }
   const notice=await f.data(f.base+'/notices',{locationId:f.location.id,reference:'synthetic-envelope-576',body:payload},201)
   const noticePath=f.base+'/notices/'+notice.id
+  // Exercise the finite dispatcher inventory against retained private records,
+  // plus concrete links and mutations emitted by the populated claim screen.
+  await owned.goto(context.origin+ui)
+  const rendered=await owned.locator('[href],[action],[formaction]').evaluateAll(nodes=>nodes.flatMap(node=>
+   ['href','action','formaction'].map(key=>node.getAttribute(key)).filter(value=>value?.startsWith('/app/envelope'))))
+  const populated=await renderedPayrollDoors(owner,context.origin,[ui,f.base.replace('/api/','/app/'),personDoor.replace('/api/','/app/'),noticePath.replace('/api/','/app/')])
+  await writeFile(join(proof,'populated-documents.json'),JSON.stringify(populated,null,2))
+  const privateDoors=[...new Set([...populated.doors,...payrollDoors(f,{id:imported.id,artifacts:[hostile,pdf]},notice),...rendered,
+   '/auth/session','/auth/operators','/auth/sessions','/auth/domain-rules','/auth/providers','/auth/settings/identity',
+   '/auth/invite/cancel','/auth/operator/status','/auth/operator/role','/auth/session/revoke','/auth/step-up',
+   '/auth/providers/unlink','/auth/providers/relink','/auth/settings/business','/auth/setup-complete','/auth/email','/auth/display-name',
+   '/auth/dependencies/setup','/auth/dependencies/relink','/auth/dependencies/unlink'])]
+  const targetSession=(await context.sql("SELECT id FROM oa_sessions WHERE operator_id='"+f.operator.id+"' AND revoked_at IS NULL ORDER BY created_at LIMIT 1"))[0].id
+  const privateBefore=await payrollSnapshot(context.sql),inventory=[]
+  for(const path of privateDoors)for(const method of ['GET','HEAD','POST']) {
+   const response=await visitor.request.fetch(context.origin+path,{method,maxRedirects:0,headers:{origin:context.origin},
+    ...(method==='POST'?{data:{version:1,operatorId:f.operator.id,sessionId:targetSession,reason:'Synthetic unauthorized mutation'}}:{})})
+   const body=await response.text(),location=response.headers().location
+   assert.ok([400,401,403,404,405].includes(response.status()) || response.status()===303 && location?.startsWith('/signin'),method+' '+path+' refuses a signed-out visitor: '+response.status())
+   for(const value of [...planted,payload])assert.ok(!body.includes(value),method+' '+path+' contains no payroll content')
+   assert.equal(response.headers()['set-cookie'],undefined,method+' '+path+' creates no visitor session')
+   assert.equal(response.headers()['content-disposition'],undefined,method+' '+path+' grants no attachment')
+   if(method==='HEAD')assert.equal(body,'')
+   inventory.push({method,path,status:response.status()})
+  }
+  assert.equal(await payrollSnapshot(context.sql),privateBefore,'signed-out reads and mutations change no retained payroll row, revision, grant or audit')
+  await writeFile(join(proof,'signed-out-doors.json'),JSON.stringify(inventory,null,2))
+  console.log('Signed-out payroll inventory passed: '+privateDoors.length+' routes, '+inventory.length+' method cases')
   for(const width of [1440,390]) {
    await owned.setViewportSize({width,height:1000});await owned.goto(context.origin+noticePath.replace('/api/','/app/'))
    assert.ok((await owned.locator('main').innerText()).includes(payload))
@@ -355,6 +427,24 @@ export async function safeInputsBrowser({context,f}) {
    }
    assert.deepEqual(await snapshot(),before,'rejected input writes no private version or audit')
   }
+  // Every mutation actually offered by the populated documents uses the same
+  // structured request boundary. None may retain a version from malformed data.
+  const inputBefore=await payrollSnapshot(context.sql),inputCases=[]
+  for(const path of populated.inputs) for(const [body,type,status] of [
+   ['null',['application','json'].join('/'),400],
+   ['[]',['application','json'].join('/'),400],
+   ['1',['application','json'].join('/'),400],
+   [Buffer.from([255,254]),['application','json'].join('/'),400],
+   ['version=1&version=2',['application','x-www-form-urlencoded'].join('/'),400],
+   ['<html>synthetic-envelope-587</html>',['text','html'].join('/'),415],
+  ]) {
+   const response=await owner.request.post(context.origin+path,{headers:{origin:context.origin,'content-type':type},data:body,maxRedirects:0})
+   assert.equal(response.status(),status,path+' refuses malformed structured input')
+   inputCases.push({path,type,status:response.status()})
+  }
+  assert.equal(await payrollSnapshot(context.sql),inputBefore,'malformed populated forms change no retained business or identity row')
+  await writeFile(join(proof,'structured-form-refusals.json'),JSON.stringify(inputCases,null,2))
+  console.log('Populated payroll input boundaries passed: '+populated.documents.length+' documents, '+populated.inputs.length+' forms, '+inputCases.length+' refusal cases')
   const structuredSnapshot=()=>context.sql('SELECT company_id,kind,object_id,version,cipher FROM env_workspace_versions ORDER BY company_id,kind,object_id,version; SELECT * FROM env_notice_replies; SELECT * FROM env_verification_releases')
   for(const [path,body,status] of [
    [f.base+'/hris-hires',{...source,version:2,sourceVersion:3,export:[]},400],

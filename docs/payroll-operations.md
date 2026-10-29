@@ -65,3 +65,58 @@ This is native proposal-webhook recovery. Complete backup validation across
 uncertain payroll effects, prior-release migration, scheduler execution,
 release and filing recovery, and the contracted scale and timing journeys
 remain unproved under ENV-056. No bank or agency delivery is inferred.
+
+## Explicit local dependency diagnostic
+
+The current configured native owner may explicitly POST `{"consent":true}` to
+`/api/envelope/companies/COMPANY_ID/operations/diagnose`. This is separate from
+the read-only health route. Consent authorizes only this local diagnostic,
+never a send, retry, hold release or business-record repair. Current native
+session and company authority are checked before work, in the database writes
+and reads, after the probes and before the response. Authority checks share
+the probe deadline; unavailable authority returns an explicit 503 refusal and
+cannot establish diagnostic health. Staff, agents, signed-out
+callers and owners without that company's authority are refused.
+
+The diagnostic writes a random non-business challenge and its AES-GCM ciphertext
+to the isolated `env_operation_sentinels` table, reads them and deletes that
+exact sentinel in one D1 transaction. It then authenticates the returned round
+trip and verifies cleanup. Every dependency wait is bounded by two seconds.
+A timed-out transaction is not cancelled: its own delete still runs before
+commit if it completes later. Timeout therefore reports an unvalidated outcome,
+including cleanup, rather than guessing success. Transaction failure reports an
+unhealthy database. A retained sentinel reports unhealthy cleanup and requires
+owner investigation of this isolated table; no payroll or outbox rows are
+cleared. Database reads alone cannot establish write health.
+
+A new round trip proves only that the supplied key works on new data. To detect
+a wrong but valid-format key or damaged retained content, the diagnostic also
+authenticates at most 25 current `env_private_records` within the owner's current
+company, location and sensitive-field grant. The sample has a two-second total
+inspection budget and runs only after the isolated dependency round trip and
+cleanup succeed. Each inspected record version has an attributed audit event
+before its bytes are read. Temporary decrypted bytes are cleared without being
+decoded or returned. The response contains only counts and dependency states;
+it never contains private values, ciphertexts, key material or underlying errors.
+Start and outcome audits identify the diagnostic and actor. An unavailable
+audit write is reported explicitly and prevents retained-content validation;
+failed auditing never silently permits private inspection.
+
+`retained.state: "validated-sample"` covers only the inspected records at that
+moment. `unvalidated` counts the company's remaining private records, including
+records excluded by the grant or sample bound. Other storage and backups remain
+explicitly unvalidated. If any company custody request or unreleased record hold
+exists, no retained ciphertext is inspected. A changed custody epoch invalidates
+the sample. Corruption or a wrong key reports unhealthy authentication; an
+unavailable inventory, absent key, empty permitted sample or timeout never
+becomes a complete storage-health claim. Even after successful diagnostics,
+GET still reports stored content as not validated.
+
+The diagnostic makes no outbound request and leaves business records, unknown
+jobs, attempts, event identities and delivery authority unchanged. All results
+remain attention-required: provider operation, scheduler execution, backup
+validation and the remaining ENV-056 recovery and timing outcomes are unproved.
+
+The isolated diagnostic schema is installed by
+`migrations/core/0040_operation_sentinels.sql`; migrations 0038 and 0039 retain
+their existing agent policy and audit meanings.

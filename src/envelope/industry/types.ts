@@ -129,7 +129,7 @@ export type IndustryPayResult = {
     medicareWagesCents: number; additionalMedicareWagesCents: number; futaWagesCents: number }
   employeeTaxes: { incomeTaxCents: number; socialSecurityCents: number; medicareCents: number; additionalMedicareCents: number }
   employerTaxes: { socialSecurityCents: number; medicareCents: number; futaCents: number }
-  withholding: { adjustedAnnualWagesCents: number; nonresidentAdjustmentCents: number; sourceId: string }
+  withholding: { adjustedAnnualWagesCents: number; nonresidentAdjustmentCents: number; sourceId: string; calculation?: Record<string,unknown> }
   classification: IndustryClassification
   formAssignment: '941' | '943'
   sources: FederalSource[]

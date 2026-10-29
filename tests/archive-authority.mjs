@@ -1,3 +1,4 @@
+import { answerAgentPolicy } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 
 // Create live source authority through the native doors. The archive journey
@@ -43,6 +44,7 @@ export async function archiveAuthority(context, company, notice) {
     id: 'resend', version: resend.version, enabled: true, consent: true,
     secret: providerSecret, sender: 'payroll@example.com',
   }, 201)
+  await answerAgentPolicy({origin,cookie,company:company.id,worker})
   const agent = await data(company.base + '/agents', {
     name: 'Archive restoration authority proof', hours: 24,
     actions: ['records:read', 'dispatch:execute'], fields: ['tax'],

@@ -2,6 +2,7 @@ import type { Session } from '../modules/operator-auth/index.mjs'
 import type { Actor } from './access'
 import type { Company } from './records'
 import { agentActions } from './agents'
+import { agentClasses, policyDecisions, type AgentPolicy } from './agent-policy'
 import { page, Card, Field, Hidden, Submit, companyPath } from './pages'
 
 export function agentsPage(
@@ -12,6 +13,8 @@ export function agentsPage(
   grants: Record<string, unknown>[],
   policy: Record<string, unknown>,
   providers: {id:string;enabled:number}[],
+  classPolicy: Awaited<ReturnType<AgentPolicy['read']>>,
+  activity: Awaited<ReturnType<AgentPolicy['activity']>>,
 ) {
   const base = companyPath(actor.company) + '/agents'
   const labels: Record<string, string> = {
@@ -27,6 +30,43 @@ export function agentsPage(
     companies,
     actor.company,
     <>
+      <section id="class-policy">
+        <Card title="Agent policy settings">
+          <p>{classPolicy.answers ? 'Every class has an explicit company answer.' : 'Agents are held until the company answers every class. No answer is selected for you.'}</p>
+          <p>{classPolicy.paused ? 'Agents are paused. Payroll calls and credential rotation are stopped.' : 'Agents are subject to the current company policy and their existing grants.'}</p>
+          <p>Policy can restrict a grant. It cannot grant access, approve payroll or authorize an outside send. Review and approval choices hold calls for a person; no automatic approval is available here. Gated steps always belong to a person; class policy cannot complete them.</p>
+          {actor.grant.role === 'owner' && actor.session.kind === 'native' && <>
+            <form method="post" action={base+'/class-policy'}>
+              <Hidden name="version" value={classPolicy.version} />
+              {agentClasses.map(kind => <label className="field" key={kind}>
+                <span>{kind[0].toUpperCase()+kind.slice(1)} class</span>
+                <select name={kind} required defaultValue={classPolicy.answers?.[kind] ?? ''}>
+                  <option value="" disabled>Choose a policy</option>
+                  {policyDecisions.map(choice => <option key={choice} value={choice}>{({autonomous:'Allow within existing authority',review:'Hold for human review',approval:'Hold for human approval',blocked:'Block calls'})[choice]}</option>)}
+                </select>
+              </label>)}
+              <Submit>Save class policy</Submit>
+            </form>
+            <form method="post" action={base+'/pause'}>
+              <Hidden name="version" value={classPolicy.version} />
+              <Hidden name="paused" value={String(!classPolicy.paused)} />
+              <Submit>{classPolicy.paused ? 'Resume agents' : 'Pause agents'}</Submit>
+            </form>
+          </>}
+        </Card>
+      </section>
+      <Card title="Agent activity">
+        <form method="get" action={base}>
+          <Field name="from" type="date" label="Activity from" value={activity.from} />
+          <Field name="through" type="date" label="Activity through" value={activity.through} />
+          <Submit>Show activity</Submit>
+        </form>
+        <p>Class and decision totals count every audited tool call in these UTC dates. A call with two classes counts once in each class. The latest 200 calls are shown below; transport discovery is separate from tool activity.</p>
+        {activity.counts.length ? activity.counts.map((count,i)=><p key={i} data-agent-count={String(count.class)+':'+String(count.decision)}>{String(count.class)} · {String(count.decision)}: {String(count.count)}</p>) : <p>No tool activity in this period.</p>}
+        <details><summary>Attributed calls</summary>
+          {activity.calls.map(call=><p key={String(call.id)}>{String(call.agentName)} for {String(call.sponsorName)} · {String(call.tool)} · {(call.classes as string[]).join(', ')} · {String(call.decision)} · {new Date(Number(call.occurredAt)).toISOString()}</p>)}
+        </details>
+      </Card>
       <Card title="Named sponsorship">
         <p>
           Each grant stays within your current company, location, field and action powers.

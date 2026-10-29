@@ -1,3 +1,9 @@
+import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
+import { ExtendedRetirement } from './benefits/extended-retirement'
+import { RetirementRecords } from './benefits/retirement-records'
+import { NyDbl } from './benefits/ny-dbl'
+import { calculationPreview, type PreviewInput } from './calculation/preview'
+import { stateCoverage } from './calculation/states'
 import { accountingResponse } from './accounting/http'
 import type { Bindings } from '../auth.server'
 import type { OperatorAuth } from '../modules/operator-auth/index.mjs'
@@ -29,6 +35,7 @@ import { SourceIntake } from './intake/sources'
 import { sourcePage } from './intake/pages'
 import { LeaveLedger, leaveBucket, leaveId } from './leave/ledger'
 import { leavePage } from './leave/pages'
+import { AgentPolicy, AgentPolicyError, policyCall, toolClasses } from './agent-policy'
 import { AgentSettings, AgentTools } from './agents'
 import { Lifecycle } from './lifecycle'
 import { Providers } from './providers'
@@ -195,10 +202,10 @@ export async function payrollResponse(
       const reportRoute = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/reports\/(proposals|bonus-runs)$/.exec(url.pathname)
       if (reportRoute && request.method !== 'POST') {
         if ([...url.searchParams.keys()].some(k=>!['limit','after'].includes(k) || url.searchParams.getAll(k).length!==1)) throw new PayrollError('invalid_report_query')
-        const result=await (reportRoute[2]==='bonus-runs' ? bonusReport.bind(null,agent) : agent.proposalReport.bind(agent))({companyId:reportRoute[1],
+        const result=await policyCall<unknown>(agent,reportRoute[2]==='bonus-runs' ? 'reports.bonuses' : 'reports.proposals','rest',()=> (reportRoute[2]==='bonus-runs' ? bonusReport.bind(null,agent) : agent.proposalReport.bind(agent))({companyId:reportRoute[1],
           ...(url.searchParams.has('limit') ? {limit:url.searchParams.get('limit')} : {}),
           ...(url.searchParams.has('after') ? {after:url.searchParams.get('after')} : {}),
-        })
+        }))
         return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
       }
       const route = /^\/api\/envelope\/v1\/companies\/([-a-zA-Z0-9]+)\/(records|drafts|bonus-runs)(?:\/([-a-zA-Z0-9]+))?$/.exec(url.pathname)
@@ -210,10 +217,10 @@ export async function payrollResponse(
           if (request.headers.get('content-type')?.split(';')[0] !== 'application/json') throw new PayrollError('unsupported_content_type',415)
           const value=await input(request)
           if (Object.hasOwn(value,'companyId')) throw new PayrollError('invalid_bonus_input')
-          return json(await prepareBonus(agent,{...value,companyId}),201)
+          return json(await policyCall(agent,'bonus.prepare','rest',()=>prepareBonus(agent,{...value,companyId})),201)
         }
         if (draftId && request.method !== 'POST') {
-          const result=await readBonus(agent,{companyId,runId:draftId})
+          const result=await policyCall(agent,'bonus.read','rest',()=>readBonus(agent,{companyId,runId:draftId}))
           return request.method==='HEAD' ? new Response(null,{headers}) : json(result)
         }
         throw new PayrollError('agent_tool_denied',403)
@@ -222,10 +229,10 @@ export async function payrollResponse(
         if ([...url.searchParams.keys()].some(k => !['limit', 'after'].includes(k)) ||
             [...url.searchParams.keys()].some(k => url.searchParams.getAll(k).length !== 1))
           throw new PayrollError('invalid_record_query')
-        const result = await agent.records({companyId,
+        const result = await policyCall(agent,'records.list','rest',()=>agent.records({companyId,
           ...(url.searchParams.has('limit') ? {limit: url.searchParams.get('limit')} : {}),
           ...(url.searchParams.has('after') ? {after: url.searchParams.get('after')} : {}),
-        })
+        }))
         return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
       }
       if (resource === 'drafts' && !draftId && request.method === 'POST') {
@@ -234,11 +241,11 @@ export async function payrollResponse(
           throw new PayrollError('unsupported_content_type', 415)
         const value = await input(request)
         if (Object.hasOwn(value, 'companyId')) throw new PayrollError('invalid_draft_input')
-        return json(await agent.prepare({...value, companyId}), 201)
+        return json(await policyCall(agent,'draft.prepare','rest',()=>agent.prepare({...value, companyId})), 201)
       }
       if (resource === 'drafts' && draftId && request.method !== 'POST') {
         if (url.search) throw new PayrollError('invalid_draft_input')
-        const result = await agent.readDraft({companyId, draftId})
+        const result = await policyCall(agent,'draft.read','rest',()=>agent.readDraft({companyId, draftId}))
         return request.method === 'HEAD' ? new Response(null, {headers}) : json(result)
       }
       throw new PayrollError('agent_tool_denied', 403)
@@ -367,6 +374,7 @@ export async function payrollResponse(
             .map(({ name, description, properties, required }) => ({
               name,
               description,
+              _meta: {classes: toolClasses[name]},
               inputSchema: {
                 type: 'object',
                 properties,
@@ -387,7 +395,7 @@ export async function payrollResponse(
         const args = params.arguments as Input
         if (!args || typeof args !== 'object' || Array.isArray(args))
           throw new PayrollError('invalid_mcp_request')
-        const value =
+        const value = await policyCall(agent,String(params.name),'mcp',async()=>
           params.name === 'credentials.rotate'
             ? Object.keys(args).length ? (() => {throw new PayrollError('invalid_input')})() : await agent.rotate()
             : params.name === 'notice.process'
@@ -412,7 +420,7 @@ export async function payrollResponse(
                 ? await agent.readDraft(args)
                 : (() => {
                     throw new PayrollError('agent_tool_denied', 403)
-                  })()
+                  })())
         result = { content: [{ type: 'text', text: JSON.stringify(value) }] }
       } else throw new PayrollError('agent_tool_denied', 403)
       return json({ jsonrpc: '2.0', id: message.id, result })
@@ -462,6 +470,43 @@ export async function payrollResponse(
     if (automation) return automation
     const firm = await firmResponse({ url, ui, post, parts, value, records, session, companies })
     if (firm) return firm
+    if (!ui && parts[0]==='companies' && parts.length===3 && ['calculation-preview','calculation-coverage'].includes(parts[2])) {
+      const actor=await records.actor(parts[1])
+      ownerOnly(actor)
+      await records.company(actor)
+      if(parts[2]==='calculation-coverage' && !post) return json(stateCoverage())
+      if(parts[2]==='calculation-preview' && post){
+        let result
+        try {
+          let retirement
+          if (value.extendedRetirement) {
+            const selection=value.extendedRetirement as Record<string,unknown>
+            if (Object.keys(selection).some(k=>!['personId','setupId','setupVersion','request'].includes(k))) throw new PayrollError('unsupported_retirement_input')
+            retirement=(await new ExtendedRetirement(new WorkspaceStore(records)).preview(actor,String(selection.personId),{setupId:selection.setupId,setupVersion:selection.setupVersion,request:selection.request},false)).result
+          }
+          const ref = value.nyDbl as {personId:string;proposalId:string;version:number} | undefined
+          const dbl = ref ? await new NyDbl(new WorkspaceStore(records)).calculation(actor,ref.personId,ref.proposalId,ref.version) : undefined
+          result=calculationPreview(value as unknown as PreviewInput,retirement,dbl)
+        }
+        catch(error){ if(error instanceof PayrollError)throw error; throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
+        if (value.hiBenefits) {
+          const benefits = await new HiPlanShares(new WorkspaceStore(records)).preview(actor,value.hiBenefits as HiPreviewRequest,{from:String(value.from),through:String(value.through),payDate:String(value.payDate),grossCents:result.grossCashCents,workState:String(value.workState),weeks:result.earnings?.weeks})
+          result = { ...result, hiBenefits:benefits }
+        }
+        // Repeat current authority immediately before returning the private result.
+        await records.company(await records.actor(parts[1]))
+        return json(result)
+      }
+      throw new PayrollError('not_found',404)
+    }
+    if (!ui && parts[0]==='companies' && parts[2]==='people' && parts[4]==='benefits' && parts[5]==='extended-retirement') {
+      const actor=await records.actor(parts[1]),benefits=new ExtendedRetirement(new WorkspaceStore(records)),personId=parts[3]
+      if (parts.length===6) return json(post ? await benefits.save(actor,personId,value) : await benefits.list(actor,personId),post?201:200)
+      if (parts.length===7 && parts[6]==='preview' && post) return json(await benefits.preview(actor,personId,value),201)
+      if (parts.length===8 && parts[6]==='review' && !post) return json(await benefits.review(actor,personId,parts[7]))
+      if (parts.length===8 && parts[6]==='decision' && post) return json(await benefits.decide(actor,personId,parts[7],value))
+      throw new PayrollError('not_found',404)
+    }
     let response: Response
     if (ui && parts.join('/') === 'workspace' && !post)
       return workspacePage(session, companies)
@@ -494,7 +539,43 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
+      if (!ui && tail[0] === 'people' && tail[2] === 'hi-benefits') {
+        const benefits = new HiPlanShares(new WorkspaceStore(records)), personId = tail[1]
+        await benefits.scope(actor,personId)
+        if (tail.length===3 && !post) response=json(await benefits.list(actor,personId))
+        else if (tail.length===4 && tail[3]==='plans' && post) response=json(await benefits.save(actor,personId,value),201)
+        else if (tail.length===4 && tail[3]==='preview' && post) {
+          if (value.personId !== personId) throw new PayrollError('hi_person_mismatch',409)
+          response=json(await benefits.preview(actor,value as unknown as HiPreviewRequest),201)
+        }
+        else if (tail.length===6 && tail[3]==='plans' && tail[5]==='review' && !post) response=json(await benefits.review(actor,personId,tail[4]))
+        else if (tail.length===6 && tail[3]==='plans' && tail[5]==='approve' && post) response=json(await benefits.approve(actor,personId,tail[4],value))
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0]==='people' && tail[2]==='retirement') {
+        const retirement=new RetirementRecords(new WorkspaceStore(records)),personId=tail[1]
+        if (tail.length===3) response=json(post?await retirement.save(actor,personId,value):await retirement.list(actor,personId),post?201:200)
+        else if (tail.length===4 && tail[3]==='review' && !post) response=json(await retirement.review(actor,personId))
+        else if (tail.length===4 && tail[3]==='approve' && post) response=json(await retirement.approve(actor,personId,value))
+        else if (tail.length===4 && tail[3]==='preview' && post) response=json(await retirement.preview(actor,personId,value),201)
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0] === 'ny-dbl-plans') {
+        const dbl = new NyDbl(new WorkspaceStore(records)), store = dbl.store
+        await dbl.scope(actor)
+        if (tail.length===1) response=json(post?await dbl.savePlan(actor,value):await dbl.plans(actor),post?201:200)
+        else if(tail.length===3 && tail[2]==='review' && !post) response=json(await store.review(actor,'ny-dbl-plan',tail[1]))
+        else if(tail.length===3 && tail[2]==='approve' && post) response=json(await store.decide(actor,'ny-dbl-plan',tail[1],value))
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0]==='people' && tail[2]==='ny-dbl') {
+        const dbl = new NyDbl(new WorkspaceStore(records)), person=tail[1]
+        await dbl.scope(actor,person)
+        if(tail.length===3 && !post) response=json(await dbl.history(actor,person))
+        else if(tail.length===4 && tail[3]==='evidence' && post) response=json(await dbl.saveEvidence(actor,person,value),201)
+        else if(tail.length===5 && tail[3]==='evidence' && tail[4]==='review' && !post) response=json(await dbl.store.review(actor,'ny-dbl-evidence',person,person))
+        else if(tail.length===5 && tail[3]==='evidence' && tail[4]==='approve' && post) response=json(await dbl.store.decide(actor,'ny-dbl-evidence',person,value,person))
+        else if(tail.length===4 && tail[3]==='proposals' && post) response=json(await dbl.prepare(actor,person,value),201)
+        else if(tail.length===4 && tail[3]==='remittance' && post) throw new PayrollError('dbl_carrier_remittance_unavailable',409)
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0] === 'funding-accounts' && tail.length === 1) {
         const payroll = new CompanyPayroll(records)
         response = json(post ? await payroll.account(actor, value) : await payroll.accounts(actor), post ? 201 : 200)
       } else if (!ui && tail[0] === 'funding-plans') {
@@ -542,6 +623,8 @@ export async function payrollResponse(
         } else throw new PayrollError('not_found',404)
       } else if (!ui && tail.length === 1 && tail[0] === 'operations' && !post) {
         response = json(await new Lifecycle(records).health(actor))
+      } else if (!ui && tail.length === 2 && tail[0] === 'operations' && tail[1] === 'diagnose' && post) {
+        response = json(await new Lifecycle(records).diagnose(actor,value))
       } else if (!ui && tail[0] === 'webhooks') {
         const lifecycle = new Lifecycle(records)
         if (tail.length === 1) response = json(post ? await lifecycle.subscribe(actor,value) : await lifecycle.read(actor),post ? 201 : 200)
@@ -815,7 +898,9 @@ export async function payrollResponse(
             : json(issued, 201)
         } else if (tail.length === 1 && !post) {
           const grants = await agents.list(actor),
-            access = await agents.access(actor)
+            access = await agents.access(actor),
+            classPolicy = await new AgentPolicy(records).read(actor),
+            activity = await new AgentPolicy(records).activity(actor,url.searchParams.get('from') ?? undefined,url.searchParams.get('through') ?? undefined)
           response = ui
             ? agentsPage(
                 session,
@@ -825,8 +910,15 @@ export async function payrollResponse(
                 grants,
                 await agents.policy(actor),
                 await new Providers(records).list(actor),
+                classPolicy,activity,
               )
-            : json({ grants, access })
+            : json({ grants, access, classPolicy, activity })
+        } else if (tail.length === 2 && tail[1] === 'class-policy' && post) {
+          const result = await new AgentPolicy(records).save(actor,value)
+          response = ui ? redirect(base+'/agents#class-policy') : json(result)
+        } else if (tail.length === 2 && tail[1] === 'pause' && post) {
+          const result = await new AgentPolicy(records).save(actor,value,true)
+          response = ui ? redirect(base+'/agents#class-policy') : json(result)
         } else if (tail.join('/') === 'agents/policy' && post) {
           const result = await agents.setPolicy(actor,value)
           response = ui ? redirect(base+'/agents') : json(result)
@@ -861,6 +953,9 @@ export async function payrollResponse(
       } else if (tail.join('/') === 'locations' && post) {
         const location = await records.createLocation(actor, value)
         response = ui ? redirect(base) : json(location, 201)
+      } else if (tail.join('/') === 'case-policy' && post) {
+        const result=await new TaxNoticeCases(new WorkspaceStore(records)).setPolicy(actor,value)
+        response=ui?redirect(base+'/grants'):json(result)
       } else if (tail.join('/') === 'paper-policy' && post) {
         const result=await new PaperOnboarding(new WorkspaceStore(records)).setPolicy(actor,value)
         response=ui?redirect(base+'/grants'):json(result)
@@ -880,6 +975,7 @@ export async function payrollResponse(
                 await auth.listOperators(request),
                 url.searchParams.get('operator') ?? undefined,
                 await new WorkspaceStore(records).paperPolicy(actor),
+                await new WorkspaceStore(records).casePolicy(actor),
               )
             : json(grants)
         }
@@ -904,7 +1000,8 @@ export async function payrollResponse(
         else if (tail.length===4 && ['approve','withdraw'].includes(tail[3]) && post) {const result=await onboarding.decide(actor,personId,value,tail[3]==='withdraw');response=ui?redirect(back):json(result)}
         else if (tail.length===6 && tail[3]==='original' && !post) {
           const original=await onboarding.original(actor,personId,tail[4],tail[5])
-          response=new Response(original,{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"'}})
+          response=new Response(original,{headers:{...headers,'content-type':['application','octet-stream'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"',
+            'content-security-policy':"sandbox; default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",'x-download-options':'noopen'}})
         } else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='verification') {
         const store=new WorkspaceStore(records), verification=new VerificationRequests(store), personId=tail[1], self=actor.grant.role!=='owner', back=base+'/people/'+personId+'/verification'+(verificationLanguage==='es'?'?lang=es':'')
@@ -1122,7 +1219,7 @@ export async function payrollResponse(
         {
           jsonrpc: '2.0',
           id: rpcId,
-          error: { code: status === 400 ? -32602 : -32000, message: code },
+          error: { code: status === 400 ? -32602 : -32000, message: code, ...(error instanceof AgentPolicyError ? {data:{setupLink:error.setupLink}} : {}) },
         },
         status,
       )
@@ -1136,6 +1233,6 @@ export async function payrollResponse(
     }
     return request.method === 'HEAD'
       ? new Response(null, { status, headers })
-      : json({ error: code }, status)
+      : json({ error: code, ...(error instanceof AgentPolicyError ? {setupLink:error.setupLink} : {}) }, status)
   }
 }

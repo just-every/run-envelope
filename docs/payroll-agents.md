@@ -394,3 +394,64 @@ calculated-run events, permitted payment and filing status and their lifecycle
 families remain ENV-030 work. Native encrypted history, inactive recovery,
 current authority and statutory custody remain obligations under ENV-028,
 ENV-034, ENV-035, ENV-051, ENV-053, ENV-054 and ENV-055 on this transport.
+
+## Company class policy and Pause
+
+Open Settings, choose the company and open Agent credentials. A current native
+company owner explicitly answers standard, money, commitment, external,
+sensitive, destructive, accounts, access, security and gated. A new company has no
+answers selected. Sponsored credentials can be issued before policy setup, but
+no tool executes until every class has an answer. Discovery still works.
+
+Each class can allow calls within existing authority, hold for human review,
+hold for human approval or block calls. Review and approval are safe holds:
+this native increment does not implement a policy approval queue. They do not
+supply a human payroll decision, a grant, provider consent or outbound authority.
+A gated step always belongs to a person, whatever its class answer. Adding a new
+class makes an older incomplete policy unset until the owner answers every class.
+The existing exact human approval and owner-only explicit reference-event
+consent remain separate. No automatic outbound action or retry is introduced.
+
+The native settings routes below the company's agents path are
+`POST /class-policy` with the current `version` and an answer for each class,
+and `POST /pause` with the current `version` and explicit boolean `paused`.
+Only a current native company owner can change them. Stale versions and
+incomplete answers refuse without a configuration change. Saving answers keeps
+an existing Pause in effect. Every change records the human actor separately
+from the agent call history.
+
+The current native hourly and bonus earnings preparation and masked record
+reads carry standard; compensation reads and reports carry sensitive;
+credential rotation carries security. Presenting a human review
+link carries standard and grants no human authority. Notice processing carries
+sensitive and external, and exact approved reply dispatch carries commitment
+and external. Classes are server declarations, never caller-supplied authority.
+This is a bounded classification of the installed tools, not complete Base
+conformance or the promised full payroll tool registry.
+
+An unanswered company returns `policy_unset` and a `setupLink` to its own
+settings. A blocked class returns `policy_blocked`. A review or approval hold
+returns `policy_review_required` or `policy_approval_required`. Pause returns
+`agents_paused`. MCP includes the link in its error data; REST includes it in
+the JSON error. CLI commands fail with the same HTTP refusal, policy code and validated setup
+link and print no credential. Credential rotation is also held; the old secret changes only on
+an allowed rotation.
+
+Pause is persisted in D1 and checked before every fenced payroll read or write.
+It has no cache interval: the next execution is held immediately, including an
+already authenticated call waiting for its body. Changing policy, pausing or
+resuming increments its version, so a suspended call cannot regain authority
+when someone resumes agents. Restart does not clear Pause. Previously committed
+work and existing human approvals are not undone by Pause.
+
+The Agents page reports class and decision totals for a selected UTC date range
+(default: the latest seven dates; maximum: 32 dates). Totals include all matching
+audited tool calls; the attributed detail view shows the latest 200. Calls with
+multiple classes count once in each class. Company owners see their company's
+history; other sponsors see only their own. Each authenticated tool attempt is recorded before execution and finalized once;
+an interrupted execution stays pending. Its row records the credential, sponsor, tool, transport, server classes, policy
+version and decision, without input payloads or private compensation. Invalid
+bearers and discovery are outside these tool totals. Full seeded-week Base
+outcomes and classification of every staff, firm, provider and security change
+remain outstanding SURFACE-006 work. Active class-policy configuration is
+excluded from portable archives; restored history supplies no policy authority.
