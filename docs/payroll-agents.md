@@ -45,6 +45,14 @@ the stored change and stay separate from the original immutable audit rows.
 The Agents activity disclosure shows attributed human changes separately from
 the agent-call totals. Historical facts confer no restored authority.
 
+Base's native administration audit hook also records installation invitations,
+role and status changes, session revocation and domain restrictions in the same
+fenced transaction. Linked sign-in settings and native provider unlinking carry
+security. Only the configured native installation owner sees installation-wide
+class facts; a company grant cannot expose that history. Stored facts omit
+mailboxes, domains and provider credentials. Changes made inside a provider's
+own account remain that provider's responsibility and need separate evidence.
+
 ## Scope and human settings API
 
 All routes use `/api/envelope/companies/:company`, a current human session and

@@ -122,6 +122,21 @@ export async function archiveJourney(context) {
   })
   fixture.extendedRetirement=await extendedRetirementArchiveFixture(context,fixture.companies[0],fixture.retainedPersonId)
   console.log('ARCHIVE-UPGRADE passed: populated prior schema, unknown notice obligations, unchanged ciphertext and authority history, idempotent native migration')
+  const grantPath='/api/envelope/companies/'+fixture.companies[0]+'/grants'
+  const grant=async body=>{
+    const response=await context.worker.fetch(context.origin+grantPath,{method:'POST',headers:{cookie:context.cookie,origin:context.origin,'content-type':['application','json'].join('/')},body:JSON.stringify(body)})
+    assert.equal(response.status,200,await response.clone().text())
+  }
+  await grant({operatorId:fixture.creatorId,version:0,role:'accountant',locations:['*'],fields:[],actions:['records:read']})
+  await grant({operatorId:fixture.creatorId,version:1,revoke:true})
+  const restricted=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+fixture.authority.agentToken,origin:context.origin,'content-type':['application','json'].join('/')},
+    body:JSON.stringify({jsonrpc:'2.0',id:5400,method:['tools','call'].join('/'),params:{name:'credentials.restrict',arguments:{fields:['tax']}}})})
+  assert.equal(restricted.status,200,await restricted.clone().text())
+  assert.equal(JSON.parse((await restricted.json()).result.content[0].text).direction,'unchanged','the archive fixture keeps the source bearer’s powers for the existing replay probe')
+  const active=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+fixture.authority.agentToken,origin:context.origin,'content-type':['application','json'].join('/')},
+    body:JSON.stringify({jsonrpc:'2.0',id:5401,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0]}}})})
+  assert.equal(active.status,200,await active.clone().text())
+  assert.ok(JSON.parse((await active.json()).result.content[0].text).records.length,'the source bearer still serves populated company data before its restored replay is refused')
   const temporary = await mkdtemp(join(tmpdir(), 'envelope-archive-'))
   try {
     const source = join(temporary, 'source'), target = join(temporary, 'target'), corruptTarget = join(temporary, 'corrupt-target')
@@ -130,6 +145,8 @@ export async function archiveJourney(context) {
     await quiesce(() => cp(persist, join(source, '.wrangler', 'state'), { recursive: true }))
     const state = directory => join(directory, '.wrangler', 'state')
     let before = await snapshot(state(source))
+    assert.ok(before.env_access_changes.some(row=>row.target_id===fixture.creatorId&&row.direction==='revoke'),'actual revoked native grants have retained access facts')
+    assert.ok(before.env_agent_call_facts.some(row=>JSON.parse(row.facts).peopleCount===1),'the actual archive contains immutable agent access facts')
     for (const id of fixture.companies) assert.ok(before.env_companies.some(row => row.id === id))
     for (const source of [...fixture.erasedIntakes,...fixture.retainedIntakes])
       assert.equal(before.env_workspace_versions.filter(row=>row.kind==='run-intake' && row.object_id===source.id).length,2,
