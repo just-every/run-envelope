@@ -78,6 +78,39 @@ export async function payrollSnapshot(sql) {
  return digest.digest('hex')
 }
 
+// Walk the populated server documents, including links and mutations added by
+// other dispatchers. Parse responses without executing their document scripts.
+export async function renderedPayrollDoors(owner, origin, roots) {
+ const pending=[...roots], seen=new Set(), doors=new Set(), inputs=new Set(), documents=[]
+ const parser=await owner.newPage()
+ try {
+  while(pending.length) {
+   const path=pending.shift()
+   if(seen.has(path)) continue
+   seen.add(path);doors.add(path)
+   const response=await owner.request.get(origin+path,{maxRedirects:0})
+   assert.ok(response.status()<500,'populated payroll document responds: '+path)
+   documents.push({path,status:response.status()})
+   if(!response.headers()['content-type']?.startsWith(['text','html'].join('/'))) continue
+   const links=await parser.evaluate(html=>{
+    const document=new DOMParser().parseFromString(html,['text','html'].join('/'))
+    return [...document.querySelectorAll('[href],[action],[formaction]')].flatMap(node=>
+     ['href','action','formaction'].map(attribute=>({target:node.getAttribute(attribute),mutation:attribute!=='href'})))
+   },await response.text())
+   for(const {target,mutation} of links) {
+    if(!target) continue
+    const url=new URL(target,origin+path)
+    if(url.origin!==origin || !/^\/(?:app|api)\/envelope(?:\/|$)/.test(url.pathname)) continue
+    const door=url.pathname+url.search
+    doors.add(door)
+    if(mutation) inputs.add(door)
+    else if(url.pathname.startsWith('/app/')) pending.push(door)
+   }
+  }
+ } finally {await parser.close()}
+ return {doors:[...doors],inputs:[...inputs],documents}
+}
+
 export async function visitorStorage(context, page) {
  assert.deepEqual(await context.cookies(), [], 'a public visit creates no visitor cookie')
  assert.deepEqual(await page.evaluate(async () => ({local: Object.keys(localStorage), session: Object.keys(sessionStorage),

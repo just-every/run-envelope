@@ -318,7 +318,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "0393e87467e1ff734541e69d9535cfb58377bcf32d23b71a5a4871cd2eb9af41",
+      "sha256": "42ac2b762095b056e318f59b219621ef257d0be45fa0a46a3e1745726041e05c",
       "executable": false
     },
     "AGENTS.md": {
@@ -342,7 +342,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "76040148ab24174f903e8e87d7da715b936f528e39d9e5473c354ed279804c44",
+      "sha256": "8e3bf907251f06314f6c79cfcb57764a34966595e85631a392840b277bd3b54c",
       "executable": false
     },
     "deploy-demo.json": {
@@ -586,7 +586,7 @@
       "executable": false
     },
     "docs/private-inputs.md": {
-      "sha256": "bb9d0a74ad02efe82e291a491f1ad40f2ee8cd913887a0d7e14e68619fa6260d",
+      "sha256": "22d2b54b17e1da099bf444cba278a1cdc59e16010c25c0efe995fa669032492e",
       "executable": false
     },
     "docs/retirement-preparation.md": {
@@ -783,6 +783,10 @@
     },
     "migrations/core/0040_native_action_classes.sql": {
       "sha256": "3d8d480dc8c6e0164e35723f35a79bd664f6784d80187a3393aedf34bb99b9d7",
+      "executable": false
+    },
+    "migrations/core/0041_grant_revision_audit.sql": {
+      "sha256": "842b6a651271ebe0fff8164843b43603f0931d721065aaa3be76cc575fb8655d",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -3746,7 +3750,7 @@
       "executable": false
     },
     "tests/claims-browser.mjs": {
-      "sha256": "34df109f97c09fa41d4dee32589e725ed3d7054410100ff45afd4df9df81f58b",
+      "sha256": "24459e7a5de4cf59f71abe2c7f8c564079208be2795adeca59e881969a8e8f1b",
       "executable": false
     },
     "tests/claims-fixture.mjs": {
@@ -3938,11 +3942,11 @@
       "executable": false
     },
     "tests/payroll-doors.mjs": {
-      "sha256": "87423a180507ad738aa854c28a661c1c4012442edfa9ff44d900befe35b92001",
+      "sha256": "fd5dcdffa3bc52d7203f670b6e1636b5d76e8e1f7567eb47f1cecad551b0ad23",
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "a380a08e5906617f8bc6211a70925a215bbc220803c63e9f491ed085c0d2b9f3",
+      "sha256": "1ccf41f51de7d47a074f36fa0cceede6f685640f85d0871d01b1a5bb1562aa11",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {

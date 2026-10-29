@@ -119,7 +119,22 @@ identity row. Download history is separately exercised by paperOnboardingJourney
 in `tests/payroll-runtime.mjs`, including current scoped access, original and
 replacement bytes, foreign companies, wrong locations or fields, signed-out and
 revoked sessions, revoked grants and renewed grants that leave old sessions dead.
-New route families must extend this inventory and their applicable record states.
+The journey recursively reads the populated company, person, notice and claim
+documents and follows their native links. It adds every emitted form action to
+the signed-out inventory, then submits malformed JSON roots, invalid UTF-8,
+duplicate scalar form values and unsupported content through those actual forms
+under current owner authority. Refusals must preserve all retained business and
+identity rows. The dispatcher inventory still supplies routes that no current
+document offers; new route families must extend it and their applicable states.
+
+Federal and state originals carry different bytes, as do their replacement
+versions. GET checks exact bytes independently for each form; HEAD retains the
+same authority and attachment protections without a body. Keyboard downloads
+open the distinct replacement links at both release widths, so a form or version
+mix-up cannot pass by returning an identical fixture. Current owners and scoped
+downloaders also attempt to overwrite and delete retained originals through
+their download links; these unsupported mutations refuse without changing the
+retained records or audit.
 This finite boundary proof does not establish exhaustive structured inputs,
 interaction states, contrast or accessibility-tree announcements.
 
