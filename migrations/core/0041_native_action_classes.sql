@@ -1,7 +1,7 @@
 -- Derived facts remain separate from the immutable original audit rows.
 CREATE TABLE env_access_changes (
  company_id TEXT NOT NULL REFERENCES env_companies(id), target_id TEXT NOT NULL,
- target_kind TEXT NOT NULL, source_change TEXT NOT NULL, person_id TEXT NOT NULL,
+ target_kind TEXT NOT NULL, source_change TEXT NOT NULL, operator_id TEXT NOT NULL REFERENCES oa_operators(id),
  version INTEGER NOT NULL, direction TEXT NOT NULL,
  people_count INTEGER NOT NULL CHECK(people_count>=0),
  PRIMARY KEY(source_change,target_id,target_kind)
@@ -48,9 +48,16 @@ SELECT a.*,
       ELSE '["access"]' END AS classes,
  CASE WHEN d.direction IS NOT NULL THEN json_object('direction',d.direction,'peopleCount',d.people_count)
       WHEN a.action='agent.policy' THEN json_object('direction',CASE WHEN EXISTS(SELECT 1 FROM env_access_changes p WHERE p.source_change=a.id) THEN 'narrow' ELSE 'unchanged' END,
-        'peopleCount',(SELECT COUNT(DISTINCT person_id) FROM env_access_changes p WHERE p.source_change=a.id))
+        'peopleCount',(SELECT COUNT(DISTINCT operator_id) FROM env_access_changes p WHERE p.source_change=a.id))
       ELSE '{}' END AS facts
 FROM env_audit a LEFT JOIN env_access_changes d ON d.company_id=a.company_id AND d.target_id=a.target_id
  AND d.source_change=a.id AND d.version=a.version AND d.target_kind=CASE WHEN a.action LIKE 'grant.%' THEN 'human' ELSE 'agent' END
 WHERE a.action IN ('grant.changed','grant.revoked','agent.issued','agent.revoked','agent.policy',
  'agents.classes.configured','agents.paused','agents.resumed','provider.declared','identity.passkey-registered');
+CREATE VIEW env_installation_classified_actions AS
+SELECT id,actor_id,created_at,
+ CASE WHEN action='envelope.identity' THEN json_extract(value,'$.event') ELSE action END AS action,
+ CASE WHEN action='envelope.identity' THEN json_extract(value,'$.classes') ELSE '["security"]' END AS classes,
+ CASE WHEN action='envelope.identity' THEN CASE WHEN json_type(value,'$.direction') IS NOT NULL
+ THEN json_object('direction',json_extract(value,'$.direction'),'peopleCount',json_extract(value,'$.peopleCount')) ELSE '{}' END ELSE '{}' END AS facts
+FROM oa_auth_audit WHERE action IN ('envelope.identity','idpSignIn','provider:unlink');
