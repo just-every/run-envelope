@@ -3809,6 +3809,7 @@ export async function identityJourney({ worker, origin, cookie, settings, sql, e
     await data('/auth/operator/status',{operatorId:invited.id,status:'active'})
     assert.equal((await call(download,undefined,renewedCookie)).status,401,'reactivation never restores a session')
     const identityChanges=(await data(base+'/agents')).activity.installation
+    assert.ok(identityChanges.some(c=>c.action==='operators.invite'&&c.classes.includes('access')&&c.classes.includes('security')&&c.facts.direction==='grant'&&c.facts.peopleCount===1))
     assert.ok(identityChanges.some(c=>c.action==='idpSignIn'&&c.classes.includes('security')),'linked sign-in policy changes carry security')
     assert.ok(identityChanges.some(c=>c.action==='operators.deactivate'&&c.classes.includes('access')&&c.facts.direction==='revoke'&&c.facts.peopleCount===1))
     assert.ok(identityChanges.some(c=>c.action==='operators.reactivate'&&c.facts.direction==='grant'&&c.facts.peopleCount===1))
