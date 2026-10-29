@@ -68,6 +68,7 @@ export function agentsPage(
         </details>
         <details><summary>Human access and security changes</summary>
           {activity.changes.map(change=><p key={String(change.id)}>{String(change.actorName)} · {String(change.action)} · {change.classes.join(', ')}{change.facts.direction ? ` · ${change.facts.direction} · ${change.facts.peopleCount} person` : ''} · {new Date(Number(change.occurredAt)).toISOString()}</p>)}
+          {activity.installation.map(change=><p key={String(change.id)}>{String(change.actorName)} · installation {String(change.action)} · {change.classes.join(', ')}{change.facts.direction ? ` · ${change.facts.direction} · ${change.facts.peopleCount} person` : ''} · {new Date(Number(change.occurredAt)).toISOString()}</p>)}
         </details>
       </Card>
       <Card title="Named sponsorship">

@@ -76,7 +76,7 @@ export class AgentPolicy {
     // An old installation can still supply its genuine pre-upgrade archive fixture.
     // New restriction calls require the migrated facts table and fail closed without it.
     const migrated=Boolean(await this.records.statement("SELECT 1 FROM sqlite_master WHERE type='view' AND name='env_classified_actions'").first())
-    const [calls, counts, changes] = await this.records.env.DB.batch<Record<string,unknown>>([
+    const [calls, counts, changes, installation] = await this.records.env.DB.batch<Record<string,unknown>>([
       this.records.statement(`SELECT a.id,a.credential_id AS credentialId,g.name AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,${migrated ? "COALESCE((SELECT facts FROM env_agent_call_facts WHERE call_id=a.id),'{}')" : "'{}'"} AS facts,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt
         FROM env_agent_call_audit a JOIN env_agent_grants g ON g.id=a.credential_id JOIN oa_operators o ON o.id=a.sponsor_id
         WHERE ${filter} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args),
@@ -84,9 +84,13 @@ export class AgentPolicy {
       migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.target_id AS targetId,a.classes,a.facts,a.occurred_at AS occurredAt
         FROM env_classified_actions a JOIN oa_operators o ON o.id=a.actor_id WHERE a.company_id=? AND a.occurred_at>=? AND a.occurred_at<?
         AND (?='owner' OR a.actor_id=?) AND ${f.sql} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args) : this.records.statement('SELECT 1 WHERE 0'),
+      migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.classes,a.facts,a.created_at AS occurredAt
+        FROM env_installation_classified_actions a JOIN oa_operators o ON o.id=a.actor_id
+        WHERE a.created_at>=? AND a.created_at<? AND ?='native' AND EXISTS(SELECT 1 FROM oa_bootstrap WHERE claim_id=?) AND ${f.sql}
+        ORDER BY a.created_at DESC,a.id DESC LIMIT 200`,[Date.parse(start),Date.parse(end)+86400000,actor.session.kind,actor.session.operator.id,...f.args]) : this.records.statement('SELECT 1 WHERE 0'),
     ])
     const decoded=(c:Record<string,unknown>): Record<string,unknown> & {classes:string[];facts:Record<string,unknown>}=>({...c,classes:JSON.parse(String(c.classes)),facts:JSON.parse(String(c.facts))})
-    return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded)}
+    return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
   }
 }
 
