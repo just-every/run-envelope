@@ -4,7 +4,7 @@ import type { AuthAuditEvent, AuthAuditStatement } from '../modules/operator-aut
 export function identityAudit(event: AuthAuditEvent): AuthAuditStatement[] {
   const {action,subjectId,actorId,detail,now}=event
   const access=action.startsWith('operators.') || action.startsWith('domains.') || action==='sessions.revoke'
-  const security=!action.startsWith('operators.')
+  const security=!action.startsWith('operators.') || ['operators.invite','operators.cancel-invite'].includes(action)
   const classes=[...(access?['access']:[]),...(security?['security']:[])]
   const direction=action==='operators.invite'||action==='operators.reactivate' ? 'grant'
     : action==='operators.cancel-invite'||action==='operators.deactivate' ? 'revoke'

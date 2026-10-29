@@ -113,6 +113,9 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     const reduced=await own({actions:['records:read'],fields:[],locations:[location.id]})
     assert.equal(reduced.direction,'narrow');assert.equal(reduced.peopleCount,1)
     assert.deepEqual(reduced.actions,['records:read'])
+    const repeated=await own({actions:['records:read'],fields:[],locations:[location.id]})
+    assert.equal(repeated.direction,'unchanged')
+    assert.equal(repeated.version,reduced.version,'replaying the retained scope cannot revoke another current call')
     assert.equal((await mcp('records.list',{companyId:company.id},disposable.token)).status,200)
     assert.equal((await mcp('draft.prepare',{...input,companyId:company.id},disposable.token)).status,403)
     const afterNarrow=await unchangedGrant()
@@ -200,7 +203,8 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
       INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES('${staffSession}','${staffHash}','${staffId}',1,'native',${clockNow},${clockNow+3600000});
       INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at) VALUES('${staffSession}','${staffHash}','${staffSession}','${staffId}',1,'credentials:mint','/app',${clockNow},${clockNow+600000},${clockNow})`)
     const staffCookie=cookie.slice(0,cookie.indexOf('=')+1)+staffToken
-    await data('/auth/invite',{email:['synthetic-envelope-9613','example.test'].join(String.fromCharCode(64)),displayName:'Synthetic invited policy colleague',role:'member'},202)
+    await sql("INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('synthetic-envelope-9613','synthetic-envelope-9613'||char(64)||'example.test','Synthetic policy colleague','member','inactive',1,1)")
+    await data('/auth/operator/status',{operatorId:'synthetic-envelope-9613',status:'active'})
     const grant={operatorId:staffId,version:0,role:'payroll-admin',locations:['*'],fields:[],actions:['records:read']}
     await data(base+'/grants',grant)
     await data(base+'/agents/pause',{version:state.version,paused:true},403,staffCookie)
@@ -211,7 +215,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.ok(staffView.activity.calls.every(c=>c.sponsorId===staffId))
     assert.deepEqual(staffView.activity.installation,[],'a company sponsor cannot read installation administration')
     const installation=(await data(base+'/agents')).activity.installation
-    assert.ok(installation.some(c=>c.action==='operators.invite'&&c.classes.join()==='access'&&c.facts.direction==='grant'&&c.facts.peopleCount===1))
+    assert.ok(installation.some(c=>c.action==='operators.reactivate'&&c.classes.includes('access')&&c.facts.direction==='grant'&&c.facts.peopleCount===1))
     const beforeProviderRefusal=await sql(`SELECT version,secret_cipher FROM env_external_providers WHERE company_id='${company.id}'`)
     await data(base+'/providers',{id:'openai',version:3,enabled:true,consent:true,secret:'synthetic-envelope-9612'},403,staffCookie)
     assert.deepEqual(await sql(`SELECT version,secret_cipher FROM env_external_providers WHERE company_id='${company.id}'`),beforeProviderRefusal)

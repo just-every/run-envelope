@@ -329,11 +329,11 @@ export class AgentTools {
   async restrict(input: Input) {
     const {after,direction,widens} = this.restriction(input)
     if (widens) throw new PayrollError('self_escalation',403)
-    const f=this.fence(), next=this.grant.version+1
+    const f=this.fence(), next=this.grant.version+(direction==='unchanged'?0:1)
     const result=await this.env.DB.batch([
       this.log('access:restrict',this.grant.id),
-      this.env.DB.prepare(`UPDATE env_agent_grants SET actions=?,fields=?,locations=?,version=version+1 WHERE id=? AND ${f.sql} RETURNING version`)
-        .bind(JSON.stringify(after.actions),JSON.stringify(after.fields),JSON.stringify(after.locations),this.grant.id,...f.args),
+      this.env.DB.prepare(`UPDATE env_agent_grants SET actions=?,fields=?,locations=?,version=? WHERE id=? AND ${f.sql} RETURNING version`)
+        .bind(JSON.stringify(after.actions),JSON.stringify(after.fields),JSON.stringify(after.locations),next,this.grant.id,...f.args),
     ])
     if (!result[1].results.length) throw new PayrollError('agent_authority_revoked',403)
     // A current call completes under the reduced grant; suspended old calls fail.
