@@ -11,6 +11,7 @@ import { agentProvider, providerSecret, email, redact, externalFlows, type Provi
 interface Notice {id:string;locationId:string;reference:string;cipher:string;digest:string}
 interface Reply {id:string;version:number;noticeId:string;providerVersion:number;cipher:string;digest:string;locationId:string}
 export interface ReplyData {sender:string;to:string;subject:string;body:string;preparedBy?:{agentId:string;sponsorId:string;grantId:string;label:string}}
+export const replyBody=(reply:ReplyData)=>reply.body+(reply.preparedBy?'\n\n'+reply.preparedBy.label:'')
 const uuid = () => crypto.randomUUID()
 const latestReply = `(SELECT MAX(version) FROM env_notice_replies WHERE company_id=r.company_id AND id=r.id)=r.version`
 function documentText(value:unknown,max=12000) {
@@ -65,7 +66,7 @@ export class Notices {
       auditStatement(this.records.env,actor,event,'notice.read',id,1),
       this.records.statement(`SELECT id,cipher FROM env_notice_analysis WHERE company_id=? AND notice_id=? AND ${f.sql} ORDER BY created_at DESC,id LIMIT 20`,[actor.company,id,...f.args]),
       this.records.statement(`SELECT r.id,r.version,r.notice_id AS noticeId,r.provider_version AS providerVersion,r.cipher,r.digest,
-        a.actor_id AS approvedBy,a.expires_at AS approvalExpiresAt,a.revoked_at AS approvalRevokedAt,d.state AS dispatchState,d.provider_receipt AS providerReceipt
+        a.actor_id AS approvedBy,(SELECT display_name FROM oa_operators WHERE id=a.actor_id) AS approverName,a.expires_at AS approvalExpiresAt,a.revoked_at AS approvalRevokedAt,d.state AS dispatchState,d.provider_receipt AS providerReceipt
         FROM env_notice_replies r LEFT JOIN env_notice_approvals a ON a.company_id=r.company_id AND a.reply_id=r.id AND a.version=r.version
         LEFT JOIN env_notice_dispatches d ON d.company_id=r.company_id AND d.reply_id=r.id AND d.version=r.version
         WHERE r.company_id=? AND r.notice_id=? AND ${latestReply} AND ${f.sql} ORDER BY r.created_at DESC`,[actor.company,id,...f.args]),
@@ -91,9 +92,8 @@ export class Notices {
       AND door_agent_id IS NOT NULL AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 1`,[actor.company,noticeId,...f.args]).first<NonNullable<ReplyData['preparedBy']>>()
     if(prepared) {
       payload.preparedBy=prepared
-      // The visible attribution is part of the exact native human-reviewed body,
-      // encrypted bytes and digest, rather than appended after approval.
-      payload.body+='\n\n'+prepared.label
+      // Attribution is a separate immutable reviewed field, so editing the
+      // message cannot duplicate, remove or impersonate its sending identity.
     }
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
@@ -256,7 +256,7 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
     const response=await fetch(externalFlows.resend.url,{
       method:'POST',redirect:'manual',signal:AbortSignal.timeout(30000),
       headers:{authorization:'Bearer '+secret,'content-type':'application/json','Idempotency-Key':'envelope-notice-'+execution},
-      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:payload.body}),
+      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload)}),
     })
     if (response.status>=400 && response.status<500 && ![408,409,429].includes(response.status)) state='rejected'
     if (response.ok) {

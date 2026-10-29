@@ -1,13 +1,15 @@
 import type { Bindings } from '../../auth.server'
 import { ToolRefusal, type ToolDefinition, type ToolContext, type ClassAndFacts } from '../../modules/agent-door/index.ts'
-import { policyCall } from '../agent-policy'
+import { policyCall, requireAgentPolicy } from '../agent-policy'
 import { PayrollError } from '../security'
 import { prepareBonus, readBonus, bonusReport } from '../bonus-runs'
 import { presentReview } from '../review-presentation'
 import { processNotice, dispatchReply } from '../notices'
 import { digest } from '../workspace/store'
 import { nativeAgent } from './native'
-import { effect } from './effects'
+import { outputSchema } from './schemas'
+import { rotate, rotationKey } from './rotation'
+import { effect, sensitiveRecords } from './effects'
 import { catalogue } from './catalogue'
 
 async function snapshot(env: Bindings, ctx: ToolContext) {
@@ -24,25 +26,30 @@ async function snapshot(env: Bindings, ctx: ToolContext) {
 }
 
 export function nativeTools(env: Bindings): ToolDefinition[] {
+  const titles:Record<string,string>={'records.list':'Read worker records','draft.prepare':'Prepare hourly inputs','draft.read':'Read an hourly proposal','bonus.prepare':'Prepare bonus earnings','bonus.read':'Read bonus earnings','reports.proposals':'Read hourly preparations','reports.bonuses':'Read bonus preparations','run.review':'Present a run for human review','notice.process':'Extract a tax notice','reply.dispatch':'Send the approved reply','credentials.rotate':'Rotate this native credential','workspace.snapshot':'Check preparation state'}
   return catalogue.map(entry=> {
     const name=entry.name, nativeName=entry.nativeName
     const tool: ToolDefinition = {
-      name,title:nativeName,description:entry.description,scope:entry.scope,readOnly:entry.readOnly,
+      name,title:titles[nativeName],description:entry.description,scope:entry.scope,readOnly:entry.readOnly,
       inputSchema:{type:'object',properties:{...entry.properties},required:[...entry.required],additionalProperties:false},
-      outputSchema:{type:'object'},classes:[...entry.classes],clauses:[...entry.clauses],
+      outputSchema:outputSchema(nativeName),classes:[...entry.classes],clauses:[...entry.clauses],
       async classify(args,ctx,completed) {
         const agent=await nativeAgent(env,ctx,args.companyId)
+        agent.doorContext=ctx
+        try { await requireAgentPolicy(agent,nativeName) } catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status,...('setupLink' in error?{setupLink:error.setupLink}:{})});throw error}
         if (nativeName!=='credentials.rotate') agent.allow(entry.scope,args.companyId ?? agent.grant.company_id)
+        if(nativeName==='credentials.rotate') await rotationKey(args.publicKey)
         if (!completed) await effect(env,nativeName,args,ctx)
-        const facts: ClassAndFacts[]=entry.classes.map(cls=>({class:cls,facts: cls==='sensitive' ? {measure:1,kind:'payroll'} : cls==='external' ? {measure:1,counterparty:'known'} : cls==='commitment' ? {measure:0,currency:'USD',counterparty:'known'} : cls==='security' ? {measure:1,setting:'native-agent-credential'} : {measure:1}}))
+        const records=entry.classes.includes('sensitive' as never)?await sensitiveRecords(env,nativeName,args,ctx):0
+        const facts: ClassAndFacts[]=entry.classes.map(cls=>({class:cls,facts: cls==='sensitive' ? {measure:records,kind:nativeName==='notice.process'?'tax-notice':'compensation'} : cls==='external' ? {measure:1,counterparty:'known'} : cls==='commitment' ? {measure:0,currency:'USD',counterparty:'known'} : cls==='security' ? {measure:1,setting:'native-agent-credential'} : {measure:1}}))
         return facts
       },
       async run(args,ctx) {
         try {
-          if (nativeName==='workspace.snapshot') return {result:await snapshot(env,ctx)}
           const agent=await nativeAgent(env,ctx,args.companyId)
           agent.doorContext=ctx
           const value=await policyCall(agent,nativeName,'shared-door',async()=> {
+            if (nativeName==='workspace.snapshot') return snapshot(env,ctx)
             if (nativeName==='records.list') return agent.records(args)
             if (nativeName==='draft.prepare') return agent.prepare(args)
             if (nativeName==='draft.read') return agent.readDraft(args)
@@ -53,18 +60,19 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
             if (nativeName==='run.review') return presentReview(agent,args)
             if (nativeName==='notice.process') return processNotice(agent,args)
             if (nativeName==='reply.dispatch') return dispatchReply(agent,args)
-            if (nativeName==='credentials.rotate') return agent.rotate()
+            if (nativeName==='credentials.rotate') return rotate(agent,args.publicKey)
             throw new ToolRefusal('tool_not_found')
           })
           return {result:value}
         } catch(error) {
-          if (error instanceof PayrollError) throw new ToolRefusal(error.code)
+          if (error instanceof PayrollError) throw new ToolRefusal(error.code,error.code,{native_status:error.status,...('setupLink' in error?{setupLink:error.setupLink}:{})})
           throw error
         }
       },
     }
+    if (entry.readOnly && nativeName!=='workspace.snapshot' || nativeName==='notice.process') tool.untrusted=true
     if (!entry.readOnly) {
-      tool.summary=async(args,ctx)=>(await effect(env,nativeName,args,ctx))?.summary ?? {items:[entry.description]}
+      tool.summary=async(args,ctx)=>{const summary=(await effect(env,nativeName,args,ctx))?.summary ?? {items:[entry.description]};if(nativeName==='credentials.rotate')summary.items=[...summary.items??[],'Delivery key SHA-256 '+await digest(JSON.stringify(args.publicKey))];return summary}
       tool.target=async(args,ctx)=>(await effect(env,nativeName,args,ctx))?.target ?? null
       tool.revision=async(args,ctx)=>(await effect(env,nativeName,args,ctx))?.revision ?? null
       if(nativeName==='notice.process') tool.revisionType='string'

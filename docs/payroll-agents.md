@@ -17,8 +17,9 @@ full payroll release are still ENV-051/034 work.
 Choose a review date within 90 days (`reviewDate`, UTC end of day), and a first
 secret lifetime of 1–24 hours (`hours`). Omitting the review date creates the
 short-lived grant used by earlier clients. A secret appears once, in a no-store
-response. Only a keyed digest is stored. `credentials.rotate` replaces that
-digest and returns a new secret expiring within 24 hours and before the original
+response. Only a keyed digest is stored. `envelope.credentials.rotate` replaces that
+digest and returns the replacement encrypted to the caller’s RSA-OAEP-256 public
+key (see the shared door guide). The decrypted secret expires expiring within 24 hours and before the original
 review date. Rotation cannot extend the grant, restore an expired/revoked bearer
 or survive sponsor removal/current-scope changes. Rotate before expiry; an
 expired secret requires fresh human issuance. Concurrent rotations have one
@@ -83,17 +84,17 @@ refused. The durable limit is 120 authenticated requests per minute per grant.
 - `credentials.rotate`: `{}`; permitted only while this bearer, grant and sponsor
   remain current. Save the returned secret securely; never put it in a notice,
   model context, URL, log or screenshot.
-- `records.list`: `{companyId}`, at most 100 scoped person IDs/names/location
+- `envelope.records.list`: `{companyId}`, at most 100 scoped person IDs/names/location
   IDs/versions, with no private values or pay rates.
-- `draft.prepare`: `{companyId,personId,minutes,periodStart,periodEnd,payDate,
+- `envelope.draft.prepare`: `{companyId,personId,minutes,periodStart,periodEnd,payDate,
   sourceRef,requestKey}`; minutes 1–44,640. Persists an immutable input proposal
   referencing a current person and latest reviewed rate effective at period
   start. Same key/inputs returns the same proposal; different inputs conflict.
-- `draft.read`: `{companyId,draftId}`, scoped proposal/rate/source references and
+- `envelope.draft.read`: `{companyId,draftId}`, scoped proposal/rate/source references and
   stale-person indication. An input proposal is **uncalculated, not approved**.
-- `notice.process`: `{companyId,noticeId}`, actual encrypted source notice to
+- `envelope.notices.process`: `{companyId,noticeId}`, actual encrypted source notice to
   declared OpenAI; redacted output is an **untrusted proposal**, never authority.
-- `reply.dispatch`: `{companyId,replyId,version,digest}`, only an exact current
+- `envelope.notices.reply`: `{companyId,replyId,version,digest}`, only an exact current
   unexpired human-approved notice reply, with current sponsor/approver/location/
   provider authority. It is not a payroll-payment or signed-filing tool.
 
@@ -132,13 +133,15 @@ remains separately authorized. Rotating a secret retains its credential ID.
 Record pages are ordered by ascending immutable person ID. Pass `next` as
 `after` until `next` is null. This is a live authorized listing, not a snapshot:
 concurrent inserts before the cursor require restarting the listing; revoked
-locations disappear immediately. MCP `records.list` accepts the same optional
+locations disappear immediately. MCP `envelope.records.list` accepts the same optional
 `limit` and `after` arguments. Unknown or repeated query parameters are refused.
 
 Draft dates are real `YYYY-MM-DD` dates, period start must not exceed period end,
 and payday must be on or after period end. Minutes are integral 1–44,640.
 References are nonempty bounded strings: source 240 characters and request key
-120. Unknown input fields, including human or approval flags, are refused.
+120. Native REST refuses unknown input fields. Shared MCP ignores undeclared
+arguments; human or approval flags confer no authority. Provider selection is
+fixed and a caller-supplied provider parameter is refused.
 The worker must be within the current location scope and have a reviewed rate
 at period start. The immutable proposal ID binds the retained person version,
 rate ID, dates, minutes and source. It is an hourly input proposal with no tax
@@ -280,7 +283,7 @@ earnings-run ceremony now uses a separately authenticated human and passkey
 verification, with a signed OIDC MFA assertion alternative at the API boundary;
 see [payroll-approvals.md](payroll-approvals.md). This does not complete ENV-051.
 
-The current preparation report is available through MCP `reports.proposals`,
+The current preparation report is available through MCP `envelope.reports.proposals`,
 `GET /api/envelope/v1/companies/:company/reports/proposals` and
 `node scripts/envelope-cli.mjs report COMPANY_ID [AFTER]`. It requires the current
 `drafts:read` action and compensation field and includes only proposals made by
@@ -296,7 +299,7 @@ sponsor, grant, field, location, bearer and custody checks and records attributi
 
 ## Bonus-only earnings preparation
 
-A conversational client can use MCP `bonus.prepare` with
+A conversational client can use MCP `envelope.bonus.prepare` with
 `{companyId,personId,amountCents,periodStart,periodEnd,payDate,sourceRef,requestKey}`.
 The equivalent REST door is `POST /api/envelope/v1/companies/COMPANY_ID/bonus-runs`,
 with the company omitted from the JSON body. The CLI uses the same installation
@@ -339,7 +342,7 @@ and a separately attributed credential event atomically. The sponsor is the
 record's sponsoring operator; `bonusPreparation.credentialId` and the access
 history identify the actual preparation client. No human decision is recorded.
 
-MCP `bonus.read` with `{companyId,runId}`, REST
+MCP `envelope.bonus.read` with `{companyId,runId}`, REST
 `GET /api/envelope/v1/companies/COMPANY_ID/bonus-runs/:id` and CLI `bonus-status`
 require `drafts:read`, compensation and all locations. They return the exact
 retained `preview`, `sourcesCurrent` and the preparation status fields.
@@ -347,7 +350,7 @@ HEAD repeats authorization and returns no body. Only the preparing credential
 can read this compensation or present its review. Current sponsor, grant,
 secret, company and held-custody fences apply to every request, including
 repeated checks after compensation decryption. The existing preparation report still covers hourly input proposals.
-MCP `reports.bonuses`, REST
+MCP `envelope.reports.bonuses`, REST
 `GET /api/envelope/v1/companies/COMPANY_ID/reports/bonus-runs` and CLI
 `node scripts/envelope-cli.mjs bonus-report COMPANY_ID [AFTER]` return a separate
 current scoped report of actual retained bonus earnings. It requires the same
@@ -360,7 +363,7 @@ credential sees no bonus rows, and revocation during report assembly returns
 no compensation. Payroll remains `uncalculated`; payment and filing remain
 `unavailable`. A compensation input report is never a paid payroll register.
 
-Call MCP `run.review` with the returned run ID to present a five-minute native
+Call MCP `envelope.runs.review_link` with the returned run ID to present a five-minute native
 review link. The link grants no authority: the human signs in separately, sees
 the exact amount, period, source, masked destination version and unresolved
 calculation, then uses the existing explicit passkey approval ceremony.

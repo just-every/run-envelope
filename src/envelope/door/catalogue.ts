@@ -1,9 +1,36 @@
 export const catalogue = [
   {
     "name": "envelope.credentials.rotate",
-    "description": "Replace the current secret, only while the sponsored grant remains current. Old bearer stops immediately.",
-    "properties": {},
-    "required": [],
+    "description": "Replace only the calling native credential; deliver the new bearer encrypted to the caller\u2019s RSA-OAEP-256 public key. Scope and original expiry cannot widen.",
+    "properties": {
+      "publicKey": {
+        "type": "object",
+        "properties": {
+          "kty": {
+            "type": "string",
+            "const": "RSA"
+          },
+          "n": {
+            "type": "string",
+            "minLength": 342,
+            "maxLength": 1024
+          },
+          "e": {
+            "type": "string",
+            "const": "AQAB"
+          }
+        },
+        "required": [
+          "kty",
+          "n",
+          "e"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "publicKey"
+    ],
     "scope": "credentials:rotate",
     "readOnly": false,
     "classes": [
@@ -11,7 +38,8 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-052"
     ],
     "sponsorEscalation": false,
     "nativeName": "credentials.rotate"
@@ -25,7 +53,8 @@ export const catalogue = [
       },
       "noticeId": {
         "type": "string"
-      }
+      },
+      "provider": false
     },
     "required": [
       "companyId",
@@ -39,7 +68,10 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-025",
+      "ENV-055",
+      "ENV-062"
     ],
     "nativeName": "notice.process"
   },
@@ -74,7 +106,10 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-025",
+      "ENV-055",
+      "ENV-062"
     ],
     "nativeName": "reply.dispatch"
   },
@@ -127,8 +162,9 @@ export const catalogue = [
     "clauses": [
       "SURFACE-001",
       "SURFACE-006",
-      "SURFACE-002",
-      "ENV-030"
+      "ENV-009",
+      "ENV-030",
+      "ENV-052"
     ],
     "nativeName": "bonus.prepare"
   },
@@ -154,7 +190,9 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-030",
+      "ENV-052"
     ],
     "nativeName": "bonus.read"
   },
@@ -180,7 +218,9 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-029",
+      "ENV-034"
     ],
     "nativeName": "run.review"
   },
@@ -210,7 +250,9 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-028",
+      "ENV-052"
     ],
     "nativeName": "records.list"
   },
@@ -263,8 +305,8 @@ export const catalogue = [
     "clauses": [
       "SURFACE-001",
       "SURFACE-006",
-      "SURFACE-002",
-      "ENV-030"
+      "ENV-030",
+      "ENV-052"
     ],
     "nativeName": "draft.prepare"
   },
@@ -294,7 +336,10 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-024",
+      "ENV-030",
+      "ENV-052"
     ],
     "nativeName": "reports.bonuses"
   },
@@ -324,7 +369,10 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-024",
+      "ENV-030",
+      "ENV-052"
     ],
     "nativeName": "reports.proposals"
   },
@@ -350,7 +398,9 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-030",
+      "ENV-052"
     ],
     "nativeName": "draft.read"
   },
@@ -366,8 +416,52 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
-      "SURFACE-006"
+      "SURFACE-006",
+      "ENV-030",
+      "ENV-056"
     ],
     "nativeName": "workspace.snapshot"
+  }
+] as const
+export const notTools = [
+  {
+    "clauses": [
+      "ENV-053"
+    ],
+    "reason": "import-door"
+  },
+  {
+    "clauses": [
+      "ENV-050",
+      "ENV-055",
+      "ENV-057",
+      "ENV-058",
+      "ENV-073",
+      "ENV-030"
+    ],
+    "reason": "installation"
+  },
+  {
+    "clauses": [
+      "ENV-022",
+      "ENV-034",
+      "ENV-051"
+    ],
+    "reason": "screen"
+  },
+  {
+    "clauses": [
+      "ENV-045"
+    ],
+    "reason": "device"
+  },
+  {
+    "clauses": [
+      "ENV-031",
+      "ENV-040",
+      "ENV-041",
+      "ENV-042"
+    ],
+    "reason": "connector"
   }
 ] as const

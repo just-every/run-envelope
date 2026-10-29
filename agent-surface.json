@@ -19,7 +19,8 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-052"
       ],
       "sponsorEscalation": false
     },
@@ -33,7 +34,10 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-025",
+        "ENV-055",
+        "ENV-062"
       ]
     },
     {
@@ -46,7 +50,10 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-025",
+        "ENV-055",
+        "ENV-062"
       ]
     },
     {
@@ -59,8 +66,9 @@
       "clauses": [
         "SURFACE-001",
         "SURFACE-006",
-        "SURFACE-002",
-        "ENV-030"
+        "ENV-009",
+        "ENV-030",
+        "ENV-052"
       ]
     },
     {
@@ -72,7 +80,9 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-052"
       ]
     },
     {
@@ -84,7 +94,9 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-029",
+        "ENV-034"
       ]
     },
     {
@@ -96,7 +108,9 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-028",
+        "ENV-052"
       ]
     },
     {
@@ -109,8 +123,8 @@
       "clauses": [
         "SURFACE-001",
         "SURFACE-006",
-        "SURFACE-002",
-        "ENV-030"
+        "ENV-030",
+        "ENV-052"
       ]
     },
     {
@@ -122,7 +136,10 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-024",
+        "ENV-030",
+        "ENV-052"
       ]
     },
     {
@@ -134,7 +151,10 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-024",
+        "ENV-030",
+        "ENV-052"
       ]
     },
     {
@@ -146,7 +166,9 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-052"
       ]
     },
     {
@@ -158,7 +180,9 @@
       ],
       "clauses": [
         "SURFACE-001",
-        "SURFACE-006"
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-056"
       ]
     }
   ],
@@ -172,15 +196,37 @@
     },
     {
       "clauses": [
-        "ENV-050"
+        "ENV-050",
+        "ENV-055",
+        "ENV-057",
+        "ENV-058",
+        "ENV-073",
+        "ENV-030"
       ],
       "reason": "installation"
     },
     {
       "clauses": [
-        "ENV-034"
+        "ENV-022",
+        "ENV-034",
+        "ENV-051"
       ],
       "reason": "screen"
+    },
+    {
+      "clauses": [
+        "ENV-045"
+      ],
+      "reason": "device"
+    },
+    {
+      "clauses": [
+        "ENV-031",
+        "ENV-040",
+        "ENV-041",
+        "ENV-042"
+      ],
+      "reason": "connector"
     }
   ],
   "witness": {
@@ -412,7 +458,12 @@
     {
       "id": "credentials-rotate",
       "tool": "envelope.credentials.rotate",
-      "args": {},
+      "args": {
+        "publicKey": {
+          "$fixture": "rotationKey",
+          "pointer": ""
+        }
+      },
       "expect": [
         {
           "class": "security"
@@ -447,6 +498,38 @@
         "https://api.openai.com",
         "https://api.resend.com"
       ]
-    }
+    },
+    "reviewers": [
+      {
+        "label": "inactive",
+        "email": "synthetic-inactive@example.com",
+        "initializer": "tests/agent-door/reviewer.mjs"
+      },
+      {
+        "label": "excluded",
+        "email": "synthetic-excluded@example.com",
+        "initializer": "tests/agent-door/reviewer.mjs"
+      }
+    ],
+    "sponsors": [
+      {
+        "label": "owner"
+      },
+      {
+        "label": "inactive",
+        "email": "synthetic-inactive@example.com",
+        "role": "member",
+        "negativeOnly": true,
+        "initializer": "tests/agent-door/negative-sponsor.mjs"
+      },
+      {
+        "label": "excluded",
+        "email": "synthetic-excluded@example.com",
+        "role": "member",
+        "negativeOnly": true,
+        "initializer": "tests/agent-door/negative-sponsor.mjs"
+      }
+    ],
+    "journey": "tests/agent-door/rotation-journey.mjs"
   }
 }

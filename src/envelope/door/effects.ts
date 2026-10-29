@@ -1,6 +1,7 @@
 import type { Bindings } from '../../auth.server'
 import { ToolRefusal, type ToolContext, type ApprovalSummary, type NativeTarget } from '../../modules/agent-door/index.ts'
 import { recordKey, unseal } from '../security'
+import { replyBody } from '../notices'
 import { nativeAgent } from './native'
 
 /** Read the actual scoped native target, never accept a caller's risk flags. */
@@ -17,7 +18,7 @@ export async function effect(env: Bindings, name: string, args: Record<string,un
   if(name==='notice.process') {
     agent.allow('notices:process',args.companyId)
     const l=agent.location('location_id'),row=await env.DB.prepare(`SELECT id,reference,digest FROM env_notices WHERE company_id=? AND id=? AND ${l.sql} AND ${f.sql}`).bind(args.companyId,args.noticeId,...l.args,...f.args).first<{id:string;reference:string;digest:string}>()
-    if(!row)throw new ToolRefusal('record_unavailable')
+    if(!row)throw new ToolRefusal('notice_unavailable','notice_unavailable',{native_status:403})
     return {target:{kind:'notice',id:row.id},revision:row.digest,summary:{target:{id:row.id,name:row.reference},recipients:['OpenAI'],items:['Redacted tax-notice text; untrusted extraction only.']}}
   }
   if(name==='reply.dispatch') {
@@ -25,13 +26,29 @@ export async function effect(env: Bindings, name: string, args: Record<string,un
     const l=agent.location('n.location_id'),row=await env.DB.prepare(`SELECT r.id,r.version,r.cipher FROM env_notice_replies r JOIN env_notices n ON n.company_id=r.company_id AND n.id=r.notice_id WHERE r.company_id=? AND r.id=? AND r.version=(SELECT MAX(version) FROM env_notice_replies WHERE company_id=r.company_id AND id=r.id) AND ${l.sql} AND ${f.sql}`).bind(args.companyId,args.replyId,...l.args,...f.args).first<{id:string;version:number;cipher:string}>()
     if(!row)throw new ToolRefusal('record_unavailable')
     const payload=JSON.parse(await unseal(await recordKey(env.ENVELOPE_RECORD_KEY),JSON.stringify([args.companyId,'reply',row.id,row.version]),row.cipher))
-    return {target:{kind:'notice-reply',id:row.id},revision:row.version,summary:{target:{id:row.id},recipients:[payload.to],items:[payload.subject,payload.body]}}
+    return {target:{kind:'notice-reply',id:row.id},revision:row.version,summary:{target:{id:row.id},recipients:[payload.to],items:[payload.subject,replyBody(payload)]}}
   }
   if(name==='run.review') {
     agent.allow('drafts:read',args.companyId)
-    const run=await env.DB.prepare(`SELECT object_id AS id,MAX(version) AS version FROM env_workspace_versions WHERE company_id=? AND kind='earnings-run' AND object_id=? AND ${f.sql} HAVING MAX(version) IS NOT NULL`).bind(args.companyId,args.runId,...f.args).first<{id:string;version:number}>()
-    if(!run)throw new ToolRefusal('record_unavailable')
+    const run=await env.DB.prepare(`SELECT object_id AS id,MAX(version) AS version FROM env_workspace_versions WHERE company_id=? AND kind='earnings-run' AND object_id=? AND ${f.sql} AND (NOT EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=env_workspace_versions.company_id AND a.target_id=env_workspace_versions.object_id AND a.action='bonus.prepared') OR EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=env_workspace_versions.company_id AND a.target_id=env_workspace_versions.object_id AND a.action='bonus.prepared' AND a.credential_id=?)) HAVING MAX(version) IS NOT NULL`).bind(args.companyId,args.runId,...f.args,agent.grant.id).first<{id:string;version:number}>()
+    if(!run)throw new ToolRefusal('review_unavailable','review_unavailable',{native_status:404})
     return {target:{kind:'earnings-run',id:run.id},revision:run.version,summary:{target:{id:run.id},items:['Present version '+run.version+' for separate native human review; no approval.']}}
   }
   return null
+}
+
+export async function sensitiveRecords(env:Bindings,name:string,args:Record<string,unknown>,ctx:ToolContext) {
+  if(!name.startsWith('reports.'))return 1
+  const agent=await nativeAgent(env,ctx,args.companyId),f=agent.fence(),limit=Number(args.limit??100),after=String(args.after??'')
+  agent.allow('drafts:read',args.companyId)
+  if(!JSON.parse(agent.grant.fields).includes('compensation'))throw new ToolRefusal('agent_scope_denied','agent_scope_denied',{native_status:403})
+  if(name==='reports.proposals') {
+    const l=agent.location('p.location_id')
+    return (await env.DB.prepare(`SELECT COUNT(*) AS n FROM (SELECT d.id FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.credential_id=? AND d.id>? AND ${l.sql} AND ${f.sql} ORDER BY d.id LIMIT ?)`).bind(agent.grant.company_id,agent.grant.id,after,...l.args,...f.args,limit).first<{n:number}>())!.n
+  }
+  if(!JSON.parse(agent.grant.locations).includes('*'))throw new ToolRefusal('agent_scope_denied','agent_scope_denied',{native_status:403})
+  return (await env.DB.prepare(`SELECT COUNT(*) AS n FROM (SELECT v.object_id FROM env_workspace_versions v WHERE v.company_id=? AND v.kind='earnings-run' AND v.version=1 AND v.object_id>? AND ${f.sql}
+    AND EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=v.company_id AND a.credential_id=? AND a.action='bonus.prepared' AND a.target_id=v.object_id)
+    AND EXISTS(SELECT 1 FROM env_workspace_people pin JOIN env_people p ON p.company_id=pin.company_id AND p.id=pin.person_id WHERE pin.company_id=v.company_id AND pin.kind=v.kind AND pin.object_id=v.object_id AND pin.version=v.version)
+    ORDER BY v.object_id LIMIT ?)`).bind(agent.grant.company_id,after,...f.args,agent.grant.id,limit).first<{n:number}>())!.n
 }

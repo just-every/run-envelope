@@ -270,6 +270,12 @@
       "name": "0041_business_agent_bindings.sql",
       "sha256": "3bd9bb74a0881fe35b0994b01b6cbbec9f68e5cd6316d266da8d93d490c3f45b",
       "sql": "-- A native sponsor explicitly issues each scoped grant through the existing\n-- step-up protected lifecycle. Business subjects never select a grant by email.\nCREATE TABLE env_business_agent_bindings (\n agent_id TEXT NOT NULL, grant_id TEXT NOT NULL REFERENCES env_agent_grants(id),\n sponsor_id TEXT NOT NULL REFERENCES oa_operators(id),\n PRIMARY KEY(agent_id,grant_id)\n);\n-- Original native audit identities survive secret rotation and expiry.\nALTER TABLE env_agent_access ADD COLUMN door_agent_id TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_agent_name TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_operation_id TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_consent TEXT;\nALTER TABLE env_agent_access ADD COLUMN door_approvers TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0042_agent_door_policy_attribution.sql",
+      "sha256": "1c4a1c924d991a980cc8e4c0315abc5521dc44b691fad9ead9e95d0a40b0641f",
+      "sql": "-- Keep the real signed principal alongside the native grant's durable identity.\nALTER TABLE env_agent_call_audit ADD COLUMN door_agent_id TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_agent_name TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_operation_id TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_consent TEXT;\nALTER TABLE env_agent_call_audit ADD COLUMN door_approvers TEXT;\nCREATE TRIGGER env_agent_call_door_attribution_immutable_update BEFORE UPDATE ON env_agent_call_audit\nWHEN NEW.door_agent_id IS NOT OLD.door_agent_id OR NEW.door_agent_name IS NOT OLD.door_agent_name\n OR NEW.door_operation_id IS NOT OLD.door_operation_id OR NEW.door_consent IS NOT OLD.door_consent\n OR NEW.door_approvers IS NOT OLD.door_approvers\nBEGIN SELECT RAISE(ABORT,'immutable_agent_call_attribution'); END;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

@@ -34,7 +34,7 @@ export interface AgentGrant {
   secret_expires_at: number
   token_hash: string
 }
-const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,(SELECT secret_expires_at FROM env_agent_credentials WHERE id=env_agent_grants.id) AS secretExpiresAt,revoked_at AS revokedAt,version`
+const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,(SELECT secret_expires_at FROM env_agent_credentials WHERE id=env_agent_grants.id) AS secretExpiresAt,revoked_at AS revokedAt,version,(SELECT agent_id FROM env_business_agent_bindings WHERE grant_id=env_agent_grants.id LIMIT 1) AS businessAgentId`
 const uuid = () => crypto.randomUUID()
 const list = (value: unknown, allowed: readonly string[]) => {
   const entries = Array.isArray(value)
@@ -196,7 +196,7 @@ export class AgentSettings {
         SELECT ?,id,sponsor_id FROM env_agent_grants WHERE id=? AND ? IS NOT NULL`,[businessAgentId,id,businessAgentId]),
     ])
     if (!result[0].results.length) throw new PayrollError('authority_or_proof_changed', 409)
-    return { id, token, expiresAt, secretExpiresAt, sponsorId: actor.session.operator.id }
+    return { id, token, expiresAt, secretExpiresAt, sponsorId: actor.session.operator.id, ...(businessAgentId?{businessAgentId}:{}) }
   }
   async revoke(actor: Actor, id: string, input: Input) {
     this.sponsor(actor)
