@@ -240,6 +240,12 @@
       "name": "0039_agent_audit_finalization.sql",
       "sha256": "7e12b24e92ea6e3e3c0be942bb73f2cca9d466db761ffed2e8f278d32aac1a4c",
       "sql": "-- Attribution is immutable. A pending call may record one terminal decision;\n-- an interrupted process leaves a truthful pending row rather than no history.\nCREATE TRIGGER env_agent_call_audit_immutable_update BEFORE UPDATE ON env_agent_call_audit\nWHEN OLD.decision!='pending' OR NEW.decision='pending'\n OR NEW.id IS NOT OLD.id OR NEW.company_id IS NOT OLD.company_id\n OR NEW.credential_id IS NOT OLD.credential_id OR NEW.sponsor_id IS NOT OLD.sponsor_id\n OR NEW.tool IS NOT OLD.tool OR NEW.transport IS NOT OLD.transport\n OR NEW.classes IS NOT OLD.classes OR NEW.occurred_at IS NOT OLD.occurred_at\nBEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\nCREATE TRIGGER env_agent_call_audit_immutable_delete BEFORE DELETE ON env_agent_call_audit BEGIN SELECT RAISE(ABORT,'immutable_agent_call_audit'); END;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0040_operation_sentinels.sql",
+      "sha256": "94c0b1b02178a92e5e46a2b013272d48a6c4b1339929a9098b87f15009a97630",
+      "sql": "-- Isolated non-business diagnostic data. No worker, job or delivery authority.\n-- Successful diagnostics remove their own random sentinel in one transaction.\nCREATE TABLE env_operation_sentinels (\n id TEXT PRIMARY KEY,\n company_id TEXT NOT NULL REFERENCES env_companies(id),\n probe_value TEXT NOT NULL,\n cipher TEXT NOT NULL,\n created_at INTEGER NOT NULL\n);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

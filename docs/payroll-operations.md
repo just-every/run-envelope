@@ -116,3 +116,7 @@ The diagnostic makes no outbound request and leaves business records, unknown
 jobs, attempts, event identities and delivery authority unchanged. All results
 remain attention-required: provider operation, scheduler execution, backup
 validation and the remaining ENV-056 recovery and timing outcomes are unproved.
+
+The isolated diagnostic schema is installed by
+`migrations/core/0040_operation_sentinels.sql`; migrations 0038 and 0039 retain
+their existing agent policy and audit meanings.
