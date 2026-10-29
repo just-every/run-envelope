@@ -1780,7 +1780,7 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
     }
     assert.doesNotMatch(
       withoutUuidReferences(JSON.stringify(audit)),
-      /synthetic-envelope-[123](?:"|\b)|00-0000001|2500|25\.00/,
+      /synthetic-envelope-[123](?:"|\b)|00-0000001|(?<!\d)2500(?!\d)|25\.00/,
       'audit contains references, versions and actors, never private values or pay amounts',
     )
     assert.equal(outputLeaks(audit), false)

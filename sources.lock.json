@@ -3918,7 +3918,7 @@
       "executable": false
     },
     "tests/payroll-runtime.mjs": {
-      "sha256": "c908a7e4d587ce1654a130811dce22fd20222e0b8605561892e892261971376d",
+      "sha256": "69ef1422ea5cf464405e531472a6e63c528efdacbd7fd8f8644e0239e05d091f",
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
