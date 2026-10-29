@@ -91,7 +91,8 @@ A new round trip proves only that the supplied key works on new data. To detect
 a wrong but valid-format key or damaged retained content, the diagnostic also
 authenticates at most 25 current `env_private_records` within the owner's current
 company, location and sensitive-field grant. The sample has a two-second total
-inspection budget. Each inspected record version has an attributed audit event
+inspection budget and runs only after the isolated dependency round trip and
+cleanup succeed. Each inspected record version has an attributed audit event
 before its bytes are read. Temporary decrypted bytes are cleared without being
 decoded or returned. The response contains only counts and dependency states;
 it never contains private values, ciphertexts, key material or underlying errors.
