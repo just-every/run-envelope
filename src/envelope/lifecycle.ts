@@ -1,8 +1,8 @@
 import type { Records, Input } from './records'
 import seed from '../../seed.json'
-import { fence, auditStatement, type Actor } from './access'
+import { fence, locationSql, auditStatement, type Actor } from './access'
 import { requirePayrollProof, stepUpFence } from './step-up'
-import { PayrollError, recordKey, seal, unseal } from './security'
+import { PayrollError, recordKey, seal, unseal, authenticateCiphertext } from './security'
 
 export function webhookDestination(env: Records['env']) {
     const configured = env.ENVELOPE_WEBHOOK_URL
@@ -19,7 +19,8 @@ export function webhookDestination(env: Records['env']) {
 export class Lifecycle {
   constructor(public records: Records) {}
   owner(actor: Actor) {
-    if (actor.grant.role !== 'owner' || actor.session.kind !== 'native' ||
+    if (actor.grant.role !== 'owner' || actor.session.kind !== 'native' || actor.session.operator.role !== 'owner' ||
+        actor.session.id !== this.records.session.id ||
         actor.session.operator.email.toLowerCase() !== this.records.env.OWNER_EMAIL.toLowerCase())
       throw new PayrollError('native_owner_required', 403)
   }
@@ -89,6 +90,146 @@ export class Lifecycle {
         : custody === 'unavailable' ? 'restore separately held record key; inspect retained jobs before any send'
         : receiver === 'unavailable' ? 'configure administrator-pinned receiver; obtain explicit owner consent before sending'
         : 'inspect jobs and receiver; explicitly retry permitted events; payment and filing remain unavailable'}
+  }
+
+  async diagnose(actor: Actor, input: Input) {
+    this.owner(actor)
+    if (Object.keys(input).some(k => k !== 'consent') || input.consent !== true)
+      throw new PayrollError('explicit_diagnostic_consent_required')
+    const currentOwner = async () => {
+      const f = fence(actor)
+      if (!await this.records.statement(`SELECT 1 WHERE ${f.sql}`, f.args).first())
+        throw new PayrollError('payroll_access_denied', 403)
+    }
+    await currentOwner()
+    const id = crypto.randomUUID(), checkedAt = Date.now(), f = fence(actor)
+    // A deadline does not cancel D1. The transaction deletes its own sentinel
+    // before commit, including when the caller has already stopped waiting.
+    const bounded = async <T>(work: () => Promise<T>, timeout = 2000) => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        const value = await Promise.race([work(),new Promise<never>((_,reject) => {
+          timer = setTimeout(() => reject(new Error('diagnostic_timeout')),timeout)
+        })])
+        return {state:'completed' as const,value}
+      } catch (error) {
+        return {state:error instanceof Error && error.message === 'diagnostic_timeout' ? 'timeout' as const : 'failed' as const,value:null}
+      } finally { clearTimeout(timer) }
+    }
+    const started = await bounded(() => auditStatement(this.records.env,actor,id,'operations.diagnostic.started',id,1).run())
+    if (!started.value) {
+      await currentOwner()
+      // With no durable access audit, never read private ciphertexts. An owner
+      // can still see that writes are unhealthy without fabricating an audit.
+      return {id,checkedAt,database:{state:started.state === 'timeout' ? 'unvalidated' : 'unhealthy',reason:'diagnostic audit write unavailable'},
+        encryptedStorage:{state:'unvalidated',reason:'not attempted'},cleanup:{state:'not-attempted'},
+        retained:{state:'unvalidated',inspected:0,authenticated:0,failed:0,unvalidated:null,reason:'audit unavailable',otherStorage:'unvalidated'},
+        audit:'unavailable',status:'attention-required',providerDelivery:'not established',automaticRetry:false,
+        nextAction:'restore dependency write access; preserve business records and unknown jobs'}
+    }
+    if (!started.value.meta.changes) throw new PayrollError('payroll_access_denied',403)
+    const key = await bounded(() => recordKey(this.records.env.ENVELOPE_RECORD_KEY))
+    const challenge = crypto.randomUUID(), context = 'operations:' + id
+    const cipher = key.value ? await bounded(() => seal(key.value!,context,challenge)) : null
+    const database = {state:'unvalidated',reason:'not completed'}
+    const encryptedStorage = {state:'unvalidated',reason:key.value ? 'round trip not completed' : 'record key unavailable'}
+    const cleanup = {state:'unvalidated'}
+    const roundTrip = await bounded(() => this.records.env.DB.batch<Record<string,unknown>>([
+      this.records.statement(`INSERT INTO env_operation_sentinels(id,company_id,probe_value,cipher,created_at)
+        SELECT ?,?,?,?,? WHERE ${f.sql} AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,
+        [id,actor.company,challenge,cipher?.value ?? '',checkedAt,...f.args,id]),
+      this.records.statement(`SELECT probe_value,cipher FROM env_operation_sentinels WHERE id=? AND company_id=? AND ${f.sql}`,[id,actor.company,...f.args]),
+      // Cleanup is permitted after revocation only for this isolated random ID.
+      this.records.statement('DELETE FROM env_operation_sentinels WHERE id=? AND company_id=? RETURNING id',[id,actor.company]),
+    ]))
+    if (roundTrip.value) {
+      const stored = roundTrip.value[1].results[0]
+      database.state = stored?.probe_value === challenge && roundTrip.value[2].results.length === 1 ? 'healthy' : 'unhealthy'
+      database.reason = database.state === 'healthy' ? 'isolated write and read completed' : 'isolated write, read or cleanup incomplete'
+      if (stored && key.value && cipher?.value) {
+        const opened = await bounded(() => unseal(key.value!,context,String(stored.cipher)))
+        encryptedStorage.state = opened.value === challenge ? 'healthy' : opened.state === 'timeout' ? 'unvalidated' : 'unhealthy'
+        encryptedStorage.reason = opened.value === challenge ? 'authenticated isolated round trip completed' : opened.state === 'timeout' ? 'timeout' : 'authentication failed'
+      }
+    } else {
+      database.state = roundTrip.state === 'timeout' ? 'unvalidated' : 'unhealthy'
+      database.reason = roundTrip.state === 'timeout' ? 'timeout; transaction outcome not established' : 'isolated transaction failed'
+    }
+    const remaining = await bounded(() => this.records.statement('SELECT 1 FROM env_operation_sentinels WHERE id=? AND company_id=?',[id,actor.company]).first())
+    cleanup.state = remaining.state !== 'completed' || roundTrip.state === 'timeout' ? 'unvalidated' : remaining.value ? 'unhealthy' : 'verified'
+    if (cleanup.state === 'unhealthy') { database.state = 'unhealthy'; database.reason = 'diagnostic sentinel cleanup failed' }
+    await currentOwner()
+    const retained = {state:'unvalidated',scope:'permitted current private records only',inspected:0,authenticated:0,failed:0,
+      unvalidated:null as number | null,reason:'not inspected',otherStorage:'unvalidated; no backup or complete storage proof'}
+    // A company with retained holds is not a content-inspection target. The
+    // owner may inspect custody separately through the existing audited doors.
+    const noHolds = `NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND status='held')
+      AND NOT EXISTS(SELECT 1 FROM env_privacy_holds WHERE company_id=? AND released_at IS NULL)`
+    const l = locationSql(actor,'p.location_id')
+    const permitted = `r.company_id=? AND r.kind IN (SELECT value FROM json_each(?)) AND ${l.sql} AND ${f.sql} AND ${noHolds}`
+    const args = [actor.company,JSON.stringify(actor.grant.fields),...l.args,...f.args,actor.company,actor.company]
+    const inventory = await bounded(() => this.records.statement(`SELECT
+      (SELECT COUNT(*) FROM env_private_records WHERE company_id=?) AS total,
+      (SELECT COUNT(*) FROM env_private_records r JOIN env_people p ON p.company_id=r.company_id AND p.id=r.person_id WHERE ${permitted}) AS permitted,
+      COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0) AS epoch`,
+      [actor.company,...args,actor.company]).first<{total:number;permitted:number;epoch:number}>())
+    if (inventory.value) retained.unvalidated = inventory.value.total
+    if (inventory.value && key.value && inventory.value.permitted > 0) {
+      const sample = await bounded(() => this.records.statement(`SELECT r.person_id,r.kind,r.version FROM env_private_records r
+        JOIN env_people p ON p.company_id=r.company_id AND p.id=r.person_id WHERE ${permitted} ORDER BY r.person_id,r.kind LIMIT 25`,args)
+        .all<{person_id:string;kind:string;version:number}>())
+      if (sample.value) {
+        const sampleDeadline = Date.now() + 2000
+        for (const row of sample.value.results) {
+          if (Date.now() >= sampleDeadline) { retained.reason = 'timeout'; break }
+          const event = crypto.randomUUID()
+          const read = await bounded(() => this.records.env.DB.batch<Record<string,unknown>>([
+            auditStatement(this.records.env,actor,event,'operations.ciphertext.inspected',row.person_id,row.version,
+              `${noHolds} AND EXISTS(SELECT 1 FROM env_private_records WHERE company_id=? AND person_id=? AND kind=? AND version=?)`,
+              [actor.company,actor.company,actor.company,row.person_id,row.kind,row.version]),
+            this.records.statement(`SELECT r.cipher FROM env_private_records r JOIN env_people p ON p.company_id=r.company_id AND p.id=r.person_id
+              WHERE ${permitted} AND r.person_id=? AND r.kind=? AND r.version=? AND EXISTS(SELECT 1 FROM env_audit WHERE id=?)`,[...args,row.person_id,row.kind,row.version,event]),
+          ]), Math.max(1,sampleDeadline-Date.now()))
+          const stored = read.value?.[1].results[0]
+          if (!stored) { retained.reason = read.state === 'timeout' ? 'timeout' : 'sample unavailable'; break }
+          const opened = await bounded(() => authenticateCiphertext(key.value!,JSON.stringify([actor.company,row.person_id,row.kind]),String(stored.cipher)),Math.max(1,sampleDeadline-Date.now()))
+          if (opened.state === 'timeout') { retained.reason = 'timeout'; break }
+          retained.inspected++
+          if (opened.state === 'completed') retained.authenticated++
+          else retained.failed++
+        }
+        retained.unvalidated = inventory.value.total - retained.inspected
+        retained.state = retained.failed ? 'unhealthy' : retained.inspected ? 'validated-sample' : 'unvalidated'
+        if (retained.inspected === sample.value.results.length)
+          retained.reason = retained.failed ? 'ciphertext authentication failed' : 'bounded sample only; all other content remains unvalidated'
+      } else retained.reason = sample.state === 'timeout' ? 'timeout' : 'inventory unavailable'
+    } else retained.reason = !inventory.value ? 'inventory unavailable' : !key.value ? 'record key unavailable' : 'no permitted unheld ciphertexts inspected'
+    // Do not claim a sample remains current after erasure, source changes or a hold.
+    if (retained.inspected) {
+      const stable = await bounded(() => this.records.statement(`SELECT 1 WHERE ${noHolds}
+        AND COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0)=?`,
+        [actor.company,actor.company,actor.company,inventory.value!.epoch]).first())
+      if (!stable.value) { retained.state = 'unvalidated'; retained.reason = 'custody changed or unavailable; run a new permitted diagnostic'; retained.unvalidated = null }
+    }
+    await currentOwner()
+    const result = {id,checkedAt,database,encryptedStorage,cleanup,retained,audit:'recorded',status:'attention-required',
+      providerDelivery:'not established',automaticRetry:false,
+      nextAction:cleanup.state !== 'verified' ? 'inspect isolated diagnostic cleanup; preserve all business records and unknown jobs'
+        : database.state !== 'healthy' || encryptedStorage.state !== 'healthy' || retained.state === 'unhealthy'
+          ? 'restore dependency or key access; inspect retained obligations before any explicit send'
+          : 'review unvalidated storage and backups separately; payment, filing and scheduler remain unavailable'}
+    const outcome = await bounded(() => auditStatement(this.records.env,actor,crypto.randomUUID(),
+      `operations.diagnostic.${database.state}.${encryptedStorage.state}.${cleanup.state}.${retained.state}`,id,1).run())
+    if (outcome.value && !outcome.value.meta.changes) throw new PayrollError('payroll_access_denied',403)
+    if (!outcome.value) {
+      result.audit = 'outcome unavailable'
+      retained.state = 'unvalidated'
+      retained.reason = 'diagnostic outcome audit unavailable'
+      retained.unvalidated = null
+      result.nextAction = 'restore audit write access; inspect retained obligations before any explicit send'
+    }
+    await currentOwner()
+    return result
   }
 
   async subscribe(actor: Actor, input: Input) {
