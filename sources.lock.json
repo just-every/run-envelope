@@ -622,7 +622,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "1239896abb06267823b4c9d62890d494328b73c6d612bc67187ddde65521fe9f",
+      "sha256": "ec375bddfb64344b92a99ff13fb59cae58059b3a62b7dd876f3d45b8b6233124",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -791,6 +791,10 @@
     },
     "migrations/core/0042_grant_revision_audit.sql": {
       "sha256": "842b6a651271ebe0fff8164843b43603f0931d721065aaa3be76cc575fb8655d",
+      "executable": false
+    },
+    "migrations/core/0043_grant_scope_direction.sql": {
+      "sha256": "a01e015a0256a9ba262231abe420a838e263ad09be8c488f6ee167e6c281c4d6",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1122,7 +1126,7 @@
       "executable": false
     },
     "RELEASE.json": {
-      "sha256": "d29b316a1f69a3af320376445b91dfe1e0191f89c7f3f1d80534fc2122098175",
+      "sha256": "9fe0e8c814f51859e33607da395b5f3ddf8c012b8eb72d3b56126e2f69265f28",
       "executable": false
     },
     "rer-project.json": {
@@ -1890,7 +1894,7 @@
       "executable": false
     },
     "src/auth.server.ts": {
-      "sha256": "e78ce2374a17206ba044bc05a17d1367fe57f611c2fe695cbd1eaa2285d1f583",
+      "sha256": "98b1e99167b6a9b2e6339bd24f0d94d95f0525f67654231ccb0a1e11136eb9ee",
       "executable": false
     },
     "src/base/actor.ts": {
@@ -2058,7 +2062,7 @@
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "6a4c5a534cc13ea2b9e542ccd6c2f80406fae5e890d892f9d8a822315f12ed0d",
+      "sha256": "a009243277245a2e9eeb47a7ddf272dd2cccad591cdc408d93f5bbe08eed137e",
       "executable": false
     },
     "src/envelope/agents.ts": {
@@ -2274,7 +2278,7 @@
       "executable": false
     },
     "src/envelope/identity-audit.ts": {
-      "sha256": "b165313d1b4b54822bb04a9fe4a8625eba3e83bc7c9617b33b7c0f745e371135",
+      "sha256": "e2d15b9f8060e3f16a1376d0a0a2498ce2c5a095b3dc6df2f1e2528892272c95",
       "executable": false
     },
     "src/envelope/income-verification/pages.tsx": {
@@ -3698,7 +3702,7 @@
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
-      "sha256": "1908c63a0055ca3bfa4212221bb989ea50a0c11a8b754bbf1f7ad720bf4eeac9",
+      "sha256": "41a7f414908f49c4954aac03bbc51df016d3a12666915240e38481010ef271d4",
       "executable": false
     },
     "tests/agent-policy-worker.mjs": {

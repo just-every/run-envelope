@@ -34,7 +34,8 @@
     "0029_privacy_requests.sql",
     "0040_operation_sentinels.sql",
     "0041_native_action_classes.sql",
-    "0042_grant_revision_audit.sql"
+    "0042_grant_revision_audit.sql",
+    "0043_grant_scope_direction.sql"
   ],
   "breaking": false,
   "agentUpdateInstructions": "Install the pinned dependencies and use the native rer commands. Keep the original payroll record encryption key for backup recovery. Review CONTRACT.md and ACCEPTANCE.md for implemented behavior before using payroll workflows."
