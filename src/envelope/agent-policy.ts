@@ -18,6 +18,7 @@ export const toolClasses: Record<string, readonly string[]> = {
   'reports.bonuses': ['sensitive'],
   'run.review': ['standard'],
   'credentials.rotate': ['security'],
+  'credentials.restrict': ['access'],
   'notice.process': ['sensitive', 'external'],
   'reply.dispatch': ['commitment', 'external'],
 }
@@ -72,18 +73,25 @@ export class AgentPolicy {
     if (start>end || Date.parse(end)-Date.parse(start)>31*86400000) throw new PayrollError('invalid_audit_period')
     const f = fence(actor), filter = `a.company_id=? AND a.occurred_at>=? AND a.occurred_at<? AND (?='owner' OR a.sponsor_id=?) AND ${f.sql}`,
       args = [actor.company,Date.parse(start),Date.parse(end)+86400000,actor.grant.role,actor.session.operator.id,...f.args]
-    const [calls, counts] = await this.records.env.DB.batch<Record<string,unknown>>([
-      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,g.name AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt
+    // An old installation can still supply its genuine pre-upgrade archive fixture.
+    // New restriction calls require the migrated facts table and fail closed without it.
+    const migrated=Boolean(await this.records.statement("SELECT 1 FROM sqlite_master WHERE type='view' AND name='env_classified_actions'").first())
+    const [calls, counts, changes] = await this.records.env.DB.batch<Record<string,unknown>>([
+      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,g.name AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,${migrated ? "COALESCE((SELECT facts FROM env_agent_call_facts WHERE call_id=a.id),'{}')" : "'{}'"} AS facts,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt
         FROM env_agent_call_audit a JOIN env_agent_grants g ON g.id=a.credential_id JOIN oa_operators o ON o.id=a.sponsor_id
         WHERE ${filter} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args),
       this.records.statement(`SELECT c.value AS class,a.decision,COUNT(*) AS count FROM env_agent_call_audit a,json_each(a.classes) c WHERE ${filter} GROUP BY c.value,a.decision ORDER BY c.value,a.decision`,args),
+      migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.target_id AS targetId,a.classes,a.facts,a.occurred_at AS occurredAt
+        FROM env_classified_actions a JOIN oa_operators o ON o.id=a.actor_id WHERE a.company_id=? AND a.occurred_at>=? AND a.occurred_at<?
+        AND (?='owner' OR a.actor_id=?) AND ${f.sql} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args) : this.records.statement('SELECT 1 WHERE 0'),
     ])
-    return {from:start,through:end,calls:calls.results.map(c=>({...c,classes:JSON.parse(String(c.classes))}) as Record<string,unknown> & {classes:string[]}),counts:counts.results}
+    const decoded=(c:Record<string,unknown>): Record<string,unknown> & {classes:string[];facts:Record<string,unknown>}=>({...c,classes:JSON.parse(String(c.classes)),facts:JSON.parse(String(c.facts))})
+    return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded)}
   }
 }
 
 /** Restriction only: policy cannot supply a scope, a human decision or provider consent. */
-export async function policyCall<T>(agent: AgentTools, tool: string, transport: string, execute: () => Promise<T>): Promise<T> {
+export async function policyCall<T>(agent: AgentTools, tool: string, transport: string, execute: () => Promise<T>, input: Input = {}): Promise<T> {
   const company = agent.grant.company_id, setupLink = '/app/envelope/companies/'+encodeURIComponent(company)+'/agents#class-policy'
   const classes = Object.hasOwn(toolClasses,tool) ? toolClasses[tool] : [], id = crypto.randomUUID()
   let decision = 'refused', policyVersion = 0
@@ -99,8 +107,15 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
     if (classes.some(c=>answers[c as keyof ClassAnswers]!=='autonomous')) return 'policy_unset'
     return null
   }
-  await agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at)
-    VALUES(?,?,?,?,?,?,?,'pending',0,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now()).run()
+  let facts: Record<string,unknown> = {}
+  if (tool==='credentials.restrict') {
+    try {facts={direction:agent.restriction(input).direction,peopleCount:1}}
+    catch {facts={direction:'invalid',peopleCount:1}}
+  }
+  const audit=agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at)
+    VALUES(?,?,?,?,?,?,?,'pending',0,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now())
+  if (tool==='credentials.restrict') await agent.env.DB.batch([audit,agent.env.DB.prepare('INSERT INTO env_agent_call_facts(call_id,facts) VALUES(?,?)').bind(id,JSON.stringify(facts))])
+  else await audit.run()
   try {
     if (!classes.length) throw new PayrollError('agent_tool_denied',403)
     const row = await read(), code = refusal(row)
@@ -126,6 +141,7 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
       throw new AgentPolicyError(decision,setupLink)
     }
     if (error instanceof PayrollError && /authority|revoked/.test(error.code)) decision='authority_revoked'
+    if (error instanceof PayrollError && error.code==='self_escalation') decision='self_escalation'
     throw error
   } finally {
     await agent.env.DB.prepare(`UPDATE env_agent_call_audit SET decision=?,policy_version=? WHERE id=? AND decision='pending'`).bind(decision,policyVersion,id).run()

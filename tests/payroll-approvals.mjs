@@ -123,6 +123,8 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       const {id,options}=await data(door+'/passkeys/options',{},200,humans[who]?.cookie??cookie)
       const response=await credentialResponse(pages[who],options,true)
       await data(door+'/passkeys/register',{id,response},200,humans[who]?.cookie??cookie)
+      const registered=await sql("SELECT classes FROM env_classified_actions WHERE action='identity.passkey-registered' ORDER BY occurred_at DESC LIMIT 1")
+      assert.deepEqual(JSON.parse(registered[0].classes),['security'],'a verified native authenticator change carries security')
       await refused(door+'/passkeys/register',{id,response},'human_challenge_stale',humans[who]?.cookie??cookie)
     }
     const ownerNow=Date.now()
