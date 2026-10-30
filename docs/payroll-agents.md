@@ -70,6 +70,13 @@ journey therefore cannot truthfully demonstrate that local-credential operation.
 The shared verifier must support a native local-credential lifecycle before the
 complete current interface can move to that door with truthful conformance.
 
+The current target names `envelope.runs.review_link`,
+`envelope.bank.request_change` and `envelope.contractors.record_payment` also
+contain underscores that the pinned Base registry rejects. The existing native
+run-review handoff cannot be registered under its contracted name until the
+shared registry accepts it or the contract owner supplies a replacement name.
+The copied shared runtime is retained without a seed-specific validation bypass.
+
 The target payroll-administrator surface in CONTRACT.md remains a target.
 Preparing earnings or notice proposals does not pay wages, remit tax, file a
 return or establish an agency receipt. Provider spend caps are not enforced by
