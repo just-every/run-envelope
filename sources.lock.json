@@ -369,7 +369,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "4d11ec8d6bbf9dc92a21139e40c429ef4e330aa590bc8cc34ea7ea3ff6c5c497",
+      "sha256": "82fe1db6905ff178867bde56a2c4ac9a7607ed0e7837ef91b80dcda71006b7f3",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -553,7 +553,7 @@
       "executable": false
     },
     "docs/payroll-agents.md": {
-      "sha256": "54329d0aee7193ac5acd312e6c2d276a9ba824accb0a64933d12654c37279f46",
+      "sha256": "6d7212fc8860314ca22586c430701937187cc22bbdf158b3892816df643c8a2b",
       "executable": false
     },
     "docs/payroll-allocations.md": {
