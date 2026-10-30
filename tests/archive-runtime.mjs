@@ -1,3 +1,4 @@
+import { agentMessage, agentValue } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -129,14 +130,14 @@ export async function archiveJourney(context) {
   }
   await grant({operatorId:fixture.creatorId,version:0,role:'accountant',locations:['*'],fields:[],actions:['records:read']})
   await grant({operatorId:fixture.creatorId,version:1,revoke:true})
-  const restricted=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+fixture.authority.agentToken,origin:context.origin,'content-type':['application','json'].join('/')},
-    body:JSON.stringify({jsonrpc:'2.0',id:5400,method:['tools','call'].join('/'),params:{name:'credentials.restrict',arguments:{fields:['tax']}}})})
+  const restricted=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',authorization:'Bearer '+fixture.authority.agentToken,origin:context.origin,'content-type':['application','json'].join('/')},
+    body:JSON.stringify(agentMessage('tools/call',{name:'credentials.restrict',arguments:{fields:['tax']}}))})
   assert.equal(restricted.status,200,await restricted.clone().text())
-  assert.equal(JSON.parse((await restricted.json()).result.content[0].text).direction,'unchanged','the archive fixture keeps the source bearer’s powers for the existing replay probe')
-  const active=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+fixture.authority.agentToken,origin:context.origin,'content-type':['application','json'].join('/')},
-    body:JSON.stringify({jsonrpc:'2.0',id:5401,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0]}}})})
+  assert.equal((await agentValue(await restricted.json())).direction,'unchanged','the archive fixture keeps the source bearer’s powers for the existing replay probe')
+  const active=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',authorization:'Bearer '+fixture.authority.agentToken,origin:context.origin,'content-type':['application','json'].join('/')},
+    body:JSON.stringify(agentMessage('tools/call',{name:'records.list',arguments:{companyId:fixture.companies[0]}}))})
   assert.equal(active.status,200,await active.clone().text())
-  assert.ok(JSON.parse((await active.json()).result.content[0].text).records.length,'the source bearer still serves populated company data before its restored replay is refused')
+  assert.ok((await agentValue(await active.json())).records.length,'the source bearer still serves populated company data before its restored replay is refused')
   const temporary = await mkdtemp(join(tmpdir(), 'envelope-archive-'))
   try {
     const source = join(temporary, 'source'), target = join(temporary, 'target'), corruptTarget = join(temporary, 'corrupt-target')
@@ -314,10 +315,10 @@ export async function archiveJourney(context) {
         assert.deepEqual(await response.json(), { error: 'authentication_required' })
       }
       const response = await context.worker.fetch(context.origin + '/api/envelope/mcp', { method: 'POST',
-        headers: { authorization: 'Bearer ' + fixture.authority.agentToken, origin: context.origin, 'content-type': 'application\u002fjson' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 53, method: ['tools', 'call'].join('/'), params: { name: 'reply.dispatch',
+        headers: {'MCP-Protocol-Version':'2025-11-25', authorization: 'Bearer ' + fixture.authority.agentToken, origin: context.origin, 'content-type': 'application\u002fjson' },
+        body: JSON.stringify(agentMessage(['tools', 'call'].join('/'),{ name: 'reply.dispatch',
           arguments: { companyId: fixture.companies[0], replyId: fixture.authority.replyId,
-            version: fixture.authority.replyVersion, digest: fixture.authority.replyDigest } } }) })
+            version: fixture.authority.replyVersion, digest: fixture.authority.replyDigest } })) })
       assert.equal(response.status, 401, 'a previously usable agent bearer cannot dispatch the retained approved reply')
       assert.equal(context.edge.mails.length, outboundBefore, 'restored credential replay makes no external request')
       await archiveAdoption(context, fixture)

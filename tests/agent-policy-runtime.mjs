@@ -7,8 +7,52 @@ import { chromium } from '@playwright/test'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 
 const answers = {standard:'autonomous',money:'autonomous',commitment:'autonomous',external:'autonomous',sensitive:'autonomous',destructive:'autonomous',accounts:'autonomous',access:'autonomous',security:'autonomous',gated:'autonomous'}
+// The shared MCP transport returns typed tool refusals in a 200 result.
+// Retain native outcome assertions, and independently assert that wire shape.
+const deliveryPair=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt'])
+const {kty,n,e}=await crypto.subtle.exportKey('jwk',deliveryPair.publicKey)
+const deliveryKey={kty,n,e}
+export async function agentValue(body) {
+  const value=body.result?.structuredContent
+  if(!value?.encryptedToken)return value
+  assert.equal(value.algorithm,'RSA-OAEP-256')
+  assert.equal(Object.hasOwn(value,'token'),false,'no plaintext bearer enters the shared result')
+  const token=new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},deliveryPair.privateKey,Buffer.from(value.encryptedToken,'base64')))
+  return {...value,token}
+}
+export function agentMessage(method,params={}) {
+  if(method==='tools/call') {
+    const aliases={'run.review':'runs.review_link','notice.process':'notices.process','reply.dispatch':'notices.reply'}
+    const raw=params.name, name=raw.startsWith('envelope.')?raw:'envelope.'+(aliases[raw]??raw)
+    const reads=['records.list','draft.read','bonus.read','reports.proposals','reports.bonuses','workspace.snapshot']
+    params={...params,name,arguments:{...params.arguments,...(raw==='credentials.rotate'?{publicKey:deliveryKey}:{}),...(reads.includes(raw)?{}:{idempotency_key:params.arguments?.requestKey??crypto.randomUUID()})}}
+  }
+  return {jsonrpc:'2.0',id:34,method,params}
+}
+export async function mcpStatus(response) {
+  const body=await response.clone().json()
+  if(body.result?.isError) {
+    assert.equal(response.status,200,'MCP tool refusals retain the successful JSON-RPC transport')
+    const error=body.result._meta?.['com.runeditrun/error']
+    assert.equal(typeof error?.code,'string','every refusal is typed')
+    const status=error.native_status??({idempotency_conflict:409,revision_conflict:409,invalid_arguments:400,record_unavailable:409,native_agent_grant_required:403,native_agent_grant_revoked:403,native_agent_admission_changed:403}[error.code])
+    assert.ok(status,'native refusal has a known status: '+error.code)
+    return status
+  }
+  if(response.status===200) assert.ok(body.result && body.result.isError!==true,'successful MCP result')
+  else assert.ok(body.error,'transport refusal is a JSON-RPC error')
+  return response.status
+}
+export async function answerSharedAgentPolicy({origin,cookie,worker=globalThis}) {
+  const r=await worker.fetch(origin+'/agents/api/policy',{method:'PUT',headers:{cookie,origin,'content-type':'application/json'},body:JSON.stringify({document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'native-journey',class:'*',do:'autonomous'}],spend:{none:true}}})})
+  if(r.status===403) {
+    const session=await worker.fetch(origin+'/auth/session',{headers:{cookie}});assert.equal(session.status,200);assert.notEqual((await session.json()).operator.role,'owner');return
+  }
+  assert.equal(r.status,200,await r.clone().text())
+}
 // Existing native-agent journeys explicitly configure their company before use.
 export async function answerAgentPolicy({origin,cookie,company,worker=globalThis}) {
+  await answerSharedAgentPolicy({origin,cookie,worker})
   const r=await worker.fetch(origin+'/api/envelope/companies/'+company+'/agents/class-policy',{method:'POST',headers:{cookie,origin,'content-type':['application','json'].join('/')},body:JSON.stringify({version:0,...answers})})
   assert.equal(r.status,200,await r.clone().text())
 }
@@ -32,9 +76,11 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     SELECT 'synthetic-envelope-9604',token_hash,id,operator_id,operator_version,'credentials:mint','/app',${now},${now+600000},${now} FROM oa_sessions WHERE token_hash='${ownerHash}'`)
   await sql(`UPDATE oa_sessions SET expires_at=${clockNow+8*86400000} WHERE token_hash='${ownerHash}'`)
   const issue=()=>data(base+'/agents',{name:'Synthetic policy agent',hours:1,actions:['records:read','drafts:prepare','drafts:read'],locations:['*'],fields:['compensation']},201)
+  await answerSharedAgentPolicy({origin,cookie})
   let credential=await issue()
-  const mcp=(name,args={},token=credential.token)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'content-type':contentType},body:JSON.stringify({jsonrpc:'2.0',id:9601,method:'tools/call',params:{name,arguments:args}})})
-  const tool=async(name,args={},status=200)=>{const r=await mcp(name,args);const body=await r.json();assert.equal(r.status,status,JSON.stringify(body));return status===200 ? JSON.parse(body.result.content[0].text) : body.error}
+  const mcp=(name,args={},token=credential.token)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':contentType,'MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
+  const tool=async(name,args={},status=200)=>{const r=await mcp(name,args);const body=await r.clone().json();assert.equal(await mcpStatus(r),status,JSON.stringify(body));const error=body.result?._meta?.['com.runeditrun/error'];return status===200 ? await agentValue(body) : {message:error?.code??body.error?.data?.code,data:error}}
+
   const rest=(path,body,token=credential.token,method)=>fetch(origin+'/api/envelope/v1/companies/'+company.id+path,{method:method??(body===undefined?'GET':'POST'),headers:{authorization:'Bearer '+token,origin,'content-type':contentType},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const cli=(args,body)=>new Promise((resolve,reject)=>{
     const child=spawn(process.execPath,['scripts/envelope-cli.mjs',...args],{env:{...process.env,ENVELOPE_ORIGIN:origin,ENVELOPE_TOKEN:credential.token},stdio:['pipe','pipe','pipe']})
@@ -86,21 +132,21 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     await configure({money:'blocked'})
     assert.equal((await tool('bonus.prepare',{...input,companyId:company.id,minutes:undefined,amountCents:25000,requestKey:'synthetic-envelope-9607'})).id,bonus.id,'blocking money leaves uncalculated preparation available')
     const old=credential.token;credential={...credential,...await tool('credentials.rotate')}
-    assert.equal((await mcp('records.list',{companyId:company.id},old)).status,401)
+    assert.equal((await mcpStatus(await mcp('records.list',{companyId:company.id},old))),401)
     assert.equal((await rest('/records')).status,200)
     // All-autonomous never supplies absent scopes or authority over another company.
     const scopedBefore=await effects()
-    assert.equal((await mcp('records.list',{companyId:foreign.id})).status,403)
+    assert.equal((await mcpStatus(await mcp('records.list',{companyId:foreign.id}))),403)
     assert.equal((await fetch(origin+'/api/envelope/v1/companies/'+foreign.id+'/records',{headers:{authorization:'Bearer '+credential.token}})).status,403)
     assert.equal((await fetch(origin+base+'/agents/pause',{method:'POST',headers:{authorization:'Bearer '+credential.token,origin,'content-type':contentType},body:JSON.stringify({version:state.version,paused:false})})).status,403)
     const limited=await data(base+'/agents',{name:'Synthetic read-only agent',hours:1,actions:['records:read'],locations:['*'],fields:[]},201)
-    assert.equal((await mcp('draft.prepare',{...input,companyId:company.id},limited.token)).status,403)
+    assert.equal((await mcpStatus(await mcp('draft.prepare',{...input,companyId:company.id},limited.token))),403)
     assert.deepEqual((await effects()).map(r=>({...r,credentials:0,hashes:''})),scopedBefore.map(r=>({...r,credentials:0,hashes:''})))
     // A bearer may reduce its own authority, never enlarge it or edit another grant.
     const disposable=await issue(), own=async(args,status=200)=>{
-      const r=await mcp('credentials.restrict',args,disposable.token),body=await r.json()
-      assert.equal(r.status,status,JSON.stringify(body))
-      return status===200?JSON.parse(body.result.content[0].text):body.error
+      const r=await mcp('credentials.restrict',args,disposable.token),body=await r.clone().json()
+      assert.equal(await mcpStatus(r),status,JSON.stringify(body))
+      return status===200?await agentValue(body):{message:body.result?._meta?.['com.runeditrun/error']?.code??body.error?.data?.code}
     }
     const unchangedGrant=()=>sql(`SELECT actions,fields,locations,version FROM env_agent_grants WHERE id='${disposable.id}'`)
     const originalGrant=await unchangedGrant()
@@ -117,13 +163,13 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.equal(repeated.direction,'unchanged')
     assert.equal(repeated.version,reduced.version,'replaying the retained scope cannot revoke another current call')
     assert.equal((await mcp('records.list',{companyId:company.id},disposable.token)).status,200)
-    assert.equal((await mcp('draft.prepare',{...input,companyId:company.id},disposable.token)).status,403)
+    assert.equal(await mcpStatus(await mcp('draft.prepare',{...input,companyId:company.id},disposable.token)),403)
     const afterNarrow=await unchangedGrant()
     assert.equal((await own({actions:['records:read','drafts:prepare'],fields:['compensation'],locations:['*']},403)).message,'self_escalation')
     assert.deepEqual(await unchangedGrant(),afterNarrow,'previous powers cannot be restored by the bearer')
-    assert.equal((await own({credentialId:credential.id,actions:[]},400)).message,'invalid_agent_scope')
+    assert.equal((await own({credentialId:credential.id,actions:[]},400)).message,'invalid_arguments')
     await data(base+'/agents/'+disposable.id+'/revoke',{version:reduced.version})
-    assert.equal((await mcp('records.list',{companyId:company.id},disposable.token)).status,403)
+    assert.equal(await mcpStatus(await mcp('records.list',{companyId:company.id},disposable.token)),401)
     const accessCalls=(await data(base+'/agents')).activity.calls.filter(c=>c.credentialId===disposable.id&&c.tool==='credentials.restrict')
     assert.ok(accessCalls.some(c=>c.decision==='executed'&&c.classes.join()==='access'&&c.facts.direction==='narrow'&&c.facts.peopleCount===1))
     assert.ok(accessCalls.some(c=>c.decision==='self_escalation'&&c.facts.direction==='widen'))
@@ -139,7 +185,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     await answerAgentPolicy({origin,cookie,company:foreign.id})
     await configure({standard:'blocked',security:'blocked',money:'blocked',sensitive:'blocked'})
     const blockedBefore=await effects()
-    for(const [name,args] of [['records.list',{companyId:company.id}],['draft.read',{companyId:company.id,draftId:prepared.id}],['draft.prepare',{...input,companyId:company.id}],['credentials.rotate',{}],['bonus.prepare',{companyId:company.id}]])assert.equal((await tool(name,args,403)).message,'policy_blocked')
+    for(const [name,args] of [['records.list',{companyId:company.id}],['draft.read',{companyId:company.id,draftId:prepared.id}],['draft.prepare',{...input,companyId:company.id}],['credentials.rotate',{}],['bonus.prepare',{companyId:company.id,personId:person.id,amountCents:25000,periodStart:input.periodStart,periodEnd:input.periodEnd,payDate:input.payDate,sourceRef:input.sourceRef,requestKey:'synthetic-envelope-blocked-bonus'}]])assert.equal((await tool(name,args,403)).message,'policy_blocked')
     assert.notEqual((await cli(['prepare',company.id],input)).code,0)
     assert.deepEqual(await effects(),blockedBefore,'blocked reads, proposals and rotation cannot change records or secrets')
     for(const decision of ['review','approval']) {await configure({standard:decision});assert.equal((await tool('draft.prepare',{...input,companyId:company.id},403)).message,'policy_'+decision+'_required');assert.deepEqual(await effects(),blockedBefore)}
@@ -154,20 +200,20 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     await pause(false)
     // A partially streamed call was already authenticated when Pause was saved.
     for(const transport of ['mcp','rest']) {
-      const beforeRace=await effects(),body=JSON.stringify(transport==='rest'?{...input,requestKey:'synthetic-envelope-race-'+transport}:{jsonrpc:'2.0',id:9602,method:'tools/call',params:{name:'draft.prepare',arguments:{...input,companyId:company.id,requestKey:'synthetic-envelope-race-'+transport}}})
+      const beforeRace=await effects(),body=JSON.stringify(transport==='rest'?{...input,requestKey:'synthetic-envelope-race-'+transport}:agentMessage('tools/call',{name:'draft.prepare',arguments:{...input,companyId:company.id,requestKey:'synthetic-envelope-race-'+transport}}))
       let controller
       const action=transport==='rest'?'transport.rest.v1':'transport.open'
       const accessBefore=(await data(base+'/agents')).access.filter(a=>a.credentialId===credential.id&&a.action===action).length
       const stream=new ReadableStream({start(c){controller=c;c.enqueue(new TextEncoder().encode(body.slice(0,-1)))}})
-      const pending=fetch(origin+(transport==='rest'?'/api/envelope/v1/companies/'+company.id+'/drafts':'/api/envelope/mcp'),{method:'POST',duplex:'half',headers:{authorization:'Bearer '+credential.token,origin,'content-type':contentType},body:stream})
+      const pending=fetch(origin+(transport==='rest'?'/api/envelope/v1/companies/'+company.id+'/drafts':'/api/envelope/mcp'),{method:'POST',duplex:'half',headers:{authorization:'Bearer '+credential.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':contentType},body:stream})
       try {
         let authenticated=false
-        for(let n=0;n<50;n++) {const activity=(await data(base+'/agents')).access;if(activity.filter(a=>a.credentialId===credential.id&&a.action===action).length>accessBefore) {authenticated=true;break}await new Promise(r=>setTimeout(r,25))}
-        assert.ok(authenticated,'authenticated call is suspended before execution')
+        for(let n=0;n<(transport==='rest'?50:1);n++) {const activity=(await data(base+'/agents')).access;if(activity.filter(a=>a.credentialId===credential.id&&a.action===action).length>accessBefore) {authenticated=true;break}await new Promise(r=>setTimeout(r,25))}
+        assert.equal(authenticated,transport==='rest','REST authenticates before streaming; MCP parses its complete request before admission')
         await pause(true)
         if(transport==='rest') await pause(false)
         controller.enqueue(new TextEncoder().encode(body.slice(-1)));controller.close()
-        const refused=await pending;assert.equal(refused.status,403,await refused.clone().text())
+        const refused=await pending;assert.equal(transport==='rest'?refused.status:await mcpStatus(refused),403,await refused.clone().text())
         assert.deepEqual(await effects(),beforeRace,'Pause fences an already-open call, including a later resume')
       } finally {try{controller.close()}catch{}await pending.catch(()=>{})}
       if(state.paused)await pause(false)
@@ -179,16 +225,16 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
       ['credentials.rotate',{},'/api/envelope/mcp'],
     ]) {
       const beforeExecution=await effects(),isRest=route.includes('/v1/')
-      const pending=fetch(origin+route,{method:isRest?'GET':'POST',headers:{authorization:'Bearer '+credential.token,origin,'content-type':contentType,'x-synthetic-policy-batch':'hold'},
-        ...(isRest?{}:{body:JSON.stringify({jsonrpc:'2.0',id:9603,method:'tools/call',params:{name,arguments:args}})})})
+      const pending=fetch(origin+route,{method:isRest?'GET':'POST',headers:{authorization:'Bearer '+credential.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':contentType,'x-synthetic-policy-batch':'hold'},
+        ...(isRest?{}:{body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})})
       try {
         let waiting=false
         for(let n=0;n<100;n++) {const observed=await fetch(origin+'/health',{headers:{'x-synthetic-policy-batch':'observe'}});if(observed.headers.get('x-synthetic-policy-state')==='waiting'){waiting=true;break}await new Promise(r=>setTimeout(r,25))}
         assert.ok(waiting,'real database execution is suspended after policy evaluation')
-        assert.ok((await data(base+'/agents')).activity.calls.some(c=>c.tool===name&&c.decision==='pending'),'the attempt is durable before execution')
+        assert.ok((await data(base+'/agents')).activity.calls.some(c=>c.tool===name&&c.decision==='pending'),'the native attempt is durable before execution')
         await pause(true)
         await fetch(origin+'/health',{headers:{'x-synthetic-policy-batch':'release'}})
-        const refused=await pending;assert.equal(refused.status,403,await refused.clone().text())
+        const refused=await pending;assert.equal(isRest?refused.status:await mcpStatus(refused),403,await refused.clone().text())
         assert.deepEqual(await effects(),beforeExecution,'Pause fences a stale read or write after policy was evaluated')
       } finally {await fetch(origin+'/health',{headers:{'x-synthetic-policy-batch':'release'}});await pending.catch(()=>{})}
       await pause(false)
@@ -210,7 +256,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     await data(base+'/agents/pause',{version:state.version,paused:true},403,staffCookie)
     await data(base+'/agents/class-policy',{version:state.version,...answers},403,staffCookie)
     const staff=await data(base+'/agents',{name:'Synthetic sponsored policy agent',hours:1,actions:['records:read'],locations:['*'],fields:[]},201,staffCookie)
-    assert.equal((await mcp('records.list',{companyId:company.id},staff.token)).status,200)
+    assert.equal((await mcpStatus(await mcp('records.list',{companyId:company.id},staff.token))),200)
     const staffView=await data(base+'/agents',undefined,200,staffCookie)
     assert.ok(staffView.activity.calls.every(c=>c.sponsorId===staffId))
     assert.deepEqual(staffView.activity.installation,[],'a company sponsor cannot read installation administration')
@@ -220,7 +266,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     await data(base+'/providers',{id:'openai',version:3,enabled:true,consent:true,secret:'synthetic-envelope-9612'},403,staffCookie)
     assert.deepEqual(await sql(`SELECT version,secret_cipher FROM env_external_providers WHERE company_id='${company.id}'`),beforeProviderRefusal)
     await data(base+'/grants',{...grant,version:1,actions:[]})
-    const revokedBefore=await effects();assert.equal((await mcp('records.list',{companyId:company.id},staff.token)).status,403);assert.deepEqual(await effects(),revokedBefore)
+    const revokedBefore=await effects();assert.equal((await mcpStatus(await mcp('records.list',{companyId:company.id},staff.token))),401);assert.deepEqual(await effects(),revokedBefore)
     // Firm accountants use the same native grants, including widening and narrowing.
     await data(base+'/grants',{...grant,version:2,role:'accountant',fields:['compensation'],actions:['records:read','rates:propose']})
     await data(base+'/grants',{...grant,version:3,role:'accountant',fields:['compensation'],actions:['records:read','rates:propose','audit:read']})
@@ -260,7 +306,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
         SELECT 'synthetic-envelope-policy-day-${day}','${dailyProofHash}',id,operator_id,operator_version,'credentials:mint','/app',${clockNow},${clockNow+600000},${clockNow} FROM oa_sessions WHERE token_hash='${ownerHash}'`)
       const daily=await issue()
       await configure({standard:day%2?'blocked':'autonomous'})
-      assert.equal((await mcp('records.list',{companyId:company.id},daily.token)).status,day%2?403:200)
+      assert.equal((await mcpStatus(await mcp('records.list',{companyId:company.id},daily.token))),day%2?403:200)
       const dayRows=await data(base+'/agents?from='+instant.slice(0,10)+'&through='+instant.slice(0,10))
       assert.equal(dayRows.activity.calls.length,1)
       assert.deepEqual(dayRows.activity.counts,[{class:'standard',decision:day%2?'policy_blocked':'executed',count:1}])

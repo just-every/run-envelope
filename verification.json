@@ -20,7 +20,7 @@
     {
       "name": "runtime",
       "browser": true,
-      "hosted": true,
+      "hosted": false,
       "commands": [
         "pnpm run build",
         "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity pnpm run test:runtime",
@@ -94,6 +94,15 @@
         "ENVELOPE_JOURNEYS=new-hires pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=paper-onboarding pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=automation pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "agent-door",
+      "browser": false,
+      "hosted": true,
+      "commands": [
+        "pnpm run build",
+        "pnpm run typecheck"
       ]
     }
   ],

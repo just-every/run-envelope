@@ -24,17 +24,20 @@ export default {
   const control=request.headers.get('x-synthetic-policy-batch')
   if(control==='release') { release?.();release=undefined;phase='idle' }
   let held=false
+  const actual=new WeakMap(),queries=new WeakMap()
+  const statement=(value,query)=>{const proxy=new Proxy(value,{get(target,key){if(key==='bind')return(...args)=>statement(target.bind(...args),query);const item=Reflect.get(target,key,target);return typeof item==='function'?item.bind(target):item}});actual.set(proxy,value);queries.set(proxy,query);return proxy}
   const database=new Proxy(env.DB,{
    get(target,key) {
-    if(key==='prepare')return sql=>target.prepare(sql.replaceAll("unixepoch('subsec')*1000",String(instant)))
+    if(key==='prepare')return sql=>statement(target.prepare(sql.replaceAll("unixepoch('subsec')*1000",String(instant))),sql)
     if(key==='batch') return async (...args)=>{
-     if(control==='hold'&&!held) {
+     const native=args[0].some(item=>(queries.get(item)||'').includes('env_'))
+     if(control==='hold'&&!held&&native) {
       held=true;phase='waiting'
       let timer
       try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }
       finally { clearTimeout(timer) }
      }
-     return target.batch(...args)
+     return target.batch(args[0].map(item=>actual.get(item)||item),...args.slice(1))
     }
     const value=Reflect.get(target,key,target)
     return typeof value==='function' ? value.bind(target) : value

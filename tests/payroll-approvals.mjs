@@ -1,4 +1,4 @@
-import { answerAgentPolicy } from './agent-policy-runtime.mjs'
+import { answerAgentPolicy, agentMessage, mcpStatus } from './agent-policy-runtime.mjs'
 // Run approval journey: exact versions, distinct people, voided approvals, no effects.
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
@@ -15,7 +15,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     fetch(origin + path, {
       method: body === undefined ? 'GET' : 'POST',
       redirect: 'manual',
-      headers: { ...(who ? { cookie: who } : {}), origin, 'content-type': 'application/json', ...extra },
+      headers: { ...(who ? { cookie: who } : {}), origin, 'MCP-Protocol-Version':'2025-11-25', 'content-type': 'application/json', ...extra },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     })
   const data = async (path, body, status = 200, who = cookie) => {
@@ -238,15 +238,13 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await answerAgentPolicy({origin,cookie,company:company.id})
     const agent = await data(base + '/agents', { name: 'synthetic-envelope-342', hours: 1, actions: ['records:read', 'drafts:prepare', 'drafts:read'],
       locations: ['*'], fields: ['compensation'], providers: [], models: [] }, 201, humans.admin.cookie)
-    const mcp = (method, params) => fetch(origin + '/api/envelope/mcp', { method: 'POST',
-      headers: { authorization: 'Bearer ' + agent.token, origin, 'content-type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 34, method, params }) })
+    const mcp=(method,params)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+agent.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage(method,params))})
     const tools = (await (await mcp('tools/list', {})).json()).result.tools.map((t) => t.name)
     assert.equal(tools.some((t) => /approve|release/.test(t)), false, 'no agent tool can approve or release a run')
     const before = await effects()
     const viaMcp = await mcp('tools/call', { name: 'run.approve', arguments: { companyId: company.id, runId: waRun, version } })
-    assert.equal(viaMcp.status, 403)
-    assert.equal((await viaMcp.json()).error.message, 'agent_tool_denied')
+    assert.equal(viaMcp.status, 400)
+    assert.equal((await viaMcp.json()).error.data.code, 'tool_not_found')
     assert.deepEqual(await effects(), before, 'an MCP approval attempt has zero effects')
     await refused(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 'human_session_required', '',
       { authorization: 'Bearer ' + agent.token }, 403)
@@ -297,9 +295,9 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     // then a different human reviews the exact amount with their own authenticator.
     const tool=async(name,args,expected=200)=>{
       const r=await mcp('tools/call',{name,arguments:args})
-      assert.equal(r.status,expected,await r.clone().text())
+      assert.equal(await mcpStatus(r),expected,await r.clone().text())
       const json=await r.json()
-      return expected===200 ? JSON.parse(json.result.content[0].text) : json
+      return expected===200 ? json.result.structuredContent : json
     }
     const bonusInput={companyId:company.id,personId:w1.id,amountCents:25000,
       periodStart:period.periodStart,periodEnd:period.periodEnd,payDate:period.payDate,
@@ -358,8 +356,10 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.deepEqual(reportRows,bonusReport.bonuses,'every paginated MCP row matches the actual CLI report')
     const priorBonusRows=await bonusRows()
     await tool('bonus.prepare',{...bonusInput,amountCents:25001},409)
-    for(const extra of [{approved:true},{human:true},{confirmation:'yes'},{amountCents:0},{amountCents:1.5},{amountCents:100000001}])
-      await tool('bonus.prepare',{...bonusInput,...extra},400)
+    for(const extra of [{approved:true},{human:true},{confirmation:'yes'}])
+      assert.equal((await tool('bonus.prepare',{...bonusInput,...extra})).id,bonus.id,'undeclared human flags are inert on the shared door replay')
+    for(const amountCents of [0,1.5,100000001])
+      await tool('bonus.prepare',{...bonusInput,amountCents,requestKey:crypto.randomUUID()},400)
     assert.deepEqual(await bonusRows(),priorBonusRows,'conflicts and spoofed preparation flags create no run')
     // Revoke a real suspended preparation after transport authentication, before
     // its JSON body finishes. Neither transport may persist the bonus afterward.
@@ -367,36 +367,36 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       await stepUp()
       const racing=await data(base+'/agents',{name:'synthetic-envelope-923',hours:1,actions:['drafts:prepare'],locations:['*'],fields:['compensation']},201,humans.admin.cookie)
       const payload=transport==='rest' ? {...bonusBody,requestKey:'synthetic-envelope-924'} :
-        {jsonrpc:'2.0',id:924,method:'tools/call',params:{name:'bonus.prepare',arguments:{...bonusInput,requestKey:'synthetic-envelope-924'}}}
+        agentMessage('tools/call',{name:'bonus.prepare',arguments:{...bonusInput,requestKey:'synthetic-envelope-924'}})
       const encoded=JSON.stringify(payload)
       let controller
       const body=new ReadableStream({start(stream){controller=stream;stream.enqueue(new TextEncoder().encode(encoded.slice(0,-1)))}})
       const pending=fetch(origin+(transport==='rest'?'/api/envelope/v1/companies/'+company.id+'/bonus-runs':'/api/envelope/mcp'),
-        {method:'POST',duplex:'half',signal:AbortSignal.timeout(10000),headers:{authorization:'Bearer '+racing.token,origin,'content-type':'application/json'},body})
+        {method:'POST',duplex:'half',signal:AbortSignal.timeout(10000),headers:{authorization:'Bearer '+racing.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body})
       try {
         let opened=false
-        for(let attempt=0;attempt<80;attempt++) {
+        for(let attempt=0;attempt<(transport==='rest'?80:1);attempt++) {
           opened=(await sql(`SELECT COUNT(*) AS n FROM env_agent_access WHERE credential_id='${racing.id}' AND action='${transport==='rest'?'transport.rest.v1':'transport.open'}'`))[0].n>0
           if(opened)break
           await new Promise(resolve=>setTimeout(resolve,25))
         }
-        assert.equal(opened,true,'the request genuinely authenticated before revocation')
+        assert.equal(opened,transport==='rest','MCP parses the complete request before authentication; REST authenticates before streaming')
         await data(base+'/agents/'+racing.id+'/revoke',{version:1},200,humans.admin.cookie)
       } finally {
         controller.enqueue(new TextEncoder().encode(encoded.slice(-1)));controller.close()
       }
       const denied=await pending
-      assert.equal(denied.status,403,await denied.clone().text())
+      assert.equal(denied.status,transport==='rest'?403:401,await denied.clone().text())
       assert.deepEqual(await bonusRows(),priorBonusRows,'revocation in flight persists no bonus')
     }
 
     const foreign=await data(base+'/agents',{name:'synthetic-envelope-918',hours:1,actions:['drafts:read'],locations:['*'],fields:['compensation']},201,humans.admin.cookie)
-    const foreignCall=async(name)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+foreign.token,origin,'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:915,method:'tools/call',params:{name,arguments:{companyId:company.id,runId:bonus.id}}})})
+    const foreignCall=async(name)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+foreign.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:{companyId:company.id,runId:bonus.id}}))})
     const foreignReport=await fetch(origin+'/api/envelope/v1/companies/'+company.id+'/reports/bonus-runs',{headers:{authorization:'Bearer '+foreign.token}})
     assert.equal(foreignReport.status,200)
     assert.deepEqual((await foreignReport.json()).bonuses,[],'foreign credential receives no bonus compensation in reports')
-    assert.equal((await foreignCall('bonus.read')).status,403)
-    assert.equal((await foreignCall('run.review')).status,404)
+    assert.equal((await mcpStatus(await foreignCall('bonus.read'))),403)
+    assert.equal((await mcpStatus(await foreignCall('run.review'))),404)
     const foreignPrepare=await bonusCli('bonus',{...bonusBody,requestKey:'synthetic-envelope-919'},foreign.token)
     assert.equal(foreignPrepare.code,1,'a read-only credential cannot prepare')
     const bonusPresentation=await tool('run.review',{companyId:company.id,runId:bonus.id})
@@ -418,13 +418,13 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await capture('bonus-human-approved',screen,'approver-b')
     await release(bonus.id,1,'run_not_payable')
     await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${foreign.id}'`)
-    assert.equal((await foreignCall('bonus.read')).status,403)
+    assert.equal((await mcpStatus(await foreignCall('bonus.read'))),401)
     console.log('BONUS-PREPARATION passed: native encrypted exact bonus earnings via CLI and conversational MCP, cross-transport idempotency, no foreign credential or scope escalation, separately authenticated passkey approval and client attribution, calculation holds and no release; 1440 and 390.')
 
     await data(base+'/agents/'+agent.id+'/revoke',{version:1},200,humans.admin.cookie)
-    await tool('reports.bonuses',{companyId:company.id},403)
-    await tool('bonus.read',{companyId:company.id,runId:bonus.id},403)
-    await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},403)
+    await tool('reports.bonuses',{companyId:company.id},401)
+    await tool('bonus.read',{companyId:company.id,runId:bonus.id},401)
+    await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},401)
     assert.equal((await bonusCli('bonus-status')).code,1)
     await refused(door+'/earnings-run/'+waRun+'/approve',{version,reviewToken:pendingPresentation.reviewToken,...pendingProof},'presenting_client_revoked',cookie,{},403)
 
@@ -725,7 +725,7 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     // reads and human approval when a current privacy request holds the worker.
     await stepUp()
     const custodyClient=await data(base+'/agents',{name:'synthetic-envelope-925',hours:1,actions:['drafts:prepare','drafts:read'],locations:['*'],fields:['compensation']},201,humans.admin.cookie)
-    const custodyRequest=await fetch(origin+'/api/envelope/v1/companies/'+company.id+'/bonus-runs',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'content-type':'application/json'},body:JSON.stringify({...bonusBody,requestKey:'synthetic-envelope-926'})})
+    const custodyRequest=await fetch(origin+'/api/envelope/v1/companies/'+company.id+'/bonus-runs',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify({...bonusBody,requestKey:'synthetic-envelope-926'})})
     assert.equal(custodyRequest.status,201,await custodyRequest.clone().text())
     const custodyRun=await custodyRequest.json()
     const privacy=base+'/people/'+w1.id+'/privacy', inventory=await data(privacy)
@@ -736,8 +736,10 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
       assert.equal(held.status,403)
       assert.doesNotMatch(await held.text(),/25000|Synthetic Seattle cook|synthetic-envelope-915/,'held reads disclose no bonus compensation')
     }
-    const heldMcp=await fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:925,method:'tools/call',params:{name:'bonus.read',arguments:{companyId:company.id,runId:custodyRun.id}}})})
-    assert.equal(heldMcp.status,403)
+    const heldMcp=await fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+custodyClient.token,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name:'bonus.read',arguments:{companyId:company.id,runId:custodyRun.id}}))})
+    assert.equal(await mcpStatus(heldMcp),401)
+    assert.match(heldMcp.headers.get('www-authenticate'),/Bearer/,'a custody-inadmissible native credential receives the shared authentication challenge')
+    assert.doesNotMatch(await heldMcp.text(),/25000|Synthetic Seattle cook|synthetic-envelope-915/,'held MCP result discloses no bonus compensation')
     await capture('bonus-custody-held',screen,'approver-b')
     console.log('BONUS-CUSTODY passed: suspended REST and MCP preparations lose authority after revocation; native inventory retains the actual bonus derivative, and an explicit privacy hold denies agent preview and report reads and human access without compensation disclosure; 1440 and 390.')
 

@@ -1,0 +1,563 @@
+{
+  "schema": "rer-agent-surface/1",
+  "seed": "envelope",
+  "specialist": "payroll",
+  "capabilities": [
+    "tools",
+    "policy",
+    "pause",
+    "audit",
+    "idempotency"
+  ],
+  "tools": [
+    {
+      "name": "envelope.credentials.restrict",
+      "scope": "credentials:restrict",
+      "readOnly": false,
+      "classes": [
+        "access"
+      ],
+      "clauses": [
+        "SURFACE-006",
+        "ENV-052"
+      ],
+      "sponsorEscalation": false
+    },
+    {
+      "name": "envelope.credentials.rotate",
+      "scope": "credentials:rotate",
+      "readOnly": false,
+      "classes": [
+        "security"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-052"
+      ],
+      "sponsorEscalation": false
+    },
+    {
+      "name": "envelope.notices.process",
+      "scope": "notices:process",
+      "readOnly": false,
+      "classes": [
+        "sensitive",
+        "external"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-025",
+        "ENV-055",
+        "ENV-062"
+      ]
+    },
+    {
+      "name": "envelope.notices.reply",
+      "scope": "dispatch:execute",
+      "readOnly": false,
+      "classes": [
+        "commitment",
+        "external"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-025",
+        "ENV-055",
+        "ENV-062"
+      ]
+    },
+    {
+      "name": "envelope.bonus.prepare",
+      "scope": "drafts:prepare",
+      "readOnly": false,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-009",
+        "ENV-030",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.bonus.read",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.runs.review_link",
+      "scope": "drafts:read",
+      "readOnly": false,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-029",
+        "ENV-034"
+      ]
+    },
+    {
+      "name": "envelope.records.list",
+      "scope": "records:read",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-028",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.draft.prepare",
+      "scope": "drafts:prepare",
+      "readOnly": false,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.reports.bonuses",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-024",
+        "ENV-030",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.reports.proposals",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-024",
+        "ENV-030",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.draft.read",
+      "scope": "drafts:read",
+      "readOnly": true,
+      "classes": [
+        "sensitive"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-052"
+      ]
+    },
+    {
+      "name": "envelope.workspace.snapshot",
+      "scope": "records:read",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "SURFACE-001",
+        "SURFACE-006",
+        "ENV-030",
+        "ENV-056"
+      ]
+    }
+  ],
+  "resources": [],
+  "notTools": [
+    {
+      "clauses": [
+        "ENV-053"
+      ],
+      "reason": "import-door"
+    },
+    {
+      "clauses": [
+        "ENV-050",
+        "ENV-055",
+        "ENV-057",
+        "ENV-058",
+        "ENV-073",
+        "ENV-030"
+      ],
+      "reason": "installation"
+    },
+    {
+      "clauses": [
+        "ENV-022",
+        "ENV-034",
+        "ENV-051"
+      ],
+      "reason": "screen"
+    },
+    {
+      "clauses": [
+        "ENV-045"
+      ],
+      "reason": "device"
+    },
+    {
+      "clauses": [
+        "ENV-031",
+        "ENV-040",
+        "ENV-041",
+        "ENV-042"
+      ],
+      "reason": "connector"
+    }
+  ],
+  "witness": {
+    "tool": "envelope.workspace.snapshot",
+    "args": {}
+  },
+  "escalations": [],
+  "journey": [
+    {
+      "id": "credentials-restrict",
+      "tool": "envelope.credentials.restrict",
+      "args": {
+        "actions": {
+          "$fixture": "actions",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "access"
+        }
+      ]
+    },
+    {
+      "id": "workspace-snapshot",
+      "tool": "envelope.workspace.snapshot",
+      "args": {},
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "records-list",
+      "tool": "envelope.records.list",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "tool": "envelope.draft.prepare",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "personId": {
+          "$fixture": "person",
+          "pointer": ""
+        },
+        "periodStart": "2026-10-01",
+        "periodEnd": "2026-10-07",
+        "payDate": "2026-10-09",
+        "sourceRef": "native-conformance",
+        "requestKey": {
+          "$fixture": "key",
+          "pointer": ""
+        },
+        "minutes": 480
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "draft-read",
+      "tool": "envelope.draft.read",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "draftId": {
+          "$from": "draft",
+          "pointer": "/id"
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "bonus",
+      "tool": "envelope.bonus.prepare",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "personId": {
+          "$fixture": "person",
+          "pointer": ""
+        },
+        "periodStart": "2026-10-01",
+        "periodEnd": "2026-10-07",
+        "payDate": "2026-10-09",
+        "sourceRef": "native-conformance",
+        "requestKey": {
+          "$fixture": "key",
+          "pointer": ""
+        },
+        "amountCents": 50000
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "bonus-read",
+      "tool": "envelope.bonus.read",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "runId": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "reports-proposals",
+      "tool": "envelope.reports.proposals",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "reports-bonuses",
+      "tool": "envelope.reports.bonuses",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        }
+      ]
+    },
+    {
+      "id": "run-review",
+      "tool": "envelope.runs.review_link",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "runId": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
+      "id": "notice-process",
+      "tool": "envelope.notices.process",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "noticeId": {
+          "$fixture": "notice",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "sensitive"
+        },
+        {
+          "class": "external"
+        }
+      ]
+    },
+    {
+      "id": "reply-dispatch",
+      "tool": "envelope.notices.reply",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "replyId": {
+          "$fixture": "reply",
+          "pointer": ""
+        },
+        "version": {
+          "$fixture": "replyVersion",
+          "pointer": ""
+        },
+        "digest": {
+          "$fixture": "replyDigest",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "commitment"
+        },
+        {
+          "class": "external"
+        }
+      ]
+    },
+    {
+      "id": "credentials-rotate",
+      "tool": "envelope.credentials.rotate",
+      "args": {
+        "publicKey": {
+          "$fixture": "rotationKey",
+          "pointer": ""
+        }
+      },
+      "expect": [
+        {
+          "class": "security"
+        }
+      ]
+    }
+  ],
+  "spend": {
+    "none": true
+  },
+  "verification": {
+    "owner": {
+      "initializer": "tests/agent-door/owner.mjs",
+      "bindings": {
+        "MAIL_FROM": {
+          "module": "tests/agent-door/mail-from.mjs"
+        },
+        "ENVELOPE_RECORD_KEY": {
+          "module": "tests/agent-door/record-key.mjs"
+        }
+      }
+    },
+    "agent": {
+      "initializer": "tests/agent-door/agent.mjs"
+    },
+    "fixtures": {
+      "module": "tests/agent-door/fixtures.mjs"
+    },
+    "network": {
+      "module": "tests/agent-door/network.mjs",
+      "origins": [
+        "https://api.openai.com",
+        "https://api.resend.com"
+      ]
+    },
+    "reviewers": [
+      {
+        "label": "inactive",
+        "email": "synthetic-inactive@example.com",
+        "initializer": "tests/agent-door/reviewer.mjs"
+      },
+      {
+        "label": "excluded",
+        "email": "synthetic-excluded@example.com",
+        "initializer": "tests/agent-door/reviewer.mjs"
+      }
+    ],
+    "sponsors": [
+      {
+        "label": "owner"
+      },
+      {
+        "label": "inactive",
+        "email": "synthetic-inactive@example.com",
+        "role": "member",
+        "negativeOnly": true,
+        "initializer": "tests/agent-door/negative-sponsor.mjs"
+      },
+      {
+        "label": "excluded",
+        "email": "synthetic-excluded@example.com",
+        "role": "member",
+        "negativeOnly": true,
+        "initializer": "tests/agent-door/negative-sponsor.mjs"
+      }
+    ],
+    "journey": "tests/agent-door/rotation-journey.mjs"
+  }
+}

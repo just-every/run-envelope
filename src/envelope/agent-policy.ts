@@ -10,6 +10,7 @@ export type ClassAnswers = Record<typeof agentClasses[number], typeof policyDeci
 // These facts describe today's native doors. A proposal cannot approve payroll.
 export const toolClasses: Record<string, readonly string[]> = {
   'records.list': ['standard'],
+  'workspace.snapshot': ['standard'],
   'draft.prepare': ['standard'],
   'draft.read': ['sensitive'],
   'reports.proposals': ['sensitive'],
@@ -66,24 +67,25 @@ export class AgentPolicy {
     if (!row[0].results.length) throw new PayrollError('policy_or_authority_changed',409)
     return this.read(actor)
   }
-  async activity(actor: Actor, from?: string, through?: string) {
+  async activity(actor: Actor, from?: string, through?: string, operation = '') {
     if (actor.grant.role !== 'owner' && !actor.grant.actions.includes('records:read')) throw new PayrollError('sponsor_scope_denied',403)
     const today = new Date().toISOString().slice(0,10)
     const end = date(through ?? today), start = date(from ?? new Date(Date.parse(end) - 6*86400000).toISOString().slice(0,10))
     if (start>end || Date.parse(end)-Date.parse(start)>31*86400000) throw new PayrollError('invalid_audit_period')
-    const f = fence(actor), filter = `a.company_id=? AND a.occurred_at>=? AND a.occurred_at<? AND (?='owner' OR a.sponsor_id=?) AND ${f.sql}`,
-      args = [actor.company,Date.parse(start),Date.parse(end)+86400000,actor.grant.role,actor.session.operator.id,...f.args]
+    if(operation && !/^[A-Za-z0-9-]{1,200}$/.test(operation))throw new PayrollError('invalid_operation_query')
+    const f = fence(actor), filter = `a.company_id=? AND (?='' OR a.door_operation_id=?) AND a.occurred_at>=? AND a.occurred_at<? AND (?='owner' OR a.sponsor_id=?) AND ${f.sql}`,
+      args = [actor.company,operation,operation,Date.parse(start),Date.parse(end)+86400000,actor.grant.role,actor.session.operator.id,...f.args]
     // An old installation can still supply its genuine pre-upgrade archive fixture.
     // New restriction calls require the migrated facts table and fail closed without it.
     const migrated=Boolean(await this.records.statement("SELECT 1 FROM sqlite_master WHERE type='view' AND name='env_classified_actions'").first())
     const [calls, counts, changes, installation] = await this.records.env.DB.batch<Record<string,unknown>>([
-      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,g.name AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,${migrated ? "COALESCE((SELECT facts FROM env_agent_call_facts WHERE call_id=a.id),'{}')" : "'{}'"} AS facts,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt
+      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,COALESCE(a.door_agent_name,g.name) AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,${migrated ? "COALESCE((SELECT facts FROM env_agent_call_facts WHERE call_id=a.id),'{}')" : "'{}'"} AS facts,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt,a.door_operation_id AS operationId
         FROM env_agent_call_audit a JOIN env_agent_grants g ON g.id=a.credential_id JOIN oa_operators o ON o.id=a.sponsor_id
         WHERE ${filter} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args),
       this.records.statement(`SELECT c.value AS class,a.decision,COUNT(*) AS count FROM env_agent_call_audit a,json_each(a.classes) c WHERE ${filter} GROUP BY c.value,a.decision ORDER BY c.value,a.decision`,args),
       migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.target_id AS targetId,a.classes,a.facts,a.occurred_at AS occurredAt
         FROM env_classified_actions a JOIN oa_operators o ON o.id=a.actor_id WHERE a.company_id=? AND a.occurred_at>=? AND a.occurred_at<?
-        AND (?='owner' OR a.actor_id=?) AND ${f.sql} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args) : this.records.statement('SELECT 1 WHERE 0'),
+        AND (?='owner' OR a.actor_id=?) AND ${f.sql} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,[actor.company,Date.parse(start),Date.parse(end)+86400000,actor.grant.role,actor.session.operator.id,...f.args]) : this.records.statement('SELECT 1 WHERE 0'),
       migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.classes,a.facts,a.created_at AS occurredAt
         FROM env_installation_classified_actions a JOIN oa_operators o ON o.id=a.actor_id
         WHERE a.created_at>=? AND a.created_at<? AND ?='native' AND EXISTS(SELECT 1 FROM oa_bootstrap b JOIN oa_operators current_owner ON current_owner.id=b.claim_id
@@ -93,6 +95,25 @@ export class AgentPolicy {
     const decoded=(c:Record<string,unknown>): Record<string,unknown> & {classes:string[];facts:Record<string,unknown>}=>({...c,classes:JSON.parse(String(c.classes)),facts:JSON.parse(String(c.facts))})
     return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
   }
+}
+
+/** Current native company restrictions also govern retained shared-door receipts. */
+export async function requireAgentPolicy(agent:AgentTools,tool:string) {
+  const row=await agent.env.DB.prepare('SELECT version,answers,paused FROM env_agent_class_policy WHERE company_id=?').bind(agent.grant.company_id).first<PolicyRow>()
+  const setupLink='/app/envelope/companies/'+encodeURIComponent(agent.grant.company_id)+'/agents#class-policy'
+  const fail=async(code:string):Promise<never>=>{
+    const ctx=agent.doorContext
+    await agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers)
+      VALUES(?,?,?,?,?,'shared-door',?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),agent.grant.company_id,agent.grant.id,agent.grant.sponsor_id,tool,JSON.stringify(toolClasses[tool]??['standard']),code,row?.version??0,Date.now(),ctx?.agent.id??null,ctx?.agent.name??null,ctx?.operationId??null,ctx?.consent??null,ctx?JSON.stringify(ctx.approvers):null).run()
+    throw new AgentPolicyError(code,setupLink)
+  }
+  if(row?.paused)return fail('agents_paused')
+  if(!row?.answers)return fail('policy_unset')
+  const answers=JSON.parse(row!.answers!) as ClassAnswers,classes=toolClasses[tool]??['standard']
+  if(agentClasses.some(c=>!policyDecisions.includes(answers[c])))return fail('policy_unset')
+  if(classes.some(c=>answers[c as keyof ClassAnswers]==='blocked'))return fail('policy_blocked')
+  if(classes.some(c=>answers[c as keyof ClassAnswers]==='approval'))return fail('policy_approval_required')
+  if(classes.some(c=>answers[c as keyof ClassAnswers]==='review'))return fail('policy_review_required')
 }
 
 /** Restriction only: policy cannot supply a scope, a human decision or provider consent. */
@@ -117,8 +138,8 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
     try {facts={direction:agent.restriction(input).direction,peopleCount:1}}
     catch {facts={direction:'invalid',peopleCount:1}}
   }
-  const audit=agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at)
-    VALUES(?,?,?,?,?,?,?,'pending',0,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now())
+  const audit=agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers)
+    VALUES(?,?,?,?,?,?,?,'pending',0,?,?,?,?,?,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now(),agent.doorContext?.agent.id??null,agent.doorContext?.agent.name??null,agent.doorContext?.operationId??null,agent.doorContext?.consent??null,agent.doorContext?JSON.stringify(agent.doorContext.approvers):null)
   if (tool==='credentials.restrict') await agent.env.DB.batch([audit,agent.env.DB.prepare('INSERT INTO env_agent_call_facts(call_id,facts) VALUES(?,?)').bind(id,JSON.stringify(facts))])
   else await audit.run()
   try {

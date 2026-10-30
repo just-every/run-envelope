@@ -1,3 +1,4 @@
+import type { ToolContext } from '../modules/agent-door/index.ts'
 import { policyFence } from './agent-policy'
 import type { Bindings } from '../auth.server'
 import type { Records, Input } from './records'
@@ -16,7 +17,7 @@ const inheritedActions: Record<string, string[]> = {
   'dispatch:execute': ['notices:read', 'notices:dispatch'],
 }
 
-interface AgentGrant {
+export interface AgentGrant {
   id: string
   company_id: string
   sponsor_id: string
@@ -33,7 +34,7 @@ interface AgentGrant {
   secret_expires_at: number
   token_hash: string
 }
-const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,(SELECT secret_expires_at FROM env_agent_credentials WHERE id=env_agent_grants.id) AS secretExpiresAt,revoked_at AS revokedAt,version`
+const metadataColumns = `id,name,sponsor_id AS sponsorId,(SELECT display_name FROM oa_operators WHERE id=env_agent_grants.sponsor_id) AS sponsorName,actions,fields,locations,providers,models,created_at AS createdAt,expires_at AS expiresAt,(SELECT secret_expires_at FROM env_agent_credentials WHERE id=env_agent_grants.id) AS secretExpiresAt,revoked_at AS revokedAt,version,(SELECT agent_id FROM env_business_agent_bindings WHERE grant_id=env_agent_grants.id LIMIT 1) AS businessAgentId`
 const uuid = () => crypto.randomUUID()
 const list = (value: unknown, allowed: readonly string[]) => {
   const entries = Array.isArray(value)
@@ -109,6 +110,7 @@ export class AgentSettings {
   async issue(actor: Actor, input: Input) {
     this.sponsor(actor)
     await requirePayrollProof(this.records.env, actor)
+    const businessAgentId = input.businessAgentId === undefined ? null : text(input.businessAgentId, 200)
     const name = text(input.name),
       hours = integer(input.hours),
       actions = list(input.actions, agentActions)
@@ -190,9 +192,11 @@ export class AgentSettings {
         'EXISTS(SELECT 1 FROM env_agent_credentials WHERE id=?)',
         [id],
       ),
+      this.records.statement(`INSERT INTO env_business_agent_bindings(agent_id,grant_id,sponsor_id)
+        SELECT ?,id,sponsor_id FROM env_agent_grants WHERE id=? AND ? IS NOT NULL`,[businessAgentId,id,businessAgentId]),
     ])
     if (!result[0].results.length) throw new PayrollError('authority_or_proof_changed', 409)
-    return { id, token, expiresAt, secretExpiresAt, sponsorId: actor.session.operator.id }
+    return { id, token, expiresAt, secretExpiresAt, sponsorId: actor.session.operator.id, ...(businessAgentId?{businessAgentId}:{}) }
   }
   async revoke(actor: Actor, id: string, input: Input) {
     this.sponsor(actor)
@@ -225,7 +229,7 @@ export class AgentSettings {
     return (
       await this.records
         .statement(
-          `SELECT credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt FROM env_agent_access WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
+          `SELECT credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt,door_agent_name AS agentLabel,door_operation_id AS operationId,door_approvers AS approvers FROM env_agent_access WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
           [actor.company, actor.grant.role, actor.session.operator.id, ...f.args],
         )
         .all<Record<string, unknown>>()
@@ -245,6 +249,7 @@ export class AgentSettings {
   }
 }
 export class AgentTools {
+  doorContext?: ToolContext
   callPolicyVersion?: number
   authenticatedPolicyVersion?: number
   constructor(
@@ -349,18 +354,23 @@ export class AgentTools {
       ? { sql: '1', args: [] }
       : { sql: `${column} IN (SELECT value FROM json_each(?))`, args: [this.grant.locations] }
   }
-  log(action: string, target: string, condition = '1', args: unknown[] = []) {
+  log(action: string, target: string, condition = '1', args: unknown[] = [], event = uuid()) {
     const f = this.fence()
     return this.env.DB.prepare(
-      `INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at) SELECT ?,?,?,?,?,?,? WHERE ${f.sql} AND ${condition}`,
+      `INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers) SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${f.sql} AND ${condition}`,
     ).bind(
-      uuid(),
+      event,
       this.grant.company_id,
       this.grant.id,
       this.grant.sponsor_id,
       action,
       target,
       Date.now(),
+      this.doorContext?.agent.id ?? null,
+      this.doorContext?.actor.label ?? null,
+      this.doorContext?.operationId ?? null,
+      this.doorContext?.consent ?? null,
+      this.doorContext ? JSON.stringify(this.doorContext.approvers) : null,
       ...f.args,
       ...args,
     )
@@ -376,17 +386,7 @@ export class AgentTools {
       l = this.location('location_id'),
       event = uuid()
     const result = await this.env.DB.batch<Record<string, unknown>>([
-      this.env.DB.prepare(
-        `INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at) SELECT ?,?,?,?,'records:read',?,? WHERE ${f.sql}`,
-      ).bind(
-        event,
-        this.grant.company_id,
-        this.grant.id,
-        this.grant.sponsor_id,
-        this.grant.company_id,
-        Date.now(),
-        ...f.args,
-      ),
+      this.log('records:read',this.grant.company_id,'1',[],event),
       this.env.DB.prepare(
         `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) AND id>? ORDER BY id LIMIT ?`,
       ).bind(this.grant.company_id, ...l.args, ...f.args, event, after, limit + 1),
@@ -403,8 +403,7 @@ export class AgentTools {
     if (limit>100) throw new PayrollError('invalid_report_query')
     const after=input.after===undefined ? '' : text(input.after,80), f=this.fence(), l=this.location('p.location_id'), event=uuid()
     const result=await this.env.DB.batch<Record<string,unknown>>([
-      this.env.DB.prepare(`INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at) SELECT ?,?,?,?,'reports:proposals',?,? WHERE ${f.sql}`)
-        .bind(event,this.grant.company_id,this.grant.id,this.grant.sponsor_id,this.grant.company_id,Date.now(),...f.args),
+      this.log('reports:proposals',this.grant.company_id,'1',[],event),
       this.env.DB.prepare(`SELECT d.id,d.person_id AS personId,d.person_version AS personVersion,d.rate_id AS rateId,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,(p.version!=d.person_version) AS stale
         FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id
         WHERE d.company_id=? AND d.credential_id=? AND d.id>? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?) ORDER BY d.id LIMIT ?`)

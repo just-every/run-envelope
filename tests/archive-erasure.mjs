@@ -1,3 +1,4 @@
+import { agentMessage } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
@@ -205,8 +206,8 @@ export async function archiveErasure(context, fixture) {
   const ownerIntakes = await (await call(intakeDoor)).json()
   for (const source of fixture.erasedIntakes) assert.equal(ownerIntakes.filter(row=>row.id===source.id).length,2,'current owner retains exact held source history')
   for(const path of privateDoors) assert.equal((await call(path,undefined,{cookie:viewerCookie})).status,403,'held private originals remain restricted')
-  const scopedRead=await worker.fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+fixture.authority.agentToken},body:JSON.stringify({jsonrpc:'2.0',id:54,method:['tools','call'].join('/'),params:{name:'records.list',arguments:{companyId:fixture.companies[0],personId:fixture.privacyPersonId}}})})
-  assert.equal(scopedRead.status,403,'a previously usable sponsored bearer cannot read retained company data')
+  const scopedRead=await worker.fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+fixture.authority.agentToken},body:JSON.stringify(agentMessage(['tools','call'].join('/'),{name:'records.list',arguments:{companyId:fixture.companies[0],personId:fixture.privacyPersonId}}))})
+  assert.equal(scopedRead.status,401,'a previously usable sponsored bearer is challenged before retained company reads')
   await browserProof('loaded',privacyDoor.replace('/api/','/app/'),/Local inventory: held/)
   const providerDoor=company+'/privacy-provider-requests'
   const requestHistory=await (await call(company+'/privacy-requests')).json()

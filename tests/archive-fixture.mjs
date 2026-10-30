@@ -1,4 +1,4 @@
-import { answerAgentPolicy } from './agent-policy-runtime.mjs'
+import { answerAgentPolicy, agentMessage } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { industryFixture, ordinaryFacts } from './industry-fixture.mjs'
@@ -161,7 +161,7 @@ export async function archiveFixture(context) {
   await payroll.data(company.base+'/providers',{id:'openai',version:aiProviders.find(p=>p.id==='openai').version,enabled:true,consent:true,secret:'synthetic-envelope-privacy-ai'},201)
   const aiAgent=await payroll.data(company.base+'/agents',{name:'Synthetic privacy analysis',hours:1,actions:['notices:process'],fields:['tax'],locations:['*'],providers:['openai'],models:['gpt-4.1-mini']},201)
   const invoke=async(token,name,args)=>{
-    const response=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{origin:context.origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+token},body:JSON.stringify({jsonrpc:'2.0',id:541,method:['tools','call'].join('/'),params:{name,arguments:args}})})
+    const response=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',origin:context.origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+token},body:JSON.stringify(agentMessage(['tools','call'].join('/'),{name,arguments:args}))})
     assert.equal(response.status,200,await response.clone().text())
     return JSON.parse((await response.json()).result.content[0].text)
   }
@@ -203,7 +203,7 @@ export async function archiveFixture(context) {
     title:'Review synthetic erased payroll',details:'Private payroll preparation derivative',dueDate:'2026-10-30',dueTime:'16:00',timeZone:'UTC',evidenceRef:'Synthetic current payroll source',assigneeId:owner},201)
   await answerAgentPolicy({...context,company:privacyPayroll.id})
   const draftAgent=await payroll.data(privacyBase+'/agents',{name:'Synthetic local draft custody',hours:1,actions:['drafts:prepare','drafts:read','records:read'],fields:['compensation'],locations:['*'],providers:[],models:[]},201)
-  const rpc=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{origin:context.origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+draftAgent.token},body:JSON.stringify({jsonrpc:'2.0',id:540,method:['tools','call'].join('/'),params:{name:'draft.prepare',arguments:{companyId:privacyPayroll.id,personId:privacyWorker.id,minutes:480,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',sourceRef:'Synthetic reviewed input',requestKey:'synthetic-envelope-privacy-draft'}}})})
+  const rpc=await context.worker.fetch(context.origin+'/api/envelope/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',origin:context.origin,'content-type':['application','json'].join('/'),authorization:'Bearer '+draftAgent.token},body:JSON.stringify(agentMessage(['tools','call'].join('/'),{name:'draft.prepare',arguments:{companyId:privacyPayroll.id,personId:privacyWorker.id,minutes:480,periodStart:'2026-10-19',periodEnd:'2026-10-25',payDate:'2026-10-30',sourceRef:'Synthetic reviewed input',requestKey:'synthetic-envelope-privacy-draft'}}))})
   assert.equal(rpc.status,200,await rpc.clone().text())
   const draft=JSON.parse((await rpc.json()).result.content[0].text)
   const privacyClaims=await claimsFixture(context,{willow:capture})
