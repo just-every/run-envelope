@@ -22,6 +22,7 @@ export function payrollDoors(f, claim, notice) {
   '/recovery', '/recovery/consents', '/recovery/' + id + '/tax-history', '/reports/combined-labor'])
  add(company, ['', '/{calculation-preview,calculation-coverage,funding-accounts,funding-plans,new-hire-coverage,operations,webhooks,workspace,schedules,rules,pay-settings,providers,notices,agents,drafts,setup,locations,paper-policy,grants,people,labor-actuals,privacy-provider-requests,privacy-requests,audit,export}',
   '/funding-plans/' + id + '/release', '/new-hire-elections', '/new-hire-elections/' + id + '/{review,approve}',
+  '/operations/diagnose', '/case-policy',
   '/webhooks/' + id + '/{revoke,deliver,recover}', '/hris-hires', '/hris-hires/' + id + '/{review,approve,apply}',
   '/rules/review/' + id, '/rules/' + id + '/{approve,withdraw}',
   '/pay-settings/{intake,intake-preview,preview,earnings-run,group,pay-item,pay-change,proration-policy,approval-policy,run-input}',
@@ -32,7 +33,7 @@ export function payrollDoors(f, claim, notice) {
   '/pay-settings/{group,pay-item,pay-change,proration-policy,approval-policy,run-input}/' + id + '/{approve,withdraw}',
   '/notices/' + notice.id, '/notices/' + notice.id + '/{people,replies,case}',
   '/notices/' + notice.id + '/case/{review,approve,evidence,link-rate}', '/notices/' + notice.id + '/case/original/1/0',
-  '/notice-replies/' + id + '/{review,approve,withdraw}', '/agents/{policy,access}', '/agents/' + id + '/revoke',
+  '/notice-replies/' + id + '/{review,approve,withdraw}', '/agents/{policy,access,class-policy,pause}', '/agents/' + id + '/revoke',
   '/setup/{profile,jurisdictions}', '/privacy-provider-requests/' + id, '/rates/' + id, '/rates/' + id + '/approve',
   '/ny-dbl-plans', '/ny-dbl-plans/' + id + '/{review,approve}'])
  add(person, ['', '/{private,rates,hi-benefits,retirement,ny-dbl,withholding-instructions,new-hire-reports,paper-onboarding,verification,hris,earnings-sources,leave,allocations,privacy,erase}',

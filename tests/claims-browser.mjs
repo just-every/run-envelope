@@ -401,6 +401,7 @@ export async function safeInputsBrowser({context,f}) {
    '/auth/session','/auth/operators','/auth/sessions','/auth/domain-rules','/auth/providers','/auth/settings/identity',
    '/auth/invite/cancel','/auth/operator/status','/auth/operator/role','/auth/session/revoke','/auth/step-up',
    '/auth/providers/unlink','/auth/providers/relink','/auth/settings/business','/auth/setup-complete','/auth/email','/auth/display-name',
+   '/auth/policies','/auth/policy-runs','/auth/policy/approve','/auth/policy/revoke','/auth/review-session',
    '/auth/dependencies/setup','/auth/dependencies/relink','/auth/dependencies/unlink'])]
   const targetSession=(await context.sql("SELECT id FROM oa_sessions WHERE operator_id='"+f.operator.id+"' AND revoked_at IS NULL ORDER BY created_at LIMIT 1"))[0].id
   const privateBefore=await payrollSnapshot(context.sql),inventory=[]
@@ -418,7 +419,8 @@ export async function safeInputsBrowser({context,f}) {
   // Valid protocol messages reach authentication instead of passing only a
   // malformed-request refusal. Discovery stays public and contains no records.
   const discover=['server','discover'].join('/'),listTools=['tools','list'].join('/'),callTool=['tools','call'].join('/'),readResource=['resources','read'].join('/')
-  for(const path of ['/mcp','/api/envelope/mcp'])for(const method of ['initialize',discover,listTools,callTool,readResource]) {
+  const resourceTemplates=['resources','templates','list'].join('/'),listPrompts=['prompts','list'].join('/'),getPrompt=['prompts','get'].join('/'),listen=['subscriptions','listen'].join('/')
+  for(const path of ['/mcp','/api/envelope/mcp'])for(const method of ['initialize',discover,listTools,callTool,readResource,resourceTemplates,listPrompts,getPrompt,listen]) {
    const response=await visitor.request.post(context.origin+path,{headers:{origin:context.origin,'MCP-Protocol-Version':'2025-11-25'},
     data:{jsonrpc:'2.0',id:1,method,params:method==='initialize'?{protocolVersion:'2025-11-25'}:method===callTool?{name:'records_list',arguments:{companyId:f.company.id}}:method===readResource?{uri:context.origin+personDoor}:{}}})
    const discovery=['initialize',discover].includes(method),body=await response.text()
