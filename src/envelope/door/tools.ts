@@ -11,6 +11,7 @@ import { outputSchema } from './schemas'
 import { rotate, rotationKey } from './rotation'
 import { effect, sensitiveRecords } from './effects'
 import { catalogue } from './catalogue'
+import { personUri } from './resources'
 
 async function snapshot(env: Bindings, ctx: ToolContext) {
   const agent=await nativeAgent(env,ctx), f=agent.fence(), l=agent.location('location_id')
@@ -66,6 +67,10 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
             if (nativeName==='credentials.rotate') return rotate(agent,args.publicKey)
             throw new ToolRefusal('tool_not_found')
           },args)
+          if(nativeName==='records.list') {
+            const page=value as Awaited<ReturnType<typeof agent.records>>
+            return {result:page,resources:page.records.map(person=>({uri:personUri(agent.grant.company_id,String(person.id)),name:String(person.name)}))}
+          }
           return {result:value}
         } catch(error) {
           if (error instanceof PayrollError) throw new ToolRefusal(error.code,error.code,{native_status:error.status,...('setupLink' in error?{setupLink:error.setupLink}:{})})

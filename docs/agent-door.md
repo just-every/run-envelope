@@ -8,7 +8,7 @@ have JSON input/output schemas, scopes, computed classes and contract citations.
 Refusals use `code` and MCP `com.runeditrun/error` metadata.
 
 This installation offers the CORE capabilities `tools`, `policy`, `pause`,
-`audit` and `idempotency`. It explicitly refuses resources, events, prompts and
+`audit`, `idempotency` and `resources`. It explicitly refuses events, prompts and
 subscriptions. These are target capabilities, not implemented payroll outcomes.
 The machine-readable registry and native journey are in `agent-surface.json`.
 
@@ -76,7 +76,7 @@ agent and sponsor in native activity and the outbound attribution header. It nev
 
 Installation, archive import, device clients and a person's own authentication
 or payroll approval screens retain their own doors. There is no agent queue
-executor, resource catalogue, streaming event feed, specialist prompt catalogue,
+executor, full resource catalogue, streaming event feed, specialist prompt catalogue,
 full payroll week, funded payment or agency filing claim in this CORE subset.
 The broader SURFACE clauses remain targets until those native jobs are delivered.
 
@@ -88,3 +88,27 @@ survive rotation or a native policy change. These fingerprints grant no scope.
 Native scope reduction (`envelope.credentials.restrict`) carries access, keeps the calling grant identity, and accepts only retained actions, fields and locations. Adding any power or naming another credential refuses without changing the grant. A reduction invalidates prior admissions; repeating the retained scope leaves its revision unchanged.
 
 The additive core migrations are 0044_business_settings.sql, 0045_business_people.sql, 0046_agent_door.sql, 0047_business_agent_bindings.sql, 0048_agent_door_policy_attribution.sql and 0049_agent_operation_lookup.sql; main’s existing 0001–0043 migrations remain unchanged.
+
+
+The masked worker resource template is
+`envelope://companies/{company}/people/{person}`. Both MCP paths list it through
+`resources/templates/list`. A successful `envelope.records.list` returns resource
+links only for that returned page, preserving its native pagination. Read each
+link with `resources/read`; the JSON contains exactly `id`, `name`, `locationId`
+and `version`, matching the native viewer identity register. Customer names are
+untrusted data, marked on each resource content. Compensation and private SSN,
+bank and tax values are absent even when a credential has wider field access.
+
+A masked read carries standard and requires current `records:read`, the matching
+company and location, live sponsor and client grants, and no held company data.
+The native company policy and Pause restrict classification and delivery in
+addition to the shared policy. Review records a review; approval withholds content
+until the native person door approves and the client retries with `requestState`.
+Neither supplies missing native authority. A changed identity projection refuses
+an old operation, including after restart or an approved retry; request a fresh
+read and any required review. Native decision facts retain only the projection
+digest for that operation. Missing, foreign and inaccessible records share
+`resource_unavailable`; a changed delivered projection may give `resource_changed`.
+Restored history supplies no session, credential, consent or resource authority.
+Company, run, filing, notice, case, coverage and report resource families remain
+unavailable, as do sensitive resource reads and file exports.

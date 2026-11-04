@@ -365,7 +365,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "9ee9d1bd2f5e7c48814bd6dda42ebc4e1909e06b58774e7f08de1984a7f0a35c",
+      "sha256": "300c4af868da5272603260dd97b0dd634859495a8d3ed5235d9c39c4bc93834d",
       "executable": false
     },
     "AGENTS.md": {
@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3a6e1bc2e567a4416c73489a61c01b1ea5cbaaf2f4530487ea4840b7d3cc2a46",
+      "sha256": "7890e7312cf4fea907353df72a88ffbe79996d61daad28d9e2dfa9c3a850b98d",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "7d2c7bbbeb1027c75370a76df710b7555e2903ad5963d03876d840a7db2463ff",
+      "sha256": "d5c8d06e167b060ffd0c709df748436a42f92c55679eeb186a946e7ec3e34aec",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -2137,11 +2137,11 @@
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "c9d6093acfa8830b9b1b2cb4f55eb6bba0ba18bf4a295e2295149422838920a0",
+      "sha256": "a8e354e81733574463f7d394d6f0a3a51a59531183d49a521621076a8039eec4",
       "executable": false
     },
     "src/envelope/agents.ts": {
-      "sha256": "429396756022d68cf00862827cdce91a8af6558cec86b464289d65142593923a",
+      "sha256": "8ed05208906f1906ee8991379ab0f5d5bf6444ee591bfd0983a6e457b91bb240",
       "executable": false
     },
     "src/envelope/archive-history.ts": {
@@ -2317,7 +2317,7 @@
       "executable": false
     },
     "src/envelope/door/index.ts": {
-      "sha256": "716f263bd9c97456ae7ff76cdfa1baf4fbcba786a362135c6cf86a28f8ff67ed",
+      "sha256": "33527986d263740032f1d7ebf3ce628e0ea05e5a88ba6be1b5f963cfa2ff1621",
       "executable": false
     },
     "src/envelope/door/native.ts": {
@@ -2341,7 +2341,7 @@
       "executable": false
     },
     "src/envelope/door/tools.ts": {
-      "sha256": "fe2d748c633cdddd8c4ac9252582e21fe47334556ba569ce25c06e620c9dcae1",
+      "sha256": "3c3405e52fef754356f3ffe15f1d60f78a83287148fb042b29f1b10c2668b2d2",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -2557,7 +2557,7 @@
       "executable": false
     },
     "src/envelope/records.ts": {
-      "sha256": "ad40ca14d7f546e7fe05ab182aae9e9f4a78804f123b3a58b18db8d4d8b2eb46",
+      "sha256": "2d812dca65068de4626706cb9ae3a422cf2653f7901fccf752fbe1accdccccba",
       "executable": false
     },
     "src/envelope/review-presentation.ts": {

@@ -27,6 +27,10 @@ export interface Person {
   locationId: string
   version: number
 }
+// The identity register shared by native viewers and masked agent resources.
+export function maskedPerson(person: Person): Person {
+  return {id:person.id,name:person.name,locationId:person.locationId,version:person.version}
+}
 export type Input = Record<string, unknown>
 const uuid = () => crypto.randomUUID()
 const hashes = async (value: string) =>
@@ -247,7 +251,7 @@ export class Records {
       [actor.company, id, ...l.args, ...f.args],
     ).first<Person>()
     if (!value) throw new PayrollError('record_not_found', 404)
-    return value
+    return maskedPerson(value)
   }
   async createPerson(actor: Actor, input: Input) {
     const id = uuid(),

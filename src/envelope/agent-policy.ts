@@ -10,6 +10,7 @@ export type ClassAnswers = Record<typeof agentClasses[number], typeof policyDeci
 // These facts describe today's native doors. A proposal cannot approve payroll.
 export const toolClasses: Record<string, readonly string[]> = {
   'records.list': ['standard'],
+  'records.person': ['standard'],
   'workspace.snapshot': ['standard'],
   'draft.prepare': ['standard'],
   'draft.read': ['sensitive'],
@@ -102,9 +103,9 @@ export async function requireAgentPolicy(agent:AgentTools,tool:string) {
   const row=await agent.env.DB.prepare('SELECT version,answers,paused FROM env_agent_class_policy WHERE company_id=?').bind(agent.grant.company_id).first<PolicyRow>()
   const setupLink='/app/envelope/companies/'+encodeURIComponent(agent.grant.company_id)+'/agents#class-policy'
   const fail=async(code:string):Promise<never>=>{
-    const ctx=agent.doorContext
+    const ctx=agent.doorContext ?? agent.resourceContext
     await agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers)
-      VALUES(?,?,?,?,?,'shared-door',?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),agent.grant.company_id,agent.grant.id,agent.grant.sponsor_id,tool,JSON.stringify(toolClasses[tool]??['standard']),code,row?.version??0,Date.now(),ctx?.agent.id??null,ctx?.agent.name??null,ctx?.operationId??null,ctx?.consent??null,ctx?JSON.stringify(ctx.approvers):null).run()
+      VALUES(?,?,?,?,?,'shared-door',?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),agent.grant.company_id,agent.grant.id,agent.grant.sponsor_id,tool,JSON.stringify(toolClasses[tool]??['standard']),code,row?.version??0,Date.now(),ctx?.agent.id??null,ctx?.agent.name??null,ctx?.operationId??null,ctx?.consent??null,agent.doorContext?JSON.stringify(agent.doorContext.approvers):null).run()
     throw new AgentPolicyError(code,setupLink)
   }
   if(row?.paused)return fail('agents_paused')
@@ -139,7 +140,7 @@ export async function policyCall<T>(agent: AgentTools, tool: string, transport: 
     catch {facts={direction:'invalid',peopleCount:1}}
   }
   const audit=agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers)
-    VALUES(?,?,?,?,?,?,?,'pending',0,?,?,?,?,?,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now(),agent.doorContext?.agent.id??null,agent.doorContext?.agent.name??null,agent.doorContext?.operationId??null,agent.doorContext?.consent??null,agent.doorContext?JSON.stringify(agent.doorContext.approvers):null)
+    VALUES(?,?,?,?,?,?,?,'pending',0,?,?,?,?,?,?)`).bind(id,company,agent.grant.id,agent.grant.sponsor_id,classes.length ? tool : 'unsupported',transport,JSON.stringify(classes),Date.now(),(agent.doorContext ?? agent.resourceContext)?.agent.id??null,(agent.doorContext ?? agent.resourceContext)?.agent.name??null,(agent.doorContext ?? agent.resourceContext)?.operationId??null,(agent.doorContext ?? agent.resourceContext)?.consent??null,agent.doorContext?JSON.stringify(agent.doorContext.approvers):null)
   if (tool==='credentials.restrict') await agent.env.DB.batch([audit,agent.env.DB.prepare('INSERT INTO env_agent_call_facts(call_id,facts) VALUES(?,?)').bind(id,JSON.stringify(facts))])
   else await audit.run()
   try {
