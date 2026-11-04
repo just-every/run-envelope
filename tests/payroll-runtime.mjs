@@ -3585,7 +3585,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     // Three durable rotations retain the original 30-day review deadline and
     // replace the digest, not the grant. Expiry boundary is advanced by fixture.
     for(let rotation=0;rotation<3;rotation++) {
-      await sql(`UPDATE env_agent_credentials SET secret_expires_at=${Date.now()+20000} WHERE id='${adminGrant.id}'`)
+      await sql(`UPDATE env_agent_credentials SET secret_expires_at=unixepoch('subsec')*1000+20000 WHERE id='${adminGrant.id}'`)
       const previous=adminToken,rotated=await tool('credentials.rotate',{},adminToken)
       adminToken=rotated.token
       assert.equal(rotated.expiresAt,adminGrant.expiresAt)
@@ -3735,6 +3735,26 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     const limitedExport=await data(api+'/agents/access',undefined,sponsors.preparer.cookie)
     assert.ok(!limitedExport.some(row=>row.targetId===exact.id),'a different sponsor cannot export the correspondence attribution')
     assert.equal((await data(api+'/notices/'+noticeId)).replies[0].providerReceipt,'00000000-0000-4000-8000-000000000052')
+    const human=await data(api+'/notices/'+noticeId+'/replies',{
+      analysisId:'human',sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,
+      to:exact.data.to,subject:'synthetic-envelope-human-preparation',body:'A native staff preparer requests the retained employer transcript.',
+      preparedBy:{agentId:adminGrant.id,label:'Untrusted supplied attribution'},
+    },sponsors.preparer.cookie,201)
+    const humanReview=await data(api+'/notice-replies/'+human.id+'/review')
+    assert.deepEqual(humanReview.data.preparedBy,{operatorId:sponsors.preparer.id,label:sponsors.preparer.id,operatorVersion:1,grantVersion:1})
+    assert.notEqual(humanReview.data.preparedBy.operatorId,humanReview.data.humanReviewer.id)
+    assert.notEqual(humanReview.data.preparedBy.operatorId,humanReview.data.sendingAgent.sponsorId)
+    await approve(humanReview)
+    assert.equal((await execute(human)).state,'accepted')
+    const humanWire=edge.calls.filter(r=>r.url==='https://api.resend.com/emails').at(-1).body
+    assert.equal(humanWire.text,humanReview.data.body+'\n\nPrepared by '+sponsors.preparer.id+'\nSent by '+humanReview.data.sendingAgent.label+'\nHuman reviewer: '+humanReview.data.humanReviewer.name)
+    const humanAttribution=(await data(api+'/agents/access')).find(row=>row.targetId===human.id && row.action==='dispatch:execute').correspondence
+    assert.deepEqual(humanAttribution.preparedBy,humanReview.data.preparedBy)
+    assert.equal(humanAttribution.approvedBy,owner.id)
+    await capture(noticePath,'notice-human-preparer')
+    assert.ok((await page.locator('body').innerText()).includes('Prepared by '+sponsors.preparer.id))
+    await capture(ui+'/agents','notice-human-preparer-activity')
+    assert.ok((await page.locator('body').innerText()).includes('prepared by '+sponsors.preparer.id))
     // Exact approvals are separately tested against expiry, withdrawal, provider
     // changes and approver removal; no refusal reaches the network.
     const freshReply=async(label,approverId=owner.id) => data(api+'/notices/'+noticeId+'/replies',{analysisId:processed.id,sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId,to:'agency-contact@example.com',subject:label,body:'Human-reviewed account transcript request.'},cookie,201)
@@ -3818,7 +3838,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.ok(access.some(a=>a.action==='dispatch:execute' && a.sponsorId===sponsors.accountant.id))
     assert.equal(edge.calls.length,callsWithoutKey,'No provider call after OpenAI key removal')
     assert.equal(JSON.stringify(audit).includes('000-00-0001'),false)
-    assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,3)
+    assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,4)
     console.log('SPONSORED-NOTICES passed: scoped payroll-admin and firm-accountant sponsorship, narrower-scope refusals, 30-day review across three rotations and sponsor removal; declared/redacted OpenAI notice processing with injection confinement; exact human-approved Resend dispatch, edited-twin/expiry/withdrawal/current-authority/provider refusals; concurrent once-only dispatch and durable unknown across restart; settings and MCP proof at 1440/390')
   } finally {await context.close();await browser.close()}
 }

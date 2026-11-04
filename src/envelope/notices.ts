@@ -102,6 +102,9 @@ export class Notices {
       if(!proposal.preparedBy)throw new PayrollError('reply_preparation_source_unavailable',409)
       payload.sourceAnalysisId=analysis.id
       payload.preparedBy=proposal.preparedBy
+    } else {
+      payload.preparedBy={operatorId:actor.session.operator.id,label:actor.session.operator.displayName,
+        operatorVersion:actor.session.operator.version,grantVersion:actor.grant.version}
     }
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))

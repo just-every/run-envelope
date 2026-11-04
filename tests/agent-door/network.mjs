@@ -11,7 +11,7 @@ export default {async fetch(request,{fixture}={}) {
   if (url.origin==='https://api.resend.com' && url.pathname==='/emails') {
     if (!body.from || !Array.isArray(body.to) || !body.to.length || !body.subject || !(body.text || body.html)) return new Response(null,{status:400})
     if(request.headers.get('Idempotency-Key')?.startsWith('envelope-notice-')) {
-      if(body.to.length!==1 || !body.headers?.['X-RER-Attribution'] || !body.text?.includes('\nSent by '+body.headers['X-RER-Attribution']) || !body.text?.includes('\nHuman reviewer: '))return new Response(null,{status:422})
+      if(body.to.length!==1 || !body.headers?.['X-RER-Attribution'] || !body.text?.includes('\n\nPrepared by ') || !body.text?.includes('\nSent by '+body.headers['X-RER-Attribution']) || !body.text?.includes('\nHuman reviewer: '))return new Response(null,{status:422})
       if(fixture?.expected && JSON.stringify(body)!==JSON.stringify(fixture.expected))return new Response(null,{status:422})
       if(fixture?.rejected)return Response.json({statusCode:422,name:'validation_error',message:'Synthetic reviewed repair required.'},{status:422})
       // The provider saw the request; the client receives no usable receipt.

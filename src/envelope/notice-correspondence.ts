@@ -9,10 +9,13 @@ export interface ReplyAgent {
   agentId:string; sponsorId:string; grantId:string; label:string
   grantVersion:number; sponsorGrantVersion:number; sponsorOperatorVersion:number
 }
+export interface ReplyPerson {
+  operatorId:string; label:string; operatorVersion:number; grantVersion:number
+}
 export interface ReplyData {
   sender:string; to:string; subject:string; body:string
   sourceAnalysisId?:string
-  preparedBy?:ReplyAgent
+  preparedBy?:ReplyAgent|ReplyPerson
   sendingAgent?:ReplyAgent
   humanReviewer?:{id:string;name:string;operatorVersion:number;grantVersion:number}
   destination?:{counterparty:'known'|'new';recipientCount:1;evidence?:{replyId:string;version:number;digest:string;providerReceipt:string}}

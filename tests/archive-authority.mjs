@@ -85,6 +85,17 @@ export async function archiveAuthority(context, company, notice) {
     version: review.version, digest: review.digest, reviewToken: review.reviewToken, minutes: 60,
   })
 
+  const humanReply=await data(company.base+'/notices/'+notice.id+'/replies',{
+    analysisId:'human',sendingIdentity,approverId,to:['synthetic-envelope-human','example.com'].join('@'),
+    subject:'Native human preparation retained for restore',body:'The native person prepared this exact reply for separate approval.',
+  },201)
+  const humanReview=await data(company.base+'/notice-replies/'+humanReply.id+'/review')
+  assert.equal(humanReview.data.preparedBy.operatorId,approverId)
+  assert.equal(Object.hasOwn(humanReview.data.preparedBy,'agentId'),false)
+  await data(company.base+'/notice-replies/'+humanReply.id+'/approve',{
+    version:humanReview.version,digest:humanReview.digest,reviewToken:humanReview.reviewToken,minutes:60,
+  })
+
   const effects = []
   for (const expected of ['accepted', 'unknown']) {
     const item = await data(company.base + '/notices/' + notice.id + '/replies', {
@@ -118,20 +129,24 @@ export async function archiveAuthority(context, company, notice) {
   }
 
   const webhook=await data(company.base+'/webhooks',{consent:true},201)
-  return { correspondence:{replyId:reply.id,version:reply.version,data:review.data,approvedBy:approverId},approverId,sendingIdentity,webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
+  return { correspondence:{replyId:reply.id,version:reply.version,data:review.data,approvedBy:approverId},
+    humanCorrespondence:{replyId:humanReply.id,version:humanReply.version,data:humanReview.data,approvedBy:approverId},
+    approverId,sendingIdentity,webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
     replyVersion: reply.version, replyDigest: reply.digest, providerSecret }
 }
 
 // Inspect the actual exported and restored records, not an archive-shaped fixture.
 export async function assertCorrespondenceHistory(rows,authority,recordSecret) {
-  const expected=authority.correspondence, row=rows.env_notice_replies.find(r=>r.id===expected.replyId && r.version===expected.version)
-  assert.ok(row,'the actual archive retains the exact reviewed correspondence')
-  const payload=JSON.parse(await decryptArchivedRecord(await archiveRecordKey(recordSecret),'env_notice_replies',row,'cipher'))
-  assert.deepEqual(payload,expected.data,'immutable message and all three attribution roles survive actual transfer')
-  const approval=rows.env_notice_approvals.find(a=>a.reply_id===row.id && a.version===row.version)
-  assert.equal(approval.actor_id,expected.approvedBy)
-  assert.equal(approval.expires_at,0,'retained human attribution conveys no restored sending authority')
-  const grant=rows.env_agent_grants.find(g=>g.id===payload.sendingAgent.grantId)
-  assert.equal(grant.expires_at,0)
-  assert.deepEqual(JSON.parse(grant.actions),[])
+  for(const expected of [authority.correspondence,authority.humanCorrespondence]) {
+    const row=rows.env_notice_replies.find(r=>r.id===expected.replyId && r.version===expected.version)
+    assert.ok(row,'the actual archive retains the exact reviewed correspondence')
+    const payload=JSON.parse(await decryptArchivedRecord(await archiveRecordKey(recordSecret),'env_notice_replies',row,'cipher'))
+    assert.deepEqual(payload,expected.data,'immutable message and all three attribution roles survive actual transfer')
+    const approval=rows.env_notice_approvals.find(a=>a.reply_id===row.id && a.version===row.version)
+    assert.equal(approval.actor_id,expected.approvedBy)
+    assert.equal(approval.expires_at,0,'retained human attribution conveys no restored sending authority')
+    const grant=rows.env_agent_grants.find(g=>g.id===payload.sendingAgent.grantId)
+    assert.equal(grant.expires_at,0)
+    assert.deepEqual(JSON.parse(grant.actions),[])
+  }
 }

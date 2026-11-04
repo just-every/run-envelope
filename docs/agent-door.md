@@ -74,7 +74,12 @@ correspondence, a successful extraction retains its exact agent and sponsor as
 preparer. The human selects the exact retained proposal, or explicitly chooses
 native human preparation; a later extraction cannot relabel that choice. The API
 requires `analysisId` containing that retained proposal ID or `human`. Native reply
-preparation requires an explicit sending identity and a
+preparation with `human` retains the authenticated person's ID, name and current
+identity and company-grant versions as preparer; supplied attribution is ignored.
+It preserves that human preparation without presenting the person as an agent.
+The same reviewed attribution accompanies the outgoing message, record, activity,
+permitted download and inactive archive history.
+Native reply preparation requires an explicit sending identity and a
 named human reviewer. The selectable identity is a current native grant, or its
 explicit Business binding; its configured name must match the actual calling
 identity. Sender, recipient, preparer, sending agent and sponsor, human reviewer,
@@ -90,6 +95,7 @@ provider-accepted correspondence in the same company and the reviewing person's
 permitted locations contains that exact mailbox. The immutable review retains
 the earlier reply version, digest and provider receipt as destination evidence;
 acceptance is not delivery. Without that evidence the destination is **new**.
+Rejected and unknown sends supply no accepted destination evidence.
 Model output, internal-recipient claims and confirmation text cannot alter these
 facts. The facts stay bound to the reviewed version, including on completed
 idempotent replay.
