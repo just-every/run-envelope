@@ -106,8 +106,12 @@ authority and reads the response under the native access audit. A changed
 selection refuses with `read_selection_changed`; pending approval refuses when
 its retained selection has changed, even if the record count stays equal.
 Retrieving an approved read rechecks the same selection rather than returning
-retained compensation under a different decision. Restart does not reset these
-checks. Refusals require a fresh read and, when policy requires it, fresh approval.
+retained compensation under a different decision. Equivalent JSON property order
+keeps that selection identity. After the native access read and policy audit
+finish, delivery selects the response again under the original authority and
+policy fence. A correction or erasure after the access batch therefore refuses
+the earlier response; a fresh call must obtain a new decision. Restart does not
+reset these checks. Refusals require a fresh read and, when policy requires it, fresh approval.
 The MCP door, its alias and the existing agent REST reads use this same path.
 Successful REST GET and HEAD reads expose the same computed facts in
 `x-envelope-classification`; HEAD returns no content. Refused reads have no

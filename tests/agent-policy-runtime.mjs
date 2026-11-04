@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { chromium } from '@playwright/test'
-import { sensitiveNativeCustody, sensitiveRestartAndRaces } from './agent-door/sensitive-reads.mjs'
+import { sensitiveDeliveryRaces, sensitiveNativeCustody, sensitiveRestartAndRaces } from './agent-door/sensitive-reads.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 
 const answers = {standard:'autonomous',money:'autonomous',commitment:'autonomous',external:'autonomous',sensitive:'autonomous',destructive:'autonomous',accounts:'autonomous',access:'autonomous',security:'autonomous',gated:'autonomous'}
@@ -80,6 +80,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
   await answerSharedAgentPolicy({origin,cookie})
   await sensitiveNativeCustody({origin,cookie,request:globalThis.fetch,restart,sql,settings})
   await sensitiveRestartAndRaces({origin,cookie,request:globalThis.fetch,restart,sql,settings})
+  await sensitiveDeliveryRaces({origin,cookie,request:globalThis.fetch,restart,sql,settings})
   let credential=await issue()
   const mcp=(name,args={},token=credential.token)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':contentType,'MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
   const tool=async(name,args={},status=200)=>{const r=await mcp(name,args);const body=await r.clone().json();assert.equal(await mcpStatus(r),status,JSON.stringify(body));const error=body.result?._meta?.['com.runeditrun/error'];return status===200 ? await agentValue(body) : {message:error?.code??body.error?.data?.code,data:error}}

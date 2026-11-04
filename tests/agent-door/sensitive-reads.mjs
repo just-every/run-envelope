@@ -216,6 +216,8 @@ export async function sensitiveRestartAndRaces(context) {
   assert.equal((await approve(pending)).state,'executed')
   const approved=await call('draft.read',{...args,draftId:first.id},pending.result.requestState)
   facts(approved,1);assert.equal(value(approved).hourlyCents,2700)
+  const reordered=await call('draft.read',{draftId:first.id,companyId:company.id},pending.result.requestState)
+  facts(reordered,1);assert.deepEqual(value(reordered),value(approved),'argument order does not change the authorized selection')
   const changed=await call('reports.proposals',args);assert.equal(changed.result.resultType,'input_required')
   await policy('autonomous')
   await prepare(people[1])
@@ -260,6 +262,108 @@ export async function sensitiveRestartAndRaces(context) {
   assert.equal((await data('/agents/api/approvals/'+id)).approval.state,'pending')
   await policy('autonomous')
   console.log('PROBE SURFACE-004 restart and race: retained exact approval survives restart; changed selection after restart and suspended classified read refuse; revoked native reviewer session cannot execute')
+}
+
+/** Current selections must survive the completed access read, not just admission. */
+export async function sensitiveDeliveryRaces(context) {
+  const {origin,request}=context,data=client(context)
+  const {company,base,people,issue}=await sensitiveFixtures(context)
+  const args={companyId:company.id},person=people[0]
+  const paths={
+    'records.list':'/records',
+    'draft.read':id=>'/drafts/'+id,
+    'bonus.read':id=>'/bonus-runs/'+id,
+    'reports.proposals':'/reports/proposals',
+    'reports.bonuses':'/reports/bonus-runs',
+  }
+  const holdRequest=async(url,options)=>{
+    const headers=new Headers(options?.headers);headers.set('x-synthetic-policy-batch','read-delivery-hold')
+    return request(url,{...options,headers})
+  }
+  const duringDelivery=async(start,change)=>{
+    const pending=start()
+    let waiting=false
+    for(let attempt=0;attempt<200&&!waiting;attempt++) {
+      const observed=await request(origin+'/health',{headers:{'x-synthetic-policy-batch':'observe'}})
+      waiting=observed.headers.get('x-synthetic-policy-state')==='waiting'
+      if(!waiting)await new Promise(resolve=>setTimeout(resolve,20))
+    }
+    try {assert.ok(waiting,'completed native selection reached delivery');await change()}
+    finally {await request(origin+'/health',{headers:{'x-synthetic-policy-batch':'release'}})}
+    return pending
+  }
+  let cents=3200
+  for(const door of ['/mcp','/api/envelope/mcp','rest'])for(const name of Object.keys(paths)) {
+    const credential=await issue(),call=readClient(context,credential)
+    let id
+    if(name!=='records.list') {
+      const bonus=name.includes('bonus'),input=prepared(person,crypto.randomUUID())
+      const preparedRead=await call(bonus?'bonus.prepare':'draft.prepare',{
+        ...args,...input,...(bonus?{minutes:undefined,amountCents:15700}:{})
+      })
+      assert.equal(error(preparedRead),undefined);id=value(preparedRead).id
+    }
+    const selected={...args,...(name==='draft.read'?{draftId:id}:name==='bonus.read'?{runId:id}:{})}
+    const baseline=await call(name,selected)
+    facts(baseline,name==='records.list'?3:1,'compensation',name==='records.list'?'standard':'sensitive')
+    if(name==='draft.read')assert.equal(value(baseline).stale,0)
+    if(name==='reports.proposals')assert.equal(value(baseline).proposals[0].stale,0)
+    if(name==='bonus.read')assert.equal(value(baseline).sourcesCurrent,true)
+    if(name==='reports.bonuses')assert.equal(value(baseline).bonuses[0].sourcesCurrent,true)
+    const path=typeof paths[name]==='function'?paths[name](id):paths[name]
+    const pending=duringDelivery(()=>door==='rest'
+      ? holdRequest(origin+'/api/envelope/v1/companies/'+company.id+path,{headers:{authorization:'Bearer '+credential.token}})
+      : readClient({...context,request:holdRequest},credential,door)(name,selected),async()=>{
+      const current=await data(base+'/people/'+person.id)
+      const rate=await data(base+'/people/'+person.id+'/rates',{version:current.version,hourlyCents:cents++,effectiveDate:'2026-01-01'},201)
+      const review=await data(base+'/rates/'+rate.id)
+      await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken,version:review.version})
+    })
+    if(door==='rest') {
+      const response=await pending
+      assert.equal(response.status,409,door+' '+name+' changed after completed selection')
+      assert.equal(response.headers.get('x-envelope-classification'),null)
+      const body=await response.json();assert.equal(body.error,'read_selection_changed');assert.equal(body.id,undefined)
+    } else {
+      const refused=await pending
+      assert.equal(error(refused),'read_selection_changed',door+' '+name+' changed after completed selection')
+      assert.equal(value(refused),undefined)
+    }
+    // A fresh decision returns the corrected current selection, with its own facts.
+    const fresh=await call(name,selected)
+    facts(fresh,name==='records.list'?3:1,'compensation',name==='records.list'?'standard':'sensitive')
+    if(name==='records.list')assert.ok(value(fresh).records.find(row=>row.id===person.id).version>value(baseline).records.find(row=>row.id===person.id).version)
+    if(name==='draft.read')assert.equal(value(fresh).stale,1)
+    if(name==='reports.proposals')assert.equal(value(fresh).proposals[0].stale,1)
+    if(name==='bonus.read')assert.equal(value(fresh).sourcesCurrent,false)
+    if(name==='reports.bonuses')assert.equal(value(fresh).bonuses[0].sourcesCurrent,false)
+  }
+  // Native, explicitly reviewed erasure must also cancel an already selected
+  // compensation read. Retrying a retained preparation cannot resurrect it.
+  const erased=await sensitiveFixtures(context),erasedCall=readClient(context,erased.credential)
+  const erasedArgs={companyId:erased.company.id},input={...erasedArgs,...prepared(erased.people[0],crypto.randomUUID())}
+  const draft=await erasedCall('draft.prepare',input);assert.equal(error(draft),undefined)
+  const privacy=erased.base+'/people/'+erased.people[0].id+'/privacy'
+  const cancelled=await duringDelivery(()=>readClient({...context,request:holdRequest},erased.credential)('draft.read',{...erasedArgs,draftId:value(draft).id}),async()=>{
+    let inventory=await data(privacy)
+    await data(privacy+'/request',{consent:true,fingerprint:inventory.fingerprint})
+    inventory=await data(privacy)
+    const release={consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(row=>row.id),legalBasis:'Synthetic reviewed retention release',custodian:'Synthetic native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
+    await data(privacy+'/retain',release)
+    await data(privacy+'/release',release)
+    const ready=await data(privacy)
+    await data(erased.base+'/people/'+erased.people[0].id+'/erase',{consent:true,version:ready.version,fingerprint:ready.fingerprint,records:ready.retained.map(row=>row.id)})
+  })
+  assert.ok(error(cancelled));assert.equal(value(cancelled),undefined)
+  await context.restart()
+  const replay=await erasedCall('draft.prepare',input)
+  assert.ok(error(replay)||value(replay).id===value(draft).id,'replay creates no new preparation')
+  const afterErase=await erasedCall('draft.read',{...erasedArgs,draftId:value(draft).id})
+  assert.ok(error(afterErase));assert.equal(value(afterErase),undefined)
+  const empty=await erasedCall('reports.proposals',erasedArgs);facts(empty,0);assert.deepEqual(value(empty).proposals,[])
+  assert.equal((await request(origin+erased.base+'/people/'+erased.people[0].id,{headers:{cookie:context.cookie}})).status,404)
+  console.log('PROBE SURFACE-004 erased delivery: native owner erases the selected worker -> no compensation returned; restart and captured preparation replay leave native worker absent and report empty')
+  console.log('PROBE SURFACE-004 delivery: MCP, alias and REST; masked, hourly, bonus and both reports changed after completed selection -> read_selection_changed, no returned rows or completed REST classification; fresh read succeeds')
 }
 
 /** Existing native private and custody doors retain human-only authority. */

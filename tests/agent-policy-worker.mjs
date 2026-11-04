@@ -41,8 +41,9 @@ export default {
      const result=await target.batch(args[0].map(item=>actual.get(item)||item),...args.slice(1))
      // Suspend only a completed private-record selection. Concurrent public
      // correction, revocation and erasure must win before plaintext delivery.
+     // Agent response rows are also held after selection, before return.
      const privateRead=args[0].some(item=>{const sql=queries.get(item)||'';return sql.includes('SELECT cipher')&&sql.includes('FROM env_private_records')})
-     if(!held&&control==='private-read-hold'&&privateRead) {
+     if(!held&&(control==='private-read-hold'&&privateRead||control==='read-delivery-hold'&&readExecution)) {
       held=true;phase='waiting'
       let timer
       try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }

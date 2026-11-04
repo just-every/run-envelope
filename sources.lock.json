@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "32af8767bfe59d6ca20c01cf95f6fbec76f13dfb7fbb8482f2ccac08c14878d0",
+      "sha256": "b68321916dcc188e58cd736e9db84a956f79492acd870c49632bb78b3f7fbef9",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "05bcdb6a16f197d44535e4a790e6f0935e75ebe94845b8ea5cfda18c53b97b84",
+      "sha256": "59b9121b9ec90f427be3a5cbe9d82282276e437a56fd82fd1407817d7a299216",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -2317,7 +2317,7 @@
       "executable": false
     },
     "src/envelope/door/effects.ts": {
-      "sha256": "18e41939a5f849af91cc49f8c3d46f06a34121cf8ea113e107ba2ec84220e61c",
+      "sha256": "243e1b44cf21c83aa7396e67a6f83e7034be3d006751ca405fbe9f99139881eb",
       "executable": false
     },
     "src/envelope/door/index.ts": {
@@ -2345,7 +2345,7 @@
       "executable": false
     },
     "src/envelope/door/tools.ts": {
-      "sha256": "1d9dce6aec71a9bffc61ecc80565c7b49402d046596f2c9fd2654bcc9f9f56c4",
+      "sha256": "b2cb17a8b84806752c1d5f2996f8c6d8e18f149f6a859705e0675b102a25157a",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -4245,15 +4245,15 @@
       "executable": false
     },
     "tests/agent-door/sensitive-reads.mjs": {
-      "sha256": "190d56860d1d45049ce3519956aab614eb86c4e5a8acfd6ae330997c5bca6e63",
+      "sha256": "f1026f6c4402c194c49831e1c7c6aadabc31fa1bf3b29f87b7c4ed01fd8dbdaf",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
-      "sha256": "ad6b39f082888a83fd185c41ea2f7de410b4b9e25cb860ad6a03f6f4a1685342",
+      "sha256": "590d3124252600a2e16f8a045e7f375c84d932b53e11d4d5090b732764ccfb8b",
       "executable": false
     },
     "tests/agent-policy-worker.mjs": {
-      "sha256": "af07cad32209f659bd0ce0c4647d500367b336308a5156159bb4c7d58c3ba4f0",
+      "sha256": "4324a988cb69fce6e0021005501b12e87e740b8280d1930be4b8e91a63a8e1f1",
       "executable": false
     },
     "tests/archive-adoption.mjs": {

@@ -82,6 +82,15 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
             if (nativeName==='credentials.rotate') return rotate(agent,args.publicKey)
             throw new ToolRefusal('tool_not_found')
           },args)
+          if(selectedReads.includes(nativeName)) {
+            // Policy finalization and its audit yield after the access batch.
+            // Repeat the selection before delivery so a correction or erasure
+            // during that interval cannot disclose the earlier response.
+            const delivered=await readSelection(agent,nativeName,args)
+            if(delivered.target.id!==(await selection(args,ctx)).target.id)
+              throw new ToolRefusal('read_selection_changed','read_selection_changed',{native_status:409})
+            return {result:delivered.value}
+          }
           return {result:value}
         } catch(error) {
           if (error instanceof PayrollError) throw new ToolRefusal(error.code,error.code,{native_status:error.status,...('setupLink' in error?{setupLink:error.setupLink}:{})})

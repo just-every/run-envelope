@@ -55,5 +55,6 @@ export async function readSelection(agent: AgentTools, name: string, args: Recor
   const f=agent.fence()
   if(!await agent.env.DB.prepare(`SELECT 1 WHERE ${f.sql}`).bind(...f.args).first()) throw new PayrollError('agent_authority_revoked',403)
   const records=name==='records.list' ? (value.records as unknown[]).length : name==='reports.proposals' ? (value.proposals as unknown[]).length : name==='reports.bonuses' ? (value.bonuses as unknown[]).length : 1
-  return {value,records,target:{kind:name==='records.list'?'masked-worker-selection':'compensation-selection',id:await digest(JSON.stringify([name,agent.grant.id,agent.grant.version,agent.grant.fields,agent.grant.locations,args,value]))}}
+  const parameters=Object.fromEntries(Object.keys(args).sort().map(key=>[key,args[key]]))
+  return {value,records,target:{kind:name==='records.list'?'masked-worker-selection':'compensation-selection',id:await digest(JSON.stringify([name,agent.grant.id,agent.grant.version,agent.grant.fields,agent.grant.locations,parameters,value]))}}
 }
