@@ -70,12 +70,12 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | BASE-AGENT-001 | One MCP door per seed | SURFACE-001 | not run |
 | BASE-AGENT-002 | The seed's jobs are tools | SURFACE-001 | not run |
 | BASE-AGENT-003 | Records are resources | SURFACE-001, SURFACE-004 | not run |
-| BASE-AGENT-004 | Business identity and short-lived tokens | ENV-052 | not run |
-| BASE-AGENT-005 | An agent acts as a person in a role | ENV-052, ENV-072 | not run |
+| BASE-AGENT-004 | Business identity and short-lived tokens | ENV-052, SURFACE-008 | not run |
+| BASE-AGENT-005 | An agent acts as a person in a role | ENV-052, ENV-072, SURFACE-008 | not run |
 | BASE-AGENT-006 | Every action declares its risk class | SURFACE-002, SURFACE-003, SURFACE-004, SURFACE-005 | not run |
 | BASE-AGENT-007 | The company's policy decides | SURFACE-002, SURFACE-006 | not run |
-| BASE-AGENT-008 | Truthful attribution | ENV-030, ENV-052, SURFACE-003, SURFACE-005 | not run |
-| BASE-AGENT-009 | Every agent action is audited | SURFACE-006 | not run |
+| BASE-AGENT-008 | Truthful attribution | ENV-030, ENV-052, SURFACE-003, SURFACE-005, SURFACE-008 | not run |
+| BASE-AGENT-009 | Every agent action is audited | SURFACE-006, SURFACE-008 | not run |
 | BASE-AGENT-010 | Agents can follow changes | ENV-030 | not run |
 | BASE-AGENT-011 | Limits are policy, and Pause stops everything | SURFACE-006 | not run |
 | BASE-AGENT-012 | Writes are idempotent and conflict-safe | ENV-030 | not run |
@@ -1605,6 +1605,19 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company's policy decides every ca
 5. In both runs every run, deposit and filing record names "<agent> for <person>", and any approval names the test person.
 6. A missing local account in the week holds only that remittance under both policies.
 
+#### SURFACE-008 — Independently named Business senders retain exact native authority
+
+*Tier:* Core · *From:* new · *Cites:* BASE-AGENT-004, BASE-AGENT-005, BASE-AGENT-008, BASE-AGENT-009 · *Rules:* D-5, D-6
+
+**Requirement.** Envelope accepts a valid Business agent bound to an authorized native credential when their display names differ. Supported generic notice replies retain the actual sending Business identity and sponsor attribution through preparation, exact review and dispatch, within current native authority and company policy. Display-name equality is no condition of that authority.
+
+**Acceptance.**
+1. Under the held company policy, a valid independently named Business agent's unchanged supported generic notice reply dispatches once after separate human review of the exact binding and reply, without a label-equality refusal.
+2. Review, the outgoing message, the native record, activity and permitted export retain the actual sending Business identity and sponsor attribution.
+3. A fresh exact review using the same unchanged independently named binding remains actionable; a display-name difference alone cannot make it stale or unavailable.
+4. A real sender identity, sponsor, authority or payload change requires fresh exact human review. Stale, revoked or unapproved send attempts refuse with no outbound or native effect.
+5. Ordinary notice review and attribution screens show the sending identity, sponsor and current review state at 1440 and 390 CSS pixels.
+
 ## Push further
 
 ### Agents carrying payroll through to evidence
@@ -1802,8 +1815,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 36 | 84 | 124 |
-| All | 5 | 36 | 84 | 125 |
+| Target and push further | 4 | 36 | 85 | 125 |
+| All | 5 | 36 | 85 | 126 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1911,6 +1924,7 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `SURFACE-005` | Registrations and gated steps | target | missing |  | New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness. |
 | `SURFACE-006` | Access, security, policy setup, Pause and audit | target | partial | `tests/agent-policy-runtime.mjs` — agentPolicyJourney, invoked by `tests/runtime.mjs` in the push runtime shard: native company setup starts with every class unanswered; MCP, REST and CLI refuse unset and blocked policies without preparation or secret changes; supported hourly and bonus preparation, compensation reads, reports, separate human review presentation and credential rotation remain within current sponsor and grant powers. Public Settings proves incomplete-answer and non-owner refusals, company isolation, durable Pause across restart, stopped next calls within 60 seconds and suspended authenticated calls fenced even after resume. Attributed class and decision totals over seven fixed UTC dates equal retained audit rows and the Agents page; selected setup, paused and activity screens are captured at 1440 and 390. Existing preparation, approval and sponsored-notice journeys explicitly configure company policy and retain their authority assertions. Native policy semantics and limits: `docs/payroll-agents.md`.  Native access and security continuation: `tests/agent-policy-runtime.mjs` — agentPolicyJourney exercises native staff and firm-accountant grant, widening, narrowing and revocation with server-computed direction and people counts; self-restriction through MCP, unchanged unsafe self-escalation and blocked attempts; native provider credential replacement and removal, non-owner refusal and isolated attributed class facts. `tests/payroll-approvals.mjs` — approvalJourney checks that verified authenticator registration carries security. `tests/payroll-runtime.mjs` — sponsoredJourney checks durable distinct-sponsor counts when company sponsorship narrows. `tests/extended-retirement-runtime.mjs` — extendedRetirementJourney retains revision-only grant invalidation, original-session revocation and stale-preparation refusals. `tests/payroll-runtime.mjs` — identityJourney checks installation sign-in security and activation audit under current native owner authority; `tests/archive-runtime.mjs` — archiveJourney retains access facts and refuses restored authority replay while preserving the populated prior schema. | Still unproved: installation-wide staff and firm access changes through Base authentication administration, complete linked-provider credential and step-up changes carrying security, complete remaining tools and future transports, full seeded-week policy outcomes and Base conformance. Native company grants and sponsored credentials now retain bounded access direction and people counts; the native owner-approved provider and authenticator paths retain security. The installed Base audit hook also retains native invitation, role, status, session and domain administration facts; its complete transport matrix is not claimed. The policy may restrict existing authority only: native company owners configure it, while scoped delegated policy administration and complete provider boundaries remain owed under the conservative owner-only floor. Review and approval policy choices remain safe holds, never exact human payroll approval, consent or a widened grant. Existing exact human approval, owner-only explicit reference sends, no automatic outbound action, no automated retry or destructive recovery, and every account, rail and company hold remain unchanged. |
 | `SURFACE-007` | A payroll week under two company policies | target | missing |  | New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness. |
+| `SURFACE-008` | Independently named Business senders retain exact native authority | target | missing |  | Independently named Business-to-native credential preparation, actionable exact review and supported generic notice dispatch with actual sender/sponsor attribution and unchanged-state refusal controls remain unbuilt or unproved. |
 | `ENV-059` | Prepare every run and explain every changed paycheck | push-further | missing |  | No implementation exists; the complete prepare every run and explain every changed paycheck behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. |
 | `ENV-060` | Keep every jurisdiction whole before its deadline | push-further | missing |  | No implementation exists; the complete keep every jurisdiction whole before its deadline behavior and its public-door acceptance journey remain to be built and proven. |
 | `ENV-061` | Prove each run to the cent and chase the cause | push-further | missing |  | No implementation exists; the complete prove each run to the cent and chase the cause behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. |

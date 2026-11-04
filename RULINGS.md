@@ -91,3 +91,13 @@ ENV-053: Approved ct defaults of 23 October apply: the original company creator 
 *Date:* 25 October 2026 · *Ruled by:* ct · *Governs:* ENV-068, ENV-075
 
 ct approved ENV-068 PARTIAL as adopted on 25 October 2026: deny by default; explicit worker consent; owner-only exact source review and audited release; bounded fields and period; no authority override, destructive action or outbound submission. Riders: consent is per request and per field set, withdrawable until release, and a release after withdrawal is refused and audited; custody expiry is shown in UTC with the clock source.
+
+### RL-101 — Independently named Business senders deferred to the next planned round
+
+*Date:* 4 November 2026 · *Ruled by:* ct · *Governs:* SURFACE-003, SURFACE-008
+
+ct's 4 November SURFACE-003 two-FIX disposition is DEFER. The f32 and f34 carriers do not land. SURFACE-008 is the single additive Core follow-up for independently named Business senders bound to authorized native credentials, assigned to the next planned Envelope round; it authorizes no further SURFACE-003 FIX round. Every existing clause, acceptance sentence, status, evidence, gap and judgment remains unchanged. SURFACE-008 starts missing with no completion evidence.
+
+ct independently read the original gate's reproduced supported-send refusal and compared the two pinned code paths. The second gate's inconclusive optional probe supplies no new runtime proof. This ruling records the scope decision without importing private evidence or claiming implementation acceptance. The frozen R1–R5 rubric is in `docs/contract/SURFACE-008-rubric.md`: differing-name native preparation and exact human review through one supported MCP dispatch; actual reviewed Business identity and sponsor attribution through all required reads; actionable fresh exact review of an unchanged binding; unchanged-state refusal controls for real identity, sponsor, authority or payload changes and revoked or unapproved sends; and ordinary notice review and attribution screens at both widths.
+
+This assignment grants no field-proof exclusion, wider authority, automatic outbound action or naming-equality precondition. Every held filing, mandate, disclosure, ledger, remaining transport and Base conformance obligation remains owed. The supported hold pending independent Opus review of these exact additive clauses remains in place; this contract-only change neither releases that hold nor submits a landing.

@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3a6e1bc2e567a4416c73489a61c01b1ea5cbaaf2f4530487ea4840b7d3cc2a46",
+      "sha256": "476cacef7e331851d063544a0e5e5573846aa49bfa1755098655ff8173ef3fcc",
       "executable": false
     },
     "deploy-demo.json": {
@@ -522,6 +522,10 @@
     },
     "docs/contract/sources.md": {
       "sha256": "5e9debeed985046ecf46de1a4c0f1d9d1dc4d11ef43529ebfdeb608ccab85ee9",
+      "executable": false
+    },
+    "docs/contract/SURFACE-008-rubric.md": {
+      "sha256": "9a3bd2cea399e391b26cf988d0779702e30feee866f5ec3c12cd8384f4be74af",
       "executable": false
     },
     "docs/extended-retirement.md": {
@@ -1213,7 +1217,7 @@
       "executable": false
     },
     "RULINGS.md": {
-      "sha256": "8a3b17ac3c82f5f9304e3d433fecd3a2b0d57dad38c245134261b0bf740e6d14",
+      "sha256": "d99a5a8f6a0eb0c9a6939b6b533024e6b13cb7944a760d804ab94cc30f451aaa",
       "executable": false
     },
     "RUN-LOCALLY.md": {
