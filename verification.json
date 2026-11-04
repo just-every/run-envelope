@@ -103,7 +103,8 @@
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "pnpm run typecheck"
+        "pnpm run typecheck",
+        "node tests/agent-door/failures.mjs"
       ]
     }
   ],
