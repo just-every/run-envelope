@@ -1815,8 +1815,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 36 | 85 | 125 |
-| All | 5 | 36 | 85 | 126 |
+| Target and push further | 4 | 37 | 84 | 125 |
+| All | 5 | 37 | 84 | 126 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1937,7 +1937,7 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `BASE-AGENT-002` | The seed's jobs are tools, through the UI's own actions | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-003` | Records are resources | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-004` | Business identity and short-lived, audience-bound tokens | target | missing | | Not yet judged through this seed's own doors. |
-| `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | missing | | Not yet judged through this seed's own doors. |
+| `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | partial | `tests/agent-door/authority.mjs` — beforeRestriction and afterRestriction, loaded by `tests/agent-door/rotation-journey.mjs` in push agent-door conformance: a disposable issued native credential first prepares real hourly inputs, then drops preparation and compensation scope and narrows to one location; populated reads remain available, removed preparation refuses, attempted restoration of actions, fields and locations returns self_escalation, and the native owner sees the exact retained grant and revision under autonomous, held and blocked-access variants. `tests/agent-policy-runtime.mjs` — agentPolicyJourney invokes authorityRevocationJourney in `tests/agent-door/authority.mjs`: actual company grant downgrade and revocation, installation sponsor downgrade and suspension, native credential revocation and self-restriction fence a human-approved preparation suspended before its native write; current calls and saved outcomes lose removed authority without another preparation or private disclosure, while retained reads survive self-restriction. Native and shared audits retain sponsor, operation, exact approval and refused outcome. Native and shared blocked access policies cannot authorize widening. | Still unproved: complete role and tool parity with the UI, grant budget intersections, self_escalation for attempts to widen the sponsor role or change company policy or Pause, every record and imported-text injection family, and remaining transports. These are bounded native acceptance 2–4 subcases, not complete clause conformance. All existing sponsor and grant, exact human approval, account and catalog, rail and company, provider and mandate, CT, device, visual-correction and feeder holds remain unchanged. Reference sends remain configured-native-owner-only with explicit consent and audited sends; no automatic outbound action, automated retry or destructive recovery is authorized. |
 | `BASE-AGENT-006` | Every action declares its risk class | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-007` | The company's policy decides, at one chokepoint | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-008` | Truthful attribution | target | missing | | Not yet judged through this seed's own doors. |

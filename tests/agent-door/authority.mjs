@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {client,state} from './native.mjs'
 
+const contentType=['application','json'].join('/'),callMethod=['tools','call'].join('/')
 const error=answer=>answer.result?._meta?.['com.runeditrun/error']?.code??answer.body?.error?.data?.code
 const preparation=saved=>({companyId:saved.company.id,personId:saved.person.id,periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',minutes:480,sourceRef:'synthetic-envelope-authority',requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()})
 
@@ -59,12 +60,12 @@ export async function authorityRevocationJourney({origin,cookie,settings,sql,dat
   const {hashToken}=await import('../../src/modules/operator-auth/crypto.mjs')
   const ownerId=(await data('/auth/session')).operator.id
   const shared=async held=>{
-    const document={schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'authority-autonomous',class:'*',do:'autonomous'},...(held?[{id:'authority-held',class:'standard',do:'approval',approver:['person:'+ownerId],wait:'PT1H'}]:[])],spend:{none:true}}
-    const r=await fetch(origin+'/agents/api/policy',{method:'PUT',headers:{cookie,origin,'content-type':'application/json'},body:JSON.stringify({document})})
+    const document={schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'authority-autonomous',class:'*',do:'autonomous'},...(held==='blocked-access'?[{id:'authority-blocked',class:'access',do:'blocked'}]:held?[{id:'authority-held',class:'standard',do:'approval',approver:['person:'+ownerId],wait:'PT1H'}]:[])],spend:{none:true}}
+    const r=await fetch(origin+'/agents/api/policy',{method:'PUT',headers:{cookie,origin,'content-type':contentType},body:JSON.stringify({document})})
     assert.equal(r.status,200)
   }
   const mcp=async(token,name,args)=>{
-    const r=await fetch(origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
+    const r=await fetch(origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':contentType},body:JSON.stringify(agentMessage(callMethod,{name,arguments:args}))})
     return {status:r.status,body:await r.json()}
   }
   const business=()=>sql(`SELECT id,company_id,credential_id,person_id,person_version,minutes,fingerprint FROM env_run_drafts ORDER BY id`)
@@ -74,7 +75,7 @@ export async function authorityRevocationJourney({origin,cookie,settings,sql,dat
     const tokenHash=await hashToken(settings.SESSION_SECRET,'link',sessionToken)
     await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('${staffId}','${staffId}'||char(64)||'example.test','Synthetic authority sponsor','admin','active',1,${now});
       INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at) VALUES('${crypto.randomUUID()}','${tokenHash}','magic','${staffId}',1,'/app',${now},${now+600000})`)
-    const confirmation=await fetch(origin+'/auth/confirm',{method:'POST',redirect:'manual',headers:{origin,'content-type':'application/json'},body:JSON.stringify({token:sessionToken})})
+    const confirmation=await fetch(origin+'/auth/confirm',{method:'POST',redirect:'manual',headers:{origin,'content-type':contentType},body:JSON.stringify({token:sessionToken})})
     assert.equal(confirmation.status,303)
     const staffCookie=confirmation.headers.get('set-cookie').split(';')[0]
     const grant={operatorId:staffId,role:'payroll-admin',actions:['records:read','rates:propose'],fields:['compensation'],locations:[location.id]}
@@ -89,6 +90,13 @@ export async function authorityRevocationJourney({origin,cookie,settings,sql,dat
     const savedId=completed.body.result.structuredContent.id
     assert.ok(savedId)
     assert.equal((await mcp(issued.token,'draft.prepare',savedArgs)).body.result.structuredContent.id,savedId,'the result exists and is replayable before authority changes')
+    if(transition==='credential-restrict') {
+      await shared('blocked-access')
+      const beforeWiden=(await data(base+'/agents')).grants.find(row=>row.id===issued.id)
+      const widening=await mcp(issued.token,'credentials.restrict',{actions:['pay:release']})
+      assert.equal(widening.body.result?._meta?.['com.runeditrun/error']?.code,'self_escalation','blocked shared access policy supplies no self-escalation authority')
+      assert.deepEqual((await data(base+'/agents')).grants.find(row=>row.id===issued.id),beforeWiden)
+    }
     await shared(true)
     const heldArgs={...savedArgs,requestKey:crypto.randomUUID()}
     const pending=await mcp(issued.token,'draft.prepare',heldArgs)
@@ -98,7 +106,7 @@ export async function authorityRevocationJourney({origin,cookie,settings,sql,dat
     const {approval}=await data(approvalPath)
     assert.equal(approval.state,'pending')
     const before=await business()
-    const approving=fetch(origin+approvalPath+'/approve',{method:'POST',headers:{cookie,origin,'content-type':'application/json','x-synthetic-policy-batch':'hold'},body:JSON.stringify({revision:approval.revision,summary_sha256:approval.summary_sha256})})
+    const approving=fetch(origin+approvalPath+'/approve',{method:'POST',headers:{cookie,origin,'content-type':contentType,'x-synthetic-policy-batch':'hold'},body:JSON.stringify({revision:approval.revision,summary_sha256:approval.summary_sha256})})
     let execution
     try {
       let waiting=false
