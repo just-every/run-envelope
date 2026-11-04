@@ -3729,6 +3729,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     const accessExport=await data(api+'/agents/access')
     const attribution=accessExport.find(row=>row.targetId===exact.id && row.action==='dispatch:execute').correspondence
     assert.equal(attribution.approvedBy,owner.id)
+    assert.equal(attribution.humanReviewer.id,owner.id,'the permitted download names the separate human reviewer')
     assert.deepEqual(attribution.preparedBy,exact.data.preparedBy)
     assert.deepEqual(attribution.sendingAgent,exact.data.sendingAgent)
     const limitedExport=await data(api+'/agents/access',undefined,sponsors.preparer.cookie)
