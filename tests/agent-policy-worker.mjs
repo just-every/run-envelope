@@ -23,7 +23,7 @@ export default {
   if(next)instant=SystemDate.parse(next)
   const control=request.headers.get('x-synthetic-policy-batch')
   if(control==='release') { release?.();release=undefined;phase='idle' }
-  let held=false
+  let held=false,resourceReads=0
   const actual=new WeakMap(),queries=new WeakMap()
   const statement=(value,query)=>{const proxy=new Proxy(value,{get(target,key){if(key==='bind')return(...args)=>statement(target.bind(...args),query);const item=Reflect.get(target,key,target);return typeof item==='function'?item.bind(target):item}});actual.set(proxy,value);queries.set(proxy,query);return proxy}
   const database=new Proxy(env.DB,{
@@ -31,7 +31,10 @@ export default {
     if(key==='prepare')return sql=>statement(target.prepare(sql.replaceAll("unixepoch('subsec')*1000",String(instant))),sql)
     if(key==='batch') return async (...args)=>{
      const native=args[0].some(item=>(queries.get(item)||'').includes('env_'))
-     if(control==='hold'&&!held&&native) {
+     const person=args[0].some(item=>(queries.get(item)||'').includes('SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND id=?'))
+     if(person)resourceReads++
+     const resource=(control==='resource-classify'&&resourceReads===1 || control==='resource-delivery'&&resourceReads===2)&&person
+     if(!held&&(control==='hold'&&native || resource)) {
       held=true;phase='waiting'
       let timer
       try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }

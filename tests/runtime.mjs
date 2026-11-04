@@ -1,5 +1,6 @@
 import { agentPolicyWorker } from './agent-policy-worker.mjs'
 import { agentPolicyJourney } from './agent-policy-runtime.mjs'
+import { maskedResourceJourney } from './agent-door/masked-resources.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
 import { extendedRetirementJourney } from './extended-retirement-runtime.mjs'
 import { retirementBenefitsJourney } from './retirement-benefits-runtime.mjs'
@@ -22,7 +23,7 @@ import { copyFile, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
-import { startRecordedWorker as unstable_startWorker, finishPrivacyRecording, recordPrivateInput } from './privacy-recorder.mjs'
+import { startRecordedWorker as unstable_startWorker, finishPrivacyRecording, recordPrivateInput, outboundRequestCount } from './privacy-recorder.mjs'
 import {
   paperOnboardingJourney,
   incomeVerificationJourney,
@@ -55,7 +56,7 @@ import { firmJourney } from './firm-runtime.mjs'
 // historical-record fixtures in the core journey are not archive source data.
 if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
-    'records,approvals,sponsored,identity', 'agent-policy',
+    'records,approvals,sponsored,identity', 'agent-policy', 'masked-resources',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
     'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
@@ -134,7 +135,7 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
-const clockEntrypoint = process.env.ENVELOPE_JOURNEYS === 'agent-policy' ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
+const clockEntrypoint = ['agent-policy','masked-resources'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
@@ -251,7 +252,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['masked-resources', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -295,6 +296,10 @@ try {
       worker=await launch(settings)
       await waitForWorker()
     }
+  }
+  if (selected?.includes('masked-resources')) {
+    let bindings={...settings}
+    await maskedResourceJourney({origin,cookie,sql,settings,outbound:outboundRequestCount,restart:async(overrides={})=>{bindings={...bindings,...overrides};await stopWorker();worker=await launch(bindings);await waitForWorker()}})
   }
   if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})

@@ -1,4 +1,5 @@
 import { agentMessage, agentValue } from './agent-policy-runtime.mjs'
+import { restoredResourceAuthority } from './archive-authority.mjs'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -305,6 +306,7 @@ export async function archiveJourney(context) {
       assert.equal(after[name]?.length ?? 0, 0, 'restored history does not reactivate ' + name)
     await context.withRestoredWorker(state(target), async () => {
       const outboundBefore = context.edge.mails.length
+      await restoredResourceAuthority(context,fixture.authority)
       const company = '/api/envelope/companies/' + fixture.companies[0]
       const requests = [[company, 'GET'], [company + '/notices', 'POST'],[fixture.extendedRetirement.door,'GET'],[fixture.extendedRetirement.door+'/preview','POST']]
       for (const [path, method] of requests) {

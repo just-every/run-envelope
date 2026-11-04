@@ -8,8 +8,8 @@ have JSON input/output schemas, scopes, computed classes and contract citations.
 Refusals use `code` and MCP `com.runeditrun/error` metadata.
 
 This installation offers the CORE capabilities `tools`, `policy`, `pause`,
-`audit`, `idempotency` and `resources`. It explicitly refuses events, prompts and
-subscriptions. These are target capabilities, not implemented payroll outcomes.
+`audit` and `idempotency`, plus the optional `resources` capability. It explicitly
+refuses events, prompts and subscriptions. These are target capabilities, not implemented payroll outcomes.
 The machine-readable registry and native journey are in `agent-surface.json`.
 
 | Tool | Class | Native job |
