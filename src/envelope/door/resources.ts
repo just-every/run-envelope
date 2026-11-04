@@ -33,6 +33,11 @@ export function nativeResources(env: Bindings): ResourceDefinition[] {
           return value
         })
         if(await sharedState()!==before)throw new ToolRefusal('resource_unavailable')
+        const state=JSON.parse(before),f=agent.fence()
+        const client=state && await env.DB.prepare(`SELECT 1 FROM agent_door_agents c JOIN agent_door_state s ON s.id=1 WHERE c.id=? AND c.revoked=0 AND c.sponsor=? AND ${f.sql}
+          AND s.envelope IS ? AND s.local_document IS ? AND s.local_revision IS ? AND s.local_paused IS ?`)
+          .bind(ctx.agent.id,ctx.person.id,...f.args,state.envelope,state.local_document,state.local_revision,state.local_paused).first()
+        if(!client)throw new ToolRefusal('resource_unavailable')
         return person ? {json:person,untrusted:true} : null
       } catch(error) {
         if(error instanceof ToolRefusal && error.code==='resource_changed')throw error

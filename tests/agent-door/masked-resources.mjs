@@ -184,6 +184,9 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
     await race(stage,()=>pause(true));await pause(false)
     await race(stage,()=>configure({standard:'blocked'}));await configure({})
     await race(stage,()=>data('/agents/api/pause',{paused:true}));await data('/agents/api/pause',{paused:false})
+    const sharedOriginal=credential
+    await race(stage,()=>data('/agents/api/agents/'+credential.id+'/revoke',{}))
+    credential=await issue();noContent(await read(undefined,sharedOriginal.token))
     const original=credential
     await race(stage,()=>data(base+'/agents/'+credential.id+'/revoke',{version:1}))
     credential=await issue();noContent(await read(undefined,original.token))
@@ -195,11 +198,12 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
   assert.equal(code(changed),'resource_changed')
   assert.equal(readValue(await read()).name,'Synthetic changed worker')
 
-  for(const change of ['record','grant','sponsor','native-policy','native-pause','shared-pause']) {
+  for(const change of ['record','grant','client','sponsor','native-policy','native-pause','shared-pause']) {
     await policy('approval')
     const pending=await read();assert.equal(code(pending),'approval_required')
     if(change==='record')await sql(`UPDATE env_people SET version=version+1 WHERE company_id=${q(company.id)} AND id=${q(people[0].id)}`)
     if(change==='grant')await data(base+'/agents/'+credential.id+'/revoke',{version:1})
+    if(change==='client')await data('/agents/api/agents/'+credential.id+'/revoke',{})
     if(change==='sponsor'){await sql(`UPDATE env_grants SET version=version+1 WHERE company_id=${q(company.id)}`);await renewOwner()}
     if(change==='native-policy')await configure({standard:'blocked'})
     if(change==='native-pause')await pause(true)
@@ -210,7 +214,7 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
     if(change==='native-policy')await configure({})
     if(change==='native-pause')await pause(false)
     if(change==='shared-pause')await data('/agents/api/pause',{paused:false})
-    if(['grant','sponsor'].includes(change))credential=await issue()
+    if(['grant','client','sponsor'].includes(change))credential=await issue()
   }
   await policy('autonomous')
   let current=readValue(await read())

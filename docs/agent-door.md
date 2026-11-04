@@ -110,5 +110,7 @@ read and any required review. Native decision facts retain only the projection
 digest for that operation. Missing, foreign and inaccessible records share
 `resource_unavailable`; a changed delivered projection may give `resource_changed`.
 Restored history supplies no session, credential, consent or resource authority.
+Revocation from the shared Agents page also fences an already suspended read;
+a native credential cannot bypass that client revocation.
 Company, run, filing, notice, case, coverage and report resource families remain
 unavailable, as do sensitive resource reads and file exports.
