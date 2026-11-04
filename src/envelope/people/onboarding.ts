@@ -135,7 +135,7 @@ export class PaperOnboarding {
     const result=await this.store.records.env.DB.batch([
       auditStatement(this.store.records.env,actor,event,'onboarding.original.read',row.id,row.version,
         'EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)',[actor.company,personId,person.version]),
-      classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
+      await classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
     ])
     if (!result[0].meta.changes) throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(form.original.pdf),c=>c.charCodeAt(0))

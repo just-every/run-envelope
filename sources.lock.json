@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "cdea8ede701c442c9a24a9db2b8493fa20558ceea113273151e3ff4db223a42d",
+      "sha256": "4d5f9b6d9aa6a008d597d4830f626cf3d4c228f8b6568325a5adcedbe920e3f3",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -2505,7 +2505,7 @@
       "executable": false
     },
     "src/envelope/native-classification.ts": {
-      "sha256": "1f74924a236e0055a656f68aa41fedd907344e483c88f6243fcacd7a3d1ddcc2",
+      "sha256": "23e6a036f6949d8c7216ea59124d3c72477f1c9d1f5f6fca0ae6191140a97e2e",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -2549,7 +2549,7 @@
       "executable": false
     },
     "src/envelope/people/onboarding.ts": {
-      "sha256": "9e0ad73084f9254974bae1673e1a5b162c3c782741b40ff8aa79d1ff0198adb5",
+      "sha256": "ed132fddc2782b3118215e2f7f0e82699d034e314ee1a39f5050192bba46c509",
       "executable": false
     },
     "src/envelope/privacy-pages.tsx": {
@@ -2565,7 +2565,7 @@
       "executable": false
     },
     "src/envelope/records.ts": {
-      "sha256": "1a31683b2b0eb2026499ae0bc65e1eb6ceeb90bc113695c3058edc813554aed5",
+      "sha256": "2982e9b076687f16021282319282f88cf4e26525466aae64d4d6666b0f40e8f4",
       "executable": false
     },
     "src/envelope/review-presentation.ts": {
@@ -2593,7 +2593,7 @@
       "executable": false
     },
     "src/envelope/tax-notices.ts": {
-      "sha256": "36adf1ff88d7400658a535b34d5fe93727e0f00c417ca4a1d90b6527b06570b0",
+      "sha256": "b1ee1cf069bfd549558162946135a32bc4fa50151f0a6b58f6c8fd3e3859c81f",
       "executable": false
     },
     "src/envelope/withholding-instruction-pages.tsx": {
@@ -2601,11 +2601,11 @@
       "executable": false
     },
     "src/envelope/withholding-instructions.ts": {
-      "sha256": "b9b9bf3e1b7073d0fe09ee82a49689040caa8a6f6d3e740cfea1e302ae6f3d65",
+      "sha256": "36c6b6edcb2c52316fabf42d493a134791c1b7314557345c841f0136afb23d88",
       "executable": false
     },
     "src/envelope/worker-privacy.ts": {
-      "sha256": "32a51f2465cd6dddbeaf168d717383f843e764a1c59e6b314b215b0e9aed9978",
+      "sha256": "5d17419aa327b27a0c94541d30c1479877de0364e4f62c027cfff9755e1c7a83",
       "executable": false
     },
     "src/envelope/workspace/allocation-tax.ts": {
@@ -4245,7 +4245,7 @@
       "executable": false
     },
     "tests/agent-door/sensitive-reads.mjs": {
-      "sha256": "969915f34575db361a3e37a16a668e9fbc9eee099b50acc4c287e4052ba8ecc8",
+      "sha256": "d10d0a2196eb38592b174f2f7163ecc2fc2a7fe3111e26fb38460ebfce9ddf46",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {

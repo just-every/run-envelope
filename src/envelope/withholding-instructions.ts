@@ -95,7 +95,7 @@ export class WithholdingInstructions {
     if(!row) throw new PayrollError('lock_in_original_unavailable',404)
     const event=crypto.randomUUID(),result=await this.store.records.env.DB.batch([
       auditStatement(this.store.records.env,actor,event,'withholding.original.read',row.id,row.version),
-      classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
+      await classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
     ])
     if(!result[0].meta.changes)throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(row.data.original.pdf),c=>c.charCodeAt(0))

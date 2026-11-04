@@ -379,6 +379,7 @@ export async function sensitiveNativeCustody(context) {
   await data(privacy+'/request',nativeInput,403,staffCookie)
   const requested=await data(privacy+'/request',nativeInput)
   assert.equal(requested.status,'held')
+  assert.deepEqual(requested.classification,classification(['destructive','sensitive'],4,'worker-records'))
   assert.deepEqual((await classified('privacy.erasure.requested'))[0].classification,classification(['destructive','sensitive'],4,'worker-records'))
   const requestFacts=await classified('privacy.erasure.requested')
   await data(privacy+'/request',nativeInput)
@@ -396,7 +397,8 @@ export async function sensitiveNativeCustody(context) {
   inventory=await data(privacy)
   const current={...selected,fingerprint:inventory.fingerprint,records:inventory.retained.map(row=>row.id)}
   await data(privacy+'/retain',current)
-  await data(privacy+'/release',{...current,records:current.records.slice(0,2)})
+  const released=await data(privacy+'/release',{...current,records:current.records.slice(0,2)})
+  assert.deepEqual(released.classification,classification(['destructive','sensitive'],2,'retention-holds'))
   assert.deepEqual((await classified('privacy.holds.released'))[0].classification,classification(['destructive','sensitive'],2,'retention-holds'))
   const final=await data(privacy)
   const last=final.retained.filter(row=>!row.released)
@@ -411,6 +413,7 @@ export async function sensitiveNativeCustody(context) {
   const ready=await data(privacy)
   const erased=await data(base+'/people/'+person.id+'/erase',{consent:true,version:ready.version,fingerprint:ready.fingerprint,records:ready.retained.map(row=>row.id)})
   assert.equal(erased.recordsDeleted,4)
+  assert.deepEqual(erased.classification,classification(['destructive','sensitive'],4,'worker-records'))
   const erasedAudit=(await classified('privacy.worker.erased'))[0]
   assert.equal(erasedAudit.targetId,erased.id)
   assert.deepEqual(erasedAudit.classification,classification(['destructive','sensitive'],4,'worker-records'))

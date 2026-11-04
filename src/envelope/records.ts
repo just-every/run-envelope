@@ -1,4 +1,4 @@
-import { classificationStatement, countedClassificationStatement } from './native-classification'
+import { classificationStatement, countedClassificationStatement, nativeFactsAvailable } from './native-classification'
 import type { Bindings } from '../auth.server'
 import type { Session } from '../modules/operator-auth/index.mjs'
 import {
@@ -309,7 +309,7 @@ export class Records {
           ...f.args,
         ],
       ),
-      countedClassificationStatement(this.env,actor,event,comp?'sensitive':'standard',comp?'compensation':'masked-worker',
+      await countedClassificationStatement(this.env,actor,event,comp?'sensitive':'standard',comp?'compensation':'masked-worker',
         comp?{sql:'SELECT COUNT(*) FROM env_rate_proposals WHERE company_id=? AND person_id=?',args:[actor.company,id]}:{sql:'SELECT 1',args:[]}),
     ])
     if (!results[0].meta.changes) throw new PayrollError('authority_or_record_changed', 409)
@@ -405,7 +405,7 @@ export class Records {
         `SELECT cipher FROM env_private_records WHERE company_id=? AND person_id=? AND kind=? AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) AND ${f.sql}`,
         [actor.company, id, kind, event, ...f.args],
       ),
-      classificationStatement(this.env,actor,event,['sensitive'],1,kind==='tax'?'tax-document':kind==='bank'?'bank-number':'ssn'),
+      await classificationStatement(this.env,actor,event,['sensitive'],1,kind==='tax'?'tax-document':kind==='bank'?'bank-number':'ssn'),
     ])
     const row = result[1].results[0]
     if (!row) throw new PayrollError('record_not_found', 404)
@@ -507,7 +507,7 @@ export class Records {
         'EXISTS(SELECT 1 FROM env_rate_reviews WHERE token_hash=?)',
         [hash],
       ),
-      classificationStatement(this.env,actor,event,['sensitive'],1,'compensation'),
+      await classificationStatement(this.env,actor,event,['sensitive'],1,'compensation'),
     ])
     if (!result[1].results.length) throw new PayrollError('authority_changed', 409)
     return { ...proposal, personName: person.name, reviewToken: token }
@@ -576,9 +576,10 @@ export class Records {
       throw new PayrollError('payroll_access_denied', 403)
     const f = fence(actor)
     // UUIDs do not order tied timestamps; keep the most recently appended event first.
+    const classification=await nativeFactsAvailable(this.env) ? '(SELECT classification FROM env_native_action_facts WHERE audit_id=env_audit.id)' : 'NULL'
     return (
       await this.statement(
-        `SELECT actor_id AS actorId,action,target_id AS targetId,version,occurred_at AS occurredAt,(SELECT classification FROM env_native_action_facts WHERE audit_id=env_audit.id) AS classification FROM env_audit WHERE company_id=? AND ${f.sql} ORDER BY occurred_at DESC,rowid DESC LIMIT 200`,
+        `SELECT actor_id AS actorId,action,target_id AS targetId,version,occurred_at AS occurredAt,${classification} AS classification FROM env_audit WHERE company_id=? AND ${f.sql} ORDER BY occurred_at DESC,rowid DESC LIMIT 200`,
         [actor.company, ...f.args],
       ).all()
     ).results.map(row=>{const {classification,...event}=row;return classification?{...event,classification:JSON.parse(String(classification))}:event})
@@ -599,7 +600,7 @@ export class Records {
         [actor.company, ...l.args, ...f.args, event],
       ),
       auditStatement(this.env,actor,event,'records.exported',actor.company,actor.grant.version),
-      countedClassificationStatement(this.env,actor,event,'standard','masked-worker',
+      await countedClassificationStatement(this.env,actor,event,'standard','masked-worker',
         {sql:'SELECT COUNT(*) FROM env_audit WHERE id!=? AND substr(id,1,length(?))=? AND company_id=?',args:[event,event,event,actor.company]}),
     ])
     // The initial export is explicitly the identity/location register. Pay-rate

@@ -174,7 +174,7 @@ export class TaxNoticeCases {
     const event=crypto.randomUUID()
     const result=await this.store.records.env.DB.batch([
       auditStatement(this.store.records.env,actor,event,'notice.case.original.read',id,version),
-      classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
+      await classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
     ])
     if (!result[0].meta.changes) throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(doc.pdf),c=>c.charCodeAt(0))

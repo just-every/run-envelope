@@ -136,8 +136,10 @@ An explicitly authorized native owner erasure request records `destructive` and
 `sensitive` with the complete selected worker-record count. An eligible hold
 release records the selected hold count in one aggregate audit event, alongside
 the existing per-record custody events. Completed erasure records the actual
-deleted count against its anonymous receipt. These classifications share the
-native audit transaction and survive restart. Stale fingerprints, ineligible
+deleted count against its anonymous receipt. These classifications are returned with the native action response and share the
+native audit transaction after the metadata migration; they survive restart. A
+pre-upgrade installation keeps its original audit rows and returns response
+classification without inventing historical metadata. Stale fingerprints, ineligible
 holds, replayed releases and missing current human authority create no completed
 classification. The audit download exposes these facts without retained values
 or erased subject identifiers. No classification releases a hold, selects a

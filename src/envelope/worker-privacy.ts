@@ -1,4 +1,4 @@
-import { classificationStatement } from './native-classification'
+import { classificationStatement, nativeClassification } from './native-classification'
 // @ts-expect-error Base publishes this runtime journal subpath without declarations.
 import { erasureStatements, redactionStatements, invalidateTransfersStatements } from '@runeditrun/rer/modules/portability/journal'
 import { fence, auditStatement, type Actor } from './access'
@@ -129,10 +129,10 @@ export class WorkerPrivacy {
     const result=await this.records.env.DB.batch([
       this.records.statement(`INSERT INTO env_privacy_requests(company_id,id,person_id,status,created_at) SELECT ?,?,?,'held',? WHERE ${f.sql} AND ${proof.sql} AND COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0)=? ON CONFLICT(company_id,person_id) DO NOTHING`, [actor.company,id,personId,Date.now(),...f.args,...proof.args,actor.company,scope.epoch]),
       auditStatement(this.records.env,actor,event,'privacy.erasure.requested',personId,1, 'EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND id=?)',[actor.company,id]),
-      classificationStatement(this.records.env,actor,event,['destructive','sensitive'],scope.entries.length,'worker-records'),
+      await classificationStatement(this.records.env,actor,event,['destructive','sensitive'],scope.entries.length,'worker-records'),
     ])
     if (!result[0].meta.changes && !await this.records.statement('SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=?',[actor.company,personId]).first()) throw new PayrollError('step_up_or_scope_changed',409)
-    return this.read(actor,personId)
+    return {...await this.read(actor,personId),classification:nativeClassification(['destructive','sensitive'],scope.entries.length,'worker-records')}
   }
   async review(actor: Actor, personId: string, input: Input, release = false) {
     const f = this.owner(actor), proof = stepUpFence(actor), scope = await this.scope(actor, personId)
@@ -166,11 +166,11 @@ export class WorkerPrivacy {
     if(release) {
       const event=crypto.randomUUID()
       statements.push(auditStatement(this.records.env,actor,event,'privacy.holds.released',personId,1),
-        classificationStatement(this.records.env,actor,event,['destructive','sensitive'],selected.length,'retention-holds'))
+        await classificationStatement(this.records.env,actor,event,['destructive','sensitive'],selected.length,'retention-holds'))
     }
     statements.push(this.records.statement('DELETE FROM rer_erasure_guard'))
     try { await this.records.env.DB.batch(statements) } catch { throw new PayrollError(release ? 'hold_not_releasable_or_authority_changed' : 'step_up_or_scope_changed', 409) }
-    return this.read(actor, personId)
+    return {...await this.read(actor,personId),...(release?{classification:nativeClassification(['destructive','sensitive'],selected.length,'retention-holds')}:{})}
   }
   async erase(actor: Actor, personId: string, input: Input) {
     const f = this.owner(actor), proof = stepUpFence(actor)
@@ -224,9 +224,9 @@ export class WorkerPrivacy {
     statements.push(this.records.statement(`UPDATE env_privacy_requests SET person_id=NULL,status='completed',completed_at=?,records_deleted=? WHERE company_id=? AND person_id=?`, [Date.now(),scope.entries.length,actor.company,personId]))
     statements.push(this.records.statement('DELETE FROM env_privacy_guard WHERE company_id=?', [actor.company]), this.records.statement('DELETE FROM env_privacy_redactions WHERE company_id=?', [actor.company]),
       auditStatement(this.records.env, actor, event, 'privacy.worker.erased', anonymous, expected),
-      classificationStatement(this.records.env,actor,event,['destructive','sensitive'],scope.entries.length,'worker-records'),
+      await classificationStatement(this.records.env,actor,event,['destructive','sensitive'],scope.entries.length,'worker-records'),
       this.records.statement('DELETE FROM rer_erasure_guard'))
     try { await db.batch(statements) } catch { throw new PayrollError('erasure_retention_review_required', 409) }
-    return {id: anonymous, erased: true, recordsDeleted: scope.entries.length}
+    return {id: anonymous, erased: true, recordsDeleted: scope.entries.length,classification:nativeClassification(['destructive','sensitive'],scope.entries.length,'worker-records')}
   }
 }
