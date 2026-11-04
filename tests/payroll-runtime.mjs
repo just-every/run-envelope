@@ -9,6 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { chromium } from '@playwright/test'
 import { privateValue, outboundRequestCount } from './privacy-recorder.mjs'
+import { payrollSnapshot } from './payroll-doors.mjs'
 import { payrollWithoutAiJourney } from './industry-runtime.mjs'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
@@ -4945,8 +4946,8 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
     federal:{form:'W-4',effectiveFrom:'2026-01-02',original,fields:{filingStatus:'single',multipleJobs:'no',dependentCreditCents:200000,otherIncomeCents:0,deductionsCents:0,additionalCents:2500,exempt:'no'}},
     state:{form:'OH-IT-4',effectiveFrom:'2026-01-02',original:{...original,pdf:statePdf},fields:{residenceAddress:'1 Synthetic Street, Columbus OH 43215',schoolDistrictName:'Synthetic Columbus',schoolDistrictNumber:'2503',allowances:1,additionalCents:1000,localExemption:'none'}}}
   privateValue(input.tin);privateValue(pdf);privateValue(statePdf)
-  const snapshot=()=>sql(`SELECT (SELECT COUNT(*) FROM env_people) AS people,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_workspace_decisions) AS decisions,(SELECT COUNT(*) FROM env_workspace_reviews) AS reviews,(SELECT COUNT(*) FROM env_audit) AS audit`)
-  const noWrite=async task=>{const before=await snapshot();await task();assert.deepEqual(await snapshot(),before,'refused onboarding creates no records, decisions, review tokens or audit')}
+  const snapshot=()=>payrollSnapshot(sql)
+  const noWrite=async task=>{const before=await snapshot();await task();assert.deepEqual(await snapshot(),before,'refused onboarding preserves retained contents, decisions, review tokens and audit')}
   await noWrite(async()=>{
     await data(door,{...input,attestTranscription:false},400)
     await data(door,{...input,federal:{...input.federal,original:{...original,signed:false}}},400)
@@ -4977,7 +4978,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   await noWrite(async()=>{await data(door+'/approve',{version:1,reviewToken:review.reviewToken},409)})
   const movedReview=await data(door+'/review');await data(door+'/approve',{version:2,reviewToken:movedReview.reviewToken})
   await data(door+'/withdraw',{version:2});assert.equal((await data(door))[0].paperworkReviewed,false)
-  const legacy={...input,version:2,federal:{form:'W-4-pre2020',effectiveFrom:'2019-01-01',original:{...original,signedOn:'2018-12-31'},fields:{filingStatus:'married',allowances:3,additionalCents:1234,exempt:'no'}},state:{form:'PA-residency',effectiveFrom:'2026-08-01',original,fields:{residenceAddress:'2 Synthetic Street, Pittsburgh PA',residencePsd:'700102',workAddress:'3 Synthetic Street, Pittsburgh PA',workPsd:'700102',localExemption:'claimed',exemptionEvidence:'Synthetic signed local exemption original attached'}}}
+  const legacy={...input,version:2,federal:{form:'W-4-pre2020',effectiveFrom:'2019-01-01',original:{...original,signedOn:'2018-12-31'},fields:{filingStatus:'married',allowances:3,additionalCents:1234,exempt:'no'}},state:{form:'PA-residency',effectiveFrom:'2026-08-01',original:{...input.state.original},fields:{residenceAddress:'2 Synthetic Street, Pittsburgh PA',residencePsd:'700102',workAddress:'3 Synthetic Street, Pittsburgh PA',workPsd:'700102',localExemption:'claimed',exemptionEvidence:'Synthetic signed local exemption original attached'}}}
   await data(door,legacy,201)
   row=(await data(door))[0];assert.equal(row.data.federal.fields.allowances,3);assert.equal(row.data.federal.fields.additionalCents,1234);assert.equal(row.data.state.fields.residencePsd,'700102');assert.equal(row.data.state.fields.workPsd,'700102');assert.equal(row.data.state.fields.localExemption,'claimed')
   const contractor=await data(base+'/people',{name:'Synthetic paper contractor',locationId:location.id},201),contractDoor=base+'/people/'+contractor.id+'/paper-onboarding'
@@ -5129,11 +5130,12 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   // Tax-form custody through both native document and API download doors. The
   // retained replacement has binary bytes and differs from the first original.
   const originalPaths=[]
-  for(const version of [1,4,5])for(const form of ['federal','state'])for(const prefix of ['/api/','/app/']) {
+  for(const version of [1,2,3,4,5])for(const form of ['federal','state'])for(const prefix of ['/api/','/app/']) {
     const path=(door+'/original/'+version+'/'+form).replace('/api/',prefix)
     originalPaths.push(path)
-    for(const method of ['GET','HEAD']) {
-      const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:downloader,origin}})
+    for(const who of [cookie,downloader])for(const method of ['GET','HEAD']) {
+      const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin,
+        'if-none-match':'*','if-modified-since':'Thu, 01 Jan 2099 00:00:00 GMT','range':'bytes=0-7'}})
       assert.equal(response.status,200,method+' current separately scoped download')
       assert.equal(response.headers.get('cache-control'),'no-store')
       assert.equal(response.headers.get('content-type'),['application','octet-stream'].join('/'))
@@ -5149,7 +5151,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   const refuseOriginals=async(who,status,paths=originalPaths)=>{
     await noWrite(async()=>{
       for(const path of paths)for(const method of ['GET','HEAD']) {
-        const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin}})
+        const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:who,origin,'if-none-match':'*','if-modified-since':'Thu, 01 Jan 2099 00:00:00 GMT','range':'bytes=0-7'}})
         const expected=status===401 && path.startsWith('/app/')?303:status
         assert.equal(response.status,expected,method+' '+path+' private tax original refusal')
         if(expected===303)assert.match(response.headers.get('location'),/^\/signin\?/)
@@ -5235,7 +5237,13 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   await refuseOriginals(await signIn(downloadId),403)
   await data(base+'/grants',{operatorId:downloadId,version:2,role:'preparer',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:download']})
   const renewedDownloader=await signIn(downloadId)
-  assert.equal((await call(door+'/original/4/state',undefined,renewedDownloader)).status,200,'a fresh session needs the renewed explicit download grant')
+  for(const path of originalPaths)for(const method of ['GET','HEAD']) {
+    const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie:renewedDownloader,origin}})
+    assert.equal(response.status,200,'a fresh session needs the renewed explicit download grant')
+    const [,version,form]=/\/original\/(\d+)\/(federal|state)$/.exec(path)
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()),method==='HEAD'?Buffer.alloc(0):originalBytes(Number(version),form))
+  }
+  console.log('TAX-ORIGINALS privacy passed: five retained versions, distinct federal and state bytes, native document and API GET and HEAD, conditional requests, scoped renewal and unchanged refused records')
   await refuseOriginals(downloader,401)
   await data(base+'/grants',{operatorId:reviewerId,version:2,role:'payroll-admin',locations:[location.id],fields:['tax','ssn'],actions:['records:read','paper:review']})
   const oldReviewer=reviewer;reviewer=await signIn(reviewerId)

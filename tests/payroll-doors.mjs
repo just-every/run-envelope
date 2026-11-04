@@ -59,7 +59,13 @@ export function payrollDoors(f, claim, notice) {
  add(person, ['/industry', '/industry/{classification,checks,tip-tax-previews,tip-tax-funds}',
   '/industry/{review,decision}/{industry-classification,industry-check}/' + id])
  const paths = [...routes].flatMap(path => ['/api/envelope' + path, '/app/envelope' + path])
- paths.push('/app', '/app/envelope', '/api/envelope/mcp')
+ paths.push('/app', '/app/envelope', '/mcp', '/api/envelope/mcp',
+  '/api/rer/agent-policy', '/api/rer/business-settings')
+ // Installed shared person dispatcher in ./src/modules/agent-door/person-doors.ts.
+ for (const pattern of ['/{policy,state,pause,audit,agents,approvals,reviews}',
+  '/agents/' + id + '/revoke', '/approvals/' + id, '/approvals/' + id + '/{approve,reject}',
+  '/reviews/' + id, '/reviews/' + id + '/{reviewed,flag,undo}'])
+  paths.push(...expand('/agents/api' + pattern))
  for (const resource of ['records', 'drafts', 'bonus-runs']) {
   paths.push('/api/envelope/v1' + company + '/' + resource)
   if (resource !== 'records') paths.push('/api/envelope/v1' + company + '/' + resource + '/' + id)
@@ -69,10 +75,10 @@ export function payrollDoors(f, claim, notice) {
 }
 
 export async function payrollSnapshot(sql) {
- const tables = await sql("SELECT name FROM sqlite_master WHERE type='table' AND (name GLOB 'env_*' OR name GLOB 'oa_*') ORDER BY name")
+ const tables = await sql("SELECT name FROM sqlite_master WHERE type='table' AND (name GLOB 'env_*' OR name GLOB 'oa_*' OR name GLOB 'bs_*' OR name GLOB 'agent_door_*') ORDER BY name")
  const digest = createHash('sha256')
  for (const {name} of tables) {
-  assert.match(name, /^(?:env|oa)_[a-z_]+$/)
+  assert.match(name, /^(?:env|oa|bs|agent_door)_[a-z_]+$/)
   digest.update(name).update(JSON.stringify(await sql('SELECT * FROM ' + name + ' ORDER BY rowid')))
  }
  return digest.digest('hex')

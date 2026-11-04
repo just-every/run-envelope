@@ -57,7 +57,9 @@ Both native document links and API retrieval return signed originals as binary
 attachments, with `no-store`, MIME sniffing disabled, a sandbox content security
 policy and no inline opening. GET preserves the exact retained bytes, including
 binary content; HEAD uses the same authority and response protection without a
-body. New paper versions append their own federal and state originals; they do
+body. Conditional cache requests and byte-range requests still require current
+authority and return the protected full original, never a shared-cache response.
+New paper versions append their own federal and state originals; they do
 not overwrite earlier versions. These are retained signed documents, not a claim
 of legal signature verification or payable authority.
 
@@ -113,11 +115,11 @@ recorded rather than presented as a complete accessibility pass.
 installed dispatch branches in `src/envelope/http.ts` and its claim, industry,
 accounting, automation and firm dispatchers. `tests/claims-browser.mjs` adds the
 actual links and form actions emitted by populated private records and the native
-identity and dependency settings doors. Signed-out GET, HEAD and POST attempts
-must refuse, disclose no private content and change no retained payroll or native
+identity and dependency settings doors. Signed-out GET, HEAD, POST, PUT, PATCH
+and DELETE attempts must refuse, disclose no private content and change no retained payroll or native
 identity row. Download history is separately exercised by paperOnboardingJourney
-in `tests/payroll-runtime.mjs`, including current scoped access, original and
-replacement bytes, foreign companies, wrong locations or fields, signed-out and
+in `tests/payroll-runtime.mjs`, including current owner and scoped staff access,
+original and replacement bytes, foreign companies, wrong locations or fields, signed-out and
 revoked sessions, revoked grants and renewed grants that leave old sessions dead.
 The journey recursively reads the populated company, person, notice and claim
 documents and follows their native links. It adds every emitted form action to
@@ -128,13 +130,25 @@ identity rows. The dispatcher inventory still supplies routes that no current
 document offers; new route families must extend it and their applicable states.
 
 Federal and state originals carry different bytes, as do their replacement
-versions. GET checks exact bytes independently for each form; HEAD retains the
-same authority and attachment protections without a body. Keyboard downloads
+versions. GET checks exact bytes independently for every retained form and
+version in the journey; HEAD retains the same authority and attachment protections without a body. Keyboard downloads
 open the distinct replacement links at both release widths, so a form or version
 mix-up cannot pass by returning an identical fixture. Current owners and scoped
 downloaders also attempt to overwrite and delete retained originals through
 their download links; these unsupported mutations refuse without changing the
-retained records or audit.
+retained records or audit. Refusal checks compare retained row contents as well
+as their counts, including native identity, Business settings and agent state.
+A renewed grant requires a fresh session for every historical download; old
+sessions remain refused even when they present conditional cache headers.
+
+The installed shared agent dispatcher is included in the signed-out inventory.
+Its person APIs, policy mutation and Business settings mutation require their
+existing authority. MCP initialization and discovery expose only public
+capabilities; attempts to list tools, call a record tool or read a resource
+without credentials are refused. The Agents document shows only its sign-in
+shell to a signed-out visitor. Public OAuth resource metadata and brand resources
+are checked for private values and visitor cookies alongside the native public
+doors. No agent or Business authority is created by these checks.
 This finite boundary proof does not establish exhaustive structured inputs,
 interaction states, contrast or accessibility-tree announcements.
 

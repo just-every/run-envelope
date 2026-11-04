@@ -169,7 +169,8 @@ export async function safeInputsBrowser({context,f}) {
    '/auth/confirm?token=synthetic-envelope-570','/auth/owner-signin?token=synthetic-envelope-570',
    '/auth/owner-claim','/.well-known/rer-dependencies','/.well-known/rer-link/jwks',
    '/.well-known/rer-link/jwks/oidc-provider@1','/.well-known/rer-link/callback',
-   '/auth/dependencies/status','/auth/oidc/auth/start','/auth/oidc/auth/callback','/auth/oidc/auth/logout']
+   '/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp',
+   '/rer-business.css','/rer-business-logo','/auth/dependencies/status','/auth/oidc/auth/start','/auth/oidc/auth/callback','/auth/oidc/auth/logout']
   const planted=[f.company.name,f.person.name,f.company.ein,'900-69-0001']
   for(const path of nativePublic)for(const method of ['GET','HEAD']) {
    const response=await visitor.request.fetch(context.origin+path,{method,maxRedirects:0})
@@ -331,34 +332,6 @@ export async function safeInputsBrowser({context,f}) {
   }
   const notice=await f.data(f.base+'/notices',{locationId:f.location.id,reference:'synthetic-envelope-576',body:payload},201)
   const noticePath=f.base+'/notices/'+notice.id
-  // Exercise the finite dispatcher inventory against retained private records,
-  // plus concrete links and mutations emitted by the populated claim screen.
-  await owned.goto(context.origin+ui)
-  const rendered=await owned.locator('[href],[action],[formaction]').evaluateAll(nodes=>nodes.flatMap(node=>
-   ['href','action','formaction'].map(key=>node.getAttribute(key)).filter(value=>value?.startsWith('/app/envelope'))))
-  const populated=await renderedPayrollDoors(owner,context.origin,[ui,f.base.replace('/api/','/app/'),personDoor.replace('/api/','/app/'),noticePath.replace('/api/','/app/')])
-  await writeFile(join(proof,'populated-documents.json'),JSON.stringify(populated,null,2))
-  const privateDoors=[...new Set([...populated.doors,...payrollDoors(f,{id:imported.id,artifacts:[hostile,pdf]},notice),...rendered,
-   '/auth/session','/auth/operators','/auth/sessions','/auth/domain-rules','/auth/providers','/auth/settings/identity',
-   '/auth/invite/cancel','/auth/operator/status','/auth/operator/role','/auth/session/revoke','/auth/step-up',
-   '/auth/providers/unlink','/auth/providers/relink','/auth/settings/business','/auth/setup-complete','/auth/email','/auth/display-name',
-   '/auth/dependencies/setup','/auth/dependencies/relink','/auth/dependencies/unlink'])]
-  const targetSession=(await context.sql("SELECT id FROM oa_sessions WHERE operator_id='"+f.operator.id+"' AND revoked_at IS NULL ORDER BY created_at LIMIT 1"))[0].id
-  const privateBefore=await payrollSnapshot(context.sql),inventory=[]
-  for(const path of privateDoors)for(const method of ['GET','HEAD','POST']) {
-   const response=await visitor.request.fetch(context.origin+path,{method,maxRedirects:0,headers:{origin:context.origin},
-    ...(method==='POST'?{data:{version:1,operatorId:f.operator.id,sessionId:targetSession,reason:'Synthetic unauthorized mutation'}}:{})})
-   const body=await response.text(),location=response.headers().location
-   assert.ok([400,401,403,404,405].includes(response.status()) || response.status()===303 && location?.startsWith('/signin'),method+' '+path+' refuses a signed-out visitor: '+response.status())
-   for(const value of [...planted,payload])assert.ok(!body.includes(value),method+' '+path+' contains no payroll content')
-   assert.equal(response.headers()['set-cookie'],undefined,method+' '+path+' creates no visitor session')
-   assert.equal(response.headers()['content-disposition'],undefined,method+' '+path+' grants no attachment')
-   if(method==='HEAD')assert.equal(body,'')
-   inventory.push({method,path,status:response.status()})
-  }
-  assert.equal(await payrollSnapshot(context.sql),privateBefore,'signed-out reads and mutations change no retained payroll row, revision, grant or audit')
-  await writeFile(join(proof,'signed-out-doors.json'),JSON.stringify(inventory,null,2))
-  console.log('Signed-out payroll inventory passed: '+privateDoors.length+' routes, '+inventory.length+' method cases')
   for(const width of [1440,390]) {
    await owned.setViewportSize({width,height:1000});await owned.goto(context.origin+noticePath.replace('/api/','/app/'))
    assert.ok((await owned.locator('main').innerText()).includes(payload))
@@ -417,6 +390,61 @@ export async function safeInputsBrowser({context,f}) {
    await owned.screenshot({path:join(proof,'structured-industry-'+width+'.png'),fullPage:true})
   }
   assert.deepEqual(outbound,[],'structured source and classification text never executes a remote request')
+  // Exercise the finite dispatcher inventory against retained private records,
+  // plus concrete links and mutations emitted by the populated claim screen.
+  await owned.goto(context.origin+ui)
+  const rendered=await owned.locator('[href],[action],[formaction]').evaluateAll(nodes=>nodes.flatMap(node=>
+   ['href','action','formaction'].map(key=>node.getAttribute(key)).filter(value=>value?.startsWith('/app/envelope'))))
+  const populated=await renderedPayrollDoors(owner,context.origin,[ui,f.base.replace('/api/','/app/'),personDoor.replace('/api/','/app/'),noticePath.replace('/api/','/app/')])
+  await writeFile(join(proof,'populated-documents.json'),JSON.stringify(populated,null,2))
+  const privateDoors=[...new Set([...populated.doors,...payrollDoors(f,{id:imported.id,artifacts:[hostile,pdf]},notice),...rendered,
+   '/auth/session','/auth/operators','/auth/sessions','/auth/domain-rules','/auth/providers','/auth/settings/identity',
+   '/auth/invite/cancel','/auth/operator/status','/auth/operator/role','/auth/session/revoke','/auth/step-up',
+   '/auth/providers/unlink','/auth/providers/relink','/auth/settings/business','/auth/setup-complete','/auth/email','/auth/display-name',
+   '/auth/dependencies/setup','/auth/dependencies/relink','/auth/dependencies/unlink'])]
+  const targetSession=(await context.sql("SELECT id FROM oa_sessions WHERE operator_id='"+f.operator.id+"' AND revoked_at IS NULL ORDER BY created_at LIMIT 1"))[0].id
+  const privateBefore=await payrollSnapshot(context.sql),inventory=[]
+  for(const path of privateDoors)for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE']) {
+   const response=await visitor.request.fetch(context.origin+path,{method,maxRedirects:0,headers:{origin:context.origin},
+    ...(!['GET','HEAD'].includes(method)?{data:{version:1,operatorId:f.operator.id,sessionId:targetSession,reason:'Synthetic unauthorized mutation'}}:{})})
+   const body=await response.text(),location=response.headers().location
+   assert.ok([400,401,403,404,405].includes(response.status()) || response.status()===303 && location?.startsWith('/signin'),method+' '+path+' refuses a signed-out visitor: '+response.status())
+   for(const value of [...planted,payload])assert.ok(!body.includes(value),method+' '+path+' contains no payroll content')
+   assert.equal(response.headers()['set-cookie'],undefined,method+' '+path+' creates no visitor session')
+   assert.equal(response.headers()['content-disposition'],undefined,method+' '+path+' grants no attachment')
+   if(method==='HEAD')assert.equal(body,'')
+   inventory.push({method,path,status:response.status()})
+  }
+  // Valid protocol messages reach authentication instead of passing only a
+  // malformed-request refusal. Discovery stays public and contains no records.
+  const discover=['server','discover'].join('/'),listTools=['tools','list'].join('/'),callTool=['tools','call'].join('/'),readResource=['resources','read'].join('/')
+  for(const path of ['/mcp','/api/envelope/mcp'])for(const method of ['initialize',discover,listTools,callTool,readResource]) {
+   const response=await visitor.request.post(context.origin+path,{headers:{origin:context.origin,'MCP-Protocol-Version':'2025-11-25'},
+    data:{jsonrpc:'2.0',id:1,method,params:method==='initialize'?{protocolVersion:'2025-11-25'}:method===callTool?{name:'records_list',arguments:{companyId:f.company.id}}:method===readResource?{uri:context.origin+personDoor}:{}}})
+   const discovery=['initialize',discover].includes(method),body=await response.text()
+   assert.equal(response.status(),discovery?200:401,method+' is public discovery or requires current credentials')
+   assert.equal(response.headers()['cache-control'],'no-store')
+   assert.equal(response.headers()['set-cookie'],undefined)
+   const message=JSON.parse(body)
+   if(discovery)assert.ok(message.result)
+   else assert.equal(message.error.code,-32001)
+   for(const value of [...planted,payload])assert.ok(!body.includes(value),'agent discovery and refusals expose no payroll content')
+   inventory.push({method:'POST',path,operation:method,status:response.status()})
+  }
+  // The shared person page may render a sign-in shell, never an agent history.
+  for(const path of ['/agents','/agents/approvals/synthetic-envelope-579']) {
+   const response=await visitor.request.get(context.origin+path),body=await response.text()
+   assert.equal(response.status(),200)
+   assert.match(body,/Sign in to see agent work/)
+   assert.ok(!body.includes('data-approval-state'))
+   assert.equal(response.headers()['cache-control'],'no-store')
+   assert.equal(response.headers()['set-cookie'],undefined)
+   for(const value of [...planted,payload])assert.ok(!body.includes(value),'a signed-out agent page contains only its sign-in shell')
+   inventory.push({method:'GET',path,status:response.status(),state:'sign-in'})
+  }
+  assert.equal(await payrollSnapshot(context.sql),privateBefore,'signed-out reads and mutations change no retained payroll row, revision, grant or audit')
+  await writeFile(join(proof,'signed-out-doors.json'),JSON.stringify(inventory,null,2))
+  console.log('Signed-out payroll inventory passed: '+privateDoors.length+' routes, '+inventory.length+' method cases')
   // The real import and document boundaries share the bounded JSON reader.
   const snapshot=()=>context.sql('SELECT (SELECT COUNT(*) FROM env_private_records) AS privateRecords,(SELECT COUNT(*) FROM env_notices) AS notices,(SELECT COUNT(*) FROM env_workspace_versions) AS versions,(SELECT COUNT(*) FROM env_audit) AS audit')
   for(const path of [personDoor+'/private',f.base+'/notices',f.base+'/hris-hires',personDoor+'/hris',personDoor+'/earnings-sources',personDoor+'/industry/classification',f.base+'/industry-returns']) {
