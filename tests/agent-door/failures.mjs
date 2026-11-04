@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {isDeepStrictEqual} from 'node:util'
 import {randomBytes,randomUUID,webcrypto} from 'node:crypto'
 import {readFile} from 'node:fs/promises'
 import {serveHosted,HOSTED_ORIGIN} from '@runeditrun/rer/internal/cli/hosted-output.mjs'
@@ -61,12 +62,14 @@ try {
     const answer=await c.tool('envelope.draft.prepare',draft(),{client:'local'})
     assert.ok(answer.result?.structuredContent&&!answer.result.isError,'the injected effect is a real authorized native preparation')
   }
+  let faults=0
   const exercise=async(label,check,expected,install)=>{
     c.points=[];await check()
-    assert.ok(c.points.length&&c.points.every(point=>point.ok),label+' clean control: '+c.points.filter(point=>!point.ok).map(point=>point.id).join(', '))
+    assert.ok(c.points.length&&c.points.every(point=>point.ok),label+' clean control: '+c.points.filter(point=>!point.ok).map(point=>point.id+': '+point.detail).join(', '))
     c.points=[];const restore=install()
     try {await check()} finally {restore()}
     assert.ok(c.points.some(point=>point.id===expected&&!point.ok),label+' fault must fail '+expected)
+    faults++
     console.log('PROBE BASE-AGENT-013 3 '+label+': real installed door with one verifier fault -> rejected by '+expected)
   }
   const wrap=(key,alter)=>{
@@ -77,13 +80,6 @@ try {
     await c.adopt(document);await c.prepare('failure-probes')
     c.listed=new Map((await c.mcp('tools/list')).result.tools.map(tool=>[tool.name,tool]))
   }
-
-  await exercise('missing schema',async()=>{c.surface=surface;await ready();await listedDoor(c)},
-    'BASE-AGENT-002.2.schema.envelope.draft.prepare',()=>wrap('mcp',async(original,method,...args)=>{
-      const answer=await original(method,...args)
-      if(method==='tools/list')delete answer.result.tools.find(tool=>tool.name==='envelope.draft.prepare').outputSchema
-      return answer
-    }))
 
   await exercise('effect before approval',async()=>{c.surface=select(['credentials-restrict']);await ready(heldPolicy());await runJourney(c,'failure-approval',{held:true})},
     'BASE-AGENT-007.5.no-effect.credentials-restrict',()=>wrap('stepTool',async(original,...args)=>{
@@ -110,65 +106,88 @@ try {
       return answer
     }))
 
-  await exercise('wrong computed class',async()=>{c.surface=select(['draft']);await ready();await runJourney(c,'failure-class')},
-    'BASE-AGENT-006.2.failure-class.draft',()=>wrap('stepTool',async(original,...args)=>{
-      const answer=await original(...args)
-      answer.decision.classes[0].class='sensitive'
+  const adopt=c.adopt
+  for(const held of [false,true]) {
+    // Negative token and person-door checks also run under both policies.
+    // Retain explicit blocked, removed and single-class policies unchanged.
+    c.adopt=(document,options)=>adopt(held&&isDeepStrictEqual(document,autonomousPolicy())?heldPolicy():document,options)
+    console.log('AGENT-CONFORMANCE-FAILURES policy='+ (held?'held':'autonomous'))
+    await exercise('missing schema',async()=>{c.surface=surface;await ready();await listedDoor(c)},
+      'BASE-AGENT-002.2.schema.envelope.draft.prepare',()=>wrap('mcp',async(original,method,...args)=>{
+        const answer=await original(method,...args)
+        if(method==='tools/list')delete answer.result.tools.find(tool=>tool.name==='envelope.draft.prepare').outputSchema
+        return answer
+      }))
+
+    await exercise('wrong computed class',async()=>{c.surface=select(['draft']);await ready();await runJourney(c,'failure-class',{held})},
+      'BASE-AGENT-006.2.failure-class.draft',()=>wrap('stepTool',async(original,...args)=>{
+        const answer=await original(...args)
+        answer.decision.classes[0].class='sensitive'
+        return answer
+      }))
+
+    await exercise('wrong computed facts',async()=>{c.surface=select(['draft']);await ready();await runJourney(c,'failure-facts',{held})},
+      'BASE-AGENT-006.2.failure-facts.draft',()=>wrap('stepTool',async(original,...args)=>{
+        const answer=await original(...args)
+        answer.decision.classes[0].facts.measure=2
+        return answer
+      }))
+
+    await exercise('argument changes class',async()=>{
+      c.surface={...select(['records-list']),journey:[{...surface.journey.find(step=>step.id==='records-list'),inject:{limit:1,internal:true,confirmExternal:true,confirmed:true}}]}
+      await ready();await runJourney(c,'failure-injection',{injections:true,held})
+    },'BASE-AGENT-005.5.failure-injection.records-list',()=>wrap('stepTool',async(original,step,args,...rest)=>{
+      const answer=await original(step,args,...rest)
+      if(args.limit===1)answer.decision.classes[0].class='sensitive'
       return answer
     }))
 
-  await exercise('argument changes class',async()=>{
-    c.surface={...select(['records-list']),journey:[{...surface.journey.find(step=>step.id==='records-list'),inject:{limit:1}}]}
-    await ready();await runJourney(c,'failure-injection',{injections:true})
-  },'BASE-AGENT-005.5.failure-injection.records-list',()=>wrap('stepTool',async(original,step,args,...rest)=>{
-    const answer=await original(step,args,...rest)
-    if(args.limit===1)answer.decision.classes[0].class='sensitive'
-    return answer
-  }))
+    await exercise('agent completes person step',async()=>{c.surface=select(['draft']);await negativePhase(c)},
+      'BASE-AGENT-008.2.person-door',()=>wrap('request',async(original,path,init={})=>{
+        if(new URL(path,origin).pathname==='/agents/api/pause'&&new Headers(init.headers).has('authorization'))
+          return original(path,{...init,headers:{origin,cookie,'content-type':'application/json'}})
+        return original(path,init)
+      }))
 
-  await exercise('agent completes person step',async()=>{c.surface=select(['draft']);await negativePhase(c)},
-    'BASE-AGENT-008.2.person-door',()=>wrap('request',async(original,path,init={})=>{
-      if(new URL(path,origin).pathname==='/agents/api/pause'&&new Headers(init.headers).has('authorization'))
-        return original(path,{...init,headers:{origin,cookie,'content-type':'application/json'}})
-      return original(path,init)
-    }))
-
-  await exercise('wrong audience accepted',async()=>{c.surface=select(['draft']);await negativePhase(c)},
-    'BASE-AGENT-004.2.audience',()=>wrap('mcp',async(original,method,params,options={})=>{
-      if(options.token) {
-        const claims=JSON.parse(Buffer.from(options.token.split('.')[1],'base64url').toString())
-        if(claims.aud==='https://sibling.invalid/mcp')options={...options,token:await accessToken(c)}
-      }
-      return original(method,params,options)
-    }))
-
-  await exercise('duplicate effect on retry',async()=>{c.surface=select(['draft']);await ready();await runJourney(c,'failure-replay',{replay:true})},
-    'BASE-AGENT-012.1.failure-replay',()=>{
-      const seen=new Map()
-      return wrap('stepTool',async(original,step,args,...rest)=>{
-        if(seen.has(args.idempotency_key)) {
-          const duplicate=await original(step,{...args,requestKey:randomUUID(),idempotency_key:randomUUID()},...rest)
-          assert.ok(duplicate.result?.structuredContent&&!duplicate.result.isError)
-          return seen.get(args.idempotency_key)
+    await exercise('wrong audience accepted',async()=>{c.surface=select(['draft']);await negativePhase(c)},
+      'BASE-AGENT-004.2.audience',()=>wrap('mcp',async(original,method,params,options={})=>{
+        if(options.token) {
+          const claims=JSON.parse(Buffer.from(options.token.split('.')[1],'base64url').toString())
+          if(claims.aud==='https://sibling.invalid/mcp')options={...options,token:await accessToken(c)}
         }
-        const answer=await original(step,args,...rest);seen.set(args.idempotency_key,answer);return answer
-      })
-    })
+        return original(method,params,options)
+      }))
 
-  // Compare the same masked identities shown by the current native person
-  // door, with populated records rather than two empty or self-derived lists.
-  c.surface=surface;await ready()
-  const records=(await c.tool('envelope.records.list',{companyId:saved.company.id})).result.structuredContent.records
-  const visible=await Promise.all(records.map(async record=>{
-    const {id,name,locationId,version}=await native(saved.base+'/people/'+record.id)
-    return {id,name,locationId,version}
-  }))
-  const checkParity=actual=>assert.deepEqual(actual.toSorted((a,b)=>a.id.localeCompare(b.id)),visible.toSorted((a,b)=>a.id.localeCompare(b.id)),'MCP identities must equal the native person door')
-  assert.ok(visible.length);checkParity(records)
-  const wrong=structuredClone(records);wrong[0].name='synthetic-envelope-wrong-person'
-  assert.throws(()=>checkParity(wrong),assert.AssertionError)
-  console.log('PROBE BASE-AGENT-013 3 role parity: populated MCP and native person reads -> changed identity rejected')
-  console.log('AGENT-CONFORMANCE-FAILURES passed: ten independent faults rejected after clean controls; product authority unchanged')
+    await exercise('duplicate effect on retry',async()=>{c.surface=select(['draft']);await ready();await runJourney(c,'failure-replay',{replay:true,held})},
+      'BASE-AGENT-012.1.failure-replay',()=>{
+        const seen=new Map()
+        return wrap('stepTool',async(original,step,args,...rest)=>{
+          if(seen.has(args.idempotency_key)) {
+            const duplicate=await original(step,{...args,requestKey:randomUUID(),idempotency_key:randomUUID()},...rest)
+            assert.ok(duplicate.result?.structuredContent&&!duplicate.result.isError)
+            return seen.get(args.idempotency_key)
+          }
+          const answer=await original(step,args,...rest);seen.set(args.idempotency_key,answer);return answer
+        })
+      })
+
+    // Compare the same masked identities shown by the current native person
+    // door, with populated records rather than two empty or self-derived lists.
+    c.surface=surface;await ready()
+    const records=(await c.tool('envelope.records.list',{companyId:saved.company.id})).result.structuredContent.records
+    const visible=await Promise.all(records.map(async record=>{
+      const {id,name,locationId,version}=await native(saved.base+'/people/'+record.id)
+      return {id,name,locationId,version}
+    }))
+    const checkParity=actual=>assert.deepEqual(actual.toSorted((a,b)=>a.id.localeCompare(b.id)),visible.toSorted((a,b)=>a.id.localeCompare(b.id)),'MCP identities must equal the native person door')
+    assert.ok(visible.length);checkParity(records)
+    const wrong=structuredClone(records);wrong[0].name='synthetic-envelope-wrong-person'
+    assert.throws(()=>checkParity(wrong),assert.AssertionError)
+    faults++
+    console.log('PROBE BASE-AGENT-013 3 role parity: populated MCP and native person reads -> changed identity rejected')
+  }
+  c.adopt=adopt
+  console.log('AGENT-CONFORMANCE-FAILURES passed: '+faults+' faults rejected after clean controls under autonomous and held policies; product authority unchanged')
 } finally {
   try {await hosted?.close()} finally {await network.close()}
 }

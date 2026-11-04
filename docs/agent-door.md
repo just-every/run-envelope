@@ -43,13 +43,16 @@ retained payroll records and grants before and after job retrieval.
 The hosted agent-door shard also runs `tests/agent-door/failures.mjs` against
 its own disposable production installation. Every probe first passes the real
 shared checker, then injects one fault into that verifier and requires the named
-assertion to fail. The probes cover a missing output schema, native effects
-before approval, while blocked and before setup, a wrong computed class, an
-argument-dependent class, an agent substituted for a signed-in person, accepted
+assertion to fail. Nineteen probes cover a missing output schema, native effects
+before approval, while blocked and before setup, wrong computed classes and
+facts, agent arguments claiming an internal or confirmed action, an agent substituted for a signed-in person, accepted
 wrong-audience identity, a duplicate effect on retry and changed masked worker
 identity against the native person door. The native effects use genuine,
 authorized preparation or person routes; no product authorization or shared
-Base source is replaced. This proves failure detection for the installed subset,
+Base source is replaced. Disposition-independent probes run under autonomous
+and held policies. Installed fixture expectations retain risk measures, data
+kinds, counterparty facts and scope direction where those facts are static;
+report measures remain dependent on the full retained selection. This proves failure detection for the installed subset,
 not completion of every target role, tool or payroll job.
 
 No resource template, event type or subscription is offered by this installed
