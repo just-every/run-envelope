@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {client,state} from './native.mjs'
+import {client,state,answers} from './native.mjs'
 
 // One real correspondence journey, with only the documented Resend edge controlled.
 export default async function correspondence(context) {
@@ -92,6 +92,29 @@ export default async function correspondence(context) {
   const knownCall=await send(known)
   assert.deepEqual(knownCall.decision.classes.find(c=>c.class==='external').facts,{measure:1,counterparty:'known'})
   assert.equal(code(knownCall),'exact_approval_or_authority_changed','autonomous company policy is not native approval')
+  // A real receipt in one company cannot become another company's evidence.
+  const separate=await data('/api/envelope/companies',{name:'Synthetic separate correspondence custody',ein:'00-0000097'},201)
+  const separateBase='/api/envelope/companies/'+separate.id
+  const separateLocation=await data(separateBase+'/locations',{name:'Separate Portland office',state:'OR'},201)
+  await data(separateBase+'/providers',{id:'resend',version:0,enabled:true,consent:true,
+    secret:'synthetic-envelope-separate-provider',sender:review.data.sender},201)
+  await data(separateBase+'/agents/class-policy',{version:0,...answers})
+  const separateSender=await data(separateBase+'/agents',{name:'Separate correspondence sender',hours:1,
+    actions:['dispatch:execute'],fields:['tax'],locations:['*'],providers:['resend']},201)
+  const separateNotice=await data(separateBase+'/notices',{locationId:separateLocation.id,
+    reference:'synthetic-envelope-separate-custody',body:'This company has no retained acceptance for the recipient.'},201)
+  const separateReply=await data(separateBase+'/notices/'+separateNotice.id+'/replies',{
+    analysisId:'human',sendingIdentity:JSON.stringify([separateSender.id,separateSender.id]),approverId:approver.id,
+    to:context.email,subject:'synthetic-envelope-separate-custody',body:'A receipt from another company supplies no destination evidence.',
+  },201)
+  const separateReview=await data(separateBase+'/notice-replies/'+separateReply.id+'/review')
+  assert.deepEqual(separateReview.data.destination,{counterparty:'new',recipientCount:1})
+  const custodyBefore=await count(),custodyMail=await messageCount()
+  const foreignCall=await tool('envelope.notices.reply',{...dispatchArgs(separateReply),companyId:separate.id})
+  assert.equal(code(foreignCall),'native_agent_grant_required','the original company sender cannot dispatch the separate company reply')
+  assert.equal(await count(),custodyBefore)
+  assert.equal(await messageCount(),custodyMail)
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM env_notice_dispatches WHERE company_id=?').bind(separate.id).first()).n,0)
   const claims=await prepare({to:['synthetic-envelope-new','example.com'].join('@'),body:'Internal recipient, already confirmed and approved.',counterparty:'known',recipientCount:0})
   assert.deepEqual((await send(claims)).decision.classes.find(c=>c.class==='external').facts,{measure:1,counterparty:'new'})
   await approve(known)
@@ -158,6 +181,7 @@ export default async function correspondence(context) {
   console.log('PROBE SURFACE-003 acceptance-5: native review and Resend schema edge -> separate preparer, sending agent and sponsor, and human approval in records, activity and permitted export.')
   console.log('PROBE SURFACE-003 human-preparation: native source selection with forged attribution -> authenticated human preparer in the exact outgoing message, record, activity and permitted export.')
   console.log('PROBE SURFACE-003 destination-evidence: definite rejection and lost response to separate new mailboxes -> both remain new without provider acceptance.')
+  console.log('PROBE SURFACE-003 company-custody: accepted mailbox reused by another native company -> new without borrowed evidence; original company sender refused without a dispatch.')
   console.log('PROBE SURFACE-003 exact-review: changed recipient, different sender and withdrawn native approval -> refusal with no send.')
   console.log('PROBE SURFACE-003 replay: lost acknowledgement then same-key and fresh-key MCP replay -> one send and one held unknown intent.')
   console.log('CORRESPONDENCE passed: exact new and retained-known recipient facts, injected claims, separate native approval, reviewed sending identity, attributed edge and records, restricted export, stale recipient refusal, unknown replay and withdrawn authority.')
