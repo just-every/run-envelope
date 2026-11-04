@@ -40,7 +40,14 @@ export default {
       try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }
       finally { clearTimeout(timer) }
      }
-     return target.batch(args[0].map(item=>actual.get(item)||item),...args.slice(1))
+     const result=await target.batch(args[0].map(item=>actual.get(item)||item),...args.slice(1))
+     if(!held&&control==='resource-return'&&resourceReads===2&&person) {
+      held=true;phase='waiting'
+      let timer
+      try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }
+      finally { clearTimeout(timer) }
+     }
+     return result
     }
     const value=Reflect.get(target,key,target)
     return typeof value==='function' ? value.bind(target) : value

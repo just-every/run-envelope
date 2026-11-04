@@ -197,6 +197,9 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
   const changed=await race('resource-delivery',()=>sql(`UPDATE env_people SET name='Synthetic changed worker',version=version+1 WHERE id=${q(people[0].id)} AND company_id=${q(company.id)}`))
   assert.equal(code(changed),'resource_changed')
   assert.equal(readValue(await read()).name,'Synthetic changed worker')
+  const changedAfterRead=await race('resource-return',()=>sql(`UPDATE env_people SET name='Synthetic newest worker',version=version+1 WHERE id=${q(people[0].id)} AND company_id=${q(company.id)}`))
+  assert.equal(code(changedAfterRead),'resource_changed')
+  assert.equal(readValue(await read()).name,'Synthetic newest worker')
 
   for(const change of ['record','grant','client','sponsor','native-policy','native-pause','shared-pause']) {
     await policy('approval')
@@ -222,6 +225,8 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
   const approved=await read();assert.equal((await approve(approved)).state,'executed')
   await restart()
   assert.deepEqual(readValue(await read({uri:resource,requestState:approved.error.data.requestState})),current)
+  const changedApprovedRead=await race('resource-return',()=>sql(`UPDATE env_people SET version=version+1 WHERE company_id=${q(company.id)} AND id=${q(people[0].id)}`),{uri:resource,requestState:approved.error.data.requestState})
+  assert.equal(code(changedApprovedRead),'resource_changed')
   await data(base+'/agents/'+credential.id+'/revoke',{version:1})
   noContent(await read({uri:resource,requestState:approved.error.data.requestState}))
   credential=await issue();await policy('autonomous')
@@ -279,7 +284,7 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
   assert.equal((await approve(capture)).state,'executed')
   assert.equal(readValue(await read({uri:erasedUri,requestState:capture.error.data.requestState})).id,people[1].id)
   const erased=await data(base+'/people/'+people[1].id+'/privacy')
-  await data(base+'/people/'+people[1].id+'/erase',{consent:true,version:erased.version,fingerprint:erased.fingerprint})
+  await race('resource-return',()=>data(base+'/people/'+people[1].id+'/erase',{consent:true,version:erased.version,fingerprint:erased.fingerprint}),{uri:erasedUri,requestState:capture.error.data.requestState})
   await restart();noContent(await read({uri:erasedUri,requestState:capture.error.data.requestState}))
   await policy('autonomous');noContent(await read({uri:erasedUri}))
   // Hold other custody through its native privacy request, never release it.

@@ -112,5 +112,7 @@ digest for that operation. Missing, foreign and inaccessible records share
 Restored history supplies no session, credential, consent or resource authority.
 Revocation from the shared Agents page also fences an already suspended read;
 a native credential cannot bypass that client revocation.
+The final delivery query checks the current identity and authority together;
+an identity edit after the native read also invalidates an approved retry.
 Company, run, filing, notice, case, coverage and report resource families remain
 unavailable, as do sensitive resource reads and file exports.
