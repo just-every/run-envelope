@@ -7,7 +7,8 @@
     "policy",
     "pause",
     "audit",
-    "idempotency"
+    "idempotency",
+    "prompts"
   ],
   "tools": [
     {
@@ -692,5 +693,62 @@
   "documentation": {
     "path": "/docs/agents",
     "format": "Accept: application/json returns the same public declarations"
-  }
+  },
+  "prompts": [
+    {
+      "name": "payroll-workers",
+      "job": "Worker records",
+      "tools": [
+        "envelope.records.list"
+      ]
+    },
+    {
+      "name": "payroll-hourly-preparation",
+      "job": "Hourly preparation",
+      "tools": [
+        "envelope.draft.prepare",
+        "envelope.reports.proposals",
+        "envelope.draft.read"
+      ]
+    },
+    {
+      "name": "payroll-bonus-preparation",
+      "job": "Bonus preparation",
+      "tools": [
+        "envelope.bonus.prepare",
+        "envelope.bonus.read",
+        "envelope.reports.bonuses"
+      ]
+    },
+    {
+      "name": "payroll-human-review",
+      "job": "Native human review",
+      "tools": [
+        "envelope.runs.review_link"
+      ]
+    },
+    {
+      "name": "payroll-notice-correspondence",
+      "job": "Notice correspondence",
+      "tools": [
+        "envelope.notices.process",
+        "envelope.notices.reply"
+      ]
+    },
+    {
+      "name": "payroll-reconciliation",
+      "job": "Reconciliation",
+      "tools": [
+        "envelope.workspace.snapshot"
+      ]
+    },
+    {
+      "name": "payroll-credentials",
+      "job": "Credential management",
+      "tools": [
+        "envelope.credentials.restrict",
+        "envelope.credentials.rotate"
+      ]
+    }
+  ]
 }

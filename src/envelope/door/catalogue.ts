@@ -608,7 +608,7 @@ export const catalogue = definitions.map(entry => {
 export const capacityLimits = {requestsPerMinute:600, maxBodyBytes:1048576} as const
 export const resourceDeclarations: import('../../modules/agent-door/index.ts').ResourceDefinition[] = []
 export const unfinishedJobs = [
-  'Complete payroll tool coverage, specialist prompts and the stranger-agent payroll week remain unfinished.',
+  'Complete payroll tool coverage and the stranger-agent payroll week remain unfinished. Specialist prompts cover only the installed native jobs.',
   'Full Base conformance and the remaining Agent surface acceptance journeys remain unproved.',
   'Hourly and bonus preparations remain uncalculated; no funded payment, tax remittance, agency filing or accepted provider outcome is claimed.',
   'Calculation catalogue licensing, authorized employer and rail access, provider accounts and mandates remain required for their target jobs.',

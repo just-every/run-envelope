@@ -15,7 +15,10 @@ export async function agentDocsJourney({origin,cookie,settings}) {
   const htmlResponse=await fetch(origin+'/docs/agents'),html=await htmlResponse.text()
   const signedIn=await fetch(origin+'/docs/agents',{headers:{cookie}})
   assert.equal(await signedIn.text(),html,'signed-in identity never enters public documentation')
-  for(const privateValue of [privateName,company.id,'00-0009936',settings.SESSION_SECRET,settings.ENVELOPE_RECORD_KEY,cookie])assert.equal(html.includes(privateValue),false,'private installation values stay absent')
+  for(const privateValue of [privateName,company.id,'00-0009936',settings.SESSION_SECRET,settings.ENVELOPE_RECORD_KEY,cookie]) {
+    assert.equal(html.includes(privateValue),false,'private installation values stay absent')
+    assert.equal(JSON.stringify(reference).includes(privateValue),false,'machine-readable declarations exclude private installation values')
+  }
   assert.ok(html.includes('&lt;agent&gt; for &lt;person&gt;'),'attribution syntax is escaped as text')
   assert.ok(html.includes('&lt;policy&gt;'),'computed-test placeholders are escaped as text')
   assert.equal((await fetch(origin+'/docs/agents',{method:'HEAD'})).status,200)
@@ -30,6 +33,7 @@ export async function agentDocsJourney({origin,cookie,settings}) {
     await page.goto(origin+'/docs/agents')
     await page.evaluate(()=>document.fonts.ready)
     assert.deepEqual(await page.locator('[data-tool]').evaluateAll(nodes=>nodes.map(node=>node.dataset.tool).sort()),reference.tools.map(tool=>tool.name).sort())
+    assert.deepEqual(await page.locator('[data-prompt]').evaluateAll(nodes=>nodes.map(node=>node.dataset.prompt)),reference.prompts.map(prompt=>prompt.name))
     for(const tool of reference.tools) {
       const article=page.locator('[data-tool="'+tool.name+'"]')
       assert.equal(await article.locator('[data-scope]').innerText(),tool._meta['com.runeditrun/scope'])
@@ -45,6 +49,10 @@ export async function agentDocsJourney({origin,cookie,settings}) {
     const summary=page.locator('summary').first()
     await summary.focus();await page.keyboard.press('Enter')
     assert.equal(await summary.evaluate(node=>node.parentElement.open),true,'schemas open using the keyboard')
+    const jobInstructions=page.locator('[data-prompt] summary').first()
+    await jobInstructions.focus();await page.keyboard.press('Enter')
+    assert.equal(await jobInstructions.evaluate(node=>node.parentElement.open),true,'specialist instructions open using the keyboard')
+    assert.equal(await jobInstructions.locator('..').locator('pre').innerText(),reference.prompts[0].messages[0].content.text)
     await page.evaluate(await readFile('node_modules/axe-core/axe.min.js','utf8'))
     const axe=await page.evaluate(()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}}))
     assert.deepEqual(axe.violations.filter(issue=>['serious','critical'].includes(issue.impact)).map(issue=>issue.id),[])

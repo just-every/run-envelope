@@ -7,8 +7,9 @@ import { payrollPeople } from './people'
 import { notTools, capacityLimits, resourceDeclarations } from './catalogue'
 import { nativeTools } from './tools'
 import { agentReference, agentInstructions, agentDocs } from './docs'
+import { specialistPrompts } from './prompts'
 
-export const capabilities = ['tools','policy','pause','audit','idempotency'] as const
+export const capabilities = ['tools','policy','pause','audit','idempotency','prompts'] as const
 function trust(env: Bindings): Trust | null {
   const {RER_OWNER_CLAIM_ISSUER:issuer,RER_OWNER_CLAIM_INSTALLATION_ID:installationId,RER_OWNER_CLAIM_PUBLIC_KEYS:keys}=env
   if (![issuer,installationId,keys,env.RER_BUSINESS_TRUST].some(Boolean)) return null
@@ -19,7 +20,7 @@ export function envelopeDoor(env: Bindings) {
   const options: AgentDoorOptions = {seed:'envelope',name:'Envelope',specialist:'payroll',db:env.DB,origin:env.AUTH_ORIGIN,trust:trust(env),capabilities,limits:capacityLimits,
     paths:['/mcp','/api/envelope/mcp'],
     people:payrollPeople(env),
-    tools:nativeTools(env),resources:resourceDeclarations,
+    tools:nativeTools(env),resources:resourceDeclarations,prompts:specialistPrompts,
     currentScopes:who=>currentScopes(env,who),
     async localCredentials(request) {
       const value=request.headers.get('authorization')?.replace(/^Bearer /,'')

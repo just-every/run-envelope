@@ -8,7 +8,7 @@ have JSON input/output schemas, scopes, computed classes and contract citations.
 Refusals use `code` and MCP `com.runeditrun/error` metadata.
 
 This installation offers the CORE capabilities `tools`, `policy`, `pause`,
-`audit` and `idempotency`. It explicitly refuses resources, events, prompts and
+`audit`, `idempotency` and `prompts`. It explicitly refuses resources, events and
 subscriptions. These are target capabilities, not implemented payroll outcomes.
 The machine-readable registry and native journey are in `agent-surface.json`.
 
@@ -30,8 +30,16 @@ or proof mapping. `tests/agent-docs-runtime.mjs`, invoked by `tests/runtime.mjs`
 in push Verify, checks the public page on a populated installation, escaping,
 private-value exclusion, keyboard access and responsive browser proof.
 
-No resource template, event type, subscription or specialist prompt is offered
-by this installed subset. The reference says so explicitly and keeps the full
+Specialist prompts list the installed worker, hourly, bonus, native review, notice
+correspondence, reconciliation and credential jobs through `prompts / list`.
+`prompts / get` returns the same instructions shown in the generated reference.
+These instructions use the existing tools, preserve calculation and provider holds,
+and supply no human approval or additional authority. Prompt arguments never enter
+the instructions. Both MCP aliases require a current authenticated caller,
+answered policy and Pause admission before retrieving a job.
+
+No resource template, event type or subscription is offered by this installed
+subset. The reference says so explicitly and keeps the full
 target tool table, remaining conformance probes and stranger-agent payroll week
 unfinished. The page documents capacity protection separately from business
 policy; it supplies no new scope, native human approval or provider authority.
@@ -85,8 +93,8 @@ agent and sponsor in native activity and the outbound attribution header. It nev
 
 Installation, archive import, device clients and a person's own authentication
 or payroll approval screens retain their own doors. There is no agent queue
-executor, resource catalogue, streaming event feed, specialist prompt catalogue,
-full payroll week, funded payment or agency filing claim in this CORE subset.
+executor, resource catalogue, streaming event feed, full payroll week, funded
+payment or agency filing claim in this CORE subset.
 The broader SURFACE clauses remain targets until those native jobs are delivered.
 
 Native company activity accepts `?operation=<shared-operation-id>` for reconciliation
