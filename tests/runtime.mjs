@@ -135,7 +135,7 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
-const clockEntrypoint = process.env.ENVELOPE_JOURNEYS === 'agent-policy' ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
+const clockEntrypoint = ['agent-policy','agent-replay'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
@@ -297,7 +297,7 @@ try {
       await waitForWorker()
     }
   }
-  if (selected?.includes('agent-replay')) await replayJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-replay')) await replayJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})
   if (selected?.includes('accounting')) await accountingJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})

@@ -5,7 +5,7 @@ import {answers} from './native.mjs'
 import {prepared,refused,replayError} from './replay.mjs'
 
 /** Persistent emitted-Worker sanity journey; all agent state changes use doors. */
-export async function replayJourney({origin,cookie,settings,sql,restart}) {
+export async function replayJourney({origin,cookie,settings,sql,restart,advanceClock}) {
   const owner=async(path,body,method=body===undefined?'GET':'POST',status=200)=>{
     const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
     assert.equal(response.status,status,path+' '+await response.clone().text())
@@ -13,7 +13,7 @@ export async function replayJourney({origin,cookie,settings,sql,restart}) {
   }
   // The shared runtime's bootstrap person has no recent email proof. Use its
   // existing operator-auth fixture seam, never write any agent-door state.
-  const ownerHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1]),now=Date.now()
+  const ownerHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1]),now=Date.parse('2026-10-28T12:00:00Z')
   await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
     SELECT 'synthetic-envelope-replay-proof',token_hash,id,operator_id,operator_version,'credentials:mint','/app',${now},${now+600000},${now} FROM oa_sessions WHERE token_hash='${ownerHash}'`)
   const company=await owner('/api/envelope/companies',{name:'Synthetic replay employer',ein:'00-0009841'},'POST',201),base='/api/envelope/companies/'+company.id
@@ -22,7 +22,7 @@ export async function replayJourney({origin,cookie,settings,sql,restart}) {
   const rate=await owner(base+'/people/'+person.id+'/rates',{version:person.version,hourlyCents:2500,effectiveDate:'2026-01-01',sourceRef:'synthetic-envelope-9842'},'POST',201)
   const rateReview=await owner(base+'/rates/'+rate.id)
   await owner(base+'/rates/'+rate.id+'/approve',{version:rateReview.version,reviewToken:rateReview.reviewToken})
-  let nativePolicy=await owner(base+'/agents/class-policy',{version:0,...answers}),seq=1000
+  let nativePolicy=await owner(base+'/agents/class-policy',{version:0,...answers}),seq=1000,currentRate=rate
   const shared=async document=>owner('/agents/api/policy',{document},'PUT')
   const issue=()=>owner(base+'/agents',{name:'Synthetic replay agent',hours:24,actions:['records:read','drafts:read','drafts:prepare'],fields:['compensation'],locations:['*']},'POST',201)
   const wire=async(credential,name,args,{path='/mcp',discard=false}={})=>{
@@ -62,7 +62,7 @@ export async function replayJourney({origin,cookie,settings,sql,restart}) {
     assert.equal(answer.result._meta['com.runeditrun/decision'].disposition,phase==='held'?'review':'autonomous')
     const after=await business(),draft=after.drafts.find(row=>row.id===result.id)
     assert.equal(after.drafts.length,before.drafts.length+1);assert.equal(after.preparations.length,before.preparations.length+1)
-    assert.equal(draft.minutes,480);assert.equal(draft.personId,person.id);assert.equal(draft.rateId,rate.id)
+    assert.equal(draft.minutes,480);assert.equal(draft.personId,person.id);assert.equal(draft.rateId,currentRate.id)
     assert.equal(after.preparations.find(row=>row.targetId===result.id).credentialId,credential.id)
     assert.deepEqual(prepared(await wire(credential,'envelope.draft.prepare',args)),result)
     assert.deepEqual(await business(),after,'ordinary duplicate produces exactly one native preparation')
@@ -81,14 +81,19 @@ export async function replayJourney({origin,cookie,settings,sql,restart}) {
     assert.deepEqual(prepared(await wire(credential,'envelope.draft.prepare',lost)),prepared(recovered))
     assert.deepEqual(await business(),retained,'process restart retains both first outcomes')
     await refusal(credential,{...args,minutes:481},'idempotency_conflict')
-    const stale={...args,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID(),expected_revision:'[-1,-1,-1]'}
-    const conflict=await refusal(credential,stale,'revision_conflict'),state=await owner(base+'/agents')
-    const nativeGrant=state.grants.find(row=>row.id===credential.id)
-    const currentPerson=await owner(base+'/people/'+person.id)
+    const state=await owner(base+'/agents'),nativeGrant=state.grants.find(row=>row.id===credential.id),previousPerson=await owner(base+'/people/'+person.id)
+    const previousRevision=JSON.stringify([previousPerson.version,nativeGrant.version,state.classPolicy.version])
+    currentRate=await owner(base+'/people/'+person.id+'/rates',{version:previousPerson.version,hourlyCents:2600,effectiveDate:phase==='autonomous'?'2026-09-01':'2026-09-02'},'POST',201)
+    const changedReview=await owner(base+'/rates/'+currentRate.id)
+    await owner(base+'/rates/'+currentRate.id+'/approve',{version:changedReview.version,reviewToken:changedReview.reviewToken})
+    const stale={...args,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID(),expected_revision:previousRevision}
+    const conflict=await refusal(credential,stale,'revision_conflict'),currentPerson=await owner(base+'/people/'+person.id)
+    assert.equal(currentPerson.version,previousPerson.version+1,'an actual reviewed source change made the saved revision stale')
     const revision=JSON.stringify([currentPerson.version,nativeGrant.version,state.classPolicy.version])
     assert.equal(replayError(conflict).current_revision,revision,'stale reply names the independently retained current revision')
     const fresh=prepared(await wire(credential,'envelope.draft.prepare',{...stale,expected_revision:revision}))
     assert.notEqual(fresh.id,result.id,'the advertised current revision admits a new preparation')
+    assert.equal((await owner(base+'/drafts')).find(row=>row.id===fresh.id).rateId,currentRate.id,'fresh revision binds the newly reviewed rate')
     console.log('PROBE BASE-AGENT-012 1-4 '+phase+': MCP duplicate, dropped stream, new ids, alias, restart, changed arguments and stale revision -> equal retained outcomes, one effect per key, typed conflicts and current revision')
     // Current policy gates run even when this exact key already succeeded.
     await owner('/agents/api/pause',{paused:true})
@@ -109,9 +114,18 @@ export async function replayJourney({origin,cookie,settings,sql,restart}) {
     await refusal(credential,args,'policy_approval_required')
     nativePolicy=await owner(base+'/agents/class-policy',{version:nativePolicy.version,...answers})
     assert.deepEqual(prepared(await wire(credential,'envelope.draft.prepare',args)),result,'resumption restores the first result')
-    const restriction=await wire(credential,'envelope.credentials.restrict',{actions:['records:read','drafts:read'],idempotency_key:crypto.randomUUID()})
+    const restrictionArgs={actions:['records:read','drafts:read'],idempotency_key:crypto.randomUUID()},restriction=await wire(credential,'envelope.credentials.restrict',restrictionArgs)
     assert.equal(restriction.result?.isError,false,JSON.stringify(replayError(restriction)))
     assert.deepEqual(restriction.result.structuredContent.actions,['records:read','drafts:read'])
+    const restrictedGrant=(await owner(base+'/agents')).grants.find(row=>row.id===credential.id)
+    assert.deepEqual((await wire(credential,'envelope.credentials.restrict',restrictionArgs)).result.structuredContent,restriction.result.structuredContent,'a real scope reduction replays its first outcome')
+    refused(await wire(credential,'envelope.credentials.restrict',{...restrictionArgs,actions:['records:read']}),'idempotency_conflict')
+    assert.deepEqual((await owner(base+'/agents')).grants.find(row=>row.id===credential.id),restrictedGrant,'replayed or conflicting restriction cannot alter the retained scope version')
+    const restrictionRevision=JSON.stringify([restrictedGrant.version,restrictedGrant.version,nativePolicy.version])
+    const staleRestriction=await wire(credential,'envelope.credentials.restrict',{actions:['records:read'],idempotency_key:crypto.randomUUID(),expected_revision:JSON.stringify([restrictedGrant.version-1,restrictedGrant.version-1,nativePolicy.version])})
+    refused(staleRestriction,'revision_conflict')
+    assert.equal(replayError(staleRestriction).current_revision,restrictionRevision,'stale restriction identifies the actual current grant revision')
+    assert.deepEqual((await owner(base+'/agents')).grants.find(row=>row.id===credential.id),restrictedGrant,'stale scope revision cannot narrow the credential')
     await refusal(credential,args,'insufficient_scope')
     const read=await wire(credential,'envelope.draft.read',{companyId:company.id,draftId:result.id})
     assert.equal(read.result.structuredContent.id,result.id,'retained read authority still reads its preparation')
@@ -130,4 +144,39 @@ export async function replayJourney({origin,cookie,settings,sql,restart}) {
     assert.deepEqual(await business(),revocationBefore,'revocation and restart cannot recover cached preparation data or write')
     console.log('PROBE BASE-AGENT-012 revocation '+phase+': saved key after shared and native grant revocation and restart -> unauthenticated, no saved content, unchanged preparations')
   }
+
+  // Check the retention edge with the existing injected clock, retaining D1
+  // across real process restarts. Rotate an expiring bearer independently;
+  // neither rotation nor passage of time changes its saved-call namespace.
+  const retained=[]
+  for(const phase of ['autonomous','held']) {
+    await shared(phase==='autonomous'?autonomousPolicy():heldPolicy())
+    const credential=await owner(base+'/agents',{name:'Synthetic retention agent',hours:24,reviewDate:'2026-11-05',actions:['records:read','drafts:read','drafts:prepare'],fields:['compensation'],locations:['*']},'POST',201)
+    const args={companyId:company.id,personId:person.id,minutes:480,periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-9844',requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}
+    retained.push({phase,credential,args,result:prepared(await wire(credential,'envelope.draft.prepare',args))})
+  }
+  const beforeRetention=await business()
+  await advanceClock('2026-10-29T11:59:00.000Z')
+  await shared(autonomousPolicy())
+  const pair=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt'])
+  const {kty,n,e}=await crypto.subtle.exportKey('jwk',pair.publicKey)
+  for(const saved of retained) {
+    const previous=saved.credential.token,response=await wire(saved.credential,'envelope.credentials.rotate',{publicKey:{kty,n,e},idempotency_key:crypto.randomUUID()})
+    assert.equal(response.result?.isError,false,JSON.stringify(replayError(response)))
+    const value=response.result.structuredContent
+    saved.credential.token=new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},pair.privateKey,Buffer.from(value.encryptedToken,'base64')))
+    assert.equal((await wire({...saved.credential,token:previous},'envelope.draft.prepare',saved.args)).httpStatus,401,'the retired bearer cannot recover an old outcome')
+  }
+  for(const boundary of ['2026-10-29T11:59:59.999Z','2026-10-29T12:00:00.000Z','2026-10-29T12:00:00.001Z']) {
+    await advanceClock(boundary)
+    await restart()
+    await advanceClock(boundary)
+    for(const saved of retained) {
+      await shared(saved.phase==='autonomous'?autonomousPolicy():heldPolicy())
+      assert.deepEqual(prepared(await wire(saved.credential,'envelope.draft.prepare',saved.args,{path:'/api/envelope/mcp'})),saved.result,'the 24-hour retention edge preserves the first outcome under '+saved.phase)
+      assert.deepEqual(await business(),beforeRetention,'retention and restart cannot repeat native preparation')
+      await refusal(saved.credential,{...saved.args,minutes:481},'idempotency_conflict')
+    }
+  }
+  console.log('PROBE BASE-AGENT-012 retention: persistent MCP at 24 hours minus 1 ms, exactly 24 hours and plus 1 ms, rotated credentials and Worker restarts -> equal first outcomes and changed-argument conflicts under both policies, no repeated preparation')
 }

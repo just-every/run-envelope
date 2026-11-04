@@ -1,4 +1,4 @@
-import {replayStep} from './replay.mjs'
+import {replayStep,replayMutation} from './replay.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 export default async function({database,request,origin,cookie}) {
@@ -17,6 +17,7 @@ export default async function({database,request,origin,cookie}) {
 }
 export async function afterStep(context) {
   await replayStep(context)
+  await replayMutation(context)
   const {phase,step,result,origin,request,database}=context
   if(step.tool!=='envelope.credentials.rotate')return
   assert.equal(Object.hasOwn(result,'token'),false,'the door never retains a plaintext native bearer')
