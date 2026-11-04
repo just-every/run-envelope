@@ -275,7 +275,8 @@ reset finishes. This key check does not replace a successful data export.
 
 Reset empties the destination and removes `.dev.vars`. Recover the original key
 before import; setup afterward preserves that recovered key while establishing
-new owner sign-in and other private settings. Without the original key, stop:
+fresh sign-in and other private settings for the original owner. Use that owner's
+original mailbox for `--owner-email`; restore retains the owner identity. Without the original key, stop:
 setup cannot reconstruct it and generating a replacement will not decrypt the
 archive. Import restores permitted history, while old sessions, agent credentials
 and other bearer authority remain inactive. See [local archive custody](docs/archive-recovery.md)

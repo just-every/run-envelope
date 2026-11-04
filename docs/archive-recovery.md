@@ -45,6 +45,8 @@ rer dev
 ```
 
 Setup after import keeps the recovered key and creates fresh sign-in settings.
+Use the original owner's mailbox for `--owner-email`: the archive retains that
+identity, and setup refuses a different owner without changing the installation.
 The old installation's sessions and bearer tokens remain refused; sign in again
 and explicitly adopt only the permitted historical reads described below.
 

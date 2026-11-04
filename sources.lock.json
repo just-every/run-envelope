@@ -413,7 +413,7 @@
       "executable": false
     },
     "docs/archive-recovery.md": {
-      "sha256": "df55432230180aded427b30e7738c92f7be6410906705725aeb32125b2c3d4e8",
+      "sha256": "412f1ee5e101e102df8d78f6ed60ca9ed1358f64a12e6008d2c015150ada7cbd",
       "executable": false
     },
     "docs/claims-follow-up.md": {
@@ -1217,7 +1217,7 @@
       "executable": false
     },
     "RUN-LOCALLY.md": {
-      "sha256": "24b3dcd8644efca130ac719bb38e8151ef04b5e0f0c1e9a4194cf7f18967e77f",
+      "sha256": "7411d7e62ffe0b7f82c5fd9aaf6fd1c821162529e1a9668d77e46d03369b15f9",
       "executable": false
     },
     "scripts/build-deployment-spec.mjs": {
