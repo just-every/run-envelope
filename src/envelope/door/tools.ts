@@ -9,7 +9,7 @@ import { digest } from '../workspace/store'
 import { nativeAgent } from './native'
 import { outputSchema } from './schemas'
 import { rotate, rotationKey } from './rotation'
-import { effect, sensitiveRecords } from './effects'
+import { effect, readSelection, selectedReads } from './effects'
 import { catalogue } from './catalogue'
 
 async function snapshot(env: Bindings, ctx: ToolContext) {
@@ -29,6 +29,17 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
   const titles:Record<string,string>={'credentials.restrict':'Reduce this credential scope','records.list':'Read worker records','draft.prepare':'Prepare hourly inputs','draft.read':'Read an hourly proposal','bonus.prepare':'Prepare bonus earnings','bonus.read':'Read bonus earnings','reports.proposals':'Read hourly preparations','reports.bonuses':'Read bonus preparations','run.review':'Present a run for human review','notice.process':'Extract a tax notice','reply.dispatch':'Send the approved reply','credentials.rotate':'Rotate this native credential','workspace.snapshot':'Check preparation state'}
   return catalogue.map(entry=> {
     const name=entry.name, nativeName=entry.nativeName
+    // Request-local snapshots span the classifier and execution contexts. Durable
+    // approval summaries retain the same opaque selection identity across restart.
+    const selections=new Map<string,Promise<Awaited<ReturnType<typeof readSelection>>>>()
+    const selection=async(args:Record<string,unknown>,ctx:ToolContext)=>{
+      if(!selections.has(ctx.operationId))selections.set(ctx.operationId,(async()=>{
+        const agent=await nativeAgent(env,ctx,args.companyId)
+        try {return await readSelection(agent,nativeName,args)}
+        catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status});throw error}
+      })())
+      return selections.get(ctx.operationId)!
+    }
     const tool: ToolDefinition = {
       name,title:titles[nativeName],description:entry.description,scope:entry.scope,readOnly:entry.readOnly,
       inputSchema:{type:'object',properties:{...entry.properties},required:[...entry.required],additionalProperties:false},
@@ -40,10 +51,10 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
         if (!['credentials.rotate','credentials.restrict'].includes(nativeName)) agent.allow(entry.scope,args.companyId ?? agent.grant.company_id)
         if(nativeName==='credentials.rotate') await rotationKey(args.publicKey)
         if (!completed) await effect(env,nativeName,args,ctx)
-        const records=entry.classes.includes('sensitive' as never)?await sensitiveRecords(env,nativeName,args,ctx):0
+        const records=selectedReads.includes(nativeName)?(await selection(args,ctx)).records:1
         let restriction:ReturnType<typeof agent.restriction>|null=null
         try {if(nativeName==='credentials.restrict')restriction=agent.restriction(args)} catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status});throw error}
-        const facts: ClassAndFacts[]=entry.classes.map(cls=>({class:cls,facts: cls==='access' ? {measure:1,direction:restriction?.widens?'widens':'narrows'} : cls==='sensitive' ? {measure:records,kind:nativeName==='notice.process'?'tax-notice':'compensation'} : cls==='external' ? {measure:1,counterparty:'known'} : cls==='commitment' ? {measure:0,currency:'USD',counterparty:'known'} : cls==='security' ? {measure:1,setting:'native-agent-credential'} : {measure:1}}))
+        const facts: ClassAndFacts[]=entry.classes.map(cls=>({class:cls,facts: cls==='access' ? {measure:1,direction:restriction?.widens?'widens':'narrows'} : cls==='sensitive' ? {measure:records,kind:nativeName==='notice.process'?'tax-notice':'compensation'} : cls==='external' ? {measure:1,counterparty:'known'} : cls==='commitment' ? {measure:0,currency:'USD',counterparty:'known'} : cls==='security' ? {measure:1,setting:'native-agent-credential'} : {measure:nativeName==='records.list'?records:1}}))
         return facts
       },
       async run(args,ctx) {
@@ -51,6 +62,16 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
           const agent=await nativeAgent(env,ctx,args.companyId)
           agent.doorContext=ctx
           const value=await policyCall(agent,nativeName,'shared-door',async()=> {
+            if(selectedReads.includes(nativeName)) {
+              const expected=await selection(args,ctx)
+              // Read approvals may be replayed to retrieve their result. Never
+              // use an old decision to disclose a different page, even at equal count.
+              const retained=await env.DB.prepare("SELECT saved FROM agent_door_approvals WHERE json_extract(saved,'$.principal.operationId')=? AND json_extract(saved,'$.tool')=? ORDER BY rowid DESC LIMIT 1").bind(ctx.operationId,name).first<{saved:string}>()
+              if(retained && JSON.parse(retained.saved).summary.nativeTarget?.id!==expected.target.id)throw new ToolRefusal('read_selection_changed','read_selection_changed',{native_status:409})
+              const actual=await readSelection(agent,nativeName,args,true)
+              if(actual.target.id!==expected.target.id)throw new ToolRefusal('read_selection_changed','read_selection_changed',{native_status:409})
+              return actual.value
+            }
             if (nativeName==='workspace.snapshot') return snapshot(env,ctx)
             if (nativeName==='records.list') return agent.records(args)
             if (nativeName==='draft.prepare') return agent.prepare(args)
@@ -73,6 +94,7 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
         }
       },
     }
+    if(selectedReads.includes(nativeName))tool.target=async(args,ctx)=>(await selection(args,ctx)).target
     if (entry.readOnly && nativeName!=='workspace.snapshot' || nativeName==='notice.process') tool.untrusted=true
     if (!entry.readOnly) {
       tool.summary=async(args,ctx)=>{const summary=(await effect(env,nativeName,args,ctx))?.summary ?? {items:[entry.description]};if(nativeName==='credentials.rotate')summary.items=[...summary.items??[],'Delivery key SHA-256 '+await digest(JSON.stringify(args.publicKey))];return summary}

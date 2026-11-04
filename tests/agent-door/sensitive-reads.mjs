@@ -1,0 +1,158 @@
+import assert from 'node:assert/strict'
+import { chromium } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import {client,negativeSessions,state} from './native.mjs'
+import {sensitiveFixtures} from './fixtures.mjs'
+
+const error=answer=>answer.result?._meta?.['com.runeditrun/error']?.code??answer.error?.data?.code??answer.error?.message
+const decision=answer=>answer.result?._meta?.['com.runeditrun/decision']
+const value=answer=>answer.result?.structuredContent
+export function readClient({request,origin},credential,path='/mcp') {
+  return async(name,args,requestState)=>{
+    const response=await request(origin+path,{method:'POST',headers:{authorization:'Bearer '+credential.token,'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({jsonrpc:'2.0',id:74,method:'tools/call',params:{name:'envelope.'+name,arguments:args,...(requestState?{requestState}:{})}})})
+    return response.json()
+  }
+}
+function facts(answer,count,kind='compensation',cls='sensitive') {
+  assert.equal(error(answer),undefined)
+  assert.deepEqual(decision(answer).classes.map(({class:className,facts})=>({class:className,facts})),[{class:cls,facts:{measure:count,...(cls==='sensitive'?{kind}:{})}}])
+}
+const prepared=(person,key)=>({personId:person.id,minutes:480,periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-9742',requestKey:key,idempotency_key:key})
+
+/** Populated public-door sanity journey for classifications and viewer limits. */
+export default async function sensitiveReads(context) {
+  const {request,origin,cookie,database}=context,data=client(context),db=await database('DB')
+  const setup=await sensitiveFixtures(context),{company,base,people,location,credential,issue}=setup
+  const call=readClient(context,credential),args={companyId:company.id}
+  const rest=async(path,token=credential.token)=>request(origin+'/api/envelope/v1/companies/'+company.id+path,{headers:{authorization:'Bearer '+token}})
+  for(const name of ['reports.proposals','reports.bonuses']) {const empty=await call(name,args);facts(empty,0);assert.deepEqual(value(empty)[name==='reports.proposals'?'proposals':'bonuses'],[])}
+  const drafts=[],bonuses=[]
+  for(const [index,person] of people.entries()) {
+    const input=prepared(person,crypto.randomUUID())
+    const draft=await call('draft.prepare',{...args,...input});assert.ok(value(draft)?.id);drafts.push(value(draft))
+    const bonus=await call('bonus.prepare',{...args,...input,minutes:undefined,amountCents:12000+index,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()});assert.ok(value(bonus)?.id);bonuses.push(value(bonus))
+  }
+  for(const path of ['/mcp','/api/envelope/mcp']) {
+    const read=readClient(context,credential,path)
+    const masked=await read('records.list',{...args,limit:2});facts(masked,2,'', 'standard')
+    assert.deepEqual(value(masked).records.map(row=>Object.keys(row).sort()),Array(2).fill(['id','locationId','name','version']))
+    const hourly=await read('draft.read',{...args,draftId:drafts[0].id});facts(hourly,1);assert.equal(value(hourly).hourlyCents,2700);assert.equal(value(hourly).minutes,480)
+    assert.deepEqual(Object.keys(value(hourly)).sort(),['approval','dispatch','hourlyCents','id','minutes','payDate','periodEnd','periodStart','personId','personName','personVersion','rateId','sourceRef','stale','status'].sort())
+    const bonus=await read('bonus.read',{...args,runId:bonuses[0].id});facts(bonus,1);assert.equal(value(bonus).preview.grossCashCents,12000);assert.equal(value(bonus).preview.paymentReady,false)
+    assert.deepEqual(Object.keys(value(bonus)).sort(),['approval','dispatch','id','preview','sourcesCurrent','status','version'])
+    for(const [name,key,expected] of [['reports.proposals','proposals',drafts],['reports.bonuses','bonuses',bonuses]]) {
+      let after,seen=[]
+      do {const page=await read(name,{...args,limit:2,...(after?{after}:{})});const rows=value(page)[key];facts(page,seen.length?1:2);seen.push(...rows.map(row=>row.id));after=value(page).next}while(after)
+      assert.deepEqual(seen.sort(),expected.map(row=>row.id).sort())
+      const empty=await read(name,{...args,after:'zzzz'});facts(empty,0)
+    }
+    const foreign=await read('draft.read',{companyId:state.get(origin).company.id,draftId:drafts[0].id});assert.ok(error(foreign));assert.equal(value(foreign),undefined)
+  }
+  for(const path of ['/records?limit=2','/drafts/'+drafts[0].id,'/bonus-runs/'+bonuses[0].id,'/reports/proposals?limit=2','/reports/bonus-runs?limit=2']) {
+    const response=await rest(path);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store')
+    const body=await response.json();assert.ok(body.id||body.records||body.proposals||body.bonuses)
+  }
+  // Restricted grants cannot retrieve preparations made by another credential,
+  // even when the worker's identity is otherwise visible at that location.
+  const limited=await issue({locations:[location.id]}),limitedCall=readClient(context,limited)
+  const masked=await limitedCall('records.list',args);facts(masked,2,'','standard');assert.ok(value(masked).records.every(row=>row.locationId===location.id))
+  assert.ok(error(await limitedCall('draft.read',{...args,draftId:drafts[2].id})))
+  assert.ok(error(await limitedCall('bonus.read',{...args,runId:bonuses[0].id})))
+  const own=await limitedCall('draft.prepare',{...args,...prepared(people[0],crypto.randomUUID())});assert.ok(value(own)?.id)
+  facts(await limitedCall('reports.proposals',args),1)
+
+  // The same viewer sees identity in the UI and the tool; policy grants no fields.
+  const viewer=negativeSessions.get(origin+':excluded'),viewerData=client({...context,cookie:viewer.cookie})
+  const grant=await data(base+'/grants',{operatorId:viewer.operator.id,version:0,role:'viewer',actions:['records:read'],fields:[],locations:[location.id]})
+  const viewerCredential=await viewerData(base+'/agents',{name:'Synthetic identity assistant',hours:1,actions:['records:read'],fields:[],locations:[location.id]},201)
+  const viewerCall=readClient(context,viewerCredential)
+  facts(await viewerCall('records.list',args),2,'','standard')
+  for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]]) {
+    assert.ok(error(await viewerCall(name,{...args,...extra})));assert.equal(value(await viewerCall(name,{...args,...extra})),undefined)
+  }
+  const ownerDetails=await data(base+'/people/'+people[0].id),viewerDetails=await viewerData(base+'/people/'+people[0].id)
+  assert.equal(ownerDetails.rates[0].hourlyCents,2700);assert.equal(viewerDetails.rates,undefined)
+  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox']})
+  const proof=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope';await mkdir(proof,{recursive:true})
+  try {
+    for(const [label,who,visible] of [['compensation',cookie,true],['identity',viewer.cookie,false]]) {
+      const page=await browser.newPage({viewport:{width:1440,height:1000}})
+      await page.route('**/*',async route=>{
+        const url=new URL(route.request().url());assert.equal(url.origin,origin,'no outbound browser request')
+        const response=await request(url.href,{headers:{cookie:who}})
+        await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())})
+      })
+      for(const width of [1440,390]) {
+        await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/envelope/companies/'+company.id+'/people/'+people[0].id)
+        if(width===1440)assert.equal(await page.getByText('$27.00 per hour',{exact:false}).count()>0,visible)
+        await page.screenshot({path:join(proof,'sensitive-'+label+'-'+width+'.png'),fullPage:true})
+      }
+      await page.close()
+    }
+  } finally {await browser.close()}
+  await data(base+'/grants',{operatorId:viewer.operator.id,version:grant.version,revoke:true})
+  assert.ok(error(await viewerCall('records.list',args)),'revoked sponsor authority stops the bearer')
+
+  let policy=(await data(base+'/agents')).classPolicy
+  for(const sensitive of ['blocked','approval']) {
+    policy=await data(base+'/agents/class-policy',{version:policy.version,...(await import('./native.mjs')).answers,sensitive})
+    for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]]) {
+      const response=await call(name,{...args,...extra});assert.equal(error(response),sensitive==='blocked'?'policy_blocked':'policy_approval_required');assert.equal(value(response),undefined)
+    }
+    const response=await rest('/reports/proposals');assert.equal(response.status,403)
+    facts(await call('records.list',args),3,'','standard')
+  }
+  await data(base+'/agents/class-policy',{version:policy.version,...(await import('./native.mjs')).answers})
+  // Removing compensation keeps masked identity reads, but refuses every retained
+  // read and report even though the class policy is autonomous again.
+  const reduced=await call('credentials.restrict',{fields:[],idempotency_key:crypto.randomUUID()});assert.equal(error(reduced),undefined)
+  facts(await call('records.list',args),3,'','standard')
+  for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]])assert.ok(error(await call(name,{...args,...extra})))
+  const grants=(await data(base+'/agents')).grants,version=grants.find(row=>row.id===credential.id).version
+  await data(base+'/agents/'+credential.id+'/revoke',{version})
+  assert.ok(error(await call('records.list',args)))
+  const privacy=await data(base+'/people/'+people[0].id+'/privacy')
+  const held=await data(base+'/people/'+people[0].id+'/privacy/request',{consent:true,fingerprint:privacy.fingerprint})
+  assert.ok(held)
+  assert.ok(error(await limitedCall('reports.proposals',args)),'held worker custody cannot be bypassed')
+  const outbound=await db.prepare("SELECT COUNT(*) AS n FROM env_notice_dispatches WHERE company_id=?").bind(company.id).first();assert.equal(outbound.n,0)
+  console.log('PROBE SURFACE-004 acceptance-1: MCP, alias and REST -> exact masked and sensitive pages, counts 0, 1, 2 and 3; no compensation in viewer output')
+  console.log('PROBE SURFACE-004 acceptance-2: scoped viewer, foreign company, location, reduced field, revoked sponsor and credential, held worker -> refused without content; UI parity at 1440 and 390')
+}
+
+/** Pending approvals bind an exact selection, including equal-count changes. */
+export async function sensitiveApprovalStep(context) {
+  if(context.phase!=='held'||context.step.id!=='reports-proposals')return
+  const setup=await sensitiveFixtures(context),data=client(context),{credential,people,base}=setup
+  const call=readClient(context,credential),args={companyId:setup.company.id,limit:1}
+  const draft=await call('draft.prepare',{companyId:setup.company.id,...prepared(people[0],crypto.randomUUID())});assert.ok(value(draft)?.id)
+  const change=async cents=>{
+    const person=await data(base+'/people/'+people[0].id)
+    const rate=await data(base+'/people/'+people[0].id+'/rates',{version:person.version,hourlyCents:cents,effectiveDate:'2026-01-01'},201)
+    const review=await data(base+'/rates/'+rate.id)
+    await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken,version:review.version})
+  }
+  const approve=async pending=>{
+    const id=pending.result._meta['com.runeditrun/approval'].id
+    const {approval}=await data('/agents/api/approvals/'+id)
+    return (await data('/agents/api/approvals/'+id+'/approve',{revision:approval.revision,summary_sha256:approval.summary_sha256})).approval
+  }
+  const pending=await call('reports.proposals',args)
+  assert.equal(pending.result.resultType,'input_required',JSON.stringify(pending));assert.equal(value(pending),undefined)
+  const {approval:display}=await data('/agents/api/approvals/'+pending.result._meta['com.runeditrun/approval'].id)
+  assert.deepEqual(display.classes,[{class:'sensitive',facts:{measure:1,kind:'compensation'}}])
+  assert.equal(display.summary.nativeTarget.kind,'compensation-selection')
+  // Change the selected worker version without changing page cardinality.
+  await change(2800)
+  assert.equal((await approve(pending)).code,'approval_evidence_changed')
+  const fresh=await call('reports.proposals',args);assert.equal(fresh.result.resultType,'input_required')
+  assert.equal((await approve(fresh)).state,'executed')
+  const result=await call('reports.proposals',args,fresh.result.requestState)
+  facts(result,1);assert.equal(value(result).proposals.length,1)
+  const added=await call('draft.prepare',{companyId:setup.company.id,...prepared(people[1],crypto.randomUUID())});assert.ok(value(added)?.id)
+  // The page's next cursor changes even if its first item remains the same.
+  const replay=await call('reports.proposals',args,fresh.result.requestState)
+  assert.equal(error(replay),'read_selection_changed');assert.equal(value(replay),undefined)
+  console.log('PROBE SURFACE-004 selection: pending and approved one-record report, changed worker at equal count -> approval_evidence_changed and read_selection_changed without contents')
+}

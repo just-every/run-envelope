@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-export const state=new Map(),rotationKeys=new Map()
+export const state=new Map(),rotationKeys=new Map(),negativeSessions=new Map()
 export const reviewerContexts=new Map(),reviewerMail=new Map(),negativeSponsors=new Map()
 export const cookieOf=r=>r.headers.getSetCookie().map(v=>v.split(';',1)[0]).join('; ')
 export function client({request,origin,cookie}) {
