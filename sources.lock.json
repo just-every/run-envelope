@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "223dc138b89a4ecb002483374a8a4a88fc69a4ae786ac01b6ec99bb6266d80c6",
+      "sha256": "32af8767bfe59d6ca20c01cf95f6fbec76f13dfb7fbb8482f2ccac08c14878d0",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4245,7 +4245,7 @@
       "executable": false
     },
     "tests/agent-door/sensitive-reads.mjs": {
-      "sha256": "0bb105ba5be4993ff1355e5e5d3d1828e42468644b4075bea2ed9439cdc3383d",
+      "sha256": "190d56860d1d45049ce3519956aab614eb86c4e5a8acfd6ae330997c5bca6e63",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {

@@ -330,6 +330,23 @@ export async function sensitiveNativeCustody(context) {
     }
     if(role==='viewer') {staffId=id;staffCookie=who;grant=1}
   }
+  // Revoking the native session after its encrypted selection cancels delivery,
+  // even though the company grant and selected private record remain current.
+  await suspendedPrivate(base+'/people/'+person.id+'/private/bank',async()=>{
+    assert.equal((await call('/auth/signout',{},staffCookie)).status,204)
+  },staffCookie)
+  staffCookie=await signIn(staffId)
+  const sessionHash=await hashToken(settings.SESSION_SECRET,'session',staffCookie.split('=')[1])
+  const [{expires_at:expiresAt}]=await sql(`SELECT expires_at FROM oa_sessions WHERE token_hash='${sessionHash}'`)
+  try {
+    await suspendedPrivate(base+'/people/'+person.id+'/private/bank',()=>context.request(origin+'/health',{
+      headers:{'x-synthetic-clock':new Date(expiresAt+1).toISOString()},
+    }),staffCookie)
+  } finally {
+    await context.request(origin+'/health',{headers:{'x-synthetic-clock':'2026-10-28T12:00:00Z'}})
+    assert.equal((await call('/auth/signout',{},staffCookie)).status,204)
+  }
+  staffCookie=await signIn(staffId)
   await suspendedPrivate(base+'/people/'+person.id+'/private/tax',()=>data(base+'/grants',{operatorId:staffId,version:grant,role:'viewer',locations:[location.id],fields:[],actions:['records:read']}),staffCookie);grant++
   const oldCookie=staffCookie;staffCookie=await signIn(staffId)
   const beforeRefusal=await snapshot()
@@ -446,5 +463,5 @@ export async function sensitiveNativeCustody(context) {
   assert.equal((await sql(`SELECT count(*) AS n FROM env_notice_dispatches WHERE company_id='${company.id}'`))[0].n,0)
   console.log('PROBE SURFACE-004 native-private: SSN, bank and tax native downloads -> sensitive, count 1 and exact kind; scoped human roles allowed, identity-only, signed-out, old-session and foreign-worker reads refused; masked exports count 2 and 0')
   console.log('PROBE SURFACE-004 native-custody: exact owner request -> destructive and sensitive count 4; invalid and stale hold release -> refused; eligible selected releases -> counts 2 and 1; restart and exact erasure -> count 4, anonymous audit, no retained values; agent custody doors remain unavailable')
-  console.log('PROBE SURFACE-004 private-delivery: correction and erasure after ciphertext selection -> refused before plaintext delivery, no successful response classification')
+  console.log('PROBE SURFACE-004 private-delivery: correction, erasure, session revocation, session expiry and grant revocation after ciphertext selection -> refused before plaintext delivery, no successful response classification')
 }
