@@ -21,3 +21,23 @@ export default async function(context) {
   const {kty,n,e}=await crypto.subtle.exportKey('jwk',pair.publicKey)
   return {clients:{local:{token:saved.localToken,clientId:saved.grantId,agent:{id:saved.grantId,name:'Payroll assistant',specialist:'payroll'}}},sponsors:negativeSponsors.get(context.origin)??{},values:{actions:['records:read','drafts:prepare','drafts:read','notices:process','dispatch:execute'],rotationKey:{kty,n,e},company:company.id,person:person.id,notice:notice.id,reply:reply.id,replyVersion:review.version,replyDigest:review.digest,key:crypto.randomUUID()}}
 }
+
+// Native retained inputs for the sensitive-read journey use only public doors.
+export async function sensitiveFixtures(context, options = {}) {
+  const data=client(context)
+  const company=await data('/api/envelope/companies',{name:'Synthetic sensitive employer',ein:'00-0009741'},201)
+  const base='/api/envelope/companies/'+company.id
+  const location=await data(base+'/locations',{name:'Selected workplace',state:'PA'},201)
+  const other=await data(base+'/locations',{name:'Other workplace',state:'PA'},201)
+  const people=[]
+  for(const [index,place] of [location,location,other].entries()) {
+    const person=await data(base+'/people',{name:'Synthetic compensation worker '+index,locationId:place.id},201)
+    const rate=await data(base+'/people/'+person.id+'/rates',{version:person.version,hourlyCents:2700+index*100,effectiveDate:'2026-01-01'},201)
+    const review=await data(base+'/rates/'+rate.id)
+    await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken,version:review.version})
+    people.push(person)
+  }
+  await data(base+'/agents/class-policy',{version:0,...(await import('./native.mjs')).answers})
+  const issue=(extra={})=>data(base+'/agents',{name:'Synthetic read assistant',hours:1,actions:['records:read','drafts:prepare','drafts:read'],fields:['compensation'],locations:['*'],...extra},201)
+  return {company,base,location,other,people,issue,credential:await issue(options)}
+}

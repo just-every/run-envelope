@@ -3,6 +3,10 @@ import { ToolRefusal, type ToolContext, type ApprovalSummary, type NativeTarget 
 import { recordKey, unseal } from '../security'
 import { replyBody } from '../notices'
 import { nativeAgent } from './native'
+import type { AgentTools } from '../agents'
+import { readBonus, bonusReport } from '../bonus-runs'
+import { digest } from '../workspace/store'
+import { PayrollError } from '../security'
 
 /** Read the actual scoped native target, never accept a caller's risk flags. */
 export async function effect(env: Bindings, name: string, args: Record<string,unknown>, ctx: ToolContext): Promise<{target:NativeTarget;revision:string|number;summary:ApprovalSummary} | null> {
@@ -37,18 +41,19 @@ export async function effect(env: Bindings, name: string, args: Record<string,un
   return null
 }
 
-export async function sensitiveRecords(env:Bindings,name:string,args:Record<string,unknown>,ctx:ToolContext) {
-  if(!name.startsWith('reports.'))return 1
-  const agent=await nativeAgent(env,ctx,args.companyId),f=agent.fence(),limit=Number(args.limit??100),after=String(args.after??'')
-  agent.allow('drafts:read',args.companyId)
-  if(!JSON.parse(agent.grant.fields).includes('compensation'))throw new ToolRefusal('agent_scope_denied','agent_scope_denied',{native_status:403})
-  if(name==='reports.proposals') {
-    const l=agent.location('p.location_id')
-    return (await env.DB.prepare(`SELECT COUNT(*) AS n FROM (SELECT d.id FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.credential_id=? AND d.id>? AND ${l.sql} AND ${f.sql} ORDER BY d.id LIMIT ?)`).bind(agent.grant.company_id,agent.grant.id,after,...l.args,...f.args,limit).first<{n:number}>())!.n
-  }
-  if(!JSON.parse(agent.grant.locations).includes('*'))throw new ToolRefusal('agent_scope_denied','agent_scope_denied',{native_status:403})
-  return (await env.DB.prepare(`SELECT COUNT(*) AS n FROM (SELECT v.object_id FROM env_workspace_versions v WHERE v.company_id=? AND v.kind='earnings-run' AND v.version=1 AND v.object_id>? AND ${f.sql}
-    AND EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=v.company_id AND a.credential_id=? AND a.action='bonus.prepared' AND a.target_id=v.object_id)
-    AND EXISTS(SELECT 1 FROM env_workspace_people pin JOIN env_people p ON p.company_id=pin.company_id AND p.id=pin.person_id WHERE pin.company_id=v.company_id AND pin.kind=v.kind AND pin.object_id=v.object_id AND pin.version=v.version)
-    ORDER BY v.object_id LIMIT ?)`).bind(agent.grant.company_id,after,...f.args,agent.grant.id,limit).first<{n:number}>())!.n
+/** Select the exact permitted response before policy evaluation. No read audit is
+ * written until execution; even an empty report still has the sensitive class. */
+export const selectedReads = ['records.list','draft.read','bonus.read','reports.proposals','reports.bonuses']
+export async function readSelection(agent: AgentTools, name: string, args: Record<string,unknown>, audit = false) {
+  let value: Record<string,unknown>
+  if(name==='records.list') value=await agent.records(args,audit)
+  else if(name==='draft.read') value=await agent.readDraft(args,audit)
+  else if(name==='bonus.read') value=await readBonus(agent,args,audit)
+  else if(name==='reports.proposals') value=await agent.proposalReport(args,audit)
+  else if(name==='reports.bonuses') value=await bonusReport(agent,args,audit)
+  else throw new ToolRefusal('tool_not_found')
+  const f=agent.fence()
+  if(!await agent.env.DB.prepare(`SELECT 1 WHERE ${f.sql}`).bind(...f.args).first()) throw new PayrollError('agent_authority_revoked',403)
+  const records=name==='records.list' ? (value.records as unknown[]).length : name==='reports.proposals' ? (value.proposals as unknown[]).length : name==='reports.bonuses' ? (value.bonuses as unknown[]).length : 1
+  return {value,records,target:{kind:name==='records.list'?'masked-worker-selection':'compensation-selection',id:await digest(JSON.stringify([name,agent.grant.id,agent.grant.version,agent.grant.fields,agent.grant.locations,args,value]))}}
 }

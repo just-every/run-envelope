@@ -226,6 +226,7 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
+      "SURFACE-004",
       "SURFACE-006",
       "ENV-030",
       "ENV-052"
@@ -286,6 +287,7 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
+      "SURFACE-004",
       "SURFACE-006",
       "ENV-028",
       "ENV-052"
@@ -372,6 +374,7 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
+      "SURFACE-004",
       "SURFACE-006",
       "ENV-024",
       "ENV-030",
@@ -405,6 +408,7 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
+      "SURFACE-004",
       "SURFACE-006",
       "ENV-024",
       "ENV-030",
@@ -434,6 +438,7 @@ export const catalogue = [
     ],
     "clauses": [
       "SURFACE-001",
+      "SURFACE-004",
       "SURFACE-006",
       "ENV-030",
       "ENV-052"
