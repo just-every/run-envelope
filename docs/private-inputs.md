@@ -128,6 +128,10 @@ duplicate scalar form values and unsupported content through those actual forms
 under current owner authority. Refusals must preserve all retained business and
 identity rows. The dispatcher inventory still supplies routes that no current
 document offers; new route families must extend it and their applicable states.
+That includes explicit dependency diagnostics, case policy, agent class policy
+and Pause, and native authentication policy administration. Signed-out protocol
+probes also exercise every installed MCP operation, including resource templates,
+prompts and subscriptions; public discovery never substitutes for private access.
 
 Federal and state originals carry different bytes, as do their replacement
 versions. GET checks exact bytes independently for every retained form and
@@ -140,6 +144,10 @@ retained records or audit. Refusal checks compare retained row contents as well
 as their counts, including native identity, Business settings and agent state.
 A renewed grant requires a fresh session for every historical download; old
 sessions remain refused even when they present conditional cache headers.
+An owner can also end one downloader session through native Settings. That old
+session refuses every retained original and replacement on both document and API
+doors, while a fresh session with the unchanged, separately scoped download grant
+can still retrieve the exact bytes.
 
 The installed shared agent dispatcher is included in the signed-out inventory.
 Its person APIs, policy mutation and Business settings mutation require their

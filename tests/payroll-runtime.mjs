@@ -5180,6 +5180,17 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
   const signedOutDownload=await signIn(downloadId)
   assert.equal((await call('/auth/signout',{},signedOutDownload)).status,204)
   await refuseOriginals(signedOutDownload,401)
+  // Ending one current session through Settings must fence every retained
+  // original without removing the person's independent download grant.
+  const revokedDownload=await signIn(downloadId)
+  const revokedSession=(await data('/auth/sessions?operatorId='+downloadId)).find(session=>session.id==='synthetic-envelope-paper-staff-'+sessionNumber)
+  assert.ok(revokedSession,'Settings lists the current downloader session')
+  assert.equal((await call('/auth/session/revoke',{sessionId:revokedSession.id})).status,204)
+  await refuseOriginals(revokedDownload,401)
+  const stillGranted=await signIn(downloadId)
+  const stillAllowed=await call(door+'/original/4/state',undefined,stillGranted)
+  assert.equal(stillAllowed.status,200,'session revocation leaves a fresh independently authorized session usable')
+  assert.deepEqual(Buffer.from(await stillAllowed.arrayBuffer()),uploadedStatePdf)
   const staffAudit=await data(base+'/audit')
   for(const [action,actorId,targetId,version] of [
     ['workspace.paper-onboarding.recorded',preparerId,'paper-'+person.id,5],
