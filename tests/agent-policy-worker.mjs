@@ -31,7 +31,8 @@ export default {
     if(key==='prepare')return sql=>statement(target.prepare(sql.replaceAll("unixepoch('subsec')*1000",String(instant))),sql)
     if(key==='batch') return async (...args)=>{
      const native=args[0].some(item=>(queries.get(item)||'').includes('env_'))
-     if(control==='hold'&&!held&&native) {
+     const readExecution=args[0].some(item=>(queries.get(item)||'').includes('INSERT INTO env_agent_access'))
+     if(!held&&(control==='hold'&&native||control==='read-hold'&&readExecution)) {
       held=true;phase='waiting'
       let timer
       try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }

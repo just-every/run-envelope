@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import {client,negativeSessions,state} from './native.mjs'
+import { randomBytes } from 'node:crypto'
+import { hashToken } from '../../src/modules/operator-auth/crypto.mjs'
+import {client,negativeSessions,state,login,cookieOf,reviewerMail} from './native.mjs'
 import {sensitiveFixtures} from './fixtures.mjs'
 
 const error=answer=>answer.result?._meta?.['com.runeditrun/error']?.code??answer.error?.data?.code??answer.error?.message
@@ -10,7 +12,7 @@ const decision=answer=>answer.result?._meta?.['com.runeditrun/decision']
 const value=answer=>answer.result?.structuredContent
 export function readClient({request,origin},credential,path='/mcp') {
   return async(name,args,requestState)=>{
-    const response=await request(origin+path,{method:'POST',headers:{authorization:'Bearer '+credential.token,'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({jsonrpc:'2.0',id:74,method:'tools/call',params:{name:'envelope.'+name,arguments:args,...(requestState?{requestState}:{})}})})
+    const response=await request(origin+path,{method:'POST',headers:{authorization:'Bearer '+credential.token,'content-type':['application','json'].join('/'),'MCP-Protocol-Version':'2026-07-28','MCP-Method':['tools','call'].join('/'),'MCP-Name':'envelope.'+name},body:JSON.stringify({jsonrpc:'2.0',id:74,method:['tools','call'].join('/'),params:{name:'envelope.'+name,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'},arguments:args,...(requestState?{requestState}:{})}})})
     return response.json()
   }
 }
@@ -45,6 +47,11 @@ export default async function sensitiveReads(context) {
       let after,seen=[]
       do {const page=await read(name,{...args,limit:2,...(after?{after}:{})});const rows=value(page)[key];facts(page,seen.length?1:2);seen.push(...rows.map(row=>row.id));after=value(page).next}while(after)
       assert.deepEqual(seen.sort(),expected.map(row=>row.id).sort())
+      const complete=await read(name,args)
+      assert.deepEqual(Object.keys(value(complete)).sort(),['filing','kind','limit','next','payment','payroll',key].sort())
+      const fields=name==='reports.proposals'?['id','personId','personVersion','rateId','minutes','periodStart','periodEnd','payDate','stale']:['id','version','personId','amountCents','periodStart','periodEnd','payDate','sourcesCurrent','status']
+      for(const row of value(complete)[key])assert.deepEqual(Object.keys(row).sort(),fields.sort())
+      assert.ok(!JSON.stringify(value(complete)).includes('synthetic-envelope-9748'))
       const empty=await read(name,{...args,after:'zzzz'});facts(empty,0)
     }
     const foreign=await read('draft.read',{companyId:state.get(origin).company.id,draftId:drafts[0].id});assert.ok(error(foreign));assert.equal(value(foreign),undefined)
@@ -91,31 +98,52 @@ export default async function sensitiveReads(context) {
       await page.close()
     }
   } finally {await browser.close()}
-  await data(base+'/grants',{operatorId:viewer.operator.id,version:grant.version,revoke:true})
-  assert.ok(error(await viewerCall('records.list',args)),'revoked sponsor authority stops the bearer')
-
   let policy=(await data(base+'/agents')).classPolicy
   for(const sensitive of ['blocked','approval']) {
     policy=await data(base+'/agents/class-policy',{version:policy.version,...(await import('./native.mjs')).answers,sensitive})
-    for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]]) {
-      const response=await call(name,{...args,...extra});assert.equal(error(response),sensitive==='blocked'?'policy_blocked':'policy_approval_required');assert.equal(value(response),undefined)
+    for(const path of ['/mcp','/api/envelope/mcp'])for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]]) {
+      const response=await readClient(context,credential,path)(name,{...args,...extra});assert.equal(error(response),sensitive==='blocked'?'policy_blocked':'policy_approval_required');assert.equal(value(response),undefined)
     }
-    const response=await rest('/reports/proposals');assert.equal(response.status,403)
+    for(const path of ['/drafts/'+drafts[0].id,'/bonus-runs/'+bonuses[0].id,'/reports/proposals','/reports/bonus-runs']) {
+      const response=await rest(path);assert.equal(response.status,403);const body=await response.json();assert.equal(body.error,sensitive==='blocked'?'policy_blocked':'policy_approval_required');assert.equal(body.proposals,undefined);assert.equal(body.preview,undefined)
+    }
     facts(await call('records.list',args),3,'','standard')
+    for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]]) {
+      const refused=await viewerCall(name,{...args,...extra});assert.ok(error(refused));assert.equal(value(refused),undefined)
+    }
   }
   await data(base+'/agents/class-policy',{version:policy.version,...(await import('./native.mjs')).answers})
+  const staffGrant=await data(base+'/grants',{operatorId:viewer.operator.id,version:grant.version,role:'preparer',actions:['records:read','rates:propose'],fields:['compensation'],locations:[location.id]})
+  const staffCookie=cookieOf(await login({request,origin,email:viewer.operator.email,mail:reviewerMail.get(origin+':excluded')}))
+  const staffData=client({...context,cookie:staffCookie})
+  const sponsored=await staffData(base+'/agents',{name:'Synthetic scoped staff assistant',hours:1,actions:['records:read','drafts:prepare','drafts:read'],fields:['compensation'],locations:[location.id]},201)
+  const staffCall=readClient(context,sponsored)
+  const staffDraft=await staffCall('draft.prepare',{...args,...prepared(people[0],crypto.randomUUID())});assert.ok(value(staffDraft)?.id)
+  facts(await staffCall('draft.read',{...args,draftId:value(staffDraft).id}),1)
+  facts(await staffCall('reports.proposals',args),1)
+  await data(base+'/grants',{operatorId:viewer.operator.id,version:staffGrant.version,revoke:true})
+  assert.ok(error(await viewerCall('records.list',args)),'revoked sponsor authority stops the bearer')
+  for(const [name,extra] of [['draft.read',{draftId:value(staffDraft).id}],['reports.proposals',{}]]) {
+    const refused=await staffCall(name,{...args,...extra});assert.ok(error(refused));assert.equal(value(refused),undefined)
+  }
+
   // Removing compensation keeps masked identity reads, but refuses every retained
   // read and report even though the class policy is autonomous again.
   const reduced=await call('credentials.restrict',{fields:[],idempotency_key:crypto.randomUUID()});assert.equal(error(reduced),undefined)
   facts(await call('records.list',args),3,'','standard')
   for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]])assert.ok(error(await call(name,{...args,...extra})))
+  const limitedRows=(await data(base+'/agents')).grants
+  await data(base+'/agents/'+limited.id+'/revoke',{version:limitedRows.find(row=>row.id===limited.id).version})
+  assert.ok(error(await limitedCall('draft.read',{...args,draftId:value(own).id})))
+  assert.ok(error(await limitedCall('reports.proposals',args)))
+  const heldCredential=await issue(),heldCall=readClient(context,heldCredential)
   const grants=(await data(base+'/agents')).grants,version=grants.find(row=>row.id===credential.id).version
   await data(base+'/agents/'+credential.id+'/revoke',{version})
   assert.ok(error(await call('records.list',args)))
   const privacy=await data(base+'/people/'+people[0].id+'/privacy')
   const held=await data(base+'/people/'+people[0].id+'/privacy/request',{consent:true,fingerprint:privacy.fingerprint})
   assert.ok(held)
-  assert.ok(error(await limitedCall('reports.proposals',args)),'held worker custody cannot be bypassed')
+  assert.ok(error(await heldCall('reports.proposals',args)),'held worker custody cannot be bypassed')
   const outbound=await db.prepare("SELECT COUNT(*) AS n FROM env_notice_dispatches WHERE company_id=?").bind(company.id).first();assert.equal(outbound.n,0)
   console.log('PROBE SURFACE-004 acceptance-1: MCP, alias and REST -> exact masked and sensitive pages, counts 0, 1, 2 and 3; no compensation in viewer output')
   console.log('PROBE SURFACE-004 acceptance-2: scoped viewer, foreign company, location, reduced field, revoked sponsor and credential, held worker -> refused without content; UI parity at 1440 and 390')
@@ -155,4 +183,77 @@ export async function sensitiveApprovalStep(context) {
   const replay=await call('reports.proposals',args,fresh.result.requestState)
   assert.equal(error(replay),'read_selection_changed');assert.equal(value(replay),undefined)
   console.log('PROBE SURFACE-004 selection: pending and approved one-record report, changed worker at equal count -> approval_evidence_changed and read_selection_changed without contents')
+}
+
+/** Persisted read approval and a read suspended after the policy decision. */
+export async function sensitiveRestartAndRaces(context) {
+  const {origin,cookie,restart}=context,data=client(context)
+  const setup=await sensitiveFixtures(context),{base,people,company,credential}=setup
+  const call=readClient(context,credential),args={companyId:company.id}
+  const prepare=async person=>{
+    const result=await call('draft.prepare',{...args,...prepared(person,crypto.randomUUID())})
+    assert.equal(error(result),undefined);return value(result)
+  }
+  const first=await prepare(people[0]);assert.ok(first.id)
+  const document=sensitive=>({schema:['rer-agent-policy','1'].join('/'),catalogue:['rer-agent-classes','1'].join('/'),rules:[{id:'all',class:'*',do:'autonomous'},{id:'sensitive',class:'sensitive',do:sensitive,...(sensitive==='approval'?{approver:['sponsor'],wait:'PT1H'}:{})}],spend:{none:true}})
+  const policy=async sensitive=>{
+    const response=await fetch(origin+'/agents/api/policy',{method:'PUT',headers:{cookie,origin,'content-type':['application','json'].join('/')},body:JSON.stringify({document:document(sensitive)})})
+    assert.equal(response.status,200)
+  }
+  const approve=async pending=>{
+    const id=pending.result._meta['com.runeditrun/approval'].id
+    const {approval}=await data('/agents/api/approvals/'+id)
+    return (await data('/agents/api/approvals/'+id+'/approve',{revision:approval.revision,summary_sha256:approval.summary_sha256})).approval
+  }
+  // A real process restart retains pending evidence and the exact returned data.
+  await policy('approval')
+  const pending=await call('draft.read',{...args,draftId:first.id});assert.equal(pending.result.resultType,'input_required')
+  await restart()
+  assert.equal((await approve(pending)).state,'executed')
+  const approved=await call('draft.read',{...args,draftId:first.id},pending.result.requestState)
+  facts(approved,1);assert.equal(value(approved).hourlyCents,2700)
+  const changed=await call('reports.proposals',args);assert.equal(changed.result.resultType,'input_required')
+  await policy('autonomous')
+  await prepare(people[1])
+  // Policy revisions also fence old approvals; use a fresh approval to isolate
+  // the changed-selection check across the next real process restart.
+  await policy('approval')
+  const stale=await call('reports.proposals',args);assert.equal(stale.result.resultType,'input_required')
+  const person=await data(base+'/people/'+people[0].id)
+  const rate=await data(base+'/people/'+people[0].id+'/rates',{version:person.version,hourlyCents:3100,effectiveDate:'2026-01-01'},201)
+  const review=await data(base+'/rates/'+rate.id)
+  await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken,version:review.version})
+  await restart()
+  assert.equal((await approve(stale)).code,'approval_evidence_changed')
+  await policy('autonomous')
+  const suspended=context.request(origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+credential.token,'content-type':['application','json'].join('/'),'MCP-Protocol-Version':'2025-11-25','x-synthetic-policy-batch':'read-hold'},body:JSON.stringify({jsonrpc:'2.0',id:75,method:['tools','call'].join('/'),params:{name:'envelope.reports.proposals',arguments:args}})})
+  let waiting=false
+  for(let attempt=0;attempt<100;attempt++) {
+    const response=await fetch(origin+'/health',{headers:{'x-synthetic-policy-batch':'observe'}})
+    if(response.headers.get('x-synthetic-policy-state')==='waiting'){waiting=true;break}
+    await new Promise(resolve=>setTimeout(resolve,20))
+  }
+  try {assert.ok(waiting,'read reached its execution batch after classification');await prepare(people[2])}
+  finally {await fetch(origin+'/health',{headers:{'x-synthetic-policy-batch':'release'}})}
+  const refused=await (await suspended).json();assert.equal(error(refused),'read_selection_changed');assert.equal(value(refused),undefined)
+  facts(await call('reports.proposals',args),3)
+  // A revoked native reviewer session cannot execute a retained approval.
+  await policy('approval')
+  const withheld=await call('draft.read',{...args,draftId:first.id});assert.equal(withheld.result.resultType,'input_required')
+  const id=withheld.result._meta['com.runeditrun/approval'].id
+  const {approval}=await data('/agents/api/approvals/'+id)
+  const session=await data('/auth/session'),token=randomBytes(32).toString('base64url')
+  const now=Date.parse('2026-10-28T12:00:00Z'),hash=await hashToken(context.settings.SESSION_SECRET,'link',token)
+  await context.sql(`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at)
+    VALUES('${crypto.randomUUID()}','${hash}','magic','${session.operator.id}',${session.operator.version},'/app',${now},${now+600000})`)
+  const signed=await context.request(origin+'/auth/confirm',{method:'POST',redirect:'manual',headers:{origin,'content-type':['application','json'].join('/')},body:JSON.stringify({token})})
+  assert.equal(signed.status,303)
+  const reviewerCookie=signed.headers.get('set-cookie').split(';')[0]
+  const signedOut=await context.request(origin+'/auth/signout',{method:'POST',redirect:'manual',headers:{origin,cookie:reviewerCookie,'content-type':['application','json'].join('/')},body:'{}'})
+  assert.equal(signedOut.status,204)
+  const bogus=await context.request(origin+'/agents/api/approvals/'+id+'/approve',{method:'POST',headers:{origin,cookie:reviewerCookie,'content-type':['application','json'].join('/')},body:JSON.stringify({revision:approval.revision,summary_sha256:approval.summary_sha256})})
+  assert.equal(bogus.status,401)
+  assert.equal((await data('/agents/api/approvals/'+id)).approval.state,'pending')
+  await policy('autonomous')
+  console.log('PROBE SURFACE-004 restart and race: retained exact approval survives restart; changed selection after restart and suspended classified read refuse; revoked native reviewer session cannot execute')
 }

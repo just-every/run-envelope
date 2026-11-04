@@ -1,4 +1,4 @@
-import type { AgentTools } from './agents'
+import { readAgentRows, type AgentTools } from './agents'
 import type { Bindings } from '../auth.server'
 import type { Input } from './records'
 import type { EarningsRun } from './workspace/pay-items'
@@ -21,16 +21,16 @@ export async function readBonus(agent: AgentTools, input: Input, audit = true) {
   authority(agent, input, 'drafts:read')
   if (Object.keys(input).some(k => !['companyId','runId'].includes(k))) throw new PayrollError('invalid_bonus_input')
   const runId = text(input.runId,80), f = agent.fence()
-  const rows = await agent.env.DB.batch<Record<string,unknown>>([
-    audit ? agent.log('bonus.read',runId) : agent.env.DB.prepare('SELECT 1'),
+  const rows = await readAgentRows<Record<string,unknown>>(agent,audit,
+    agent.log('bonus.read',runId),
     agent.env.DB.prepare(`SELECT v.cipher,(${currentSources('v')}) AS sourcesCurrent FROM env_workspace_versions v
       WHERE v.company_id=? AND v.kind='earnings-run' AND v.object_id=? AND v.version=1 AND ${f.sql}
       AND EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=v.company_id AND a.credential_id=? AND a.action='bonus.prepared' AND a.target_id=v.object_id)
       AND EXISTS(SELECT 1 FROM env_people p WHERE p.company_id=v.company_id AND p.id=(SELECT person_id FROM env_workspace_people WHERE company_id=v.company_id AND kind=v.kind AND object_id=v.object_id AND version=v.version))`)
       .bind(agent.grant.company_id,runId,...f.args,agent.grant.id),
-  ])
+  )
   const row=rows[1].results[0]
-  if (audit && !rows[0].meta.changes || !row) throw new PayrollError('bonus_or_authority_unavailable',403)
+  if (audit && !rows[0]?.meta.changes || !row) throw new PayrollError('bonus_or_authority_unavailable',403)
   const data=JSON.parse(await unseal(await recordKey(agent.env.ENVELOPE_RECORD_KEY),JSON.stringify([agent.grant.company_id,'earnings-run',runId,1]),String(row.cipher))) as EarningsRun
   // Repeat authority after decrypting private compensation.
   const current=agent.fence()
@@ -104,16 +104,16 @@ export async function bonusReport(agent: AgentTools, input: Input, audit = true)
   const limit=input.limit===undefined ? 100 : integer(input.limit)
   if(limit>100) throw new PayrollError('invalid_report_query')
   const after=input.after===undefined ? '' : text(input.after,80), f=agent.fence()
-  const rows=await agent.env.DB.batch<{id:string}>([
-    audit ? agent.log('reports.bonuses',agent.grant.company_id) : agent.env.DB.prepare('SELECT 1'),
+  const rows=await readAgentRows<{id:string}>(agent,audit,
+    agent.log('reports.bonuses',agent.grant.company_id),
     agent.env.DB.prepare(`SELECT v.object_id AS id FROM env_workspace_versions v
       WHERE v.company_id=? AND v.kind='earnings-run' AND v.version=1 AND v.object_id>? AND ${f.sql}
       AND EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=v.company_id AND a.credential_id=? AND a.action='bonus.prepared' AND a.target_id=v.object_id)
       AND EXISTS(SELECT 1 FROM env_workspace_people pin JOIN env_people p ON p.company_id=pin.company_id AND p.id=pin.person_id
         WHERE pin.company_id=v.company_id AND pin.kind=v.kind AND pin.object_id=v.object_id AND pin.version=v.version)
       ORDER BY v.object_id LIMIT ?`).bind(agent.grant.company_id,after,...f.args,agent.grant.id,limit+1),
-  ])
-  if(audit && !rows[0].meta.changes) throw new PayrollError('agent_authority_revoked',403)
+  )
+  if(audit && !rows[0]?.meta.changes) throw new PayrollError('agent_authority_revoked',403)
   const selected=rows[1].results.slice(0,limit), bonuses=[]
   for(const row of selected) {
     const run=await readBonus(agent,{companyId:agent.grant.company_id,runId:row.id},audit)
