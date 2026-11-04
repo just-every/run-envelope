@@ -179,6 +179,20 @@
         "scripts/installer/local.mjs"
       ],
       "effects": "Serve fixed production output, preserve local owner and durable state, stop after idle timeout or explicit stop."
+    },
+    "record-key": {
+      "argv": [
+        "rer",
+        "run",
+        "record-key"
+      ],
+      "inputs": [
+        "package.json",
+        "scripts/portability/record-key.mjs",
+        "scripts/portability/record-key-custody.mjs",
+        "scripts/portability/record-key-settings.mjs"
+      ],
+      "effects": "Seed-owned local key custody: backup --output PATH --yes saves the record key separately in a new private external file and records its location for reset preflight; recover --input PATH --yes restores it only into an empty business-data target. Neither operation prints the key or restores authority. See docs/archive-recovery.md."
     }
   },
   "health": {

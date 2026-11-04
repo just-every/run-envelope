@@ -248,18 +248,39 @@ To back up and restore this installation locally, run these in order from the sa
 
 ```sh
 rer dev --stop
+mkdir -p "$HOME/.local/share/envelope-recovery"
+chmod 700 "$HOME/.local/share/envelope-recovery"
+rer run record-key -- backup --output "$HOME/.local/share/envelope-recovery/record-key.txt" --yes
 rer export --output exports/x.rer
 rer reset --yes
+rer run record-key -- recover --input "$HOME/.local/share/envelope-recovery/record-key.txt" --yes
 rer import --input exports/x.rer --yes
 rer setup --owner-email you@example.com
 rer dev
 ```
 
-Stop the running app so no operation can write during the backup. Export saves
-its domain data before reset removes the local installation. Reset makes the
-destination empty, as import requires. Import restores the saved domain data;
-setup then establishes the owner and private local configuration excluded from
-the archive. Start development to use the restored installation.
+Run one command at a time and stop on any refusal. Stop the running app so no
+operation can write during the backup. Keep the recovery directory outside the
+checkout, owned by you with mode `0700`; choose a new key filename for each backup.
+The key operation creates a mode-`0600` file, refuses an existing file and never
+prints the key. It runs with the installer's private Node and pnpm through
+`rer run`; neither tool needs to be on your PATH.
+
+Export saves domain data, including encrypted private records, but never their
+record key. Reset checks that the separately held key still matches the saved
+private setting before it shows the removal inventory; `--yes` cannot skip that
+check. An absent, changed, linked or non-private key backup refuses reset without
+removing local data or settings. Keep the file at its recorded location until
+reset finishes. This key check does not replace a successful data export.
+
+Reset empties the destination and removes `.dev.vars`. Recover the original key
+before import; setup afterward preserves that recovered key while establishing
+new owner sign-in and other private settings. Without the original key, stop:
+setup cannot reconstruct it and generating a replacement will not decrypt the
+archive. Import restores permitted history, while old sessions, agent credentials
+and other bearer authority remain inactive. See [local archive custody](docs/archive-recovery.md)
+for fresh-target recovery, erasure journals and the separate restricted history
+adoption required after signing in again.
 
 Other supported operations are `rer verify`, `rer deploy` and `rer describe`.
 

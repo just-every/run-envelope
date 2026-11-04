@@ -25,6 +25,7 @@
     "reset": "rer reset",
     "export": "rer export",
     "import": "rer import",
+    "record-key": "node ./scripts/portability/record-key.mjs",
     "release": "rer release",
     "doctor": "rer doctor",
     "describe": "rer describe",

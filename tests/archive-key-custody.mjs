@@ -15,11 +15,18 @@ export async function archiveKeyCustody({ source, target, corruptTarget, tempora
   await writePrivateFile(wrongFile, wrongKey + '\n', true);
   await writePrivateFile(invalidFile, 'synthetic-envelope-1\n', true);
   const invoke = async (directory, verb, file) => {
-    const result = await run(process.execPath, [join(directory, 'scripts', 'portability', 'record-key.mjs'),
-      verb, verb === 'backup' ? '--output' : '--input', file, '--yes'], directory, env);
+    const result = await run(process.execPath, [join(directory, 'node_modules', '@runeditrun', 'rer', 'global', 'rer.mjs'),
+      'run', 'record-key', '--', verb, verb === 'backup' ? '--output' : '--input', file, '--yes'], directory, env);
     for (const secret of [key, wrongKey]) assert.ok(!result.output.includes(secret), 'terminal output never prints record keys');
     return result;
   };
+  const beforeReset = await readFile(join(source, '.dev.vars'), 'utf8');
+  const unsafeReset = await run(process.execPath, [join(source, 'node_modules', '@runeditrun', 'rer', 'global', 'rer.mjs'),
+    'reset', '--yes', '--json'], source, env);
+  assert.equal(unsafeReset.code, 4, 'confirmed reset refuses a populated installation without separate key custody');
+  assert.ok(unsafeReset.output.includes('record_key_backup_required'));
+  assert.equal(await readFile(join(source, '.dev.vars'), 'utf8'), beforeReset, 'unsafe reset preserves private settings');
+  assert.ok((await lstat(join(source, '.wrangler', 'state'))).isDirectory(), 'unsafe reset keeps native storage');
   assert.equal((await invoke(source, 'backup', backup)).code, 0, 'native terminal exports a separate private record-key backup');
   assert.equal(await readFile(backup, 'utf8'), key + '\n', 'the separate backup retains the original key');
   assert.equal((await lstat(backup)).mode & 0o777, 0o600, 'key backup is owner-only');

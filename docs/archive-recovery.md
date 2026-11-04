@@ -14,18 +14,39 @@ user with permissions `0700`. Keep that directory and its backup away from publi
 files and shared storage. From the source checkout:
 
 ```sh
-node ./scripts/portability/record-key.mjs backup --output /private/owner-recovery/envelope-record-key.txt --yes
-pnpm exec rer export --output exports/payroll.rer
+rer run record-key -- backup --output /private/owner-recovery/envelope-record-key.txt --yes
+rer export --output exports/payroll.rer
 ```
+
+These are this seed's declared package operations, run through `rer run` with the
+installer's private Node and pinned pnpm. They work when only `rer` is on PATH;
+there is no shared `rer record-key` command. Stop the app before transfer or key
+operations, run one command at a time and stop on any refusal.
 
 The key command creates a new owner-only file with permissions `0600`. It refuses
-an existing destination and never prints the key. On an empty target checkout,
-recover the original key before importing the archive:
+an existing destination and never prints the key. Backup records only the file's
+location in private local bookkeeping. Before destructive removal, `rer reset`
+reopens that external file and checks its ownership, permissions and exact key
+against the saved private setting. A missing, changed, linked or non-private
+backup refuses reset before removal, even with `--yes`. Keep it available at the
+recorded location until reset finishes. A key backup does not replace the data
+archive; choose a new filename for a later backup.
+
+For the same checkout, follow the complete [export/reset/recover/import sequence](../RUN-LOCALLY.md#back-up-and-restore-this-installation).
+For a fresh target, install its locked dependencies with `rer install`; do not
+set up a replacement key first. On that empty target checkout, recover the
+original key before importing the archive:
 
 ```sh
-node ./scripts/portability/record-key.mjs recover --input /private/owner-recovery/envelope-record-key.txt --yes
-pnpm exec rer import --input /private/owner-recovery/payroll.rer --yes
+rer run record-key -- recover --input /private/owner-recovery/envelope-record-key.txt --yes
+rer import --input /private/owner-recovery/payroll.rer --yes
+rer setup --owner-email you@example.com
+rer dev
 ```
+
+Setup after import keeps the recovered key and creates fresh sign-in settings.
+The old installation's sessions and bearer tokens remain refused; sign in again
+and explicitly adopt only the permitted historical reads described below.
 
 Recovery uses the native checkout operation lock and private settings writer.
 It refuses populated business data, symbolic links, shared files, invalid keys

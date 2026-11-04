@@ -413,7 +413,7 @@
       "executable": false
     },
     "docs/archive-recovery.md": {
-      "sha256": "762b4f10b1df0ca701a904258d7c42caac7712beefda0cad18972af5ae5433c5",
+      "sha256": "df55432230180aded427b30e7738c92f7be6410906705725aeb32125b2c3d4e8",
       "executable": false
     },
     "docs/claims-follow-up.md": {
@@ -877,7 +877,7 @@
       "executable": false
     },
     "OPERATIONS.json": {
-      "sha256": "fc6937285fbc667f7cd03a4753b9ee4b72826e7232dc99c3f2b62a51f1292318",
+      "sha256": "74401c9b258c36c84ea9dbb079a3cade40184dfa09f5d194268aeb6c61df41cc",
       "executable": false
     },
     "OPERATIONS.md": {
@@ -885,7 +885,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "87d1d6affbe262ea2d60ffb334ac987b931f92f460c27ea780f4bb05cfc25807",
+      "sha256": "649e3f40952aaf0dec78e29956ec0a52d7d85ef87f64aedea0d414c4861285a3",
       "executable": false
     },
     "packaging.json": {
@@ -1217,7 +1217,7 @@
       "executable": false
     },
     "RUN-LOCALLY.md": {
-      "sha256": "ab049a0eb1db086a99aff1627444eaa38de2fb1ca0d2532def42bb75ca83038e",
+      "sha256": "24b3dcd8644efca130ac719bb38e8151ef04b5e0f0c1e9a4194cf7f18967e77f",
       "executable": false
     },
     "scripts/build-deployment-spec.mjs": {
@@ -1897,7 +1897,7 @@
       "executable": false
     },
     "scripts/installer/local.mjs": {
-      "sha256": "43aa510c2e8470c539e832177ef12f62dcdd5802bcf9af2ef59c3617cd01b71c",
+      "sha256": "25475ea94dc3ea478fd08c9fbdd00059e15fb761ea0dc332255bce5bc36137ea",
       "executable": false
     },
     "scripts/installer/seed.mjs": {
@@ -1936,12 +1936,16 @@
       "sha256": "5bde8fafbf71fb7821ac4cda820711f8d54df03c25f1ff0399766a4d4058fd4d",
       "executable": false
     },
+    "scripts/portability/record-key-custody.mjs": {
+      "sha256": "3ea9a284f624f42069a0ef0280ea250d8af24c3f486307dc2205cf6728900eca",
+      "executable": false
+    },
     "scripts/portability/record-key-settings.mjs": {
       "sha256": "cec8b47d7f88c112b4f51b3e1e3f388bbbddde11798d16e7e0cefdfe2f3336f2",
       "executable": false
     },
     "scripts/portability/record-key.mjs": {
-      "sha256": "389ef54d5982ae93f24a3463e0ff09d0edae57575c938d9003ac54979bdff269",
+      "sha256": "bafc2a6cd3d935137076bd935d16d48632efab65bfa083232cd9949a52295606",
       "executable": false
     },
     "scripts/portability/relationships.mjs": {
@@ -4265,7 +4269,7 @@
       "executable": false
     },
     "tests/archive-key-custody.mjs": {
-      "sha256": "6ff08c8701eacff69f61ed5c3ecd5e7cf28707652aec1222e28451e5cbdcd892",
+      "sha256": "92295af6fe36fd415f68f5e37e5060dc61cd5e87411df41cdc6041e8881a6862",
       "executable": false
     },
     "tests/archive-relationships.mjs": {

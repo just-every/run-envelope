@@ -5,6 +5,7 @@ import { selectLocalState } from '@runeditrun/rer/local/state';
 import { commandAdapter as createCommandAdapter } from '@runeditrun/rer/adapter';
 import { ownerDeploy } from '@runeditrun/rer/deploy';
 import { envelopePortability } from '../portability/local.mjs';
+import { recordKeyResetPreflight } from '../portability/record-key-custody.mjs';
 import * as model from './ui/seed.mjs';
 
 export { selectLocalState };
@@ -25,6 +26,7 @@ export const { install } = lifecycle;
 export const commandAdapter = createCommandAdapter(lifecycle, {
  dev: developmentTarget, preview: previewTarget, verify: ['pnpm', ['run', 'verify:app']], deploy: ownerDeploy('deploy.json', lifecycle),
  portability: envelopePortability(lifecycle.hooks.secrets),
+ resetPreflight: recordKeyResetPreflight,
  setup: { manifestFile: 'rer-setup.json' }, browserModule: 'scripts/installer/ui/seed.mjs',
  // The run site (rer build --site, rer deploy --site, RER_SITE): pages from
  // edition identity and Run data, written to an ignored folder; its domain is in deploy-site.json.
