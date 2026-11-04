@@ -3638,6 +3638,8 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     const dispatcher=await data(api+'/agents',{name:'synthetic-envelope-517',hours:24,reviewDate,actions:['dispatch:execute'],fields:['tax'],locations:[ca.id],providers:['resend']},sponsors.accountant.cookie,201)
     await setIdentity(cookie)
     await page.goto(origin+noticePath)
+    await page.getByLabel('Sending agent and sponsor',{exact:true}).selectOption(JSON.stringify([dispatcher.id,dispatcher.id]))
+    await page.getByLabel('Designated human approver',{exact:true}).selectOption(owner.id)
     await page.getByLabel('Verified reply recipient email',{exact:true}).fill('agency-contact@example.com')
     await page.getByLabel('Reply subject',{exact:true}).fill('CP161 evidence request')
     await page.getByLabel('Exact reply text',{exact:true}).fill('Please provide the account transcript for human reconciliation.\nReference synthetic-envelope-518. '+hostileReply)
@@ -3656,12 +3658,15 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await page.waitForURL(origin+ui+'/notices')
     reply=(await data(api+'/notices/'+noticeId)).replies[0]
     assert.equal(reply.approvedBy,owner.id)
+    assert.notEqual(reply.data.preparedBy.sponsorId,reply.approvedBy)
+    assert.notEqual(reply.data.sendingAgent.sponsorId,reply.approvedBy)
+    assert.equal(reply.data.humanReviewer.id,owner.id)
     await capture(noticePath,'notice-approved')
     // An edited twin does not inherit approval; neither old nor new version sends.
-    const edited=await data(api+'/notices/'+noticeId+'/replies',{id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:reply.data.body+' Edited.'},cookie,201)
+    const edited=await data(api+'/notices/'+noticeId+'/replies',{sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:reply.data.body+' Edited.'},cookie,201)
     await executeStatus(reply,409)
     await executeStatus(edited,409)
-    await data(api+'/notices/'+noticeId+'/replies',{id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:'stale overwrite'},cookie,409)
+    await data(api+'/notices/'+noticeId+'/replies',{sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:'stale overwrite'},cookie,409)
     assert.equal((await data(api+'/notices/'+noticeId)).replies[0].data.body,reply.data.body+' Edited.')
     assert.equal(edge.calls.length,unapprovedCalls)
     await capture(noticePath,'notice-edited-unapproved')
@@ -3682,7 +3687,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     const emailCall=edge.calls.find(r=>r.url==='https://api.resend.com/emails')
     assert.equal(exact.data.preparedBy.agentId,adminGrant.id,'the reviewed attribution binds the real native client')
     assert.equal(exact.data.preparedBy.sponsorId,sponsors['payroll-admin'].id,'the reviewed attribution binds its real sponsor')
-    assert.deepEqual(emailCall.body,{from:exact.data.sender,to:[exact.data.to],subject:exact.data.subject,text:exact.data.body+'\n\nPrepared by '+exact.data.preparedBy.label,headers:{'X-RER-Attribution':'synthetic-envelope-517 for '+sponsors.accountant.id}})
+    assert.deepEqual(emailCall.body,{from:exact.data.sender,to:[exact.data.to],subject:exact.data.subject,text:exact.data.body+'\n\nPrepared by '+exact.data.preparedBy.label+'\nSent by '+exact.data.sendingAgent.label+'\nHuman reviewer: '+exact.data.humanReviewer.name,headers:{'X-RER-Attribution':'synthetic-envelope-517 for '+sponsors.accountant.id}})
     assert.ok(emailCall.idempotencyKey.startsWith('envelope-notice-'))
     const accepted=await execute(exact)
     assert.equal(accepted.state,'accepted')
@@ -3691,7 +3696,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal((await data(api+'/notices/'+noticeId)).replies[0].providerReceipt,'00000000-0000-4000-8000-000000000052')
     // Exact approvals are separately tested against expiry, withdrawal, provider
     // changes and approver removal; no refusal reaches the network.
-    const freshReply=async(label) => data(api+'/notices/'+noticeId+'/replies',{to:'agency-contact@example.com',subject:label,body:'Human-reviewed account transcript request.'},cookie,201)
+    const freshReply=async(label,approverId=owner.id) => data(api+'/notices/'+noticeId+'/replies',{sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId,to:'agency-contact@example.com',subject:label,body:'Human-reviewed account transcript request.'},cookie,201)
     const approveReply=async(r) => {const v=await data(api+'/notice-replies/'+r.id+'/review');await approve(v);return r}
     const expired=await approveReply(await freshReply('synthetic-envelope-520'))
     await sql(`UPDATE env_notice_approvals SET expires_at=1 WHERE reply_id='${expired.id}'`)
@@ -3720,7 +3725,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await capture(noticePath,'notice-provider-rejected')
     const afterRejected=edge.calls.length
     edge.sendMode='normal'
-    const removed=await freshReply('synthetic-envelope-524')
+    const removed=await freshReply('synthetic-envelope-524',sponsors['payroll-admin'].id)
     const adminReview=await data(api+'/notice-replies/'+removed.id+'/review',undefined,sponsors['payroll-admin'].cookie)
     await data(api+'/notice-replies/'+removed.id+'/approve',{version:adminReview.version,digest:adminReview.digest,reviewToken:adminReview.reviewToken},sponsors['payroll-admin'].cookie)
     await data(api+'/grants',{operatorId:sponsors['payroll-admin'].id,version:1,revoke:true})

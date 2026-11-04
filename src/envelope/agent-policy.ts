@@ -1,3 +1,4 @@
+import { correspondenceRecord } from './notice-correspondence'
 import type { Actor } from './access'
 import { auditStatement, fence } from './access'
 import type { Input, Records } from './records'
@@ -93,7 +94,15 @@ export class AgentPolicy {
         ORDER BY a.created_at DESC,a.id DESC LIMIT 200`,[Date.parse(start),Date.parse(end)+86400000,actor.session.kind,actor.session.operator.id,this.records.env.OWNER_EMAIL.trim().toLowerCase(),...f.args]) : this.records.statement('SELECT 1 WHERE 0'),
     ])
     const decoded=(c:Record<string,unknown>): Record<string,unknown> & {classes:string[];facts:Record<string,unknown>}=>({...c,classes:JSON.parse(String(c.classes)),facts:JSON.parse(String(c.facts))})
-    return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
+    const attributedCalls=await Promise.all(calls.results.map(async row=> {
+      const call=decoded(row)
+      if(row.tool!=='reply.dispatch')return call
+      const access=await this.records.statement(`SELECT e.target_id AS replyId,d.version FROM env_agent_access e JOIN env_notice_dispatches d
+        ON d.company_id=e.company_id AND d.reply_id=e.target_id AND d.credential_id=e.credential_id
+        WHERE e.company_id=? AND e.action='dispatch:execute' AND e.door_operation_id=? AND ${f.sql}`,[actor.company,row.operationId,...f.args]).first<{replyId:string;version:number}>()
+      return {...call,correspondence:access?await correspondenceRecord(this.records.env,actor,access.replyId,access.version):null}
+    }))
+    return {from:start,through:end,calls:attributedCalls,counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
   }
 }
 

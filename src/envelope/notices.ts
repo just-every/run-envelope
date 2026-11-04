@@ -6,12 +6,12 @@ import { PayrollError, text, integer, recordKey, seal, unseal } from './security
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { digest, WorkspaceStore } from './workspace/store'
 import { WorkerPrivacy } from './worker-privacy'
+import { correspondenceChoices, replyDestination, agentAttribution, requireReviewedSender, replyBody, type ReplyData } from './notice-correspondence'
+export { replyBody } from './notice-correspondence'
 import { agentProvider, providerSecret, email, redact, externalFlows, type Provider } from './providers'
 
 interface Notice {id:string;locationId:string;reference:string;cipher:string;digest:string}
 interface Reply {id:string;version:number;noticeId:string;providerVersion:number;cipher:string;digest:string;locationId:string}
-export interface ReplyData {sender:string;to:string;subject:string;body:string;preparedBy?:{agentId:string;sponsorId:string;grantId:string;label:string}}
-export const replyBody=(reply:ReplyData)=>reply.body+(reply.preparedBy?'\n\nPrepared by '+reply.preparedBy.label:'')
 const uuid = () => crypto.randomUUID()
 const latestReply = `(SELECT MAX(version) FROM env_notice_replies WHERE company_id=r.company_id AND id=r.id)=r.version`
 function documentText(value:unknown,max=12000) {
@@ -77,23 +77,27 @@ export class Notices {
       const {cipher,...metadata}=r
       return {...metadata,data:JSON.parse(await unseal(key,JSON.stringify([actor.company,'reply',r.id,r.version]),String(cipher)))} as Record<string,unknown> & {data:ReplyData}
     }))
-    return {...notice, cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
+    return {...notice, choices:await correspondenceChoices(this.records,actor,notice.locationId), cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
   }
   async saveReply(actor:Actor,noticeId:string,input:Input) {
-    await this.notice(actor,noticeId,'notices:write')
+    const sourceNotice=await this.notice(actor,noticeId,'notices:write')
+    const choices=await correspondenceChoices(this.records,actor,sourceNotice.locationId),
+      sendingAgent=choices.senders.find(s=>s.value===input.sendingIdentity)?.identity,
+      humanReviewer=choices.reviewers.find(r=>r.id===input.approverId)
+    if(!sendingAgent || !humanReviewer)throw new PayrollError('exact_correspondence_identities_required',409)
     const id=input.id ? text(input.id) : uuid(), version=input.version===undefined || input.version===0 || input.version==='0' ? 0 : integer(input.version),
       f=fence(actor), event=uuid(), key=await recordKey(this.records.env.ENVELOPE_RECORD_KEY)
     const provider=await this.records.statement(`SELECT * FROM env_external_providers WHERE company_id=? AND id='resend' AND enabled=1 AND ${f.sql}`,[actor.company,...f.args]).first<Provider>()
     if (!provider) throw new PayrollError('provider_not_declared',409)
     const secret=await providerSecret(this.records.env,actor.company,provider)
     const payload:ReplyData={sender:provider.sender,to:email(input.to),subject:redact(text(input.subject,200),[secret]),body:redact(documentText(input.body),[secret])}
-    const prepared=await this.records.statement(`SELECT door_agent_id AS agentId,sponsor_id AS sponsorId,credential_id AS grantId,door_agent_name AS label
-      FROM env_agent_access WHERE company_id=? AND target_id=? AND action='notices:process'
-      AND door_agent_id IS NOT NULL AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 1`,[actor.company,noticeId,...f.args]).first<NonNullable<ReplyData['preparedBy']>>()
-    if(prepared) {
-      payload.preparedBy=prepared
-      // Attribution is a separate immutable reviewed field, so editing the
-      // message cannot duplicate, remove or impersonate its sending identity.
+    payload.sendingAgent=sendingAgent
+    payload.humanReviewer=humanReviewer
+    payload.destination=await replyDestination(this.records,actor,payload.to)
+    const analysis=await this.records.statement(`SELECT id,cipher FROM env_notice_analysis WHERE company_id=? AND notice_id=? AND ${f.sql} ORDER BY created_at DESC,id DESC LIMIT 1`,[actor.company,noticeId,...f.args]).first<{id:string;cipher:string}>()
+    if(analysis) {
+      const proposal=JSON.parse(await unseal(key,JSON.stringify([actor.company,'analysis',analysis.id]),analysis.cipher))
+      if(proposal.preparedBy)payload.preparedBy=proposal.preparedBy
     }
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
@@ -135,6 +139,8 @@ export class Notices {
     await requirePayrollProof(this.records.env,actor)
     const version=integer(input.version), hash=text(input.digest), tokenHash=await digest(text(input.reviewToken,100)),
       minutes=input.minutes===undefined ? 10 : integer(input.minutes), f=fence(actor), p=stepUpFence(actor), event=uuid()
+    const reviewed:ReplyData=JSON.parse(await unseal(await recordKey(this.records.env.ENVELOPE_RECORD_KEY),JSON.stringify([actor.company,'reply',id,reply.version]),reply.cipher))
+    if(!reviewed.humanReviewer || reviewed.humanReviewer.id!==actor.session.operator.id || reviewed.humanReviewer.operatorVersion!==actor.session.operator.version || reviewed.humanReviewer.grantVersion!==actor.grant.version)throw new PayrollError('reviewed_human_approver_changed',409)
     if (version!==reply.version || hash!==reply.digest || minutes>60) throw new PayrollError('exact_review_required',409)
     const result=await this.records.env.DB.batch([
       this.records.statement(`INSERT INTO env_notice_approvals(company_id,reply_id,version,digest,actor_id,operator_version,grant_version,expires_at,created_at,change_id)
@@ -176,7 +182,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
   await agentProvider(agent,'openai',provider.version)
   const opened=await agent.log('notices:process',id).run()
   if (!opened.meta.changes) throw new PayrollError('agent_authority_revoked',403)
-  let analysis:Record<string,string>
+  let analysis:Record<string,unknown>
   try {
     const response=await fetch(externalFlows.openai.url,{
       method:'POST',redirect:'manual',signal:AbortSignal.timeout(30000),
@@ -195,7 +201,7 @@ export async function processNotice(agent:AgentTools,input:Input) {
     if (output.length!==1 || output[0].type!=='output_text') throw 0
     const parsed=JSON.parse(String(output[0].text))
     if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',')!=='proposedReply,summary') throw 0
-    analysis={summary:redact(documentText(parsed.summary,6000),[secret]),proposedReply:redact(documentText(parsed.proposedReply,6000),[secret]),sourceReference:'notice:'+id+':'+notice.digest}
+    analysis={summary:redact(documentText(parsed.summary,6000),[secret]),proposedReply:redact(documentText(parsed.proposedReply,6000),[secret]),sourceReference:'notice:'+id+':'+notice.digest,preparedBy:agentAttribution(agent)}
   } catch { throw new PayrollError('notice_model_unavailable',503) }
   const analysisId=uuid(), cipher=await seal(key,JSON.stringify([company,'analysis',analysisId]),JSON.stringify(analysis))
   // In-flight provider, sponsor and grant revocation fences also protect results.
@@ -218,6 +224,7 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
   if (!row) throw new PayrollError('exact_approved_reply_required',403)
   const provider=await agentProvider(agent,'resend',row.provider_version), secret=await providerSecret(agent.env,company,provider), key=await recordKey(agent.env.ENVELOPE_RECORD_KEY),
     payload:ReplyData=JSON.parse(await unseal(key,JSON.stringify([company,'reply',id,version]),row.cipher))
+  requireReviewedSender(agent,payload)
   const execution=uuid(), now=Date.now()
   // This statement is the execution eligibility linearization point: exact latest
   // immutable item, current approver and sponsor scopes, unexpired approval/provider.
@@ -227,12 +234,13 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
     JOIN oa_operators o ON o.id=a.actor_id
     JOIN env_external_providers ep ON ep.company_id=r.company_id AND ep.id='resend' AND ep.enabled=1 AND ep.version=r.provider_version
     WHERE r.company_id=? AND r.id=? AND r.version=? AND r.digest=? AND ${latestReply} AND ${l.sql}
+    AND a.actor_id=? AND a.operator_version=? AND a.grant_version=?
     AND a.revoked_at IS NULL AND a.expires_at>unixepoch('subsec')*1000
     AND o.status='active' AND o.version=a.operator_version AND g.version=a.grant_version AND g.revoked_at IS NULL
     AND (g.role='owner' OR (EXISTS(SELECT 1 FROM json_each(g.actions) WHERE value='notices:approve')
       AND EXISTS(SELECT 1 FROM json_each(g.fields) WHERE value='tax')
       AND EXISTS(SELECT 1 FROM json_each(g.locations) WHERE value='*' OR value=n.location_id))))`
-  const eligibilityArgs=[company,id,version,hash,...l.args]
+  const eligibilityArgs=[company,id,version,hash,...l.args,payload.humanReviewer?.id??'',payload.humanReviewer?.operatorVersion??0,payload.humanReviewer?.grantVersion??0]
   const claimed=await agent.env.DB.batch([
     agent.env.DB.prepare(`INSERT INTO env_notice_dispatches(company_id,reply_id,version,digest,id,credential_id,state,created_at,updated_at)
       SELECT ?,?,?,?,?,?,'pending',?,? WHERE ${f.sql} AND ${eligible}
@@ -254,7 +262,7 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
     const response=await fetch(externalFlows.resend.url,{
       method:'POST',redirect:'manual',signal:AbortSignal.timeout(30000),
       headers:{authorization:'Bearer '+secret,'content-type':'application/json','Idempotency-Key':'envelope-notice-'+execution},
-      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload),...(agent.doorContext?{headers:{'X-RER-Attribution':agent.doorContext.actor.label.replace(/[\r\n]/g,' ')}}:{})}),
+      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload),headers:{'X-RER-Attribution':payload.sendingAgent!.label.replace(/[\r\n]/g,' ')}}),
     })
     if (response.status>=400 && response.status<500 && ![408,409,429].includes(response.status)) state='rejected'
     if (response.ok) {

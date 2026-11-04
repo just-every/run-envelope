@@ -39,11 +39,12 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
         try { await requireAgentPolicy(agent,nativeName) } catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status,...('setupLink' in error?{setupLink:error.setupLink}:{})});throw error}
         if (!['credentials.rotate','credentials.restrict'].includes(nativeName)) agent.allow(entry.scope,args.companyId ?? agent.grant.company_id)
         if(nativeName==='credentials.rotate') await rotationKey(args.publicKey)
-        if (!completed) await effect(env,nativeName,args,ctx)
+        const nativeEffect=!completed ? await effect(env,nativeName,args,ctx) : null
+        const recipients=nativeEffect?.recipientFacts ?? completed?.find(f=>f.class==='external')?.facts
         const records=entry.classes.includes('sensitive' as never)?await sensitiveRecords(env,nativeName,args,ctx):0
         let restriction:ReturnType<typeof agent.restriction>|null=null
         try {if(nativeName==='credentials.restrict')restriction=agent.restriction(args)} catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status});throw error}
-        const facts: ClassAndFacts[]=entry.classes.map(cls=>({class:cls,facts: cls==='access' ? {measure:1,direction:restriction?.widens?'widens':'narrows'} : cls==='sensitive' ? {measure:records,kind:nativeName==='notice.process'?'tax-notice':'compensation'} : cls==='external' ? {measure:1,counterparty:'known'} : cls==='commitment' ? {measure:0,currency:'USD',counterparty:'known'} : cls==='security' ? {measure:1,setting:'native-agent-credential'} : {measure:1}}))
+        const facts: ClassAndFacts[]=entry.classes.map(cls=>({class:cls,facts: cls==='access' ? {measure:1,direction:restriction?.widens?'widens':'narrows'} : cls==='sensitive' ? {measure:records,kind:nativeName==='notice.process'?'tax-notice':'compensation'} : cls==='external' ? {measure:recipients?.measure??1,counterparty:recipients?.counterparty??'known'} : cls==='commitment' ? {measure:0,currency:'USD',counterparty:recipients?.counterparty??'known'} : cls==='security' ? {measure:1,setting:'native-agent-credential'} : {measure:1}}))
         return facts
       },
       async run(args,ctx) {

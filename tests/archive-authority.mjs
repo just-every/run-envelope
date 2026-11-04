@@ -58,14 +58,21 @@ export async function archiveAuthority(context, company, notice) {
   const activeRecords = JSON.parse((await active.json()).result.content[0].text).records
   assert.ok(activeRecords.some(row => row.id === company.people[0].id), 'the live bearer reads its native scoped worker')
 
+  const approverId=(await data('/auth/session')).operator.id
+  const sendingIdentity=JSON.stringify([agent.id,agent.id])
   const reply = await data(company.base + '/notices/' + notice.id + '/replies', {
-    version: 0, to: 'agency@example.com', subject: 'Reviewed payroll notice response',
+    sendingIdentity,approverId,version: 0, to: 'agency@example.com', subject: 'Reviewed payroll notice response',
     body: 'The employer reviewed this notice and retained the supporting payroll records. This reply awaits dispatch.',
   }, 201)
   const review = await data(company.base + '/notice-replies/' + reply.id + '/review')
   assert.ok(review.reviewToken, 'the current human must obtain the exact native reply review')
   assert.equal(review.version, reply.version)
   assert.equal(review.digest, reply.digest)
+  assert.equal(review.data.sendingAgent.grantId,agent.id)
+  assert.equal(review.data.sendingAgent.sponsorId,approverId)
+  assert.equal(review.data.humanReviewer.id,approverId)
+  assert.equal(review.data.destination.counterparty,'new')
+  assert.equal(review.data.destination.recipientCount,1)
   await data(company.base + '/notice-replies/' + reply.id + '/approve', {
     version: review.version, digest: review.digest, reviewToken: review.reviewToken, minutes: 60,
   })
@@ -73,7 +80,7 @@ export async function archiveAuthority(context, company, notice) {
   const effects = []
   for (const expected of ['accepted', 'unknown']) {
     const item = await data(company.base + '/notices/' + notice.id + '/replies', {
-      version: 0, to: 'agency@example.com', subject: 'Archive retained notice ' + expected,
+      sendingIdentity,approverId,version: 0, to: 'agency@example.com', subject: 'Archive retained notice ' + expected,
       body: 'The employer reviewed this redacted notice response. No payroll or bank instruction is included.',
     }, 201)
     const exact = await data(company.base + '/notice-replies/' + item.id + '/review')
@@ -103,6 +110,6 @@ export async function archiveAuthority(context, company, notice) {
   }
 
   const webhook=await data(company.base+'/webhooks',{consent:true},201)
-  return { webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
+  return { approverId,sendingIdentity,webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
     replyVersion: reply.version, replyDigest: reply.digest, providerSecret }
 }
