@@ -1815,8 +1815,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 36 | 85 | 125 |
-| All | 5 | 36 | 85 | 126 |
+| Target and push further | 4 | 37 | 84 | 125 |
+| All | 5 | 37 | 84 | 126 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1933,7 +1933,7 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `ENV-064` | Carry the switch to a clean first quarter | push-further | missing |  | No implementation exists; the complete carry the switch to a clean first quarter behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |
 | `ENV-070` | Explain a worker's own paycheck with citations | push-further | missing |  | No implementation exists; the complete explain a worker's own paycheck with citations behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |
 | `ENV-106` | Worker paycheck questions measured on a fixed corpus | push-further | missing |  | No implementation exists; the complete explain a worker's own paycheck with citations behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |
-| `BASE-AGENT-001` | One MCP door per seed | target | missing | | Not yet judged through this seed's own doors. |
+| `BASE-AGENT-001` | One MCP door per seed | target | partial | Acceptance points 2–6: `tests/agent-door/protocol.mjs` — protocolJourney, invoked by the autonomous and held draft hooks in `tests/agent-door/rotation-journey.mjs` during the existing push Agent door conformance. Actual canonical MCP and compatibility-alias requests use newly issued native credentials: modern discovery without initialization, legacy initialization with identical nonempty tools, deterministic private cache metadata and no-store responses, unsupported-version refusals, foreign Origin and method, name and version metadata mismatch refusals, and oversized body and stream refusals. Independently retained populated hourly preparations, bonus versions, grants and credential hashes remain unchanged after each refusal, and the issued bearer still reads the native worker. Discovery also reports both versions, tools, server identity and specialist instructions without claiming unsupported Roots, Sampling or Logging. | Still unproved: complete acceptance point 1 discovery, contracted resources and prompts support, complete discovery capabilities and instructions, and full Base conformance. The installed capability subset is not the complete contracted door. Live documentation and masked-resource work retain their separate clause custody; this protocol proof changes none of the existing account, catalog, rail, company, provider, mandate, exact human approval, sponsor, grant, CT, device, visual-correction or feeder holds. Reference sends remain configured-native-owner-only with explicit consent and audit; no automatic outbound action, automated retry or destructive recovery is authorized. |
 | `BASE-AGENT-002` | The seed's jobs are tools, through the UI's own actions | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-003` | Records are resources | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-004` | Business identity and short-lived, audience-bound tokens | target | missing | | Not yet judged through this seed's own doors. |
