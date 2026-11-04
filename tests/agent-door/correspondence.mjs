@@ -39,6 +39,7 @@ export default async function correspondence(context) {
   assert.equal(review.data.preparedBy.agentId,businessAgentId,'a later preparation cannot relabel the exact selected source')
   assert.equal(review.data.sendingAgent.agentId,businessAgentId)
   assert.equal(review.data.sendingAgent.sponsorId,approver.id)
+  assert.notEqual(review.data.preparedBy.label,review.data.sendingAgent.label,'the Business display name differs from the native grant label for the same agent')
   assert.equal(review.data.humanReviewer.id,approver.id)
   assert.notEqual(review.data.preparedBy.agentId,approver.id,'human approval and agent preparation have separate principals')
   const expected={from:review.data.sender,to:[context.email],subject:review.data.subject,
@@ -47,6 +48,7 @@ export default async function correspondence(context) {
   await fixtures.set('https://api.resend.com',{expected})
   const sent=await send(reply)
   assert.equal(sent.result.structuredContent.state,'accepted','the Resend schema edge accepts only the exact reviewed attributed message')
+  console.log('PROBE SURFACE-003 blocking-A: MCP Business agent with a different native grant label -> exact external recipient classification and separately approved attributed reply accepted.')
   assert.equal(await messageCount(),beforeMail+1)
   const retained=await data(base+'/notices/'+notice.id)
   const native=retained.replies.find(r=>r.id===reply.id)

@@ -21,5 +21,5 @@ export default async function(context) {
   const pair=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt'])
   rotationKeys.set(context.origin+':'+context.phase,pair.privateKey)
   const {kty,n,e}=await crypto.subtle.exportKey('jwk',pair.publicKey)
-  return {clients:{local:{token:saved.localToken,clientId:saved.grantId,agent:{id:saved.grantId,name:'Agent door conformance',specialist:'payroll'}}},sponsors:negativeSponsors.get(context.origin)??{},values:{actions:['records:read','drafts:prepare','drafts:read','notices:process','dispatch:execute'],rotationKey:{kty,n,e},company:company.id,person:person.id,notice:notice.id,reply:reply.id,replyVersion:review.version,replyDigest:review.digest,key:crypto.randomUUID()}}
+  return {clients:{local:{token:saved.localToken,clientId:saved.grantId,agent:{id:saved.grantId,name:'Synthetic native correspondence grant',specialist:'payroll'}}},sponsors:negativeSponsors.get(context.origin)??{},values:{actions:['records:read','drafts:prepare','drafts:read','notices:process','dispatch:execute'],rotationKey:{kty,n,e},company:company.id,person:person.id,notice:notice.id,reply:reply.id,replyVersion:review.version,replyDigest:review.digest,key:crypto.randomUUID()}}
 }

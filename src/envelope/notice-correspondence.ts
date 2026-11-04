@@ -30,7 +30,9 @@ export function agentAttribution(agent:AgentTools):ReplyAgent {
 }
 export function requireReviewedSender(agent:AgentTools,payload:ReplyData) {
   const actual=agentAttribution(agent), reviewed=payload.sendingAgent
-  if(!reviewed || JSON.stringify(actual)!==JSON.stringify(reviewed))throw new PayrollError('reviewed_sender_changed',409)
+  // Labels are retained attribution text; identity and authority bind the review.
+  const binding=['agentId','sponsorId','grantId','grantVersion','sponsorGrantVersion','sponsorOperatorVersion'] as const
+  if(!reviewed || binding.some(key=>actual[key]!==reviewed[key]))throw new PayrollError('reviewed_sender_changed',409)
 }
 
 /** Only live native dispatch grants and explicit Business bindings can be selected. */

@@ -2501,7 +2501,7 @@
       "executable": false
     },
     "src/envelope/notice-correspondence.ts": {
-      "sha256": "40070a715860f2702b33bcb1c7bdc579802759500d7cd724edb4c7a65d239939",
+      "sha256": "1e0fd7851b7e40a68dcd83ae02d05ea43e4da1af7e095a4c8c47da08187d5b6d",
       "executable": false
     },
     "src/envelope/notice-pages.tsx": {
@@ -4201,15 +4201,15 @@
       "executable": false
     },
     "tests/agent-door/agent.mjs": {
-      "sha256": "5cb8733e17db77e5feb13f31938c8ad7f9df7959bc873d7910ce9d60f5acc734",
+      "sha256": "2a7783c37e52ab081f87ee916d3082886a3341752d82a6dfe9389aa163aa4a9e",
       "executable": false
     },
     "tests/agent-door/correspondence.mjs": {
-      "sha256": "377c77f686f11b9d8b3f307c41b555aa22fe96353947bc9694033c2822781a54",
+      "sha256": "26ab5c4082135434f6d484d3c76dae3e627bdb9570262ba35e2d5883cae88712",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
-      "sha256": "946694a0a30c3b4a524e228e4117f82b76b970c35a2013068548fc88b0c0ad68",
+      "sha256": "6a4e368e909ec104ff89848ea45317fab905d5eb7a29fb93db6670c0ca708ba9",
       "executable": false
     },
     "tests/agent-door/mail-from.mjs": {

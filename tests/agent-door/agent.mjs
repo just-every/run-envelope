@@ -9,7 +9,7 @@ export default async function({agentId,request,origin}) {
   await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken,version:review.version})
   for (const provider of ['openai','resend']) await data(base+'/providers',{id:provider,version:0,enabled:true,consent:true,secret:crypto.randomUUID(),...(provider==='resend'?{sender:'payroll@example.com'}:{})},201)
   await data(base+'/agents/class-policy',{version:0,...answers})
-  const grant=await data(base+'/agents',{name:'Agent door conformance',businessAgentId:agentId,hours:24,actions:['records:read','drafts:prepare','drafts:read','notices:process','dispatch:execute'],fields:['compensation','tax'],locations:['*'],providers:['openai','resend'],models:['gpt-4.1-mini']},201)
+  const grant=await data(base+'/agents',{name:'Synthetic native correspondence grant',businessAgentId:agentId,hours:24,actions:['records:read','drafts:prepare','drafts:read','notices:process','dispatch:execute'],fields:['compensation','tax'],locations:['*'],providers:['openai','resend'],models:['gpt-4.1-mini']},201)
   const saved={company,location,person,base,businessAgentId:agentId,grantId:grant.id,localToken:grant.token}
   state.set(origin,saved)
 }
