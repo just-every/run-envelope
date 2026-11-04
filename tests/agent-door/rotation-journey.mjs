@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
+import correspondence from './correspondence.mjs'
 import {state,rotationKeys} from './native.mjs'
-export default async function({database,request,origin,cookie}) {
+export default async function(context) {
+  const {database,request,origin,cookie}=context
   const db=await database('DB')
   const rows=(await db.prepare("SELECT * FROM env_agent_call_audit WHERE rowid IN (SELECT MIN(rowid) FROM env_agent_call_audit WHERE door_operation_id IS NOT NULL GROUP BY tool)").all()).results
   for(const native of rows) {
@@ -13,6 +15,7 @@ export default async function({database,request,origin,cookie}) {
     assert.equal(response.status,200)
     assert.ok((await response.json()).activity.calls.some(row=>row.operationId===native.door_operation_id))
   }
+  await correspondence(context)
 }
 export async function afterStep({phase,step,result,origin,request,database}) {
   if(step.tool!=='envelope.credentials.rotate')return

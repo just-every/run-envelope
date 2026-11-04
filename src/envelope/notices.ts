@@ -77,7 +77,7 @@ export class Notices {
       const {cipher,...metadata}=r
       return {...metadata,data:JSON.parse(await unseal(key,JSON.stringify([actor.company,'reply',r.id,r.version]),String(cipher)))} as Record<string,unknown> & {data:ReplyData}
     }))
-    return {...notice, choices:await correspondenceChoices(this.records,actor,notice.locationId), cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
+    return {...notice, choices:actor.grant.role==='owner' || actor.grant.actions.includes('notices:write') ? await correspondenceChoices(this.records,actor,notice.locationId) : {senders:[],reviewers:[]}, cipher:undefined,body:redact(await unseal(key,JSON.stringify([actor.company,'notice',id]),notice.cipher)),analyses,replies}
   }
   async saveReply(actor:Actor,noticeId:string,input:Input) {
     const sourceNotice=await this.notice(actor,noticeId,'notices:write')

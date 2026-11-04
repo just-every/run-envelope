@@ -8,6 +8,7 @@ import { cp, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, sym
 import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileRecords } from '@runeditrun/rer/modules/portability/files'
+import { assertCorrespondenceHistory } from './archive-authority.mjs'
 import { archiveFixture } from './archive-fixture.mjs'
 import { extendedRetirementArchiveFixture } from './extended-retirement-runtime.mjs'
 import { archiveKeyCustody } from './archive-key-custody.mjs'
@@ -194,6 +195,7 @@ export async function archiveJourney(context) {
     const rows = Object.fromEntries(manifest.tables.map(table => [table.name, []]))
     for (const record of records) for (const item of record.items ?? []) if (item.kind === 'row') rows[item.table].push(item.row)
     for (const name of Object.keys(rows)) rows[name] = ordered(rows[name])
+    await assertCorrespondenceHistory(rows,fixture.authority,settings.ENVELOPE_RECORD_KEY)
     assert.ok(!rows.env_private_records.some(row => row.person_id === fixture.privacyPersonId), 'the public archive contains no erased private record')
     assert.ok(!rows.env_workspace_versions.some(row => row.object_id === fixture.privacyWorkId), 'the public archive contains no erased work derivative')
     assert.ok(!rows.env_workspace_people.some(row => row.person_id === fixture.privacyPersonId), 'the public archive contains no erased source pin')
@@ -300,6 +302,7 @@ export async function archiveJourney(context) {
       columns: table.columns.filter(column => !(manifest.excludedColumns[table.name] ?? []).includes(column.name)) })))
     assert.equal(digest(targetRows), digest(rows), 'every archived business and identity row matches the fresh target')
     assert.equal(digest(ciphers(targetRows)), digest(ciphers(includedBefore)), 'restore preserves exact encrypted history without re-encryption')
+    await assertCorrespondenceHistory(targetRows,fixture.authority,settings.ENVELOPE_RECORD_KEY)
     const after = await snapshot(state(target))
     for (const name of ['oa_sessions', 'oa_tokens', 'oa_credentials', 'env_grants', 'env_workspace_reviews', 'env_external_providers', 'env_webhook_keys'])
       assert.equal(after[name]?.length ?? 0, 0, 'restored history does not reactivate ' + name)

@@ -3515,6 +3515,10 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
       assert.equal(await page.locator('img[src^="https://ungranted.example"]').count(),0)
       await page.keyboard.press('Tab')
       assert.equal(await page.evaluate(()=>document.activeElement?.tagName==='A'),true)
+      if(path===ui+'/agents') {
+        await page.getByText('Attributed calls',{exact:true}).click()
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'expanded activity fits '+width)
+      }
       await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
     }
   }
@@ -3635,7 +3639,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     edge.modelMode='tool'
     await tool('notice.process',{companyId:company,noticeId},adminToken,503)
     edge.modelMode='normal'
-    const dispatcher=await data(api+'/agents',{name:'synthetic-envelope-517',hours:24,reviewDate,actions:['dispatch:execute'],fields:['tax'],locations:[ca.id],providers:['resend']},sponsors.accountant.cookie,201)
+    let dispatcher=await data(api+'/agents',{name:'synthetic-envelope-517',hours:24,reviewDate,actions:['dispatch:execute'],fields:['tax'],locations:[ca.id],providers:['resend']},sponsors.accountant.cookie,201)
     await setIdentity(cookie)
     await page.goto(origin+noticePath)
     await page.getByLabel('Sending agent and sponsor',{exact:true}).selectOption(JSON.stringify([dispatcher.id,dispatcher.id]))
@@ -3651,8 +3655,27 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     const executeStatus=async(r,status) => tool('reply.dispatch',{companyId:company,replyId:r.id,version:r.version,digest:r.digest},dispatcher.token,status)
     await executeStatus(reply,409)
     const unapprovedCalls=edge.calls.length
+    // Shared company approval cannot manufacture the distinct native approval.
+    const sharedPolicy=async(held=false)=>{
+      const r=await fetch(origin+'/agents/api/policy',{method:'PUT',headers:{cookie,origin,'content-type':'application/json'},body:JSON.stringify({document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'native-correspondence',class:'*',do:'autonomous'},...(held?[{id:'held-correspondence',class:'external',do:'approval',approver:['person:'+owner.id],wait:'PT1H'}]:[])],spend:{none:true}}})})
+      assert.equal(r.status,200,await r.clone().text())
+    }
+    await sharedPolicy(true)
+    const policyPending=await (await rpc('reply.dispatch',{companyId:company,replyId:reply.id,version:reply.version,digest:reply.digest},dispatcher.token)).json()
+    const handle=policyPending.result._meta['com.runeditrun/approval']
+    assert.ok(handle.id)
+    const {approval}=await data('/agents/api/approvals/'+handle.id)
+    const policyApproved=await data('/agents/api/approvals/'+handle.id+'/approve',{revision:approval.revision,summary_sha256:approval.summary_sha256})
+    assert.equal(policyApproved.approval.state,'refused')
+    assert.equal(policyApproved.approval.code,'exact_approval_or_authority_changed')
+    assert.equal((await data(api+'/notices/'+noticeId)).replies[0].approvedBy,null)
+    assert.equal(edge.calls.length,unapprovedCalls,'shared human approval creates neither native authority nor an external send')
+    await sharedPolicy()
     // The agent has no approval door, even alongside the owner's cookie.
     assert.equal((await fetch(origin+api+'/notice-replies/'+reply.id+'/approve',{method:'POST',headers:{cookie,origin,authorization:'Bearer '+dispatcher.token,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify({version:reply.version,digest:reply.digest,approved:true})})).status,403)
+    const otherReview=await data(api+'/notice-replies/'+reply.id+'/review',undefined,sponsors.accountant.cookie)
+    await data(api+'/notice-replies/'+reply.id+'/approve',{version:otherReview.version,digest:otherReview.digest,reviewToken:otherReview.reviewToken},sponsors.accountant.cookie,409)
+    assert.equal((await data(api+'/notices/'+noticeId)).replies[0].approvedBy,null,'the sending sponsor cannot stand in for the named human approver')
     await capture(ui+'/notice-replies/'+reply.id+'/review','notice-exact-review')
     await page.getByRole('button',{name:'Approve this exact notice reply',exact:true}).click()
     await page.waitForURL(origin+ui+'/notices')
@@ -3693,6 +3716,19 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal(accepted.state,'accepted')
     assert.equal(accepted.replayed,true)
     await capture(noticePath,'notice-provider-accepted')
+    assert.ok((await page.locator('body').innerText()).includes('Sent by '+exact.data.sendingAgent.label))
+    assert.ok((await page.locator('body').innerText()).includes('Prepared by '+exact.data.preparedBy.label))
+    await capture(ui+'/agents','notice-attribution-activity')
+    const activityText=await page.locator('body').innerText()
+    assert.ok(activityText.includes('prepared by '+exact.data.preparedBy.label))
+    assert.ok(activityText.includes('human approval '+exact.data.humanReviewer.name))
+    const accessExport=await data(api+'/agents/access')
+    const attribution=accessExport.find(row=>row.targetId===exact.id && row.action==='dispatch:execute').correspondence
+    assert.equal(attribution.approvedBy,owner.id)
+    assert.deepEqual(attribution.preparedBy,exact.data.preparedBy)
+    assert.deepEqual(attribution.sendingAgent,exact.data.sendingAgent)
+    const limitedExport=await data(api+'/agents/access',undefined,sponsors.preparer.cookie)
+    assert.ok(!limitedExport.some(row=>row.targetId===exact.id),'a different sponsor cannot export the correspondence attribution')
     assert.equal((await data(api+'/notices/'+noticeId)).replies[0].providerReceipt,'00000000-0000-4000-8000-000000000052')
     // Exact approvals are separately tested against expiry, withdrawal, provider
     // changes and approver removal; no refusal reaches the network.
@@ -3708,7 +3744,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.deepEqual(await sql('SELECT COUNT(*) AS n FROM env_audit'),afterWithdrawal,'a refused retry cannot claim a second human withdrawal')
     await executeStatus(withdrawn,409)
     const changedProvider=await approveReply(await freshReply('synthetic-envelope-522'))
-    await data(api+'/providers',{id:'resend',version:1,enabled:true,consent:true,sender:'payroll@example.com'},cookie,201)
+    await data(api+'/providers',{id:'resend',version:1,enabled:true,consent:true,sender:['payroll-revised','example.com'].join('@')},cookie,201)
     await executeStatus(changedProvider,403)
     // An actual timeout/unknown result remains durable across a worker restart.
     const unknown=await approveReply(await freshReply('synthetic-envelope-523'))
@@ -3733,6 +3769,12 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     await tool('credentials.rotate',{},adminToken,401)
     await tool('notice.process',{companyId:company,noticeId},adminToken,401)
     assert.equal(edge.calls.length,afterRejected)
+    const revokedSender=await approveReply(await freshReply('synthetic-envelope-revoked-sender'))
+    await data(api+'/agents/'+dispatcher.id+'/revoke',{version:1})
+    const effectsBeforeRevocation=edge.calls.length
+    await executeStatus(revokedSender,401)
+    assert.equal(edge.calls.length,effectsBeforeRevocation,'revoked sending authority cannot use retained human approval')
+    dispatcher=await data(api+'/agents',{name:'synthetic-envelope-renewed-dispatch',hours:24,actions:['dispatch:execute'],fields:['tax'],locations:[ca.id],providers:['resend']},cookie,201)
     const ownerModel=await data(api+'/agents',{...grantInput,name:'synthetic-envelope-525'},cookie,201)
     await data(api+'/agents',{...grantInput,name:'synthetic-envelope-sponsor-count'},sponsors.accountant.cookie,201)
     await data(api+'/agents/policy',{version:0,ownerOnly:true})

@@ -69,10 +69,45 @@ configure the shared policy there; paired installations use Business. The native
 company's existing class restrictions and Pause remain additional restrictions,
 including at native SQL effects. Neither policy supplies missing native authority.
 Native access records retain the signed agent, sponsor, originating operation,
-consent and named approvers alongside the original grant ID. For shared-door
-correspondence, native extraction attribution is incorporated into the saved
-reply as a separate attribution field **before** human review, encryption and hashing; dispatch preserves that preparer and separately records the actual sending
-agent and sponsor in native activity and the outbound attribution header. It never appends unreviewed text after approval.
+consent and named approvers alongside the original grant ID. For generic notice
+correspondence, a successful extraction retains its exact agent and sponsor as
+preparer. Native reply preparation requires an explicit sending identity and a
+named human reviewer. The selectable identity is a current native grant, or its
+explicit Business binding; its configured name must match the actual calling
+identity. Sender, recipient, preparer, sending agent and sponsor, human reviewer,
+message and provider version are encrypted and digested together before review.
+The reviewed message includes the preparer, sending identity and human reviewer
+as separate attribution lines. The separately authenticated designated person
+must still perform exact native approval with fresh proof. Shared policy approval
+never substitutes for that ceremony, and an agent cannot approve through it.
+
+The external recipient count is one: this door accepts one validated mailbox,
+never a recipient list. A destination is **known** only when retained
+provider-accepted correspondence in the same company and the reviewing person's
+permitted locations contains that exact mailbox. The immutable review retains
+the earlier reply version, digest and provider receipt as destination evidence;
+acceptance is not delivery. Without that evidence the destination is **new**.
+Model output, internal-recipient claims and confirmation text cannot alter these
+facts. The facts stay bound to the reviewed version, including on completed
+idempotent replay.
+
+Changed recipient, payload, provider or sending identity requires another saved
+version and fresh exact review. Changed grant, sponsor or designated reviewer
+authority prevents execution under the old review. Dispatch uses only the pinned
+sender and attribution, never an unreviewed footer or identity header. The native
+notice record, Agents activity and permission-filtered agent access download
+preserve preparer, actual sending agent and sponsor, and the separate native human
+approval. The access download contains attribution, not reply text or addresses.
+Accepted and unknown dispatches retain one durable intent across fresh admission,
+replay and restart; an unknown effect is held for human reconciliation without an
+automated retry. Archives retain this evidence but no active credential, provider,
+review session or sending authority. Historical replies without the new identity
+pins require fresh preparation and exact approval before any new effect.
+
+This slice changes no RL-6 casework authority and no RL-13 reference-event
+consent. Returns, reports, new-hire and claim submissions, signed mandates,
+report links, verification disclosures, ledger posting, other transports and full
+payroll-week and Base conformance remain owed by SURFACE-003 and its inheritors.
 
 Installation, archive import, device clients and a person's own authentication
 or payroll approval screens retain their own doors. There is no agent queue

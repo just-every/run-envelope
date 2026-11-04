@@ -143,6 +143,7 @@ export const catalogue = [
     "clauses": [
       "SURFACE-001",
       "SURFACE-006",
+      "SURFACE-003",
       "ENV-025",
       "ENV-055",
       "ENV-062"

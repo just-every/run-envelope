@@ -73,11 +73,11 @@ export function noticePage(session:Session,companies:Company[],actor:Actor,notic
 function ReplyForm({action,id,version=0,data,choices}:{action:string;id?:string;version?:number;data?:ReplyData;choices:Awaited<ReturnType<Notices['details']>>['choices']}) {
   return <form method="post" action={action}>
     {id && <Hidden name="id" value={id} />}<Hidden name="version" value={version} />
-    <label className="field"><span>Sending agent and sponsor</span><select name="sendingIdentity" required defaultValue={data?.sendingAgent?JSON.stringify([data.sendingAgent.grantId,data.sendingAgent.agentId]):''}>
+    <label className="field"><span>Sending agent and sponsor</span><select name="sendingIdentity" aria-label="Sending agent and sponsor" required defaultValue={data?.sendingAgent?JSON.stringify([data.sendingAgent.grantId,data.sendingAgent.agentId]):''}>
       <option value="" disabled>Choose the exact sending identity</option>
       {choices.senders.map(s=><option key={s.value} value={s.value}>{s.identity.label} · {s.identity.agentId===s.identity.grantId?'native credential':'Business agent'}</option>)}
     </select></label>
-    <label className="field"><span>Designated human approver</span><select name="approverId" required defaultValue={data?.humanReviewer?.id??''}>
+    <label className="field"><span>Designated human approver</span><select name="approverId" aria-label="Designated human approver" required defaultValue={data?.humanReviewer?.id??''}>
       <option value="" disabled>Choose a person for separate approval</option>
       {choices.reviewers.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
     </select></label>

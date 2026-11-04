@@ -1,5 +1,6 @@
 import { answerAgentPolicy, agentMessage } from './agent-policy-runtime.mjs'
 import assert from 'node:assert/strict'
+import { archiveRecordKey, decryptArchivedRecord } from '../scripts/portability/encryption.mjs'
 
 // Create live source authority through the native doors. The archive journey
 // supplies the TLS Worker and captures only its declared mail network edge.
@@ -44,11 +45,12 @@ export async function archiveAuthority(context, company, notice) {
     id: 'resend', version: resend.version, enabled: true, consent: true,
     secret: providerSecret, sender: 'payroll@example.com',
   }, 201)
+  await data(company.base+'/providers',{id:'openai',version:providers.find(p=>p.id==='openai').version,enabled:true,consent:true,secret:'synthetic-envelope-archive-analysis'},201)
   await answerAgentPolicy({origin,cookie,company:company.id,worker})
   const agent = await data(company.base + '/agents', {
     name: 'Archive restoration authority proof', hours: 24,
-    actions: ['records:read', 'dispatch:execute'], fields: ['tax'],
-    locations: [company.location.id], providers: ['resend'], models: [],
+    actions: ['records:read', 'notices:process', 'dispatch:execute'], fields: ['tax'],
+    locations: [company.location.id], providers: ['openai','resend'], models: ['gpt-4.1-mini'],
   }, 201)
   assert.ok(agent.id && agent.token, 'native issuance must return an actual agent credential')
   const active = await worker.fetch(origin + '/api/envelope/mcp', { method: 'POST',
@@ -58,6 +60,9 @@ export async function archiveAuthority(context, company, notice) {
   const activeRecords = JSON.parse((await active.json()).result.content[0].text).records
   assert.ok(activeRecords.some(row => row.id === company.people[0].id), 'the live bearer reads its native scoped worker')
 
+  const processed=await worker.fetch(origin+'/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',authorization:'Bearer '+agent.token,origin,'content-type':mime},body:JSON.stringify(agentMessage(['tools','call'].join('/'),{name:'notice.process',arguments:{companyId:company.id,noticeId:notice.id}}))})
+  assert.equal(processed.status,200)
+  assert.equal(JSON.parse((await processed.json()).result.content[0].text).status,'untrusted-proposal')
   const approverId=(await data('/auth/session')).operator.id
   const sendingIdentity=JSON.stringify([agent.id,agent.id])
   const reply = await data(company.base + '/notices/' + notice.id + '/replies', {
@@ -68,6 +73,8 @@ export async function archiveAuthority(context, company, notice) {
   assert.ok(review.reviewToken, 'the current human must obtain the exact native reply review')
   assert.equal(review.version, reply.version)
   assert.equal(review.digest, reply.digest)
+  assert.equal(review.data.preparedBy.agentId,agent.id)
+  assert.notEqual(review.data.preparedBy.agentId,approverId)
   assert.equal(review.data.sendingAgent.grantId,agent.id)
   assert.equal(review.data.sendingAgent.sponsorId,approverId)
   assert.equal(review.data.humanReviewer.id,approverId)
@@ -110,6 +117,20 @@ export async function archiveAuthority(context, company, notice) {
   }
 
   const webhook=await data(company.base+'/webhooks',{consent:true},201)
-  return { approverId,sendingIdentity,webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
+  return { correspondence:{replyId:reply.id,version:reply.version,data:review.data,approvedBy:approverId},approverId,sendingIdentity,webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
     replyVersion: reply.version, replyDigest: reply.digest, providerSecret }
+}
+
+// Inspect the actual exported and restored records, not an archive-shaped fixture.
+export async function assertCorrespondenceHistory(rows,authority,recordSecret) {
+  const expected=authority.correspondence, row=rows.env_notice_replies.find(r=>r.id===expected.replyId && r.version===expected.version)
+  assert.ok(row,'the actual archive retains the exact reviewed correspondence')
+  const payload=JSON.parse(await decryptArchivedRecord(await archiveRecordKey(recordSecret),'env_notice_replies',row,'cipher'))
+  assert.deepEqual(payload,expected.data,'immutable message and all three attribution roles survive actual transfer')
+  const approval=rows.env_notice_approvals.find(a=>a.reply_id===row.id && a.version===row.version)
+  assert.equal(approval.actor_id,expected.approvedBy)
+  assert.equal(approval.expires_at,0,'retained human attribution conveys no restored sending authority')
+  const grant=rows.env_agent_grants.find(g=>g.id===payload.sendingAgent.grantId)
+  assert.equal(grant.expires_at,0)
+  assert.deepEqual(JSON.parse(grant.actions),[])
 }
