@@ -116,6 +116,21 @@ export async function requireAgentPolicy(agent:AgentTools,tool:string) {
   if(classes.some(c=>answers[c as keyof ClassAnswers]==='review'))return fail('policy_review_required')
 }
 
+/** Record a refused widening before any shared-policy hold can authorize it. */
+export async function restrictionEscalation(agent:AgentTools,input:Input) {
+  const restriction=agent.restriction(input)
+  if(!restriction.widens)return false
+  const id=crypto.randomUUID(),ctx=agent.doorContext
+  const policy=await agent.env.DB.prepare('SELECT version FROM env_agent_class_policy WHERE company_id=?').bind(agent.grant.company_id).first<{version:number}>()
+  await agent.env.DB.batch([
+    agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers)
+      VALUES(?,?,?,?,'credentials.restrict','shared-door','["access"]','self_escalation',?,?,?,?,?,?,?)`)
+      .bind(id,agent.grant.company_id,agent.grant.id,agent.grant.sponsor_id,policy?.version??0,Date.now(),ctx?.agent.id??null,ctx?.agent.name??null,ctx?.operationId??null,ctx?.consent??null,ctx?JSON.stringify(ctx.approvers):null),
+    agent.env.DB.prepare('INSERT INTO env_agent_call_facts(call_id,facts) VALUES(?,?)').bind(id,JSON.stringify({direction:restriction.direction,peopleCount:1})),
+  ])
+  return true
+}
+
 /** Restriction only: policy cannot supply a scope, a human decision or provider consent. */
 export async function policyCall<T>(agent: AgentTools, tool: string, transport: string, execute: () => Promise<T>, input: Input = {}): Promise<T> {
   const company = agent.grant.company_id, setupLink = '/app/envelope/companies/'+encodeURIComponent(company)+'/agents#class-policy'

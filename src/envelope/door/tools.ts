@@ -1,6 +1,6 @@
 import type { Bindings } from '../../auth.server'
 import { ToolRefusal, type ToolDefinition, type ToolContext, type ClassAndFacts } from '../../modules/agent-door/index.ts'
-import { policyCall, requireAgentPolicy } from '../agent-policy'
+import { policyCall, requireAgentPolicy, restrictionEscalation } from '../agent-policy'
 import { PayrollError } from '../security'
 import { prepareBonus, readBonus, bonusReport } from '../bonus-runs'
 import { presentReview } from '../review-presentation'
@@ -80,7 +80,12 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
       tool.revision=async(args,ctx)=>{const target=await effect(env,nativeName,args,ctx);if(!target)return null;const agent=await nativeAgent(env,ctx,args.companyId);return JSON.stringify([target.revision,agent.grant.version,agent.authenticatedPolicyVersion])}
       tool.revisionType='string'
     }
-    if (nativeName==='credentials.restrict') tool.authority=async(_args,ctx)=>({subject:(await nativeAgent(env,ctx)).grant.id,widens:false})
+    if (nativeName==='credentials.restrict') tool.authority=async(args,ctx)=>{
+      const agent=await nativeAgent(env,ctx)
+      agent.doorContext=ctx
+      try {return {subject:ctx.agent.id,widens:await restrictionEscalation(agent,args)}}
+      catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status});throw error}
+    }
     if (nativeName==='credentials.rotate') tool.authority=async(_args,ctx)=>({subject:(await nativeAgent(env,ctx)).grant.id,widens:false})
     return tool
   })

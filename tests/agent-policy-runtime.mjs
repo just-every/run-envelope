@@ -1,3 +1,4 @@
+import {authorityRevocationJourney} from './agent-door/authority.mjs'
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
@@ -35,7 +36,7 @@ export async function mcpStatus(response) {
     assert.equal(response.status,200,'MCP tool refusals retain the successful JSON-RPC transport')
     const error=body.result._meta?.['com.runeditrun/error']
     assert.equal(typeof error?.code,'string','every refusal is typed')
-    const status=error.native_status??({idempotency_conflict:409,revision_conflict:409,invalid_arguments:400,record_unavailable:409,native_agent_grant_required:403,native_agent_grant_revoked:403,native_agent_admission_changed:403}[error.code])
+    const status=error.native_status??({self_escalation:403,idempotency_conflict:409,revision_conflict:409,invalid_arguments:400,record_unavailable:409,native_agent_grant_required:403,native_agent_grant_revoked:403,native_agent_admission_changed:403}[error.code])
     assert.ok(status,'native refusal has a known status: '+error.code)
     return status
   }
@@ -153,6 +154,8 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
     assert.equal((await own({actions:['pay:release']},403)).message,'self_escalation')
     assert.deepEqual(await unchangedGrant(),originalGrant,'policy cannot add a payroll power')
     await configure({access:'blocked'})
+    assert.equal((await own({actions:['records:read','pay:release']},403)).message,'self_escalation','a blocked company class cannot turn self-escalation into an approval path')
+    assert.deepEqual(await unchangedGrant(),originalGrant)
     assert.equal((await own({actions:['records:read']},403)).message,'policy_blocked')
     assert.deepEqual(await unchangedGrant(),originalGrant,'blocked restriction has no effect')
     await configure()
@@ -294,6 +297,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
       assert.equal(change?.facts.direction,direction,'company role transition version '+version)
       assert.equal(change?.facts.peopleCount,1)
     }
+    await authorityRevocationJourney({origin,cookie,settings,sql,data,base,company,location,person,now:clockNow,agentMessage})
     // Seed the rest of one fixed UTC week through real calls, with real D1 time
     // supplied by the test-only clock rather than the machine's civil date.
     const expectedDays=['2026-10-28']

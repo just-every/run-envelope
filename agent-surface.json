@@ -20,8 +20,7 @@
       "clauses": [
         "SURFACE-006",
         "ENV-052"
-      ],
-      "sponsorEscalation": false
+      ]
     },
     {
       "name": "envelope.credentials.rotate",
@@ -246,22 +245,41 @@
     "tool": "envelope.workspace.snapshot",
     "args": {}
   },
-  "escalations": [],
+  "escalations": [
+    {
+      "id": "restore-preparation",
+      "tool": "envelope.credentials.restrict",
+      "client": "restriction",
+      "args": {
+        "actions": [
+          "records:read",
+          "drafts:prepare"
+        ]
+      }
+    }
+  ],
   "journey": [
     {
       "id": "credentials-restrict",
       "tool": "envelope.credentials.restrict",
       "args": {
-        "actions": {
-          "$fixture": "actions",
-          "pointer": ""
-        }
+        "actions": [
+          "records:read"
+        ],
+        "fields": [],
+        "locations": [
+          {
+            "$fixture": "location",
+            "pointer": ""
+          }
+        ]
       },
       "expect": [
         {
           "class": "access"
         }
-      ]
+      ],
+      "client": "restriction"
     },
     {
       "id": "workspace-snapshot",
