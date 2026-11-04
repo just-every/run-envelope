@@ -24,6 +24,12 @@ export async function afterStep(context) {
   const token=new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},rotationKeys.get(origin+':'+phase),Buffer.from(latest?.encrypted??result.encryptedToken,'base64')))
   const saved=state.get(origin),list=bearer=>request(origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+bearer,'content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:51,method:'tools/list',params:{}})})
   assert.equal((await list(saved.localToken)).status,401,'the previous native bearer stops immediately')
+  for(const path of ['/mcp','/api/envelope/mcp'])for(const method of ['prompts/list','prompts/get']) {
+    const revoked=await request(origin+path,{method:'POST',headers:{authorization:'Bearer '+saved.localToken,'content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:52,method,params:{name:'payroll-workers'}})})
+    assert.equal(revoked.status,401,'a revoked native bearer cannot list or retrieve specialist jobs')
+    const body=await revoked.json()
+    assert.equal(body.result,undefined)
+  }
   assert.equal((await list(token)).status,200,'the decrypted replacement retains the real native scope')
   for(const [table,columns] of [['agent_door_calls',['outcome']],['agent_door_approvals',['saved','result']],['agent_door_audit',['row','evidence']]]) {
     const row=await db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${columns.map(column=>`instr(COALESCE(${column},''),?)>0`).join(' OR ')}`).bind(...columns.map(()=>token)).first()

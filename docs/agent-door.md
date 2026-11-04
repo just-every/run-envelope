@@ -36,7 +36,9 @@ correspondence, reconciliation and credential jobs through `prompts / list`.
 These instructions use the existing tools, preserve calculation and provider holds,
 and supply no human approval or additional authority. Prompt arguments never enter
 the instructions. Both MCP aliases require a current authenticated caller,
-answered policy and Pause admission before retrieving a job.
+answered policy and Pause admission before retrieving a job. The native journey
+checks unanswered setup, Pause, resume and revoked-bearer refusal, and compares
+retained payroll records and grants before and after job retrieval.
 
 No resource template, event type or subscription is offered by this installed
 subset. The reference says so explicitly and keeps the full

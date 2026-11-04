@@ -12,6 +12,7 @@ export function assertReference(reference, listed, templates, surface, prompts) 
   }
   assert.deepEqual(reference.prompts.map(({messages,...prompt})=>prompt),prompts,'documentation must contain exactly the discovered prompt metadata')
   assert.deepEqual(reference.prompts.map(prompt=>prompt.name),surface.prompts.map(prompt=>prompt.name).sort(),'the descriptor declares every specialist job')
+  assert.deepEqual(surface.prompts.map(prompt=>prompt.job).sort(),[...new Set(surface.tools.map(tool=>tool.job))].sort(),'every installed job has exactly one specialist prompt')
   for(const prompt of surface.prompts) {
     assert.ok(prompt.tools.length,'a specialist job must name installed tools')
     assert.deepEqual(prompt.tools.toSorted(),surface.tools.filter(tool=>tool.job===prompt.job).map(tool=>tool.name).sort(),'a job covers its installed tools')
@@ -30,6 +31,20 @@ export function assertReference(reference, listed, templates, surface, prompts) 
       assert.equal(proof.test,'BASE-AGENT-006.2.<policy>.'+fixture.id)
     }
   }
+}
+
+/** Job instructions need an answered policy even though their public docs do not. */
+export async function unsetPromptJourney({request,origin}) {
+  const token=state.get(origin).localToken
+  for(const path of ['/mcp','/api/envelope/mcp'])for(const method of ['prompts/list','prompts/get']) {
+    const response=await request(origin+path,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:84,method,params:{name:'payroll-workers'}})})
+    assert.equal(response.status,200)
+    const body=await response.json()
+    if(method==='prompts/list')assert.deepEqual(body.result.prompts,[],'unanswered setup exposes no specialist jobs')
+    else {assert.equal(body.error.data.code,'policy_unset');assert.equal(body.result,undefined)}
+  }
+  assert.equal((await request(origin+'/docs/agents')).status,200,'public reference remains readable before policy setup')
+  console.log('AGENT-DOCS unset passed: both MCP aliases withhold specialist instructions before policy setup')
 }
 
 export async function docsJourney({request,origin,database,phase,cookie}) {
