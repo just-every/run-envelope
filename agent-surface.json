@@ -21,7 +21,16 @@
         "SURFACE-006",
         "ENV-052"
       ],
-      "sponsorEscalation": false
+      "sponsorEscalation": false,
+      "job": "Credential management",
+      "classTests": [
+        {
+          "class": "access",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.credentials-restrict",
+          "step": "credentials-restrict"
+        }
+      ]
     },
     {
       "name": "envelope.credentials.rotate",
@@ -35,7 +44,16 @@
         "SURFACE-006",
         "ENV-052"
       ],
-      "sponsorEscalation": false
+      "sponsorEscalation": false,
+      "job": "Credential management",
+      "classTests": [
+        {
+          "class": "security",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.credentials-rotate",
+          "step": "credentials-rotate"
+        }
+      ]
     },
     {
       "name": "envelope.notices.process",
@@ -51,6 +69,21 @@
         "ENV-025",
         "ENV-055",
         "ENV-062"
+      ],
+      "job": "Notice correspondence",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.notice-process",
+          "step": "notice-process"
+        },
+        {
+          "class": "external",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.notice-process",
+          "step": "notice-process"
+        }
       ]
     },
     {
@@ -67,6 +100,21 @@
         "ENV-025",
         "ENV-055",
         "ENV-062"
+      ],
+      "job": "Notice correspondence",
+      "classTests": [
+        {
+          "class": "commitment",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reply-dispatch",
+          "step": "reply-dispatch"
+        },
+        {
+          "class": "external",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reply-dispatch",
+          "step": "reply-dispatch"
+        }
       ]
     },
     {
@@ -82,6 +130,15 @@
         "ENV-009",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Bonus preparation",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.bonus",
+          "step": "bonus"
+        }
       ]
     },
     {
@@ -96,6 +153,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Bonus preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.bonus-read",
+          "step": "bonus-read"
+        }
       ]
     },
     {
@@ -110,6 +176,15 @@
         "SURFACE-006",
         "ENV-029",
         "ENV-034"
+      ],
+      "job": "Native human review",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.run-review",
+          "step": "run-review"
+        }
       ]
     },
     {
@@ -124,6 +199,15 @@
         "SURFACE-006",
         "ENV-028",
         "ENV-052"
+      ],
+      "job": "Worker records",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.records-list",
+          "step": "records-list"
+        }
       ]
     },
     {
@@ -138,6 +222,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Hourly preparation",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.draft",
+          "step": "draft"
+        }
       ]
     },
     {
@@ -153,6 +246,15 @@
         "ENV-024",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Bonus preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reports-bonuses",
+          "step": "reports-bonuses"
+        }
       ]
     },
     {
@@ -168,6 +270,15 @@
         "ENV-024",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Hourly preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reports-proposals",
+          "step": "reports-proposals"
+        }
       ]
     },
     {
@@ -182,6 +293,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Hourly preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.draft-read",
+          "step": "draft-read"
+        }
       ]
     },
     {
@@ -196,6 +316,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-056"
+      ],
+      "job": "Reconciliation",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.workspace-snapshot",
+          "step": "workspace-snapshot"
+        }
       ]
     }
   ],
@@ -559,5 +688,9 @@
       }
     ],
     "journey": "tests/agent-door/rotation-journey.mjs"
+  },
+  "documentation": {
+    "path": "/docs/agents",
+    "format": "Accept: application/json returns the same public declarations"
   }
 }

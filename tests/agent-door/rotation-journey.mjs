@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
+import {docsJourney} from './docs.mjs'
 export default async function({database,request,origin,cookie}) {
   const db=await database('DB')
   const rows=(await db.prepare("SELECT * FROM env_agent_call_audit WHERE rowid IN (SELECT MIN(rowid) FROM env_agent_call_audit WHERE door_operation_id IS NOT NULL GROUP BY tool)").all()).results
@@ -14,7 +15,8 @@ export default async function({database,request,origin,cookie}) {
     assert.ok((await response.json()).activity.calls.some(row=>row.operationId===native.door_operation_id))
   }
 }
-export async function afterStep({phase,step,result,origin,request,database}) {
+export async function afterStep(context) {
+  const {phase,step,result,origin,request,database}=context
   if(step.tool!=='envelope.credentials.rotate')return
   assert.equal(Object.hasOwn(result,'token'),false,'the door never retains a plaintext native bearer')
   const db=await database('DB')
@@ -28,4 +30,5 @@ export async function afterStep({phase,step,result,origin,request,database}) {
     assert.equal(row.n,0,'durable door records contain only encrypted credential delivery')
   }
   saved.localToken=token
+  if(['autonomous','held'].includes(phase))await docsJourney(context)
 }

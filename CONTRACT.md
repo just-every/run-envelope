@@ -1802,8 +1802,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 36 | 84 | 124 |
-| All | 5 | 36 | 84 | 125 |
+| Target and push further | 4 | 37 | 83 | 124 |
+| All | 5 | 37 | 83 | 125 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1931,4 +1931,4 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `BASE-AGENT-010` | Agents can follow changes | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-011` | Limits are policy, and Pause stops everything | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-012` | Writes are idempotent and conflict-safe | target | missing | | Not yet judged through this seed's own doors. |
-| `BASE-AGENT-013` | Manifest, docs and the conformance journey | target | missing | | Not yet judged through this seed's own doors. |
+| `BASE-AGENT-013` | Manifest, docs and the conformance journey | target | partial | Acceptance 1 and 2 for the installed native subset: `tests/agent-door/docs.mjs` — docsJourney, invoked by `tests/agent-door/rotation-journey.mjs` after the real autonomous and held journeys, compares all discovered tool names, scopes, possible classes, schemas, class proof mappings and resource templates with the public generated reference and detects an omitted tool, class or proof. `tests/agent-docs-runtime.mjs` — agentDocsJourney, invoked by `tests/runtime.mjs` in push Verify, exercises the populated installation through public documentation GET and HEAD, refuses mutation, excludes private values, checks escaped text and keyboard and accessibility at 1440 with phone smoke and browser proof at 390. | Complete target-tool and resource coverage, specialist prompts, every BASE-AGENT-001 to 012 and SURFACE acceptance journey under both policies, complete conformance failure probes and the stranger-agent payroll week remain owed. The current native subset offers no resources, prompts, events or subscriptions; its passing subset harness does not prove those target outcomes. Calculation catalogue licensing, authorized employer and rail access, provider accounts and mandates remain external prerequisites for complete payroll jobs. Existing exact-human-approval, sponsor and grant, CT, device, br visual-correction and feeder holds remain unchanged, including configured-native-owner-only explicitly consented reference sends and no automatic outbound action, automated retry or destructive recovery. |

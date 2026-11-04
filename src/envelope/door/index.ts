@@ -1,11 +1,12 @@
-import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
+import { createAgentDoor, type Trust, type AgentDoorOptions } from '../../modules/agent-door/index.ts'
 import { createBusinessSettings } from '../../modules/business-settings/index.ts'
 import { operatorAuth, type Bindings } from '../../auth.server'
 import { AgentTools } from '../agents'
 import { currentScopes, scopes } from './native'
 import { payrollPeople } from './people'
-import { notTools } from './catalogue'
+import { notTools, capacityLimits, resourceDeclarations } from './catalogue'
 import { nativeTools } from './tools'
+import { agentReference, agentInstructions, agentDocs } from './docs'
 
 export const capabilities = ['tools','policy','pause','audit','idempotency'] as const
 function trust(env: Bindings): Trust | null {
@@ -15,10 +16,10 @@ function trust(env: Bindings): Trust | null {
   return {issuer,installationId,appOrigin:env.AUTH_ORIGIN,publicKeys:JSON.parse(keys)}
 }
 export function envelopeDoor(env: Bindings) {
-  return createAgentDoor({seed:'envelope',name:'Envelope',specialist:'payroll',db:env.DB,origin:env.AUTH_ORIGIN,trust:trust(env),capabilities,
+  const options: AgentDoorOptions = {seed:'envelope',name:'Envelope',specialist:'payroll',db:env.DB,origin:env.AUTH_ORIGIN,trust:trust(env),capabilities,limits:capacityLimits,
     paths:['/mcp','/api/envelope/mcp'],
     people:payrollPeople(env),
-    tools:nativeTools(env),resources:[],
+    tools:nativeTools(env),resources:resourceDeclarations,
     currentScopes:who=>currentScopes(env,who),
     async localCredentials(request) {
       const value=request.headers.get('authorization')?.replace(/^Bearer /,'')
@@ -28,10 +29,26 @@ export function envelopeDoor(env: Bindings) {
       } catch { return null }
     },
     notTools:notTools.map(item=>({reason:item.reason,clauses:[...item.clauses]})),
-  })
+  }
+  const door=createAgentDoor(options)
+  return {...door, async handle(request:Request) {
+    const path=new URL(request.url).pathname
+    if(path==='/docs/agents')return agentDocs(request,agentReference(options))
+    const response=await door.handle(request)
+    if(response?.ok && options.paths?.includes(path) && response.headers.get('content-type')?.includes('application/json')) {
+      const message=await response.clone().json() as {result?:{instructions?:string;capabilities?:unknown;_meta?:Record<string,unknown>}}
+      if(typeof message.result?.instructions==='string' && message.result.capabilities) {
+        message.result.instructions=agentInstructions(agentReference(options))
+        if(message.result._meta)message.result._meta['com.runeditrun/docs']='/docs/agents'
+        return Response.json(message,{status:response.status,headers:response.headers})
+      }
+    }
+    return response
+  }}
 }
 export async function agentResponse(request: Request, env: Bindings) {
   const path=new URL(request.url).pathname
+  if(path==='/docs/agents')return envelopeDoor(env).handle(request)
   if(!['/mcp','/api/envelope/mcp','/api/rer/agent-policy','/api/rer/business-settings','/rer-business-logo','/rer-business.css','/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp','/agents'].includes(path) && !path.startsWith('/agents/')) return null
   const settings=createBusinessSettings({db:env.DB,trust:env.RER_BUSINESS_TRUST ?? null,
     team:operatorAuth(env).businessTeam,

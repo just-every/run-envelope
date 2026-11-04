@@ -1,4 +1,4 @@
-export const catalogue = [
+const definitions = [
 {
   "name": "envelope.credentials.restrict",
 "sponsorEscalation": false,
@@ -500,4 +500,218 @@ export const notTools = [
     ],
     "reason": "connector"
   }
+] as const
+
+// Class proof declarations are independent of the runtime classifier classes.
+const documentation = {
+  "credentials.restrict": {
+    "job": "Credential management",
+    "step": "credentials-restrict",
+    "classes": [
+      "access"
+    ]
+  },
+  "credentials.rotate": {
+    "job": "Credential management",
+    "step": "credentials-rotate",
+    "classes": [
+      "security"
+    ]
+  },
+  "notice.process": {
+    "job": "Notice correspondence",
+    "step": "notice-process",
+    "classes": [
+      "sensitive",
+      "external"
+    ]
+  },
+  "reply.dispatch": {
+    "job": "Notice correspondence",
+    "step": "reply-dispatch",
+    "classes": [
+      "commitment",
+      "external"
+    ]
+  },
+  "bonus.prepare": {
+    "job": "Bonus preparation",
+    "step": "bonus",
+    "classes": [
+      "standard"
+    ]
+  },
+  "bonus.read": {
+    "job": "Bonus preparation",
+    "step": "bonus-read",
+    "classes": [
+      "sensitive"
+    ]
+  },
+  "run.review": {
+    "job": "Native human review",
+    "step": "run-review",
+    "classes": [
+      "standard"
+    ]
+  },
+  "records.list": {
+    "job": "Worker records",
+    "step": "records-list",
+    "classes": [
+      "standard"
+    ]
+  },
+  "draft.prepare": {
+    "job": "Hourly preparation",
+    "step": "draft",
+    "classes": [
+      "standard"
+    ]
+  },
+  "draft.read": {
+    "job": "Hourly preparation",
+    "step": "draft-read",
+    "classes": [
+      "sensitive"
+    ]
+  },
+  "reports.bonuses": {
+    "job": "Bonus preparation",
+    "step": "reports-bonuses",
+    "classes": [
+      "sensitive"
+    ]
+  },
+  "reports.proposals": {
+    "job": "Hourly preparation",
+    "step": "reports-proposals",
+    "classes": [
+      "sensitive"
+    ]
+  },
+  "workspace.snapshot": {
+    "job": "Reconciliation",
+    "step": "workspace-snapshot",
+    "classes": [
+      "standard"
+    ]
+  }
+} as const
+export const catalogue = definitions.map(entry => {
+  const proof = documentation[entry.nativeName]
+  return {...entry, job:proof.job, classTests:proof.classes.map(cls => ({
+    class:cls, path:'src/modules/agent-door/conformance/journey.mjs',
+    test:'BASE-AGENT-006.2.<policy>.'+proof.step, step:proof.step,
+  }))}
+})
+export const capacityLimits = {requestsPerMinute:600, maxBodyBytes:1048576} as const
+export const resourceDeclarations: import('../../modules/agent-door/index.ts').ResourceDefinition[] = []
+export const unfinishedJobs = [
+  'Complete payroll tool coverage, specialist prompts and the stranger-agent payroll week remain unfinished.',
+  'Full Base conformance and the remaining Agent surface acceptance journeys remain unproved.',
+  'Hourly and bonus preparations remain uncalculated; no funded payment, tax remittance, agency filing or accepted provider outcome is claimed.',
+  'Calculation catalogue licensing, authorized employer and rail access, provider accounts and mandates remain required for their target jobs.',
+  'Scoped delegation, exact human approvals, statutory custody, device proof and the existing policy and visual-correction holds remain required.',
+] as const
+
+// Shared door and native prerequisite refusal vocabulary; unknown effects stay held.
+export const stableErrors = [
+  "agent_authentication_required",
+  "agent_authority_revoked",
+  "agent_rate_limited",
+  "agent_scope_denied",
+  "agent_tool_denied",
+  "agents_paused",
+  "ambiguous_authentication",
+  "answer_every_agent_class",
+  "approval_already_dispatched_or_changed",
+  "approval_evidence_changed",
+  "approval_expired",
+  "approval_rejected",
+  "approval_required",
+  "audit_missing",
+  "authority_changed",
+  "authority_or_proof_changed",
+  "bonus_idempotency_conflict",
+  "bonus_input_or_authority_changed",
+  "bonus_or_authority_unavailable",
+  "budget_exhausted",
+  "call_in_progress",
+  "capability_not_declared",
+  "classification_invalid",
+  "compensation_scope_required",
+  "consent_revoked",
+  "credential_or_authority_changed",
+  "decision_busy",
+  "dispatch_provider_scope_required",
+  "draft_input_or_authority_changed",
+  "draft_or_authority_unavailable",
+  "exact_approval_or_authority_changed",
+  "exact_approved_reply_required",
+  "exact_notice_custody_consent_required",
+  "exact_review_or_authority_changed",
+  "exact_review_required",
+  "execution_failed",
+  "idempotency_conflict",
+  "idempotency_key_required",
+  "insufficient_scope",
+  "invalid_agent_scope",
+  "invalid_arguments",
+  "invalid_audit_period",
+  "invalid_bonus_input",
+  "invalid_class_policy",
+  "invalid_draft_input",
+  "invalid_draft_period",
+  "invalid_effective_date",
+  "invalid_input",
+  "invalid_notice_input",
+  "invalid_notice_text",
+  "invalid_operation_query",
+  "invalid_origin",
+  "invalid_record_query",
+  "invalid_report_query",
+  "invalid_review_date",
+  "invalid_rotation_key",
+  "narrowing_contract_violation",
+  "native_agent_admission_changed",
+  "native_agent_grant_required",
+  "native_agent_grant_revoked",
+  "native_owner_required",
+  "native_proof_required",
+  "notice_model_unavailable",
+  "notice_or_authority_changed",
+  "notice_provider_scope_required",
+  "notice_unavailable",
+  "operation_mismatch",
+  "output_invalid",
+  "owner_required",
+  "payroll_record_key_required",
+  "policy_blocked",
+  "policy_or_authority_changed",
+  "policy_unavailable",
+  "policy_unset",
+  "presenting_client_revoked",
+  "private_record_unavailable",
+  "provider_not_declared",
+  "provider_or_authority_changed",
+  "rate_limited",
+  "record_unavailable",
+  "reply_or_authority_changed",
+  "reply_unavailable",
+  "resource_changed",
+  "resource_unavailable",
+  "review_required",
+  "review_unavailable",
+  "revision_conflict",
+  "self_escalation",
+  "sponsor_scope_denied",
+  "sponsor_unavailable",
+  "summary_invalid",
+  "target_invalid",
+  "tool_not_found",
+  "unauthenticated",
+  "undeclared_arguments",
+  "unsupported_cipher",
+  "unsupported_content_type"
 ] as const

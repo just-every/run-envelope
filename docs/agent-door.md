@@ -12,20 +12,29 @@ This installation offers the CORE capabilities `tools`, `policy`, `pause`,
 subscriptions. These are target capabilities, not implemented payroll outcomes.
 The machine-readable registry and native journey are in `agent-surface.json`.
 
-| Tool | Class | Native job |
-| --- | --- | --- |
-| `envelope.records.list` | standard | Scoped masked worker page |
-| `envelope.draft.prepare` | standard | Uncalculated hourly-input proposal |
-| `envelope.draft.read` | sensitive | This grant's retained hourly proposal |
-| `envelope.bonus.prepare` | standard | Uncalculated bonus earnings preparation |
-| `envelope.bonus.read` | sensitive | This grant's retained bonus preparation |
-| `envelope.reports.proposals` | sensitive | This grant's hourly preparation report |
-| `envelope.reports.bonuses` | sensitive | This grant's bonus preparation report |
-| `envelope.runs.review_link` | standard | Separate native human review handoff |
-| `envelope.notices.process` | sensitive, external | Redacted notice extraction at OpenAI |
-| `envelope.notices.reply` | commitment, external | Exact human-reviewed Resend correspondence |
-| `envelope.credentials.rotate` | security | Replace this native grant's bearer |
-| `envelope.workspace.snapshot` | standard | Counts and digest of visible native state |
+The installed public reference is `/docs/agents`. It groups the actual registry
+by job and includes every offered tool's scope, possible classes, computed-class
+tests, input and output schemas, resource templates, capacity limits and stable
+refusal codes. It reads declarations only, without customer records, credentials,
+company-policy answers or installation settings. GET and HEAD work signed out;
+other methods return 405. An `Accept: application/json` request returns the same
+public declarations. Both MCP paths generate their discovery instructions from
+this catalogue and point to that reference.
+
+Each class proof names its fixture step in `agent-surface.json` and its check in
+`src/modules/agent-door/conformance/journey.mjs`. The `<policy>` placeholder is
+`autonomous` or `held`. The hosted journey checks real computed classes for those
+steps, then `tests/agent-door/docs.mjs` compares the reference with authenticated
+full-scope discovery under both policies. It also refuses an omitted tool, class
+or proof mapping. `tests/agent-docs-runtime.mjs`, invoked by `tests/runtime.mjs`
+in push Verify, checks the public page on a populated installation, escaping,
+private-value exclusion, keyboard access and responsive browser proof.
+
+No resource template, event type, subscription or specialist prompt is offered
+by this installed subset. The reference says so explicitly and keeps the full
+target tool table, remaining conformance probes and stranger-agent payroll week
+unfinished. The page documents capacity protection separately from business
+policy; it supplies no new scope, native human approval or provider authority.
 
 Credential rotation accepts `publicKey: {kty:"RSA",n,e:"AQAB"}` for an RSA key
 of at least 2048 bits. The caller keeps its private key. The shared result
