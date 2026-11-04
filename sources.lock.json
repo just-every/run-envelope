@@ -365,7 +365,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "9ee9d1bd2f5e7c48814bd6dda42ebc4e1909e06b58774e7f08de1984a7f0a35c",
+      "sha256": "059934f77d572d9e0eea1c24407f760eb99c5d51d4faa8e7ff02752635bdcb57",
       "executable": false
     },
     "AGENTS.md": {
@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "11b6f0dfdb2c2b7696ce014dd87b284935c936cfd28346be935e554c0237e916",
+      "sha256": "83576189cb7f96bc96bab2a1e363715021ab1485ec27aea16cdb3eadd2d1ac05",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4237,7 +4237,7 @@
       "executable": false
     },
     "tests/agent-door/rotation-journey.mjs": {
-      "sha256": "49c87c35d4f13b625a455448182f27d4123950ee91b6e98a0d47adf6fa597191",
+      "sha256": "4a71f879086b43a10004939a76c80d315fd1bd5a39cbc5a64aedd99d667b3023",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
@@ -4509,7 +4509,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "d54bf5b7305132831984fcae575768ae8b2d0789c3eac052c7829f7d323f6cdd",
+      "sha256": "a817856fb49ba97814805dac797fedc5280d3fdf0ec8202fc272936f247a711d",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -4525,7 +4525,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "0105df3b0fee7aa6509e8793ef8de5ba0df3f3c688552533888b491f2400d2db",
+      "sha256": "7c316d0a3a13fb1a82f74fa18544744e10b212b1d23959276aad0624229b83a8",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

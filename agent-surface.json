@@ -558,6 +558,11 @@
         "initializer": "tests/agent-door/negative-sponsor.mjs"
       }
     ],
-    "journey": "tests/agent-door/rotation-journey.mjs"
+    "journey": "tests/agent-door/rotation-journey.mjs",
+    "replayAdmission": {
+      "prepare": [
+        "draft"
+      ]
+    }
   }
 }
