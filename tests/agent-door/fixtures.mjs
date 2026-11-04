@@ -37,6 +37,7 @@ export async function sensitiveFixtures(context, options = {}) {
     await data(base+'/rates/'+rate.id+'/approve',{reviewToken:review.reviewToken,version:review.version})
     people.push(person)
   }
+  for(const kind of ['ssn','bank','tax'])await data(base+'/people/'+people[0].id+'/private',{kind,version:0,value:'synthetic-envelope-9748-'+kind},201)
   await data(base+'/agents/class-policy',{version:0,...(await import('./native.mjs')).answers})
   const issue=(extra={})=>data(base+'/agents',{name:'Synthetic read assistant',hours:1,actions:['records:read','drafts:prepare','drafts:read'],fields:['compensation'],locations:['*'],...extra},201)
   return {company,base,location,other,people,issue,credential:await issue(options)}
