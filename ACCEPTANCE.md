@@ -9,9 +9,9 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Core | 5 | 33 | 60 | 98 |
-| Agent surface | 0 | 1 | 19 | 20 |
+| Agent surface | 0 | 2 | 18 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 5 | 36 | 84 | 125 |
+| Full target | 5 | 37 | 83 | 125 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1750,7 +1750,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** `server / discover` instructions and an on-site `/docs/agents` page are generated from the action registry. The page lists tools by job, with each tool's classes, the test that adds each computed class, its scopes, resource templates, event types, capacity limits and error codes, and the specialist role. `prompts / list` carries the specialist's jobs. Base ships the conformance journey, a harness that `rer verify` runs against `rer dev` and seeds run in CI. It is an MCP client; a signed-in test person takes a person's steps (setup answers, approvals, review marks, resume) through the URLs the door returns, and the same browser leg runs the UI-parity actions and the page checks at 1440 and 390. It runs every acceptance point of BASE-AGENT-001 to 012 and of the seed's SURFACE clauses under two company policies: *all autonomous* (`*`), and *held* (standard review, every other class the seed declares approval, which the test person grants), plus the single-class variants a point names. A point that names no disposition passes under both.
 
@@ -1761,8 +1761,8 @@ Agent surface · target · **missing**
 4. Every acceptance point runs under both policies, every decision matches the policy in force, and under all autonomous no call waits for a person or is refused by policy.
 5. A stranger agent given only the seed URL completes the specialist journey through MCP.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance 1 and 2 for the installed native subset: `tests/agent-door/docs.mjs` — docsJourney, invoked by `tests/agent-door/rotation-journey.mjs` after the real autonomous and held journeys, compares all discovered tool names, scopes, possible classes, schemas, class proof mappings and resource templates with the public generated reference and detects an omitted tool, class or proof. `tests/agent-docs-runtime.mjs` — agentDocsJourney, invoked by `tests/runtime.mjs` in push Verify, exercises the populated installation through public documentation GET and HEAD, refuses mutation, excludes private values, checks escaped text and keyboard and accessibility at 1440 with phone smoke and browser proof at 390.
+**Gap.** Complete target-tool and resource coverage, specialist prompts, every BASE-AGENT-001 to 012 and SURFACE acceptance journey under both policies, complete conformance failure probes and the stranger-agent payroll week remain owed. The current native subset offers no resources, prompts, events or subscriptions; its passing subset harness does not prove those target outcomes. Calculation catalogue licensing, authorized employer and rail access, provider accounts and mandates remain external prerequisites for complete payroll jobs. Existing exact-human-approval, sponsor and grant, CT, device, br visual-correction and feeder holds remain unchanged, including configured-native-owner-only explicitly consented reference sends and no automatic outbound action, automated retry or destructive recovery.
 
 ### Agent surface
 
