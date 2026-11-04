@@ -135,8 +135,8 @@ export async function archiveFixture(context) {
   const noticeDetails=await payroll.data(company.base+'/notices/'+custodyNotice.id)
   await payroll.data(company.base+'/notices/'+custodyNotice.id+'/people',{personId:privacyPerson.id,digest:noticeDetails.digest,consent:true},201)
   const custodyNoticeLinkId=custodyNotice.id
-  let custodyReply=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/replies',{sendingIdentity:authority.sendingIdentity,approverId:authority.approverId,version:0,to:'agency@example.com',subject:'Private worker notice',body:'Synthetic retained worker response.'},201)
-  custodyReply=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/replies',{sendingIdentity:authority.sendingIdentity,approverId:authority.approverId,id:custodyReply.id,version:1,to:'agency@example.com',subject:'Private worker notice',body:'Synthetic corrected retained worker response.'},201)
+  let custodyReply=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/replies',{analysisId:'human',sendingIdentity:authority.sendingIdentity,approverId:authority.approverId,version:0,to:'agency@example.com',subject:'Private worker notice',body:'Synthetic retained worker response.'},201)
+  custodyReply=await payroll.data(company.base+'/notices/'+custodyNotice.id+'/replies',{analysisId:'human',sendingIdentity:authority.sendingIdentity,approverId:authority.approverId,id:custodyReply.id,version:1,to:'agency@example.com',subject:'Private worker notice',body:'Synthetic corrected retained worker response.'},201)
   const replyReview=await payroll.data(company.base+'/notice-replies/'+custodyReply.id+'/review')
   await payroll.data(company.base+'/notice-replies/'+custodyReply.id+'/approve',{version:replyReview.version,digest:replyReview.digest,reviewToken:replyReview.reviewToken})
   const custodyPdf=Buffer.from('%PDF-1.7\nSynthetic retained worker custody original.\n%%EOF').toString('base64')

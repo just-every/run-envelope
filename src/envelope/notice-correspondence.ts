@@ -11,6 +11,7 @@ export interface ReplyAgent {
 }
 export interface ReplyData {
   sender:string; to:string; subject:string; body:string
+  sourceAnalysisId?:string
   preparedBy?:ReplyAgent
   sendingAgent?:ReplyAgent
   humanReviewer?:{id:string;name:string;operatorVersion:number;grantVersion:number}

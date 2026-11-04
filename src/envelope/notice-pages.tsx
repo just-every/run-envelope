@@ -63,16 +63,22 @@ export function noticePage(session:Session,companies:Company[],actor:Actor,notic
         <p className="evidence-text">{r.dispatchState==='accepted' ? 'Provider accepted; delivery unconfirmed' : r.dispatchState==='unknown' || r.dispatchState==='pending' ? 'Unknown or pending send — held for human reconciliation; do not resend' : r.dispatchState==='rejected' ? 'Provider rejected; human repair required' : 'Not dispatched'}. {Boolean(r.providerReceipt) && 'Receipt: '+r.providerReceipt}</p>{Boolean(r.dispatchedByLabel) && <p className="evidence-text">Sent by {String(r.dispatchedByLabel)}.</p>}
         {canApprove && !r.approvedBy && <p className="evidence-text"><a className="btn" href={base+'/notice-replies/'+r.id+'/review'}>Review exact reply version {Number(r.version)}</a></p>}
         {canApprove && Boolean(r.approvedBy) && !r.approvalRevokedAt && !r.dispatchState && <form method="post" action={base+'/notice-replies/'+r.id+'/withdraw'}><Hidden name="version" value={Number(r.version)} /><Submit>Withdraw exact reply approval</Submit></form>}
-        {canWrite && !r.dispatchState && <details><summary>Edit into an unapproved version</summary><ReplyForm action={base+'/notices/'+notice.id+'/replies'} id={String(r.id)} version={Number(r.version)} data={r.data} choices={notice.choices} /></details>}
+        {canWrite && !r.dispatchState && <details><summary>Edit into an unapproved version</summary><ReplyForm action={base+'/notices/'+notice.id+'/replies'} id={String(r.id)} version={Number(r.version)} data={r.data} choices={notice.choices} analyses={notice.analyses} /></details>}
       </div>) : <p className="evidence-text">No replies prepared.</p>}
     </Card>
-    {canWrite && <Card title="Prepare a reply for human review"><p className="evidence-text">Verify the recipient independently. No model-suggested recipient or signature is authority.</p><ReplyForm action={base+'/notices/'+notice.id+'/replies'} choices={notice.choices} /></Card>}
+    {canWrite && <Card title="Prepare a reply for human review"><p className="evidence-text">Verify the recipient independently. No model-suggested recipient or signature is authority.</p><ReplyForm action={base+'/notices/'+notice.id+'/replies'} choices={notice.choices} analyses={notice.analyses} /></Card>}
     <a className="btn" href={base+'/notices'}>All notices</a>
   </>)
 }
-function ReplyForm({action,id,version=0,data,choices}:{action:string;id?:string;version?:number;data?:ReplyData;choices:Awaited<ReturnType<Notices['details']>>['choices']}) {
+function ReplyForm({action,id,version=0,data,choices,analyses}:{action:string;id?:string;version?:number;data?:ReplyData;choices:Awaited<ReturnType<Notices['details']>>['choices'];analyses:Awaited<ReturnType<Notices['details']>>['analyses']}) {
   return <form method="post" action={action}>
     {id && <Hidden name="id" value={id} />}<Hidden name="version" value={version} />
+    <label className="field"><span>Reply preparation source</span><select name="analysisId" aria-label="Reply preparation source" required defaultValue={data?data.sourceAnalysisId??'human':''}>
+      <option value="" disabled>Choose the retained proposal or human preparation</option>
+      <option value="human">Native human preparation</option>
+      {data?.sourceAnalysisId && !analyses.some(a=>a.id===data.sourceAnalysisId) && <option value={data.sourceAnalysisId}>Retained proposal · {data.preparedBy?.label}</option>}
+      {analyses.filter(a=>a.preparedBy).map(a=><option key={String(a.id)} value={String(a.id)}>Retained proposal · {String(a.preparedBy.label)} · {String(a.id)}</option>)}
+    </select></label>
     <label className="field"><span>Sending agent and sponsor</span><select name="sendingIdentity" aria-label="Sending agent and sponsor" required defaultValue={data?.sendingAgent?JSON.stringify([data.sendingAgent.grantId,data.sendingAgent.agentId]):''}>
       <option value="" disabled>Choose the exact sending identity</option>
       {choices.senders.map(s=><option key={s.value} value={s.value}>{s.identity.label} · {s.identity.agentId===s.identity.grantId?'native credential':'Business agent'}</option>)}

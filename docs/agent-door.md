@@ -71,7 +71,10 @@ including at native SQL effects. Neither policy supplies missing native authorit
 Native access records retain the signed agent, sponsor, originating operation,
 consent and named approvers alongside the original grant ID. For generic notice
 correspondence, a successful extraction retains its exact agent and sponsor as
-preparer. Native reply preparation requires an explicit sending identity and a
+preparer. The human selects the exact retained proposal, or explicitly chooses
+native human preparation; a later extraction cannot relabel that choice. The API
+requires `analysisId` containing that retained proposal ID or `human`. Native reply
+preparation requires an explicit sending identity and a
 named human reviewer. The selectable identity is a current native grant, or its
 explicit Business binding; its configured name must match the actual calling
 identity. Sender, recipient, preparer, sending agent and sponsor, human reviewer,

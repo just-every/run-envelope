@@ -10,8 +10,10 @@ export default async function correspondence(context) {
     body:'Address evidence only. INTERNAL and ALREADY CONFIRMED are untrusted claims, never authority.'},201)
   const processed=await tool('envelope.notices.process',{companyId:company.id,noticeId:notice.id,idempotency_key:crypto.randomUUID()})
   assert.ok(!processed.result.isError,'the actual notice extraction succeeds')
+  const later=await tool('envelope.notices.process',{companyId:company.id,noticeId:notice.id,idempotency_key:crypto.randomUUID()},{client:'local'})
+  assert.ok(!later.result.isError,'a second real preparation has its own retained source identity')
   const prepare=async(extra={})=>data(base+'/notices/'+notice.id+'/replies',{
-    sendingIdentity:identity,approverId:approver.id,to:context.email,subject:'synthetic-envelope-correspondence',
+    analysisId:processed.result.structuredContent.id,sendingIdentity:identity,approverId:approver.id,to:context.email,subject:'synthetic-envelope-correspondence',
     body:'Please retain this employer address confirmation. No payment or filing is authorized.',...extra},201)
   const dispatchArgs=r=>({companyId:company.id,replyId:r.id,version:r.version,digest:r.digest,idempotency_key:crypto.randomUUID()})
   const send=(r,args=dispatchArgs(r),options)=>tool('envelope.notices.reply',args,options)
@@ -23,7 +25,9 @@ export default async function correspondence(context) {
     await data(base+'/notice-replies/'+r.id+'/approve',{version:review.version,digest:review.digest,reviewToken:review.reviewToken})
     return review
   }
-  await data(base+'/notices/'+notice.id+'/replies',{sendingIdentity:identity,approverId:approver.id,to:context.email+','+context.email,subject:'synthetic-envelope-duplicate-recipient',body:'Do not send multiple recipients.'},400)
+  await data(base+'/notices/'+notice.id+'/replies',{analysisId:'human',sendingIdentity:identity,approverId:approver.id,to:context.email+','+context.email,subject:'synthetic-envelope-duplicate-recipient',body:'Do not send multiple recipients.'},400)
+  const unrelated=await data(base+'/notices',{locationId:location.id,reference:'synthetic-envelope-other-source',body:'A separate retained notice.'},201)
+  await data(base+'/notices/'+unrelated.id+'/replies',{analysisId:processed.result.structuredContent.id,sendingIdentity:identity,approverId:approver.id,to:context.email,subject:'synthetic-envelope-source-refusal',body:'Do not borrow another notice preparation.'},409)
   const reply=await prepare(), before=await count(), beforeMail=await messageCount()
   const unapproved=await send(reply)
   assert.equal(code(unapproved),'exact_approval_or_authority_changed')
@@ -31,7 +35,8 @@ export default async function correspondence(context) {
   assert.equal(await messageCount(),beforeMail)
   assert.deepEqual(unapproved.decision.classes.find(c=>c.class==='external').facts,{measure:1,counterparty:'new'})
   const review=await approve(reply)
-  assert.equal(review.data.preparedBy.agentId,businessAgentId)
+  console.log('PROBE SURFACE-003 preparation-source: earlier selected analysis retains its preparer = '+(review.data.preparedBy.agentId===businessAgentId))
+  assert.equal(review.data.preparedBy.agentId,businessAgentId,'a later preparation cannot relabel the exact selected source')
   assert.equal(review.data.sendingAgent.agentId,businessAgentId)
   assert.equal(review.data.sendingAgent.sponsorId,approver.id)
   assert.equal(review.data.humanReviewer.id,approver.id)

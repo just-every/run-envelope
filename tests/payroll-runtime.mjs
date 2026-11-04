@@ -3520,6 +3520,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'expanded activity fits '+width)
       }
       await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
+      if(label==='notice-attribution-activity')await page.locator('section').filter({has:page.getByRole('heading',{name:'Agent activity',exact:true})}).screenshot({path:join(proof,'notice-attribution-detail-'+width+'.png')})
     }
   }
   const rpc=async(name,args,token)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage('tools/call',{name,arguments:args}))})
@@ -3642,6 +3643,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     let dispatcher=await data(api+'/agents',{name:'synthetic-envelope-517',hours:24,reviewDate,actions:['dispatch:execute'],fields:['tax'],locations:[ca.id],providers:['resend']},sponsors.accountant.cookie,201)
     await setIdentity(cookie)
     await page.goto(origin+noticePath)
+    await page.getByLabel('Reply preparation source',{exact:true}).selectOption(processed.id)
     await page.getByLabel('Sending agent and sponsor',{exact:true}).selectOption(JSON.stringify([dispatcher.id,dispatcher.id]))
     await page.getByLabel('Designated human approver',{exact:true}).selectOption(owner.id)
     await page.getByLabel('Verified reply recipient email',{exact:true}).fill('agency-contact@example.com')
@@ -3662,7 +3664,8 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     }
     await sharedPolicy(true)
     const policyPending=await (await rpc('reply.dispatch',{companyId:company,replyId:reply.id,version:reply.version,digest:reply.digest},dispatcher.token)).json()
-    const handle=policyPending.result._meta['com.runeditrun/approval']
+    assert.equal(policyPending.result._meta['com.runeditrun/error'].code,'approval_required')
+    const handle=policyPending.result._meta['com.runeditrun/error'].approval
     assert.ok(handle.id)
     const {approval}=await data('/agents/api/approvals/'+handle.id)
     const policyApproved=await data('/agents/api/approvals/'+handle.id+'/approve',{revision:approval.revision,summary_sha256:approval.summary_sha256})
@@ -3686,10 +3689,10 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal(reply.data.humanReviewer.id,owner.id)
     await capture(noticePath,'notice-approved')
     // An edited twin does not inherit approval; neither old nor new version sends.
-    const edited=await data(api+'/notices/'+noticeId+'/replies',{sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:reply.data.body+' Edited.'},cookie,201)
+    const edited=await data(api+'/notices/'+noticeId+'/replies',{analysisId:processed.id,sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:reply.data.body+' Edited.'},cookie,201)
     await executeStatus(reply,409)
     await executeStatus(edited,409)
-    await data(api+'/notices/'+noticeId+'/replies',{sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:'stale overwrite'},cookie,409)
+    await data(api+'/notices/'+noticeId+'/replies',{analysisId:processed.id,sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId:owner.id,id:reply.id,version:reply.version,to:reply.data.to,subject:reply.data.subject,body:'stale overwrite'},cookie,409)
     assert.equal((await data(api+'/notices/'+noticeId)).replies[0].data.body,reply.data.body+' Edited.')
     assert.equal(edge.calls.length,unapprovedCalls)
     await capture(noticePath,'notice-edited-unapproved')
@@ -3732,7 +3735,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.equal((await data(api+'/notices/'+noticeId)).replies[0].providerReceipt,'00000000-0000-4000-8000-000000000052')
     // Exact approvals are separately tested against expiry, withdrawal, provider
     // changes and approver removal; no refusal reaches the network.
-    const freshReply=async(label,approverId=owner.id) => data(api+'/notices/'+noticeId+'/replies',{sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId,to:'agency-contact@example.com',subject:label,body:'Human-reviewed account transcript request.'},cookie,201)
+    const freshReply=async(label,approverId=owner.id) => data(api+'/notices/'+noticeId+'/replies',{analysisId:processed.id,sendingIdentity:JSON.stringify([dispatcher.id,dispatcher.id]),approverId,to:'agency-contact@example.com',subject:label,body:'Human-reviewed account transcript request.'},cookie,201)
     const approveReply=async(r) => {const v=await data(api+'/notice-replies/'+r.id+'/review');await approve(v);return r}
     const expired=await approveReply(await freshReply('synthetic-envelope-520'))
     await sql(`UPDATE env_notice_approvals SET expires_at=1 WHERE reply_id='${expired.id}'`)

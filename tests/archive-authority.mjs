@@ -62,11 +62,12 @@ export async function archiveAuthority(context, company, notice) {
 
   const processed=await worker.fetch(origin+'/mcp',{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',authorization:'Bearer '+agent.token,origin,'content-type':mime},body:JSON.stringify(agentMessage(['tools','call'].join('/'),{name:'notice.process',arguments:{companyId:company.id,noticeId:notice.id}}))})
   assert.equal(processed.status,200)
-  assert.equal(JSON.parse((await processed.json()).result.content[0].text).status,'untrusted-proposal')
+  const prepared=JSON.parse((await processed.json()).result.content[0].text)
+  assert.equal(prepared.status,'untrusted-proposal')
   const approverId=(await data('/auth/session')).operator.id
   const sendingIdentity=JSON.stringify([agent.id,agent.id])
   const reply = await data(company.base + '/notices/' + notice.id + '/replies', {
-    sendingIdentity,approverId,version: 0, to: 'agency@example.com', subject: 'Reviewed payroll notice response',
+    analysisId:prepared.id,sendingIdentity,approverId,version: 0, to: 'agency@example.com', subject: 'Reviewed payroll notice response',
     body: 'The employer reviewed this notice and retained the supporting payroll records. This reply awaits dispatch.',
   }, 201)
   const review = await data(company.base + '/notice-replies/' + reply.id + '/review')
@@ -87,7 +88,7 @@ export async function archiveAuthority(context, company, notice) {
   const effects = []
   for (const expected of ['accepted', 'unknown']) {
     const item = await data(company.base + '/notices/' + notice.id + '/replies', {
-      sendingIdentity,approverId,version: 0, to: 'agency@example.com', subject: 'Archive retained notice ' + expected,
+      analysisId:prepared.id,sendingIdentity,approverId,version: 0, to: 'agency@example.com', subject: 'Archive retained notice ' + expected,
       body: 'The employer reviewed this redacted notice response. No payroll or bank instruction is included.',
     }, 201)
     const exact = await data(company.base + '/notice-replies/' + item.id + '/review')

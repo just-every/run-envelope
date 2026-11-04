@@ -94,10 +94,14 @@ export class Notices {
     payload.sendingAgent=sendingAgent
     payload.humanReviewer=humanReviewer
     payload.destination=await replyDestination(this.records,actor,payload.to)
-    const analysis=await this.records.statement(`SELECT id,cipher FROM env_notice_analysis WHERE company_id=? AND notice_id=? AND ${f.sql} ORDER BY created_at DESC,id DESC LIMIT 1`,[actor.company,noticeId,...f.args]).first<{id:string;cipher:string}>()
-    if(analysis) {
+    if(input.analysisId!=='human') {
+      if(typeof input.analysisId!=='string' || !input.analysisId)throw new PayrollError('reply_preparation_source_required',409)
+      const analysis=await this.records.statement(`SELECT id,cipher FROM env_notice_analysis WHERE company_id=? AND notice_id=? AND id=? AND ${f.sql}`,[actor.company,noticeId,input.analysisId,...f.args]).first<{id:string;cipher:string}>()
+      if(!analysis)throw new PayrollError('reply_preparation_source_unavailable',409)
       const proposal=JSON.parse(await unseal(key,JSON.stringify([actor.company,'analysis',analysis.id]),analysis.cipher))
-      if(proposal.preparedBy)payload.preparedBy=proposal.preparedBy
+      if(!proposal.preparedBy)throw new PayrollError('reply_preparation_source_unavailable',409)
+      payload.sourceAnalysisId=analysis.id
+      payload.preparedBy=proposal.preparedBy
     }
     const notice=await this.notice(actor,noticeId,'notices:write'), hash=await digest(JSON.stringify([actor.company,notice.id,notice.digest,provider.version,payload])),
       cipher=await seal(key,JSON.stringify([actor.company,'reply',id,version+1]),JSON.stringify(payload))
