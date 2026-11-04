@@ -3711,6 +3711,7 @@ export async function sponsoredJourney({origin,cookie,settings,sql,edge,restart}
     assert.ok(concurrentResults.some(result=>result?.state==='accepted'),'one concurrent request completes the native dispatch')
     assert.equal(edge.calls.filter(r=>r.url==='https://api.resend.com/emails').length,1,'concurrent dispatch sends once')
     const emailCall=edge.calls.find(r=>r.url==='https://api.resend.com/emails')
+    assert.equal(exact.data.sourceAnalysisId,processed.id,'the reviewed reply preserves the exact preparation reference')
     assert.equal(exact.data.preparedBy.agentId,adminGrant.id,'the reviewed attribution binds the real native client')
     assert.equal(exact.data.preparedBy.sponsorId,sponsors['payroll-admin'].id,'the reviewed attribution binds its real sponsor')
     assert.deepEqual(emailCall.body,{from:exact.data.sender,to:[exact.data.to],subject:exact.data.subject,text:exact.data.body+'\n\nPrepared by '+exact.data.preparedBy.label+'\nSent by '+exact.data.sendingAgent.label+'\nHuman reviewer: '+exact.data.humanReviewer.name,headers:{'X-RER-Attribution':'synthetic-envelope-517 for '+sponsors.accountant.id}})
