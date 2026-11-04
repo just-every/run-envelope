@@ -88,3 +88,30 @@ survive rotation or a native policy change. These fingerprints grant no scope.
 Native scope reduction (`envelope.credentials.restrict`) carries access, keeps the calling grant identity, and accepts only retained actions, fields and locations. Adding any power or naming another credential refuses without changing the grant. A reduction invalidates prior admissions; repeating the retained scope leaves its revision unchanged.
 
 The additive core migrations are 0044_business_settings.sql, 0045_business_people.sql, 0046_agent_door.sql, 0047_business_agent_bindings.sql, 0048_agent_door_policy_attribution.sql and 0049_agent_operation_lookup.sql; main’s existing 0001–0043 migrations remain unchanged.
+
+Masked worker pages retain the standard class and return only worker identity,
+location and version. Reading a retained hourly proposal or bonus preparation,
+or a page of either preparation report, carries sensitive with kind
+`compensation`. The measure is the number of permitted records returned on that
+page, including zero for an empty page; pagination lookahead does not count.
+These reads still require the existing native read action, compensation field,
+credential ownership and location scope. Bonus reads retain their existing
+company-wide location requirement. A company policy cannot add a field or role
+permission that the sponsoring person lacks in the native UI.
+
+Classification selects the actual authorized response without an access write.
+The approval summary retains an opaque fingerprint of that selection, including
+its contents, page cursor and native grant revision. Execution repeats current
+authority and reads the response under the native access audit. A changed
+selection refuses with `read_selection_changed`; pending approval refuses when
+its retained selection has changed, even if the record count stays equal.
+Retrieving an approved read rechecks the same selection rather than returning
+retained compensation under a different decision. Restart does not reset these
+checks. Refusals require a fresh read and, when policy requires it, fresh approval.
+The MCP door, its alias and the existing agent REST reads use this same path.
+
+This increment adds no SSN, bank-number, tax-document or export tool and no
+erasure or hold-release authority. Complete private-document custody and the
+remaining destructive classifications remain owed by SURFACE-004. Calculation,
+verified-bank, payment and provider holds remain in force. Reads send no outbound
+request and introduce no automatic action, retry or destructive recovery.

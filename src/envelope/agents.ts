@@ -385,13 +385,13 @@ export class AgentTools {
     const f = this.fence(),
       l = this.location('location_id'),
       event = uuid()
-    const result = await this.env.DB.batch<Record<string, unknown>>([
-      audit ? this.log('records:read',this.grant.company_id,'1',[],event) : this.env.DB.prepare('SELECT 1'),
+    const result = await readAgentRows<Record<string, unknown>>(this, audit,
+      this.log('records:read',this.grant.company_id,'1',[],event),
       this.env.DB.prepare(
         `SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} AND (?=0 OR EXISTS(SELECT 1 FROM env_agent_access WHERE id=?)) AND id>? ORDER BY id LIMIT ?`,
       ).bind(this.grant.company_id, ...l.args, ...f.args, audit ? 1 : 0, event, after, limit + 1),
-    ])
-    if (audit && !result[0].meta.changes) throw new PayrollError('agent_authority_revoked', 403)
+    )
+    if (audit && !result[0]?.meta.changes) throw new PayrollError('agent_authority_revoked', 403)
     const records = result[1].results.slice(0, limit)
     return { records, limit, next: result[1].results.length > limit ? records.at(-1)?.id : null }
   }
@@ -402,14 +402,14 @@ export class AgentTools {
     const limit=input.limit===undefined ? 100 : integer(input.limit)
     if (limit>100) throw new PayrollError('invalid_report_query')
     const after=input.after===undefined ? '' : text(input.after,80), f=this.fence(), l=this.location('p.location_id'), event=uuid()
-    const result=await this.env.DB.batch<Record<string,unknown>>([
-      audit ? this.log('reports:proposals',this.grant.company_id,'1',[],event) : this.env.DB.prepare('SELECT 1'),
+    const result=await readAgentRows<Record<string,unknown>>(this, audit,
+      this.log('reports:proposals',this.grant.company_id,'1',[],event),
       this.env.DB.prepare(`SELECT d.id,d.person_id AS personId,d.person_version AS personVersion,d.rate_id AS rateId,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,(p.version!=d.person_version) AS stale
         FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id
         WHERE d.company_id=? AND d.credential_id=? AND d.id>? AND ${l.sql} AND ${f.sql} AND (?=0 OR EXISTS(SELECT 1 FROM env_agent_access WHERE id=?)) ORDER BY d.id LIMIT ?`)
         .bind(this.grant.company_id,this.grant.id,after,...l.args,...f.args,audit ? 1 : 0,event,limit+1),
-    ])
-    if (audit && !result[0].meta.changes) throw new PayrollError('agent_authority_revoked',403)
+    )
+    if (audit && !result[0]?.meta.changes) throw new PayrollError('agent_authority_revoked',403)
     const proposals=result[1].results.slice(0,limit)
     return {kind:'run-input-proposals',proposals,limit,next:result[1].results.length>limit ? proposals.at(-1)?.id : null,payroll:'uncalculated',payment:'unavailable',filing:'unavailable'}
   }
@@ -500,20 +500,20 @@ export class AgentTools {
     const id = text(input.draftId),
       f = this.fence(),
       l = this.location('p.location_id')
-    const result = await this.env.DB.batch<Record<string, unknown>>([
-      audit ? this.log(
+    const result = await readAgentRows<Record<string, unknown>>(this, audit,
+      this.log(
         'drafts:read',
         id,
         `EXISTS(SELECT 1 FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id WHERE d.company_id=? AND d.id=? AND d.credential_id=? AND ${l.sql})`,
         [this.grant.company_id, id, this.grant.id, ...l.args],
-      ) : this.env.DB.prepare('SELECT 1'),
+      ),
       this.env.DB.prepare(
         `SELECT d.id,d.person_id AS personId,p.name AS personName,d.person_version AS personVersion,d.rate_id AS rateId,r.hourly_cents AS hourlyCents,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,d.source_ref AS sourceRef,(p.version!=d.person_version) AS stale
     FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id JOIN env_rate_proposals r ON r.company_id=d.company_id AND r.id=d.rate_id
     WHERE d.company_id=? AND d.id=? AND d.credential_id=? AND ${l.sql} AND ${f.sql}`,
       ).bind(this.grant.company_id, id, this.grant.id, ...l.args, ...f.args),
-    ])
-    if (audit && !result[0].meta.changes || !result[1].results[0])
+    )
+    if (audit && !result[0]?.meta.changes || !result[1].results[0])
       throw new PayrollError('draft_or_authority_unavailable', 403)
     return {
       ...result[1].results[0],
@@ -522,4 +522,11 @@ export class AgentTools {
       dispatch: 'unavailable',
     }
   }
+}
+
+/** Classification reads are side-effect-free SELECTs. Execution keeps the native
+ * access audit and its selected rows in one transaction. */
+export async function readAgentRows<T>(agent: AgentTools, audit: boolean, log: D1PreparedStatement, query: D1PreparedStatement) {
+  if(!audit)return [null,await query.all<T>()] as const
+  return agent.env.DB.batch<T>([log,query])
 }

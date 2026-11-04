@@ -98,7 +98,7 @@
     },
     {
       "name": "agent-door",
-      "browser": false,
+      "browser": true,
       "hosted": true,
       "commands": [
         "pnpm run build",

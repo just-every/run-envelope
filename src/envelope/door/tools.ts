@@ -2,7 +2,7 @@ import type { Bindings } from '../../auth.server'
 import { ToolRefusal, type ToolDefinition, type ToolContext, type ClassAndFacts } from '../../modules/agent-door/index.ts'
 import { policyCall, requireAgentPolicy } from '../agent-policy'
 import { PayrollError } from '../security'
-import { prepareBonus, readBonus, bonusReport } from '../bonus-runs'
+import { prepareBonus } from '../bonus-runs'
 import { presentReview } from '../review-presentation'
 import { processNotice, dispatchReply } from '../notices'
 import { digest } from '../workspace/store'
@@ -73,13 +73,8 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
               return actual.value
             }
             if (nativeName==='workspace.snapshot') return snapshot(env,ctx)
-            if (nativeName==='records.list') return agent.records(args)
             if (nativeName==='draft.prepare') return agent.prepare(args)
-            if (nativeName==='draft.read') return agent.readDraft(args)
             if (nativeName==='bonus.prepare') return prepareBonus(agent,args)
-            if (nativeName==='bonus.read') return readBonus(agent,args)
-            if (nativeName==='reports.bonuses') return bonusReport(agent,args)
-            if (nativeName==='reports.proposals') return agent.proposalReport(args)
             if (nativeName==='run.review') return presentReview(agent,args)
             if (nativeName==='notice.process') return processNotice(agent,args)
             if (nativeName==='reply.dispatch') return dispatchReply(agent,args)
