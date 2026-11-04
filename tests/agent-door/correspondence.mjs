@@ -79,6 +79,27 @@ export default async function correspondence(context) {
   assert.equal(code(await send(changed)),'exact_approval_or_authority_changed')
   assert.equal(code(await send(reply,dispatchArgs(reply),{client:'local'})),'reviewed_sender_changed','a different sending principal cannot reuse review')
 
+  // A definite rejection can be repaired only as another explicitly reviewed
+  // immutable version. Each history entry must keep its own attribution.
+  const repair=await prepare()
+  await approve(repair)
+  await fixtures.set('https://api.resend.com',{expected,rejected:true})
+  assert.equal((await send(repair)).result.structuredContent.state,'rejected')
+  const corrected=await prepare({id:repair.id,version:repair.version,analysisId:later.result.structuredContent.id,body:'Human-reviewed replacement correspondence after a definite rejection.'})
+  assert.equal(code(await send(corrected)),'exact_approval_or_authority_changed')
+  const correctionReview=await approve(corrected)
+  const correctedExpected={...expected,text:correctionReview.data.body+'\n\nPrepared by '+correctionReview.data.preparedBy.label+'\nSent by '+correctionReview.data.sendingAgent.label+'\nHuman reviewer: '+correctionReview.data.humanReviewer.name}
+  await fixtures.set('https://api.resend.com',{expected:correctedExpected})
+  assert.equal((await send(corrected)).result.structuredContent.state,'accepted')
+  const history=(await data(base+'/agents/access')).filter(row=>row.action==='dispatch:execute' && row.targetId===repair.id).map(row=>row.correspondence).sort((a,b)=>a.version-b.version)
+  console.log('PROBE SURFACE-003 version-attribution: rejected and newly reviewed versions = '+JSON.stringify(history.map(row=>row.version)))
+  assert.deepEqual(history.map(row=>row.version),[1,2],'each native effect must export its exact immutable version')
+  assert.equal(history[0].preparedBy.agentId,businessAgentId)
+  assert.equal(history[1].preparedBy.agentId,grantId)
+  const activityVersions=(await data(base+'/agents')).activity.calls.filter(row=>row.correspondence?.replyId===repair.id).map(row=>row.correspondence.version)
+  assert.ok(activityVersions.includes(1) && activityVersions.includes(2),'activity preserves each separately reviewed version')
+  await fixtures.set('https://api.resend.com',{expected})
+
   const lost=await prepare(),exact=await approve(lost),key=dispatchArgs(lost)
   const lostExpected={...expected,text:exact.data.body+'\n\nPrepared by '+exact.data.preparedBy.label+'\nSent by '+exact.data.sendingAgent.label+'\nHuman reviewer: '+exact.data.humanReviewer.name}
   await fixtures.set('https://api.resend.com',{expected:lostExpected,lostResponse:true})

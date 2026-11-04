@@ -230,14 +230,14 @@ export class AgentSettings {
     const rows = (
       await this.records
         .statement(
-          `SELECT credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt,door_agent_name AS agentLabel,door_operation_id AS operationId,door_approvers AS approvers FROM env_agent_access WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
+          `SELECT id AS eventId,credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt,door_agent_name AS agentLabel,door_operation_id AS operationId,door_approvers AS approvers FROM env_agent_access WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
           [actor.company, actor.grant.role, actor.session.operator.id, ...f.args],
         )
         .all<Record<string, unknown>>()
     ).results
     return Promise.all(rows.map(async row=> {
       if(row.action!=='dispatch:execute')return row
-      const dispatched=await this.records.statement('SELECT version FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND credential_id=?',[actor.company,row.targetId,row.credentialId]).first<{version:number}>()
+      const dispatched=await this.records.statement('SELECT version FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND credential_id=? AND id=?',[actor.company,row.targetId,row.credentialId,row.eventId]).first<{version:number}>()
       return {...row,correspondence:dispatched?await correspondenceRecord(this.records.env,actor,String(row.targetId),dispatched.version):null}
     }))
   }

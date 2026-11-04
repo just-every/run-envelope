@@ -13,6 +13,7 @@ export default {async fetch(request,{fixture}={}) {
     if(request.headers.get('Idempotency-Key')?.startsWith('envelope-notice-')) {
       if(body.to.length!==1 || !body.headers?.['X-RER-Attribution'] || !body.text?.includes('\nSent by '+body.headers['X-RER-Attribution']) || !body.text?.includes('\nHuman reviewer: '))return new Response(null,{status:422})
       if(fixture?.expected && JSON.stringify(body)!==JSON.stringify(fixture.expected))return new Response(null,{status:422})
+      if(fixture?.rejected)return Response.json({statusCode:422,name:'validation_error',message:'Synthetic reviewed repair required.'},{status:422})
       // The provider saw the request; the client receives no usable receipt.
       if(fixture?.lostResponse)return Response.json({})
     }

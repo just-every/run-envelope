@@ -100,7 +100,9 @@ authority prevents execution under the old review. Dispatch uses only the pinned
 sender and attribution, never an unreviewed footer or identity header. The native
 notice record, Agents activity and permission-filtered agent access download
 preserve preparer, actual sending agent and sponsor, and the separate native human
-approval. The access download contains attribution, not reply text or addresses.
+approval. Each effect is linked by its execution identity to its exact reply
+version, including a separately reviewed replacement after a definite rejection.
+The access download contains attribution, not reply text or addresses.
 Accepted and unknown dispatches retain one durable intent across fresh admission,
 replay and restart; an unknown effect is held for human reconciliation without an
 automated retry. Archives retain this evidence but no active credential, provider,

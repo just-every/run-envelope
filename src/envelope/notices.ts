@@ -249,7 +249,7 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
     agent.env.DB.prepare(`INSERT INTO env_notice_dispatches(company_id,reply_id,version,digest,id,credential_id,state,created_at,updated_at)
       SELECT ?,?,?,?,?,?,'pending',?,? WHERE ${f.sql} AND ${eligible}
       ON CONFLICT(company_id,reply_id,version) DO NOTHING RETURNING id`).bind(company,id,version,hash,execution,agent.grant.id,now,now,...f.args,...eligibilityArgs),
-    agent.log('dispatch:execute',id,'EXISTS(SELECT 1 FROM env_notice_dispatches WHERE id=?)',[execution]),
+    agent.log('dispatch:execute',id,'EXISTS(SELECT 1 FROM env_notice_dispatches WHERE id=?)',[execution],execution),
   ])
   if (!claimed[0].results.length) {
     const existing=await agent.env.DB.prepare(`SELECT state,provider_receipt AS providerReceipt FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND version=? AND digest=? AND ${f.sql}`).bind(company,id,version,hash,...f.args).first()

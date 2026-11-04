@@ -98,7 +98,7 @@ export class AgentPolicy {
       const call=decoded(row)
       if(row.tool!=='reply.dispatch')return call
       const access=await this.records.statement(`SELECT e.target_id AS replyId,d.version FROM env_agent_access e JOIN env_notice_dispatches d
-        ON d.company_id=e.company_id AND d.reply_id=e.target_id AND d.credential_id=e.credential_id
+        ON d.company_id=e.company_id AND d.id=e.id AND d.reply_id=e.target_id AND d.credential_id=e.credential_id
         WHERE e.company_id=? AND e.action='dispatch:execute' AND e.door_operation_id=? AND ${f.sql}`,[actor.company,row.operationId,...f.args]).first<{replyId:string;version:number}>()
       return {...call,correspondence:access?await correspondenceRecord(this.records.env,actor,access.replyId,access.version):null}
     }))
