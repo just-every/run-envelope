@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {client,cookieOf,reviewerContexts,reviewerMail,negativeSponsors,login} from './native.mjs'
+import {client,cookieOf,reviewerContexts,reviewerMail,negativeSponsors,negativeSessions,login} from './native.mjs'
 export default async function({request,origin,owner,label,sub,email}) {
   await reviewerContexts.get(origin).initialize(label,{cookie:owner.cookie})
   // A fresh native confirmation is returned directly, with its own real cookie.
@@ -10,5 +10,6 @@ export default async function({request,origin,owner,label,sub,email}) {
   else assert.equal(label,'excluded') // active native teammate; no payroll company grant
   const subjects=negativeSponsors.get(origin)??{}
   subjects[label]={sub,email};negativeSponsors.set(origin,subjects)
+  negativeSessions.set(origin+':'+label,{cookie:cookieOf(response),operator:session.operator})
   return response
 }
