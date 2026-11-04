@@ -1,3 +1,4 @@
+import { classificationStatement } from '../native-classification'
 import type { Actor } from '../access'
 import { auditStatement } from '../access'
 import type { Input } from '../records'
@@ -130,9 +131,13 @@ export class PaperOnboarding {
     if (!row || !['federal','state'].includes(which)) throw new PayrollError('record_not_found',404)
     const form=which==='federal'?row.data.federal:row.data.state
     if (!form) throw new PayrollError('record_not_found',404)
-    const event=await auditStatement(this.store.records.env,actor,crypto.randomUUID(),'onboarding.original.read',row.id,row.version,
-      'EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)',[actor.company,personId,person.version]).run()
-    if (!event.meta.changes) throw new PayrollError('authority_changed',409)
+    const event=crypto.randomUUID()
+    const result=await this.store.records.env.DB.batch([
+      auditStatement(this.store.records.env,actor,event,'onboarding.original.read',row.id,row.version,
+        'EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)',[actor.company,personId,person.version]),
+      classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
+    ])
+    if (!result[0].meta.changes) throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(form.original.pdf),c=>c.charCodeAt(0))
   }
 }

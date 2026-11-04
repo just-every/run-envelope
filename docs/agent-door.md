@@ -115,3 +115,36 @@ erasure or hold-release authority. Complete private-document custody and the
 remaining destructive classifications remain owed by SURFACE-004. Calculation,
 verified-bank, payment and provider holds remain in force. Reads send no outbound
 request and introduce no automatic action, retry or destructive recovery.
+
+
+## Native private reads and custody classification
+
+The existing human-session doors keep their separate native permissions. A record
+reading agent credential gains no SSN, bank, paper, export, erasure or hold-release
+power. Class decisions and supplied approval claims cannot supply those powers.
+
+Successful native SSN, bank-document and tax-document downloads carry
+`x-envelope-classification`, with `sensitive`, a count of one and the selected
+kind. Signed paper originals, retained tax-notice documents and IRS withholding
+instruction originals use `tax-document`. The byte response stays an attachment
+with private cache controls. Person detail reads count the permitted compensation
+rows; an identity-only detail is standard. The identity register export is
+standard, reports its actual returned worker count including zero, and contains
+no private values or compensation.
+
+An explicitly authorized native owner erasure request records `destructive` and
+`sensitive` with the complete selected worker-record count. An eligible hold
+release records the selected hold count in one aggregate audit event, alongside
+the existing per-record custody events. Completed erasure records the actual
+deleted count against its anonymous receipt. These classifications share the
+native audit transaction and survive restart. Stale fingerprints, ineligible
+holds, replayed releases and missing current human authority create no completed
+classification. The audit download exposes these facts without retained values
+or erased subject identifiers. No classification releases a hold, selects a
+retention policy, performs an outbound action or supplies a human decision.
+
+Private agent reads and exports, delegated destructive tools and full transport
+coverage remain unavailable. Their eventual implementations inherit the same
+classification and current-authority duties; this native increment does not
+supply them. Existing provider, payment, calculation and statutory-custody
+boundaries remain in force.

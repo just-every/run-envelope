@@ -257,3 +257,168 @@ export async function sensitiveRestartAndRaces(context) {
   await policy('autonomous')
   console.log('PROBE SURFACE-004 restart and race: retained exact approval survives restart; changed selection after restart and suspended classified read refuse; revoked native reviewer session cannot execute')
 }
+
+/** Existing native private and custody doors retain human-only authority. */
+export async function sensitiveNativeCustody(context) {
+  const {origin,cookie,sql,settings,restart}=context
+  const call=(path,body,who=cookie,method)=>context.request(origin+path,{method:method??(body===undefined?'GET':'POST'),redirect:'manual',headers:{origin,cookie:who,'content-type':['application','json'].join('/')},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const data=async(path,body,status=200,who)=>{const response=await call(path,body,who);assert.equal(response.status,status,path+' '+await response.clone().text());return response.json()}
+  const company=await data('/api/envelope/companies',{name:'Synthetic classified custody employer',ein:'00-0009750'},201)
+  const base='/api/envelope/companies/'+company.id
+  const location=await data(base+'/locations',{name:'Private workplace',state:'PA'},201)
+  const other=await data(base+'/locations',{name:'Other private workplace',state:'PA'},201)
+  const person=await data(base+'/people',{name:'Synthetic private worker',locationId:location.id},201)
+  const outside=await data(base+'/people',{name:'Synthetic outside worker',locationId:other.id},201)
+  const classification=(classes,measure,kind)=>classes.map(cls=>({class:cls,facts:{measure,kind}}))
+  const audit=()=>data(base+'/audit')
+  const classified=async action=>(await audit()).filter(row=>row.action===action)
+  const snapshot=()=>sql(`SELECT audit_id,classification FROM env_native_action_facts ORDER BY audit_id`)
+  const assertPrivate=async(kind,who=cookie)=>{
+    const response=await call(base+'/people/'+person.id+'/private/'+kind,undefined,who)
+    assert.equal(response.status,200)
+    assert.equal(response.headers.get('cache-control'),'no-store')
+    assert.match(response.headers.get('content-disposition'),/^attachment/)
+    const expected=classification(['sensitive'],1,kind==='tax'?'tax-document':kind==='bank'?'bank-number':'ssn')
+    assert.deepEqual(JSON.parse(response.headers.get('x-envelope-classification')),expected)
+    assert.equal(await response.text(),'synthetic-envelope-9751-'+kind)
+    assert.deepEqual((await classified('private.'+kind+'.read'))[0].classification,expected)
+  }
+  for(const kind of ['ssn','bank','tax']) {
+    await data(base+'/people/'+person.id+'/private',{kind,version:0,value:'synthetic-envelope-9751-'+kind},201)
+    await assertPrivate(kind)
+  }
+  // Human scopes stay separate from the current record-reading agent grants.
+  const signIn=async id=>{
+    const operator=(await sql(`SELECT version FROM oa_operators WHERE id='${id}'`))[0]
+    const token=randomBytes(32).toString('base64url'),hash=await hashToken(settings.SESSION_SECRET,'link',token),now=Date.parse('2026-10-28T12:00:00Z')
+    await sql(`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at) VALUES('${crypto.randomUUID()}','${hash}','magic','${id}',${operator.version},'/app',${now},${now+600000})`)
+    const response=await call('/auth/confirm',{token},'')
+    assert.equal(response.status,303)
+    return response.headers.get('set-cookie').split(';')[0]
+  }
+  let staffId,staffCookie,grant
+  for(const role of ['payroll-admin','preparer','accountant','viewer']) {
+    const id='synthetic-envelope-9752-'+role
+    await sql(`INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES('${id}','${id}'||char(64)||'example.test','Synthetic private reader','member','active',1,1)`)
+    await data(base+'/grants',{operatorId:id,version:0,role,locations:[location.id],fields:['ssn','bank','tax'],actions:['records:read','private:read']})
+    const who=await signIn(id)
+    for(const kind of ['ssn','bank','tax'])await assertPrivate(kind,who)
+    for(const target of [outside.id,'synthetic-envelope-missing']) {
+      const response=await call(base+'/people/'+target+'/private/ssn',undefined,who)
+      assert.equal(response.status,404)
+      assert.ok(!(await response.text()).includes('synthetic-envelope-9751'))
+      assert.equal(response.headers.get('x-envelope-classification'),null)
+    }
+    if(role==='viewer') {staffId=id;staffCookie=who;grant=1}
+  }
+  await data(base+'/grants',{operatorId:staffId,version:grant,role:'viewer',locations:[location.id],fields:[],actions:['records:read']});grant++
+  const oldCookie=staffCookie;staffCookie=await signIn(staffId)
+  const beforeRefusal=await snapshot()
+  for(const who of [oldCookie,staffCookie,''])for(const kind of ['ssn','bank','tax']) {
+    const response=await call(base+'/people/'+person.id+'/private/'+kind,undefined,who)
+    assert.equal(response.status,who===staffCookie?403:401)
+    assert.equal(response.headers.get('x-envelope-classification'),null)
+    assert.ok(!(await response.text()).includes('synthetic-envelope-9751'))
+  }
+  assert.deepEqual(await snapshot(),beforeRefusal,'refused reads create no completed classification')
+  for(const [who,classes,count,kind] of [[cookie,['sensitive'],0,'compensation'],[staffCookie,['standard'],1,'masked-worker']]) {
+    const response=await call(base+'/people/'+person.id,undefined,who)
+    assert.equal(response.status,200)
+    assert.deepEqual(JSON.parse(response.headers.get('x-envelope-classification')),classification(classes,count,kind))
+  }
+  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,headless:true,args:['--no-sandbox']})
+  const proof=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope';await mkdir(proof,{recursive:true})
+  try {
+    for(const [label,who,visible] of [['private-authorized',cookie,true],['private-identity',staffCookie,false]]) {
+      const page=await browser.newPage({viewport:{width:1440,height:1000}})
+      await page.route('**/*',async route=>{
+        const url=new URL(route.request().url());assert.equal(url.origin,origin,'no outbound browser request')
+        const response=await context.request(url.href,{headers:{cookie:who}})
+        await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())})
+      })
+      for(const width of [1440,390]) {
+        await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/envelope/companies/'+company.id+'/people/'+person.id)
+        if(width===1440)for(const kind of ['ssn','bank','tax'])assert.equal(await page.getByRole('link',{name:'Read '+kind+' record',exact:true}).count()>0,visible)
+        assert.ok(!(await page.locator('main').innerText()).includes('synthetic-envelope-9751'),'values stay masked on screen')
+        await page.screenshot({path:join(proof,label+'-'+width+'.png'),fullPage:true})
+      }
+      await page.close()
+    }
+  } finally {await browser.close()}
+
+  const foreign=await data('/api/envelope/companies',{name:'Synthetic foreign private employer',ein:'00-0009753'},201)
+  await data('/api/envelope/companies/'+foreign.id+'/people/'+person.id+'/private/ssn',undefined,404)
+  const exported=await call(base+'/export')
+  assert.equal(exported.status,200)
+  assert.deepEqual(JSON.parse(exported.headers.get('x-envelope-classification')),classification(['standard'],2,'masked-worker'))
+  assert.deepEqual((await classified('records.exported'))[0].classification,classification(['standard'],2,'masked-worker'))
+  const csv=await exported.text();assert.equal(csv.split('\r\n').filter(Boolean).length,3);assert.ok(csv.includes(person.id)&&csv.includes(outside.id));assert.ok(!csv.includes('synthetic-envelope-9751'))
+  const empty=await call('/api/envelope/companies/'+foreign.id+'/export')
+  assert.deepEqual(JSON.parse(empty.headers.get('x-envelope-classification')),classification(['standard'],0,'masked-worker'));assert.equal((await empty.text()).split('\r\n').filter(Boolean).length,1)
+
+  const privacy=base+'/people/'+person.id+'/privacy'
+  let inventory=await data(privacy)
+  assert.deepEqual(inventory.retained.map(row=>row.table),Array(3).fill('env_private_records'))
+  assert.deepEqual(inventory.retained.map(row=>row.key.kind).sort(),['bank','ssn','tax'])
+  const nativeInput={consent:true,fingerprint:inventory.fingerprint}
+  // The existing agent cannot acquire a human's custody or private powers from
+  // autonomous policy, a supplied approval claim or possession of a person ID.
+  const policy=await data(base+'/agents/class-policy',{version:0,...(await import('./native.mjs')).answers})
+  const credential=await data(base+'/agents',{name:'Synthetic identity custodian',hours:1,actions:['records:read'],fields:[],locations:['*']},201)
+  for(const path of ['/mcp','/api/envelope/mcp'])for(const name of ['records.private','records.export','privacy.request','privacy.release','privacy.erase']) {
+    const refused=await readClient(context,credential,path)(name,{companyId:company.id,personId:person.id,kind:'ssn',approved:true})
+    assert.ok(error(refused));assert.equal(value(refused),undefined)
+  }
+  for(const path of ['/people/'+person.id+'/private/ssn','/people/'+person.id+'/privacy/request','/people/'+person.id+'/erase','/export']) {
+    const response=await context.request(origin+'/api/envelope/v1/companies/'+company.id+path,{headers:{authorization:'Bearer '+credential.token}})
+    assert.equal(response.status,403);assert.ok(!(await response.text()).includes('synthetic-envelope-9751'))
+  }
+  await data(base+'/agents/class-policy',{version:policy.version,...(await import('./native.mjs')).answers,sensitive:'blocked',destructive:'blocked'})
+  // Native owner intent still needs the exact inventory and fresh step-up;
+  // agent class answers supply neither of these native human permissions.
+  await data(privacy+'/request',nativeInput,403,staffCookie)
+  const requested=await data(privacy+'/request',nativeInput)
+  assert.equal(requested.status,'held')
+  assert.deepEqual((await classified('privacy.erasure.requested'))[0].classification,classification(['destructive','sensitive'],4,'worker-records'))
+  const requestFacts=await classified('privacy.erasure.requested')
+  await data(privacy+'/request',nativeInput)
+  assert.deepEqual(await classified('privacy.erasure.requested'),requestFacts,'replayed request creates no new classification')
+  await data(base+'/people/'+person.id+'/erase',{consent:true,version:requested.version,fingerprint:requested.fingerprint,records:requested.retained.map(row=>row.id)},409)
+  const selected={...nativeInput,records:inventory.retained.map(row=>row.id),legalBasis:'Synthetic reviewed retention release',custodian:'Synthetic native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
+  // Invalid source selections and ineligible holds fail before a completed event.
+  await data(privacy+'/release',selected,409)
+  assert.deepEqual(await classified('privacy.holds.released'),[])
+  await data(privacy+'/retain',selected)
+  await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:1,value:'synthetic-envelope-9751-corrected'},201)
+  const beforeStale=await snapshot()
+  await data(privacy+'/release',selected,409)
+  assert.deepEqual(await snapshot(),beforeStale)
+  inventory=await data(privacy)
+  const current={...selected,fingerprint:inventory.fingerprint,records:inventory.retained.map(row=>row.id)}
+  await data(privacy+'/retain',current)
+  await data(privacy+'/release',{...current,records:current.records.slice(0,2)})
+  assert.deepEqual((await classified('privacy.holds.released'))[0].classification,classification(['destructive','sensitive'],2,'retention-holds'))
+  const final=await data(privacy)
+  const last=final.retained.filter(row=>!row.released)
+  assert.equal(last.length,1)
+  await data(privacy+'/release',{...current,records:last.map(row=>row.id)})
+  assert.deepEqual((await classified('privacy.holds.released'))[0].classification,classification(['destructive','sensitive'],1,'retention-holds'))
+  const releasedFacts=await classified('privacy.holds.released')
+  await data(privacy+'/release',{...current,records:last.map(row=>row.id)},409)
+  assert.deepEqual(await classified('privacy.holds.released'),releasedFacts)
+  await restart()
+  assert.deepEqual(await classified('privacy.holds.released'),releasedFacts,'restart retains exact selected counts')
+  const ready=await data(privacy)
+  const erased=await data(base+'/people/'+person.id+'/erase',{consent:true,version:ready.version,fingerprint:ready.fingerprint,records:ready.retained.map(row=>row.id)})
+  assert.equal(erased.recordsDeleted,4)
+  const erasedAudit=(await classified('privacy.worker.erased'))[0]
+  assert.equal(erasedAudit.targetId,erased.id)
+  assert.deepEqual(erasedAudit.classification,classification(['destructive','sensitive'],4,'worker-records'))
+  assert.ok(!JSON.stringify(await audit()).includes(person.id),'classification retains no erased subject identifier')
+  await data(base+'/people/'+person.id,undefined,404)
+  await data(base+'/people/'+person.id+'/private/ssn',undefined,404)
+  assert.deepEqual((await sql(`SELECT count(*) AS n FROM env_private_records WHERE company_id='${company.id}'`))[0],{n:0})
+  assert.equal((await sql(`SELECT count(*) AS n FROM env_notice_dispatches WHERE company_id='${company.id}'`))[0].n,0)
+  console.log('PROBE SURFACE-004 native-private: SSN, bank and tax native downloads -> sensitive, count 1 and exact kind; scoped human roles allowed, identity-only, signed-out, old-session and foreign-worker reads refused; masked exports count 2 and 0')
+  console.log('PROBE SURFACE-004 native-custody: exact owner request -> destructive and sensitive count 4; invalid and stale hold release -> refused; eligible selected releases -> counts 2 and 1; restart and exact erasure -> count 4, anonymous audit, no retained values; agent custody doors remain unavailable')
+}

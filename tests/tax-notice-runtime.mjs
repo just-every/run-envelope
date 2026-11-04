@@ -223,7 +223,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   assert.deepEqual(await data(paperDoor),[],'Unsupported lower elections create no paper version')
   await data(paperDoor,election({allowances:0,additionalCents:2500}),201)
   let paperRows=await data(paperDoor);assert.equal(paperRows[0].data.federal.fields.allowances,0);assert.equal(paperRows[0].data.federal.fields.additionalCents,2500);assert.equal(paperRows[0].payable,false)
-  const source=await call(instructionDoor+'/original/1');assert.deepEqual(Buffer.from(await source.arrayBuffer()),Buffer.from(lockPdf,'base64'))
+  const source=await call(instructionDoor+'/original/1');assert.deepEqual(JSON.parse(source.headers.get('x-envelope-classification')),[{class:'sensitive',facts:{measure:1,kind:'tax-document'}}]);assert.deepEqual(Buffer.from(await source.arrayBuffer()),Buffer.from(lockPdf,'base64'))
   for(const target of [instructionDoor,instructionDoor+'/original/1',paperDoor]) assert.equal((await call(target,undefined,who)).status,403)
   await advanceClock('2026-10-30T00:00:30Z')
   const modification={...instruction,pdf:Buffer.from('%PDF-1.7\nSynthetic IRS Letter 2808C. Employee 900-25-2525. Single, maximum 3 allowances, effective on receipt October 30, 2026.\n%%EOF').toString('base64'),version:1,kind:'modification',letterOn:'2026-10-30',receivedOn:'2026-10-30',effectiveFrom:'2026-10-30',maximumAllowances:3,quote:'Synthetic authenticated IRS modification permits 3 allowances immediately on receipt.'}
@@ -354,7 +354,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   let teamRow=(await data(teamDoor,undefined,200,staff.preparer.cookie))[0]
   assert.equal(teamRow.createdBy,staff.preparer.id);assert.equal(teamRow.approvedBy,staff.reviewer.id);assert.equal(teamRow.data.evidence[0].recordedBy,staff.preparer.id);assert.equal(teamRow.resolved,false);assert.equal(teamRow.payrollChanged,false)
   for(const staffer of [staff.preparer,staff.reviewer]) await data(teamDoor+'/original/1/0',undefined,403,staffer.cookie)
-  const teamOriginal=await call(teamDoor+'/original/1/0',undefined,staff.custodian.cookie);assert.equal(teamOriginal.status,200);assert.deepEqual(Buffer.from(await teamOriginal.arrayBuffer()),original)
+  const teamOriginal=await call(teamDoor+'/original/1/0',undefined,staff.custodian.cookie);assert.equal(teamOriginal.status,200);assert.deepEqual(JSON.parse(teamOriginal.headers.get('x-envelope-classification')),[{class:'sensitive',facts:{measure:1,kind:'tax-document'}}]);assert.deepEqual(Buffer.from(await teamOriginal.arrayBuffer()),original)
   await data(teamDoor+'/evidence',{...evidence,version:2,reference:'synthetic-envelope-no-investigation'},403,staff.reviewer.cookie)
   await data(teamDoor,{...correction,version:2},403,staff.custodian.cookie)
   await data(teamDoor+'/link-rate',{version:2,ruleId:rule.id,ruleVersion:2},403,staff.reviewer.cookie)
@@ -411,7 +411,7 @@ export async function taxNoticeJourney({origin,cookie,sql,settings,advanceClock}
   for(const target of [teamDoor,teamDoor+'/review',teamDoor+'/original/1/0']) await data(target,undefined,403,staff.preparer.cookie)
   await data(teamDoor,{...correction,version:3},403,staff.preparer.cookie)
   await data(privacyDoor+'/release',{consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(r=>r.id),legalBasis:'Unpermitted delegated release'},403,staff.preparer.cookie)
-  const heldDownload=await call(teamDoor+'/original/1/0');assert.equal(heldDownload.status,200);assert.deepEqual(Buffer.from(await heldDownload.arrayBuffer()),original)
+  const heldDownload=await call(teamDoor+'/original/1/0');assert.equal(heldDownload.status,200);assert.deepEqual(JSON.parse(heldDownload.headers.get('x-envelope-classification')),[{class:'sensitive',facts:{measure:1,kind:'tax-document'}}]);assert.deepEqual(Buffer.from(await heldDownload.arrayBuffer()),original)
   await data(base+'/people/'+linkedPerson.id+'/erase',{version:inventory.version,consent:true,fingerprint:inventory.fingerprint},409)
   const custodyRelease={consent:true,fingerprint:inventory.fingerprint,records:inventory.retained.map(r=>r.id),legalBasis:'Synthetic reviewed expired retention with no continuing hold.',custodian:'Native owner',earliestReleaseAt:'2000-01-01T00:00:00.000Z'}
   await data(privacyDoor+'/retain',custodyRelease)

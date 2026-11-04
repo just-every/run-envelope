@@ -1,3 +1,4 @@
+import { classificationStatement } from './native-classification'
 import { auditStatement, type Actor } from './access'
 import type { Input } from './records'
 import { Notices } from './notices'
@@ -170,8 +171,12 @@ export class TaxNoticeCases {
     const rows=await this.store.list<TaxNoticeCase>(actor,'tax-notice-case'),row=rows.find(r=>r.id===id && r.version===version)
     const doc=index===0?row?.data.original:row?.data.evidence[index-1]?.document
     if(!doc) throw new PayrollError('notice_original_unavailable',404)
-    const event=await auditStatement(this.store.records.env,actor,crypto.randomUUID(),'notice.case.original.read',id,version).run()
-    if (!event.meta.changes) throw new PayrollError('authority_changed',409)
+    const event=crypto.randomUUID()
+    const result=await this.store.records.env.DB.batch([
+      auditStatement(this.store.records.env,actor,event,'notice.case.original.read',id,version),
+      classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
+    ])
+    if (!result[0].meta.changes) throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(doc.pdf),c=>c.charCodeAt(0))
   }
 }

@@ -1,3 +1,5 @@
+import { auditStatement } from './access'
+import { classificationStatement } from './native-classification'
 import { federalIncomeTax } from './industry/federal-withholding'
 import type { IndustryPayInput, FederalW4, ModernW4 } from './industry/types'
 import type { Actor } from './access'
@@ -91,6 +93,11 @@ export class WithholdingInstructions {
     this.owner(actor)
     const row=(await this.store.list<WithholdingInstruction>(actor,'withholding-instruction',person)).find(r=>r.version===version)
     if(!row) throw new PayrollError('lock_in_original_unavailable',404)
+    const event=crypto.randomUUID(),result=await this.store.records.env.DB.batch([
+      auditStatement(this.store.records.env,actor,event,'withholding.original.read',row.id,row.version),
+      classificationStatement(this.store.records.env,actor,event,['sensitive'],1,'tax-document'),
+    ])
+    if(!result[0].meta.changes)throw new PayrollError('authority_changed',409)
     return Uint8Array.from(atob(row.data.original.pdf),c=>c.charCodeAt(0))
   }
   async forCheck(actor:Actor,person:string,input:IndustryPayInput) {

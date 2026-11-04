@@ -5138,6 +5138,7 @@ export async function paperOnboardingJourney({origin,cookie,sql,settings}) {
         'if-none-match':'*','if-modified-since':'Thu, 01 Jan 2099 00:00:00 GMT','range':'bytes=0-7'}})
       assert.equal(response.status,200,method+' current separately scoped download')
       assert.equal(response.headers.get('cache-control'),'no-store')
+      assert.deepEqual(JSON.parse(response.headers.get('x-envelope-classification')),[{class:'sensitive',facts:{measure:1,kind:'tax-document'}}])
       assert.equal(response.headers.get('content-type'),['application','octet-stream'].join('/'))
       assert.match(response.headers.get('content-disposition'),/^attachment; filename="signed-paper\.pdf"$/)
       assert.equal(response.headers.get('x-content-type-options'),'nosniff')

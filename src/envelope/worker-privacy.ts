@@ -1,3 +1,4 @@
+import { classificationStatement } from './native-classification'
 // @ts-expect-error Base publishes this runtime journal subpath without declarations.
 import { erasureStatements, redactionStatements, invalidateTransfersStatements } from '@runeditrun/rer/modules/portability/journal'
 import { fence, auditStatement, type Actor } from './access'
@@ -124,10 +125,11 @@ export class WorkerPrivacy {
     const f=this.owner(actor), proof=stepUpFence(actor), scope=await this.scope(actor,personId)
     if (!explicit(input.consent)) throw new PayrollError('consent_required')
     if (input.fingerprint!==scope.fingerprint) throw new PayrollError('privacy_scope_changed',409)
-    const id=crypto.randomUUID()
+    const id=crypto.randomUUID(), event=crypto.randomUUID()
     const result=await this.records.env.DB.batch([
       this.records.statement(`INSERT INTO env_privacy_requests(company_id,id,person_id,status,created_at) SELECT ?,?,?,'held',? WHERE ${f.sql} AND ${proof.sql} AND COALESCE((SELECT version FROM env_privacy_epochs WHERE company_id=?),0)=? ON CONFLICT(company_id,person_id) DO NOTHING`, [actor.company,id,personId,Date.now(),...f.args,...proof.args,actor.company,scope.epoch]),
-      auditStatement(this.records.env,actor,crypto.randomUUID(),'privacy.erasure.requested',personId,1, 'EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND id=?)',[actor.company,id]),
+      auditStatement(this.records.env,actor,event,'privacy.erasure.requested',personId,1, 'EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND id=?)',[actor.company,id]),
+      classificationStatement(this.records.env,actor,event,['destructive','sensitive'],scope.entries.length,'worker-records'),
     ])
     if (!result[0].meta.changes && !await this.records.statement('SELECT 1 FROM env_privacy_requests WHERE company_id=? AND person_id=?',[actor.company,personId]).first()) throw new PayrollError('step_up_or_scope_changed',409)
     return this.read(actor,personId)
@@ -161,6 +163,11 @@ export class WorkerPrivacy {
       }
       statements.push(auditStatement(this.records.env, actor, crypto.randomUUID(), release ? 'privacy.hold.released' : 'privacy.hold.classified', e.id, 1))
     }
+    if(release) {
+      const event=crypto.randomUUID()
+      statements.push(auditStatement(this.records.env,actor,event,'privacy.holds.released',personId,1),
+        classificationStatement(this.records.env,actor,event,['destructive','sensitive'],selected.length,'retention-holds'))
+    }
     statements.push(this.records.statement('DELETE FROM rer_erasure_guard'))
     try { await this.records.env.DB.batch(statements) } catch { throw new PayrollError(release ? 'hold_not_releasable_or_authority_changed' : 'step_up_or_scope_changed', 409) }
     return this.read(actor, personId)
@@ -182,7 +189,7 @@ export class WorkerPrivacy {
       const expectedIds=scope.entries.filter(e=>e.table!=='env_people').map(e=>e.id)
       if (selected.length!==expectedIds.length || new Set(selected).size!==selected.length || expectedIds.some(id=>!selected.includes(id))) throw new PayrollError('record_selection_required')
     }
-    const anonymous = 'erased-' + crypto.randomUUID()
+    const anonymous = 'erased-' + crypto.randomUUID(), event=crypto.randomUUID()
     const db = this.records.env.DB
     const statements: D1PreparedStatement[] = [this.records.statement(`INSERT INTO rer_erasure_guard(value) SELECT CASE WHEN (${f.sql} AND ${proof.sql}
       AND EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND version=?)
@@ -216,7 +223,9 @@ export class WorkerPrivacy {
     for (const entry of scope.entries) statements.push(this.records.statement('DELETE FROM env_privacy_holds WHERE company_id=? AND record_id=?', [actor.company, entry.id]))
     statements.push(this.records.statement(`UPDATE env_privacy_requests SET person_id=NULL,status='completed',completed_at=?,records_deleted=? WHERE company_id=? AND person_id=?`, [Date.now(),scope.entries.length,actor.company,personId]))
     statements.push(this.records.statement('DELETE FROM env_privacy_guard WHERE company_id=?', [actor.company]), this.records.statement('DELETE FROM env_privacy_redactions WHERE company_id=?', [actor.company]),
-      auditStatement(this.records.env, actor, crypto.randomUUID(), 'privacy.worker.erased', anonymous, expected), this.records.statement('DELETE FROM rer_erasure_guard'))
+      auditStatement(this.records.env, actor, event, 'privacy.worker.erased', anonymous, expected),
+      classificationStatement(this.records.env,actor,event,['destructive','sensitive'],scope.entries.length,'worker-records'),
+      this.records.statement('DELETE FROM rer_erasure_guard'))
     try { await db.batch(statements) } catch { throw new PayrollError('erasure_retention_review_required', 409) }
     return {id: anonymous, erased: true, recordsDeleted: scope.entries.length}
   }

@@ -1,3 +1,4 @@
+import { classificationHeaders } from './native-classification'
 import { agentRest } from './door/rest'
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
 import { ExtendedRetirement } from './benefits/extended-retirement'
@@ -374,7 +375,7 @@ export async function payrollResponse(
           const result=await instructions.approve(actor,person,value)
           response=ui?redirect(door):json(result)
         } else if(tail.length===5 && !post && tail[3]==='original' && /^\d+$/.test(tail[4])) {
-          response=new Response(await instructions.original(actor,person,Number(tail[4])),{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="withholding-instruction.pdf"','x-content-type-options':'nosniff'}})
+          response=new Response(await instructions.original(actor,person,Number(tail[4])),{headers:{...headers,...classificationHeaders(['sensitive'],1,'tax-document'),'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="withholding-instruction.pdf"','x-content-type-options':'nosniff'}})
         } else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='new-hire-reports') {
         const reporting=new NewHireReporting(new WorkspaceStore(records)),person=await records.person(actor,tail[1]),id=tail[3], action=tail[4],back=base+'/people/'+person.id+'/new-hire-reports'
@@ -635,7 +636,7 @@ export async function payrollResponse(
             const result=await (action==='approve'?cases.approve(actor,id,value):action==='evidence'?cases.evidence(actor,id,value):cases.linkRate(actor,id,value))
             response=ui?redirect(base+'/notices/'+id+'/case'):json(result)
           } else if(!post && tail.length===6 && action==='original' && /^\d+$/.test(tail[4]) && /^\d+$/.test(tail[5])) {
-            response=new Response(await cases.original(actor,id,Number(tail[4]),Number(tail[5])),{headers:{...headers,'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="tax-notice.pdf"','x-content-type-options':'nosniff'}})
+            response=new Response(await cases.original(actor,id,Number(tail[4]),Number(tail[5])),{headers:{...headers,...classificationHeaders(['sensitive'],1,'tax-document'),'content-type':['application','pdf'].join('/'),'content-disposition':'attachment; filename="tax-notice.pdf"','x-content-type-options':'nosniff'}})
           } else throw new PayrollError('not_found',404)
         } else if (tail.length===3 && tail[2]==='replies' && post) {
           const result = await notices.saveReply(actor,tail[1],value)
@@ -764,7 +765,7 @@ export async function payrollResponse(
         else if (tail.length===4 && ['approve','withdraw'].includes(tail[3]) && post) {const result=await onboarding.decide(actor,personId,value,tail[3]==='withdraw');response=ui?redirect(back):json(result)}
         else if (tail.length===6 && tail[3]==='original' && !post) {
           const original=await onboarding.original(actor,personId,tail[4],tail[5])
-          response=new Response(original,{headers:{...headers,'content-type':['application','octet-stream'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"',
+          response=new Response(original,{headers:{...headers,...classificationHeaders(['sensitive'],1,'tax-document'),'content-type':['application','octet-stream'].join('/'),'content-disposition':'attachment; filename="signed-paper.pdf"',
             'content-security-policy':"sandbox; default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",'x-download-options':'noopen'}})
         } else throw new PayrollError('not_found',404)
       } else if (tail[0]==='people' && tail[2]==='verification') {
@@ -906,6 +907,7 @@ export async function payrollResponse(
       } else if (tail[0] === 'people' && tail.length === 2 && !post) {
         const person = await records.details(actor, tail[1])
         response = ui ? personPage(session, companies, actor, person) : json(person)
+        Object.entries(classificationHeaders(person.rates===undefined?['standard']:['sensitive'],person.rates===undefined?1:person.rates.length,person.rates===undefined?'masked-worker':'compensation')).forEach(([key,value])=>response.headers.set(key,value))
       } else if (
         tail[0] === 'people' &&
         tail[2] === 'private' &&
@@ -925,6 +927,7 @@ export async function payrollResponse(
         response = new Response(privateValue, {
           headers: {
             ...headers,
+            ...classificationHeaders(['sensitive'],1,tail[3]==='tax'?'tax-document':tail[3]==='bank'?'bank-number':'ssn'),
             'content-type': 'text/plain; charset=utf-8',
             'content-disposition': 'attachment; filename="private-record.txt"',
           },
@@ -947,6 +950,7 @@ export async function payrollResponse(
       } else if (tail[0] === 'rates' && tail.length === 2 && !post) {
         const proposal = await records.reviewRate(actor, tail[1])
         response = ui ? ratePage(session, companies, actor, proposal) : json(proposal)
+        Object.entries(classificationHeaders(['sensitive'],1,'compensation')).forEach(([key,value])=>response.headers.set(key,value))
       } else if (
         tail[0] === 'rates' &&
         tail[2] === 'approve' &&
@@ -962,9 +966,11 @@ export async function payrollResponse(
           'attachment; filename="payroll-audit.json"',
         )
       } else if (!ui && tail.join('/') === 'export' && !post) {
-        response = new Response(await records.export(actor), {
+        const exported=await records.export(actor)
+        response = new Response(exported.csv, {
           headers: {
             ...headers,
+            ...classificationHeaders(['standard'],exported.count,'masked-worker'),
             'content-type': ['text', 'csv'].join('/') + '; charset=utf-8',
             'content-disposition': 'attachment; filename="record-register.csv"',
           },

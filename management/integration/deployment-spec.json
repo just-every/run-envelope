@@ -300,6 +300,12 @@
       "name": "0049_agent_operation_lookup.sql",
       "sha256": "652caf1917184bd85d6312f86cba0ba4d76d2ed9904c54dc563aadc16a1de276",
       "sql": "-- Native operators can reconcile a shared decision with its original company\n-- activity without scanning every client's retained week.\nCREATE INDEX env_agent_call_operation ON env_agent_call_audit(company_id,door_operation_id,occurred_at);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0050_native_sensitive_actions.sql",
+      "sha256": "b5980ed07379c84ce43e7ba4958dbff23c2ed70b6ba39930cdbe8612340622a2",
+      "sql": "-- Classification belongs to the audited native selection and carries no payload.\nCREATE TABLE env_native_action_facts (\n audit_id TEXT PRIMARY KEY REFERENCES env_audit(id),\n classification TEXT NOT NULL CHECK(json_valid(classification))\n);\nCREATE TRIGGER env_native_action_facts_no_update BEFORE UPDATE ON env_native_action_facts\nBEGIN SELECT RAISE(ABORT,'immutable_native_action_facts'); END;\nCREATE TRIGGER env_native_action_facts_no_delete BEFORE DELETE ON env_native_action_facts\nBEGIN SELECT RAISE(ABORT,'immutable_native_action_facts'); END;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
