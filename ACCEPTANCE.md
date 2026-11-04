@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 33 | 60 | 98 |
+| Core | 5 | 33 | 61 | 99 |
 | Agent surface | 0 | 1 | 19 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 5 | 36 | 84 | 125 |
+| Full target | 5 | 36 | 85 | 126 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1397,6 +1397,24 @@ Core · target · **missing** · Rules D-6
 
 **Evidence.** None.
 **Gap.** No implementation exists; the complete us-first complete payroll and honest product boundaries behavior and its public-door acceptance journey remain to be built and proven.
+
+### Agent surface
+
+#### SURFACE-008 — Independently named Business senders retain exact native authority
+
+Core · target · **missing** · From new · Cites BASE-AGENT-004, BASE-AGENT-005, BASE-AGENT-008, BASE-AGENT-009 · Rules D-5, D-6
+
+**Requirement.** Envelope accepts a valid Business agent bound to an authorized native credential when their display names differ. Supported generic notice replies retain the actual sending Business identity and sponsor attribution through preparation, exact review and dispatch, within current native authority and company policy. Display-name equality is no condition of that authority.
+
+**Acceptance.**
+1. Under the held company policy, a valid independently named Business agent's unchanged supported generic notice reply dispatches once after separate human review of the exact binding and reply, without a label-equality refusal.
+2. Review, the outgoing message, the native record, activity and permitted export retain the actual sending Business identity and sponsor attribution.
+3. A fresh exact review using the same unchanged independently named binding remains actionable; a display-name difference alone cannot make it stale or unavailable.
+4. A real sender identity, sponsor, authority or payload change requires fresh exact human review. Stale, revoked or unapproved send attempts refuse with no outbound or native effect.
+5. Ordinary notice review and attribution screens show the sending identity, sponsor and current review state at 1440 and 390 CSS pixels.
+
+**Evidence.** None.
+**Gap.** Independently named Business-to-native credential preparation, actionable exact review and supported generic notice dispatch with actual sender/sponsor attribution and unchanged-state refusal controls remain unbuilt or unproved.
 
 ### Agents carrying payroll through to evidence
 

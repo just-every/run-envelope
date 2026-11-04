@@ -1488,7 +1488,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company's policy decides every ca
 | `envelope.authorizations.prepare` | Prepare 8655, state POA and debit mandates for signing | ENV-037, ENV-105, ENV-044, ENV-065 | commitment · gated | none |
 | `envelope.coverage.export` | Read the coverage ledger and request a mapping | ENV-066, ENV-097, ENV-098, ENV-099 | standard | none |
 | `envelope.notices.process` | Intake, extract and match a notice or claim request | ENV-025, ENV-069, ENV-062 | standard or sensitive | `notice.process` |
-| `envelope.notices.reply` | Send a notice reply or claim response | ENV-025, ENV-069, ENV-062 | commitment · external | `reply.dispatch` |
+| `envelope.notices.reply` | Send a notice reply or claim response | ENV-025, ENV-069, ENV-062, SURFACE-008 | commitment · external | `reply.dispatch` |
 | `envelope.reconcile.run` | Reconcile a run or period and propose fixes | ENV-038, ENV-061 | standard | none |
 | `envelope.ledger.post` | Post a payroll journal to the connected ledger | ENV-023 | external | none |
 | `envelope.migration.import` | Import an incumbent's history and standing setup | ENV-026, ENV-039, ENV-100, ENV-101, ENV-102, ENV-064 | standard or sensitive | none |
