@@ -402,7 +402,7 @@ export class Records {
         ],
       ),
       this.statement(
-        `SELECT cipher FROM env_private_records WHERE company_id=? AND person_id=? AND kind=? AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) AND ${f.sql}`,
+        `SELECT cipher,version FROM env_private_records WHERE company_id=? AND person_id=? AND kind=? AND EXISTS(SELECT 1 FROM env_audit WHERE id=?) AND ${f.sql}`,
         [actor.company, id, kind, event, ...f.args],
       ),
       await classificationStatement(this.env,actor,event,['sensitive'],1,kind==='tax'?'tax-document':kind==='bank'?'bank-number':'ssn'),
@@ -410,7 +410,12 @@ export class Records {
     const row = result[1].results[0]
     if (!row) throw new PayrollError('record_not_found', 404)
     const value = await unseal(key, JSON.stringify([actor.company, id, kind]), String(row.cipher))
-    if (!await this.statement(`SELECT 1 WHERE ${f.sql}`,f.args).first()) throw new PayrollError('authority_changed',409)
+    // The ciphertext was selected before decryption. A correction or erasure
+    // during that await must not deliver data under the earlier selection.
+    const current=fence(actor)
+    if (!await this.statement(`SELECT 1 FROM env_private_records r JOIN env_people p ON p.company_id=r.company_id AND p.id=r.person_id
+      WHERE r.company_id=? AND r.person_id=? AND r.kind=? AND r.version=? AND r.cipher=? AND p.version=? AND ${current.sql}`,
+      [actor.company,id,kind,row.version,row.cipher,person.version,...current.args]).first()) throw new PayrollError('authority_or_record_changed',409)
     return value
   }
   async proposeRate(actor: Actor, id: string, input: Input) {

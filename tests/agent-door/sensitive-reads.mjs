@@ -56,9 +56,12 @@ export default async function sensitiveReads(context) {
     }
     const foreign=await read('draft.read',{companyId:state.get(origin).company.id,draftId:drafts[0].id});assert.ok(error(foreign));assert.equal(value(foreign),undefined)
   }
-  for(const path of ['/records?limit=2','/drafts/'+drafts[0].id,'/bonus-runs/'+bonuses[0].id,'/reports/proposals?limit=2','/reports/bonus-runs?limit=2']) {
+  for(const [path,count,cls] of [['/records?limit=2',2,'standard'],['/drafts/'+drafts[0].id,1,'sensitive'],['/bonus-runs/'+bonuses[0].id,1,'sensitive'],['/reports/proposals?limit=2',2,'sensitive'],['/reports/bonus-runs?limit=2',2,'sensitive'],['/reports/proposals?after=zzzz',0,'sensitive'],['/reports/bonus-runs?after=zzzz',0,'sensitive']]) {
     const response=await rest(path);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store')
+    assert.deepEqual(JSON.parse(response.headers.get('x-envelope-classification')),[{class:cls,facts:{measure:count,...(cls==='sensitive'?{kind:'compensation'}:{})}}])
     const body=await response.json();assert.ok(body.id||body.records||body.proposals||body.bonuses)
+    const head=await request(origin+'/api/envelope/v1/companies/'+company.id+path,{method:'HEAD',headers:{authorization:'Bearer '+credential.token}})
+    assert.equal(head.status,200);assert.equal(await head.text(),'');assert.equal(head.headers.get('x-envelope-classification'),response.headers.get('x-envelope-classification'))
   }
   // Restricted grants cannot retrieve preparations made by another credential,
   // even when the worker's identity is otherwise visible at that location.
@@ -106,6 +109,7 @@ export default async function sensitiveReads(context) {
     }
     for(const path of ['/drafts/'+drafts[0].id,'/bonus-runs/'+bonuses[0].id,'/reports/proposals','/reports/bonus-runs']) {
       const response=await rest(path);assert.equal(response.status,403);const body=await response.json();assert.equal(body.error,sensitive==='blocked'?'policy_blocked':'policy_approval_required');assert.equal(body.proposals,undefined);assert.equal(body.preview,undefined)
+      assert.equal(response.headers.get('x-envelope-classification'),null,'refusal carries no completed selection')
     }
     facts(await call('records.list',args),3,'','standard')
     for(const [name,extra] of [['draft.read',{draftId:drafts[0].id}],['bonus.read',{runId:bonuses[0].id}],['reports.proposals',{}],['reports.bonuses',{}]]) {
@@ -263,6 +267,21 @@ export async function sensitiveNativeCustody(context) {
   const {origin,cookie,sql,settings,restart}=context
   const call=(path,body,who=cookie,method)=>context.request(origin+path,{method:method??(body===undefined?'GET':'POST'),redirect:'manual',headers:{origin,cookie:who,'content-type':['application','json'].join('/')},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const data=async(path,body,status=200,who)=>{const response=await call(path,body,who);assert.equal(response.status,status,path+' '+await response.clone().text());return response.json()}
+  const suspendedPrivate=async(path,change,who=cookie)=>{
+    const pending=context.request(origin+path,{headers:{cookie:who,'x-synthetic-policy-batch':'private-read-hold'}})
+    let waiting=false
+    for(let attempt=0;attempt<200&&!waiting;attempt++) {
+      const state=await context.request(origin+'/health',{headers:{'x-synthetic-policy-batch':'observe'}})
+      waiting=state.headers.get('x-synthetic-policy-state')==='waiting'
+      if(!waiting)await new Promise(resolve=>setTimeout(resolve,20))
+    }
+    try {assert.ok(waiting,'private selection reached its delivery boundary');await change()}
+    finally {await context.request(origin+'/health',{headers:{'x-synthetic-policy-batch':'release'}})}
+    const refused=await pending
+    assert.equal(refused.status,409,'changed private selection must not deliver retained plaintext')
+    assert.equal(refused.headers.get('x-envelope-classification'),null)
+    assert.ok(!(await refused.text()).includes('synthetic-envelope-9751'))
+  }
   const company=await data('/api/envelope/companies',{name:'Synthetic classified custody employer',ein:'00-0009750'},201)
   const base='/api/envelope/companies/'+company.id
   const location=await data(base+'/locations',{name:'Private workplace',state:'PA'},201)
@@ -311,7 +330,7 @@ export async function sensitiveNativeCustody(context) {
     }
     if(role==='viewer') {staffId=id;staffCookie=who;grant=1}
   }
-  await data(base+'/grants',{operatorId:staffId,version:grant,role:'viewer',locations:[location.id],fields:[],actions:['records:read']});grant++
+  await suspendedPrivate(base+'/people/'+person.id+'/private/tax',()=>data(base+'/grants',{operatorId:staffId,version:grant,role:'viewer',locations:[location.id],fields:[],actions:['records:read']}),staffCookie);grant++
   const oldCookie=staffCookie;staffCookie=await signIn(staffId)
   const beforeRefusal=await snapshot()
   for(const who of [oldCookie,staffCookie,''])for(const kind of ['ssn','bank','tax']) {
@@ -390,7 +409,7 @@ export async function sensitiveNativeCustody(context) {
   await data(privacy+'/release',selected,409)
   assert.deepEqual(await classified('privacy.holds.released'),[])
   await data(privacy+'/retain',selected)
-  await data(base+'/people/'+person.id+'/private',{kind:'ssn',version:1,value:'synthetic-envelope-9751-corrected'},201)
+  await suspendedPrivate(base+'/people/'+person.id+'/private/ssn',()=>data(base+'/people/'+person.id+'/private',{kind:'ssn',version:1,value:'synthetic-envelope-9751-corrected'},201))
   const beforeStale=await snapshot()
   await data(privacy+'/release',selected,409)
   assert.deepEqual(await snapshot(),beforeStale)
@@ -411,7 +430,10 @@ export async function sensitiveNativeCustody(context) {
   await restart()
   assert.deepEqual(await classified('privacy.holds.released'),releasedFacts,'restart retains exact selected counts')
   const ready=await data(privacy)
-  const erased=await data(base+'/people/'+person.id+'/erase',{consent:true,version:ready.version,fingerprint:ready.fingerprint,records:ready.retained.map(row=>row.id)})
+  let erased
+  await suspendedPrivate(base+'/people/'+person.id+'/private/ssn',async()=>{
+    erased=await data(base+'/people/'+person.id+'/erase',{consent:true,version:ready.version,fingerprint:ready.fingerprint,records:ready.retained.map(row=>row.id)})
+  })
   assert.equal(erased.recordsDeleted,4)
   assert.deepEqual(erased.classification,classification(['destructive','sensitive'],4,'worker-records'))
   const erasedAudit=(await classified('privacy.worker.erased'))[0]
@@ -424,4 +446,5 @@ export async function sensitiveNativeCustody(context) {
   assert.equal((await sql(`SELECT count(*) AS n FROM env_notice_dispatches WHERE company_id='${company.id}'`))[0].n,0)
   console.log('PROBE SURFACE-004 native-private: SSN, bank and tax native downloads -> sensitive, count 1 and exact kind; scoped human roles allowed, identity-only, signed-out, old-session and foreign-worker reads refused; masked exports count 2 and 0')
   console.log('PROBE SURFACE-004 native-custody: exact owner request -> destructive and sensitive count 4; invalid and stale hold release -> refused; eligible selected releases -> counts 2 and 1; restart and exact erasure -> count 4, anonymous audit, no retained values; agent custody doors remain unavailable')
+  console.log('PROBE SURFACE-004 private-delivery: correction and erasure after ciphertext selection -> refused before plaintext delivery, no successful response classification')
 }

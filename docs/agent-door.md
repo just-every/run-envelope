@@ -109,6 +109,10 @@ Retrieving an approved read rechecks the same selection rather than returning
 retained compensation under a different decision. Restart does not reset these
 checks. Refusals require a fresh read and, when policy requires it, fresh approval.
 The MCP door, its alias and the existing agent REST reads use this same path.
+Successful REST GET and HEAD reads expose the same computed facts in
+`x-envelope-classification`; HEAD returns no content. Refused reads have no
+completed-selection header. Empty compensation pages still carry sensitive with
+a count of zero. No extra selection is made to compute the REST header.
 
 This increment adds no SSN, bank-number, tax-document or export tool and no
 erasure or hold-release authority. Complete private-document custody and the
@@ -150,3 +154,10 @@ coverage remain unavailable. Their eventual implementations inherit the same
 classification and current-authority duties; this native increment does not
 supply them. Existing provider, payment, calculation and statutory-custody
 boundaries remain in force.
+
+Native private-record delivery repeats current session and company authority
+after decryption and checks that the exact selected record and worker still
+exist unchanged. A correction or erasure while that read is suspended refuses
+delivery; the caller must make a fresh read. Revocation likewise cancels the
+pending read. A refused response contains neither private bytes nor a successful
+classification header.
