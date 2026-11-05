@@ -95,7 +95,9 @@ populated durable audit and captured diagnostics for bearer retention. The
 owner obtains fresh native proof through real single-use email-link requests
 and confirmation, with only the declared mail provider faked at its network
 edge. The journey runs the emitted production Worker over isolated HTTPS and
-adds no production authentication path.
+adds no production authentication path. It also refuses signed tokens naming an
+unknown sponsor, a changed email, a foreign Business or no consent without
+changing native business records or credentials.
 
 An adopted signed Business policy can withdraw a consent immediately. Both MCP
 routes refuse its next read, preparation, discovery and saved-result replay;
@@ -120,8 +122,21 @@ the owner had already configured it, and the owner must explicitly configure
 that policy before native agent work can resume. Stopping updates neither
 adds a grant nor issues a replacement Business token.
 
+The same journey replaces the installation's existing public-key bindings at
+Worker restart. A key outside that ring cannot authenticate or update signed
+Business settings or policy. During an administrator-provisioned overlap, both
+keys can read; the replacement can prepare one genuinely retained native draft
+using the original credential and sponsor. After removing the old public key,
+its fresh calls, saved-result replay and signed settings and policy refuse,
+including after another restart. The replacement token and independently issued
+native credential still work. No test private signing key enters a Worker
+binding, and changing the ring neither issues nor widens a native grant. This
+proves consumption of configured public keys, not production key issuance,
+distribution or an automatic key-refresh service.
+
 These are installed native lifecycle proofs. Actual sibling-seed execution,
-the complete OAuth and native JWT issuer and signing-key lifecycle, end-to-end
+the complete OAuth and native JWT issuer lifecycle and production signing-key
+issuance and distribution, end-to-end
 Business revocation delivery within 60 seconds, dedicated native consent
 selection and the remaining role and transport matrix are still owed by
 BASE-AGENT-004. Receiving a disposable signed revocation is not evidence of

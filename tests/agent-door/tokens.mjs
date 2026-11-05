@@ -6,23 +6,37 @@ import { privateValue } from '../privacy-recorder.mjs'
 
 export const tokenInstant = '2026-10-28T12:00:00.000Z'
 
+export async function tokenSigner(issuer, installationId) {
+  const keys = await webcrypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
+  return {privateKey:keys.privateKey,publicKey:await webcrypto.subtle.exportKey('jwk',keys.publicKey),kid:crypto.randomUUID(),issuer,installationId}
+}
+
 /** Disposable installation trust, using the installed Business wire formats. */
 export async function tokenInstallation(origin, email) {
-  const keys = await webcrypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])
-  const kid = crypto.randomUUID(), issuer = 'https://business.example.test', installationId = crypto.randomUUID()
-  const publicKeys = {[kid]:await webcrypto.subtle.exportKey('jwk',keys.publicKey)}
-  const trust = {v:1,issuer,audience:'self-host',subject:installationId,email,keys:publicKeys}
+  const issuer = 'https://business.example.test', installationId = crypto.randomUUID()
+  const signer = await tokenSigner(issuer,installationId)
+  const trust = {v:1,issuer,audience:'self-host',subject:installationId,email}
+  const keyRing = signers => {
+    assert.ok(signers.length)
+    assert.ok(signers.every(key=>key.issuer===issuer&&key.installationId===installationId))
+    const publicKeys=Object.fromEntries(signers.map(key=>[key.kid,key.publicKey]))
+    return {
+      RER_OWNER_CLAIM_ISSUER:issuer, RER_OWNER_CLAIM_INSTALLATION_ID:installationId,
+      RER_OWNER_CLAIM_PUBLIC_KEYS:JSON.stringify(publicKeys), RER_BUSINESS_TRUST:JSON.stringify({...trust,keys:publicKeys}),
+    }
+  }
   const context = {
-    origin, signer:{privateKey:keys.privateKey,kid,issuer,installationId}, now:Date.parse(tokenInstant),
+    origin, signer, now:Date.parse(tokenInstant),
     business:crypto.randomUUID(), person:{sub:crypto.randomUUID(),email}, consent:crypto.randomUUID(),
     surface:{specialist:'payroll',tools:[]}, seq:0, revision:0, revoked:{agents:[],consents:[]},
   }
   const bearers = new Set()
   const mails = []
   const recipients=new Set([email])
+  let settingsRevision=0
   const remember = token => {bearers.add(token);privateValue(token);return token}
   return {
-    context, bearers, mails, recipients,
+    context, bearers, mails, recipients, keyRing,
     async mailEdge(request) {
       assert.equal(request.url,'https://api.resend.com/emails')
       assert.equal(request.method,'POST')
@@ -34,20 +48,19 @@ export async function tokenInstallation(origin, email) {
       mails.push(body)
       return Response.json({id:crypto.randomUUID()})
     },
-    bindings:{
-      RER_OWNER_CLAIM_ISSUER:issuer, RER_OWNER_CLAIM_INSTALLATION_ID:installationId,
-      RER_OWNER_CLAIM_PUBLIC_KEYS:JSON.stringify(publicKeys), RER_BUSINESS_TRUST:JSON.stringify(trust),
-    },
-    async pair(request, status=200) {
+    bindings:keyRing([signer]),
+    async pair(request, status=200, signer=context.signer) {
       const iat = context.now / 1000
-      const settings = await signJws(keys.privateKey,kid,'rer-business-settings+jwt',{
+      const settings = await signJws(signer.privateKey,signer.kid,'rer-business-settings+jwt',{
         v:1,iss:issuer,aud:trust.audience,sub:installationId,business:context.business,email,
-        owner_id:context.person.sub,jti:crypto.randomUUID(),iat,exp:iat+300,rev:1,
+        owner_id:context.person.sub,jti:crypto.randomUUID(),iat,exp:iat+300,rev:settingsRevision+1,
         values:{display_name:'Synthetic token employer'},logo:null,team:[],
       })
       const response = await request('/api/rer/business-settings',{settings})
       assert.equal(response.status,status,'the existing signed settings lifecycle binds the Business owner only while paired')
-      await response.body.cancel()
+      if(status===200) settingsRevision++
+      if(status===403) assert.deepEqual(await response.json(),{error:'invalid_settings'})
+      else await response.body.cancel()
     },
     async adopt(request, document, options={}) {
       const revoked={agents:[...new Set([...context.revoked.agents,...options.revoked?.agents??[]])],consents:[...new Set([...context.revoked.consents,...options.revoked?.consents??[]])]}
@@ -60,8 +73,8 @@ export async function tokenInstallation(origin, email) {
       context.revoked=revoked
       return signed
     },
-    async token(overrides = {}) {
-      return remember(await accessToken(context,{scope:'records:read drafts:prepare',...overrides}))
+    async token(overrides = {}, signer=context.signer) {
+      return remember(await accessToken({...context,signer},{scope:'records:read drafts:prepare',...overrides}))
     },
     async untrustedToken() {
       const foreign = await webcrypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},false,['sign','verify'])

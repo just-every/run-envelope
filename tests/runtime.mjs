@@ -316,6 +316,10 @@ try {
         sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),
         advanceClock:async instant=>{assert.equal((await request(tokens.context.origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},
         restart:async()=>{await stopWorker();await start()},
+        reconfigureTrust:async bindings=>{
+          assert.deepEqual(Object.keys(bindings).sort(),Object.keys(tokens.bindings).sort())
+          await stopWorker();Object.assign(tokenSettings,bindings);await start()
+        },
       })
     } finally { await stopWorker();worker=await launch(settings);await waitForWorker() }
   }

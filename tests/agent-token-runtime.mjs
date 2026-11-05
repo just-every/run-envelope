@@ -4,10 +4,10 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { autonomousPolicy, heldPolicy, policyEnvelope } from '../src/modules/agent-door/conformance/crypto.mjs'
 import { answers } from './agent-door/native.mjs'
-import { tokenCall, tokenChallenge, tokenInstant } from './agent-door/tokens.mjs'
+import { tokenCall, tokenChallenge, tokenInstant, tokenSigner } from './agent-door/tokens.mjs'
 
 /** Paired Business credential sanity journey against the emitted persistent Worker. */
-export async function tokenJourney({origin,cookie,settings,sql,restart,advanceClock,installation,request:transport}) {
+export async function tokenJourney({origin,cookie,settings,sql,restart,reconfigureTrust,advanceClock,installation,request:transport}) {
   const request = (path,body,who=cookie,extra={}) => transport(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',
     headers:{origin,...(who?{cookie:who}:{}),'content-type':'application/json','CF-Connecting-IP':'127.0.0.2',...extra},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const owner = async (path,body,status=200) => {
@@ -99,7 +99,7 @@ export async function tokenJourney({origin,cookie,settings,sql,restart,advanceCl
   }
   for (const phase of ['autonomous','held']) {
     const policy=phase==='autonomous'?autonomousPolicy():heldPolicy()
-    const initialPolicy=await installation.adopt(request,policy)
+    await installation.adopt(request,policy)
     installation.context.consent=crypto.randomUUID()
     installation.context.agentId = crypto.randomUUID()
     const credential = await owner(base+'/agents',{name:'Synthetic paired payroll agent',businessAgentId:installation.context.agentId,hours:1,actions:['records:read','drafts:prepare'],fields:['compensation'],locations:['*']},201)
@@ -147,9 +147,15 @@ export async function tokenJourney({origin,cookie,settings,sql,restart,advanceCl
       await refusal(await installation.token({aud:'https://sibling.example.test/mcp'}),401)
       await refusal(await installation.token({iss:'https://untrusted.example.test'}),401)
       await refusal(await installation.untrustedToken(),401)
+      for(const claims of [
+        {sub:crypto.randomUUID()},
+        {email:'synthetic-envelope-9854'+String.fromCharCode(64)+'example.test'},
+        {business:crypto.randomUUID()},
+        {consent:''},
+      ]) await refusal(await installation.token(claims),401)
       const unbound = await installation.token({act:{sub:crypto.randomUUID(),name:'Synthetic unbound agent',specialist:'payroll'}})
       await refusal(unbound,403,{},['drafts:prepare'])
-      console.log('PROBE BASE-AGENT-004 2 '+phase+' '+path+': paired token -> native read and one attributed preparation; foreign audience, untrusted issuer or key and unbound agent -> refused, native state unchanged; sibling installation not exercised')
+      console.log('PROBE BASE-AGENT-004 2 '+phase+' '+path+': paired token -> native read and one attributed preparation; foreign audience, untrusted issuer or key, unknown sponsor, changed email, foreign Business, absent consent and unbound agent -> refused, native state unchanged; sibling installation not exercised')
 
       success(await mcp(await installation.token({iat,exp:iat+900}),'envelope.records.list',{companyId:company.id},{path}))
       await refusal(await installation.token({iat,exp:iat+901}),401)
@@ -175,22 +181,78 @@ export async function tokenJourney({origin,cookie,settings,sql,restart,advanceCl
     await restart()
     success(await mcp(token,'envelope.records.list',{companyId:company.id},{path:'/api/envelope/mcp'}))
     await noBearerRetention()
+
+    // Administrators replace only the installation's existing public-key
+    // bindings; the private signing material never leaves this test process.
+    const previousSigner=installation.context.signer
+    const nextSigner=await tokenSigner(previousSigner.issuer,previousSigner.installationId)
+    const nextToken=await installation.token({},nextSigner)
+    const unchangedKeys=await retained(),unchangedEffects=await writes()
+    for(const path of ['/mcp','/api/envelope/mcp'])
+      await refused(nextToken,'envelope.draft.prepare',args(),path)
+    const trustState=async()=>({settings:await sql('SELECT * FROM bs_settings'),policy:await sql('SELECT * FROM agent_door_state')})
+    const beforeUnknownKey=await trustState()
+    await installation.pair(request,403,nextSigner)
+    const unknownPolicy=await policyEnvelope({...installation.context,signer:nextSigner},policy)
+    assert.equal((await request('/api/rer/agent-policy',{policy:unknownPolicy.policy})).status,400)
+    assert.deepEqual(await trustState(),beforeUnknownKey,'an unknown key cannot replace installed owner settings or policy')
+
+    await reconfigureTrust(installation.keyRing([previousSigner,nextSigner]))
+    for(const path of ['/mcp','/api/envelope/mcp']) {
+      success(await mcp(token,'envelope.records.list',{companyId:company.id},{path}))
+      success(await mcp(nextToken,'envelope.records.list',{companyId:company.id},{path}))
+    }
+    assert.deepEqual(await retained(),unchangedKeys,'overlapping signing keys do not issue or alter native authority')
+    assert.deepEqual(await writes(),unchangedEffects)
+    installation.context.signer=nextSigner
+    await installation.pair(request)
+    await installation.adopt(request,policy)
+    const nextArgs=args(),beforeNext=await writes()
+    const nextPrepared=success(await mcp(nextToken,'envelope.draft.prepare',nextArgs))
+    const nextEffects=(await writes()).filter(row=>!beforeNext.some(prior=>prior.id===row.id))
+    assert.equal(nextEffects.length,1,'an admitted replacement signing key performs one genuine native preparation')
+    assert.equal(nextEffects[0].target_id,nextPrepared.id)
+    assert.equal(nextEffects[0].credential_id,credential.id)
+    assert.equal(nextEffects[0].sponsor_id,credential.sponsorId)
+    const beforeRemoval=await retained(),beforeRemovalEffects=await writes()
+    await reconfigureTrust(installation.keyRing([nextSigner]))
+    for(const path of ['/mcp','/api/envelope/mcp']) {
+      await refused(token,'envelope.records.list',{companyId:company.id},path)
+      await refused(token,'envelope.draft.prepare',preparedArgs,path)
+      success(await mcp(nextToken,'envelope.records.list',{companyId:company.id},{path}))
+    }
+    const beforeRemovedKey=await trustState()
+    await installation.pair(request,403,previousSigner)
+    const removedPolicy=await policyEnvelope({...installation.context,signer:previousSigner},policy,{paused:true})
+    assert.equal((await request('/api/rer/agent-policy',{policy:removedPolicy.policy})).status,400)
+    assert.deepEqual(await trustState(),beforeRemovedKey,'a removed signing key cannot change settings or pause the installed policy')
+    await restart()
+    await refused(token,'envelope.draft.prepare',preparedArgs)
+    success(await mcp(nextToken,'envelope.records.list',{companyId:company.id},{path:'/api/envelope/mcp'}))
+    success(await mcp(credential.token,'envelope.records.list',{companyId:company.id}))
+    assert.deepEqual(await retained(),beforeRemoval)
+    assert.deepEqual(await writes(),beforeRemovalEffects)
+    await noBearerRetention()
+    console.log('PROBE BASE-AGENT-004 keys '+phase+': unknown key -> 401 and settings or policy refusal; overlapping installed keys -> both work; replacement -> one attributed native preparation; removed key -> 401 on fresh and saved-result calls across restart, signed settings and policy refused; replacement and native credential remain usable')
+
+    const currentToken=nextToken
+    const initialPolicy=await installation.adopt(request,policy)
     const consent=installation.context.consent
     const independent=await installation.token({consent:crypto.randomUUID()})
     success(await mcp(independent,'envelope.records.list',{companyId:company.id}))
-    await suspended(token,()=>installation.adopt(request,policy,{revoked:{agents:[],consents:[consent]}}))
+    await suspended(currentToken,()=>installation.adopt(request,policy,{revoked:{agents:[],consents:[consent]}}))
     assert.equal((await request('/api/rer/agent-policy',{policy:initialPolicy.policy})).status,409,'a captured earlier signed policy cannot restore consent')
     for(const path of ['/mcp','/api/envelope/mcp']) {
-      await refused(token,'envelope.records.list',{companyId:company.id},path)
-      await refused(token,'envelope.draft.prepare',args(),path)
-      await refused(token,'envelope.draft.prepare',preparedArgs,path)
-      await refused(token,undefined,undefined,path)
+      await refused(currentToken,'envelope.records.list',{companyId:company.id},path)
+      await refused(currentToken,'envelope.draft.prepare',args(),path)
+      await refused(currentToken,'envelope.draft.prepare',nextArgs,path)
+      await refused(currentToken,undefined,undefined,path)
       success(await mcp(independent,'envelope.records.list',{companyId:company.id},{path}))
     }
     await advanceClock('2026-10-28T12:00:59.000Z')
-    await refused(await installation.token(),'envelope.draft.prepare',preparedArgs)
+    await refused(await installation.token(),'envelope.draft.prepare',nextArgs)
     await restart()
-    await refused(token,'envelope.draft.prepare',preparedArgs)
+    await refused(currentToken,'envelope.draft.prepare',nextArgs)
     success(await mcp(independent,'envelope.records.list',{companyId:company.id}))
     await advanceClock(tokenInstant)
     // Seed-side withdrawal is deliberately broader: the owner revokes this
