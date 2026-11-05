@@ -110,19 +110,24 @@ elicitation when the modern MCP client advertises URL elicitation support. It
 retains the server's target, amount, summary and class facts without preparing a
 run. The named person signs in separately and approves the saved policy revision
 and summary. Retrying the same call returns the completed result and approval
-receipt; it cannot prepare a second run. Changed arguments cannot reuse that
+receipt; it cannot prepare a second run. A changed shared policy revision also invalidates a waiting approval,
+even when its document has the same contents. Changed arguments cannot reuse that
 approval: use a fresh key and obtain a fresh exact approval. Rejection and expiry
 return `approval_rejected` and `approval_expired` without preparation. Blocked
 returns `policy_blocked` with its class, rule and policy revision. A changed
 shared policy applies to the next call and is recorded in its audit.
 
 This shared decision is permission to attempt preparation under the native
-company floor. Native review and approval restrictions still refuse execution,
+company floor. Native review, approval and blocked restrictions still refuse execution under
+shared autonomous, review and approval policies before a pending action opens,
 and native Pause also prevents an already pending action from executing. Shared
 approval never supplies native payroll approval, tax or net calculation, payment
 readiness or dispatch authority. The emitted-Worker journey
 `tests/agent-policy-decisions-runtime.mjs` exercises this bounded bonus path,
 including named-person browser decisions, restart and a controlled expiry clock.
+The existing native v1 bonus route has the same four decisions: approval returns
+its pending handle with `approval_required`; the named person approves through
+the same browser door before the integration retry returns its single preparation.
 Other tools and classes, thresholds, daily caps, multi-class decisions, complete
 setup and upgrade behavior, signed-policy rejection, delegated policy
 administration and full transport parity remain separate unproved obligations.
