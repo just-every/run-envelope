@@ -1815,8 +1815,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 37 | 84 | 125 |
-| All | 5 | 37 | 84 | 126 |
+| Target and push further | 4 | 38 | 83 | 125 |
+| All | 5 | 38 | 83 | 126 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1936,7 +1936,7 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `BASE-AGENT-001` | One MCP door per seed | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-002` | The seed's jobs are tools, through the UI's own actions | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-003` | Records are resources | target | missing | | Not yet judged through this seed's own doors. |
-| `BASE-AGENT-004` | Business identity and short-lived, audience-bound tokens | target | missing | | Not yet judged through this seed's own doors. |
+| `BASE-AGENT-004` | Business identity and short-lived, audience-bound tokens | target | partial | Acceptance points 1–5, installed paired Business subcases: `tests/agent-token-runtime.mjs` — tokenJourney, invoked by `tests/runtime.mjs` as agent-tokens in the push runtime shard. Both real MCP routes under autonomous and held policies prove the canonical RFC 9728 challenge, trusted issuer and installed scopes, actual retained reads and uncalculated preparation bound to a genuinely issued native grant, wrong-audience and untrusted issuer or key refusals, expired and exact-expiry refusals, the 900 and 901 second lifetime boundary, and read-only write refusal with the complete required-scope challenge. Query tokens alone and with a valid Authorization header refuse without retained bearer values in response diagnostics, populated durable audit or the privacy recorder's captured Worker diagnostics. Independent native state and credential snapshots prove refusals change no business records, preparation effects, grants, credential hashes or bindings; restart preserves trust and the issued binding. Disposable signing fixture: `tests/agent-door/tokens.mjs`; native email-proof fixture seam: `tests/agent-door/native.mjs` — recentNativeProof. | Still unproved: actual same-token refusal through a sibling seed; complete OAuth and native issuer lifecycle, consent revocation in the seed and Business within 60 seconds, unpairing with continued native sign-in, and the remaining role and transport matrix. This paired-token journey is not full Base conformance and issues no production credential. Existing sponsor and native-grant limits, exact human approval, account and licensed catalog, rail and company authority, provider and mandate, CT, device, br visual-correction and feeder holds remain unchanged. Reference sends remain configured-native-owner-only with explicit consent; no automatic outbound action, automated retry or destructive recovery. |
 | `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-006` | Every action declares its risk class | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-007` | The company's policy decides, at one chokepoint | target | missing | | Not yet judged through this seed's own doors. |

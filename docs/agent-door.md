@@ -63,6 +63,29 @@ skip provider consent. Without a matching live grant, Business calls refuse.
 Local credentials retain their original native ID and narrow scope. Recognizable
 invalid Business credentials never become local credentials.
 
+Paired Business access tokens use the canonical `/mcp` audience even when sent
+to `/api/envelope/mcp`. An unauthenticated MCP request receives the canonical
+RFC 9728 `resource_metadata` challenge. Its metadata declares the installation's
+trusted issuer, installed tool scopes and Authorization header transport. A
+write attempted with only read scope returns HTTP 403 `insufficient_scope`
+with the required tool scope in that same challenge. Query-string access tokens
+are refused even when an otherwise valid Authorization header is also present.
+An expired token is invalid at its exact expiry. A lifetime of 900 seconds is
+admissible; 901 seconds is refused. These checks do not extend native grants.
+
+`tests/agent-token-runtime.mjs` — `tokenJourney`, selected as `agent-tokens`
+in the push runtime shard, exercises these boundaries through both real MCP
+routes under autonomous and held company policies. It uses disposable signing
+material, the existing signed Business settings and policy receivers, and an
+agent bound by the native credential issuance route. It independently compares
+retained native business and credential state around refusals and checks
+populated durable audit and captured diagnostics for bearer retention. The
+local owner email-proof fixture uses the existing operator-auth test seam;
+the journey adds no production authentication path. This proves the installed
+paired-token slice only. Actual sibling-seed execution, the complete native
+issuer and OAuth lifecycle, consent-revocation timing, unpairing and the
+remaining role and transport matrix are still owed by BASE-AGENT-004.
+
 The shared signed policy receiver is `/api/rer/agent-policy`. Native people use
 `/agents`, its approval/review pages and person JSON doors. Standalone owners
 configure the shared policy there; paired installations use Business. The native

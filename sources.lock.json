@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b0976f7c886f7f17b2692aad69811a73f544d94bc72a17aa8f1e2622cfb12b45",
+      "sha256": "498f3ac2aadc119577b46716d0718ceeff3076e29b9a6ee47228e1de40bd0742",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "7d2c7bbbeb1027c75370a76df710b7555e2903ad5963d03876d840a7db2463ff",
+      "sha256": "5ec63fe0ede03fef53b79f99680c3108bfb3b04bc2358ae51e6df47e20621083",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -4213,7 +4213,7 @@
       "executable": false
     },
     "tests/agent-door/native.mjs": {
-      "sha256": "ed10faa184b2df745b4aaefe775f8b1929a784457f48d0f26365111732db68eb",
+      "sha256": "50bb97075d9fafd6058bcc1d67e3660d0ef24975f1b29c4008a742362067c391",
       "executable": false
     },
     "tests/agent-door/negative-sponsor.mjs": {
@@ -4248,12 +4248,20 @@
       "sha256": "d103bd458adedbedf7d02910ed783e71b327b66bcbc16e1bf7c5a58f419fc080",
       "executable": false
     },
+    "tests/agent-door/tokens.mjs": {
+      "sha256": "898e4aad78f7b0fb17ae514cbbb33bf46fdedb4bec6580ea30b23763509cbbe4",
+      "executable": false
+    },
     "tests/agent-policy-runtime.mjs": {
       "sha256": "90bf1f4d39796ca49c1d476819a2141308e986da467b034ede60c79a62005bc1",
       "executable": false
     },
     "tests/agent-policy-worker.mjs": {
       "sha256": "35f079082c686ec3d696686e76fd7ce409be5f98e3d2e704ae54a873380631ae",
+      "executable": false
+    },
+    "tests/agent-token-runtime.mjs": {
+      "sha256": "84473a36f86198fc026b11cbd3df905e6be1bd5d7c63a99088df5caeb54df12c",
       "executable": false
     },
     "tests/archive-adoption.mjs": {
@@ -4517,7 +4525,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "03edad2b3fd417013ff4465c220de38d473ae372f598eea3f04f7709bbe1e9c4",
+      "sha256": "ab6dffe4fae873fbb942907d0c6157fbd71e836412bcb8bdfc645490747f5856",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -4533,7 +4541,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "7c316d0a3a13fb1a82f74fa18544744e10b212b1d23959276aad0624229b83a8",
+      "sha256": "a80757faf1aad1859f311cceb814a47d1dc479315733017be957c17fdd5d362c",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

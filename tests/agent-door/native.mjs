@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {hashToken} from '../../src/modules/operator-auth/crypto.mjs'
 export const state=new Map(),rotationKeys=new Map()
 export const reviewerContexts=new Map(),reviewerMail=new Map(),negativeSponsors=new Map()
 export const cookieOf=r=>r.headers.getSetCookie().map(v=>v.split(';',1)[0]).join('; ')
@@ -20,3 +21,11 @@ export async function login({request,origin,email,mail}) {
   return response
 }
 export const answers={standard:'autonomous',money:'autonomous',commitment:'autonomous',external:'autonomous',sensitive:'autonomous',destructive:'autonomous',accounts:'autonomous',access:'autonomous',security:'autonomous',gated:'autonomous'}
+
+/** Existing operator-auth fixture seam for the bootstrap session's email proof.
+ * Agent grants and Business bindings are issued only through native routes. */
+export async function recentNativeProof({cookie,settings,sql,now,id}) {
+  const ownerHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1])
+  await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
+    SELECT '${id}',token_hash,id,operator_id,operator_version,'credentials:mint','/app',${now},${now+600000},${now} FROM oa_sessions WHERE token_hash='${ownerHash}'`)
+}
