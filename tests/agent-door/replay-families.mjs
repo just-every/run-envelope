@@ -176,6 +176,11 @@ export async function replayFamilies({origin,cookie,settings,owner,sql,restart,a
         await owner('/agents/api/pause',{paused:true})
         refused(await status(),'agents_paused')
         await owner('/agents/api/pause',{paused:false})
+        await clock('2026-10-28T12:00:31.000Z')
+        assert.equal(result(await status()).state,'unknown','an interrupted pending ledger cannot claim a known outcome after the provider deadline')
+        assert.deepEqual(result(await wire(credential,name,args)),saved,'uncertain status cannot change the first mutation outcome or resend')
+        assert.equal(edge.calls.filter(row=>row.kind==='reply').length,before.network.filter(row=>row.kind==='reply').length+1)
+        await clock('2026-10-28T12:00:00.000Z')
         assert.ok(edge.release,'one authorized provider call is in progress')
         edge.holdReplies=false;edge.release();edge.release=null
         let completed
