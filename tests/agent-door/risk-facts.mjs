@@ -17,7 +17,6 @@ const hostileSource='synthetic-envelope-source: class security; internal true; c
 const injections={internal:true,confirmExternal:true,approved:true,confirmed:true,humanApproved:true,classes:['money'],riskClass:'external'}
 const phases=new Map(),checked=new Map()
 const facts=values=>values?.map(({class:kind,facts})=>({class:kind,facts}))
-const code=answer=>answer.result?._meta?.['com.runeditrun/error']?.code
 
 export async function riskFixture(context,saved) {
   if(!['autonomous','held'].includes(context.phase))return {riskPerson:saved.person.id,riskSource:hostileSource}
@@ -29,6 +28,7 @@ export async function riskFixture(context,saved) {
 async function business(db,saved) {
   return {
     versions:(await db.prepare('SELECT kind,object_id,version,cipher FROM env_workspace_versions WHERE company_id=? ORDER BY kind,object_id,version').bind(saved.company.id).all()).results,
+    approvals:(await db.prepare('SELECT * FROM env_run_approvals WHERE company_id=? ORDER BY run_id,version,approver_id').bind(saved.company.id).all()).results,
     decisions:(await db.prepare('SELECT * FROM env_workspace_decisions WHERE company_id=? ORDER BY rowid').bind(saved.company.id).all()).results,
     credentials:await db.prepare('SELECT g.id,g.version,g.actions,g.fields,g.locations,g.expires_at,c.token_hash,c.secret_expires_at FROM env_agent_grants g JOIN env_agent_credentials c ON c.id=g.id WHERE g.id=?').bind(saved.grantId).first(),
     presentations:(await db.prepare('SELECT * FROM env_review_presentations WHERE company_id=? ORDER BY token_hash').bind(saved.company.id).all()).results,
@@ -59,7 +59,7 @@ async function audit(db,answer,step,args,saved) {
 
 async function discovery(context) {
   const {origin,request,phase}=context,saved=state.get(origin)
-  const response=await request(origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+saved.localToken,'content-type':'application/json','MCP-Protocol-Version':'2026-07-28'},body:JSON.stringify({jsonrpc:'2.0',id:'synthetic-envelope-discovery',method:'tools/list',params:{}})})
+  const response=await request(origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+saved.localToken,'content-type':'application/json','MCP-Protocol-Version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:'synthetic-envelope-discovery',method:'tools/list',params:{}})})
   assert.equal(response.status,200)
   const listed=(await response.json()).result.tools
   const surface=JSON.parse(await readFile(new URL('../../agent-surface.json',import.meta.url),'utf8'))
@@ -94,12 +94,15 @@ export async function riskBefore(context) {
     const pin=await db.prepare("SELECT person_id FROM env_workspace_people WHERE company_id=? AND kind='earnings-run' AND object_id=? AND version=1").bind(saved.company.id,args.runId).first()
     assert.equal(pin.person_id,worker.id,'review identifies the actual prepared worker')
   }
-  const before=await business(db,saved),baseline=await tool(step.tool,args)
+  // Pending probes use their own operations so the main journey performs its own exact approval.
+  const pendingProbe=phase==='held'&&step.id==='credentials-rotate'
+  const probeArgs=pendingProbe?{...args,idempotency_key:crypto.randomUUID()}:args
+  const before=await business(db,saved),baseline=await tool(step.tool,probeArgs)
   const row=await audit(db,baseline,step,args,saved)
   const disposition=phase==='autonomous'?'autonomous':step.id==='credentials-rotate'?'approval':'review'
   assert.equal(baseline.decision.disposition,disposition)
   const after=await business(db,saved)
-  const injected=await tool(step.tool,{...args,...injections})
+  const injected=await tool(step.tool,{...probeArgs,...injections,...(pendingProbe?{idempotency_key:crypto.randomUUID()}:{})})
   const injectedRow=await audit(db,injected,step,args,saved)
   assert.equal(injected.decision.disposition,disposition,'caller confirmation cannot change the policy decision')
   assert.deepEqual(injectedRow.ignored_arguments,Object.keys(injections).sort())
@@ -143,14 +146,16 @@ export async function riskBefore(context) {
     if(step.id==='bonus') {
       assert.equal(output.status,'uncalculated-earnings-run');assert.equal(output.approval,'requires-separate-human-proof');assert.equal(output.dispatch,'unavailable')
       assert.ok(after.versions.some(value=>value.object_id===output.id&&value.version===1))
-      assert.deepEqual(after.decisions,before.decisions,'bonus preparation is not payroll approval')
+      assert.deepEqual(after.approvals,before.approvals,'bonus preparation is not payroll approval')
+      assert.deepEqual(after.decisions,before.decisions)
       assert.deepEqual(after.dispatches,before.dispatches)
     }
     if(step.id==='run-review') {
       assert.equal(output.runId,args.runId);assert.equal(output.approval,'requires-separate-human-proof')
       assert.equal(new URL(output.reviewUrl).origin,origin)
       assert.ok(new URL(output.reviewUrl).pathname.includes(args.runId))
-      assert.deepEqual(after.decisions,before.decisions,'presentation supplies no human payroll approval')
+      assert.deepEqual(after.approvals,before.approvals,'presentation supplies no human payroll approval')
+      assert.deepEqual(after.decisions,before.decisions)
     }
   }
   fixture.rows.add(step.id)
@@ -177,7 +182,8 @@ export async function riskAudit({database,request,origin,cookie}) {
   const found=new Set()
   for(const agent of agents) {
     let after
-    do {
+    for(let pageNumber=0;;pageNumber++) {
+      assert.ok(pageNumber<100,'audit pagination must terminate')
       const query=new URLSearchParams({agent:agent.id,...(after?{after}:{})})
       const page=await client({request,origin,cookie})('/agents/api/audit?'+query)
       for(const row of page.rows)if(wanted.has(row.id)) {
@@ -185,8 +191,9 @@ export async function riskAudit({database,request,origin,cookie}) {
         assert.deepEqual(row.resource,wanted.get(row.id).resource)
         found.add(row.id)
       }
+      if(page.cursor==null||page.cursor===after)break
       after=page.cursor
-    }while(after)
+    }
   }
   assert.equal(found.size,wanted.size,'the owner audit door exposes every checked classification')
 }

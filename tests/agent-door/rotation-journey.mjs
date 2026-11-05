@@ -3,7 +3,7 @@ import {replayStep,replayMutation} from './replay.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 export default async function({database,request,origin,cookie}) {
-  await riskAudit({database,request,origin,cookie})
+  try { await riskAudit({database,request,origin,cookie}) } catch(error) { console.error('Risk facts audit',error.code,error.stack?.split('\n').find(line=>line.includes('risk-facts.mjs:')));throw error }
   const db=await database('DB')
   const rows=(await db.prepare("SELECT * FROM env_agent_call_audit WHERE rowid IN (SELECT MIN(rowid) FROM env_agent_call_audit WHERE door_operation_id IS NOT NULL GROUP BY tool)").all()).results
   for(const native of rows) {
@@ -18,7 +18,7 @@ export default async function({database,request,origin,cookie}) {
   }
 }
 export async function beforeStep(context) {
-  await riskBefore(context)
+  try { await riskBefore(context) } catch(error) { console.error('Risk facts before',context.phase,context.step.id,error.code,error.stack?.split('\n').find(line=>line.includes('risk-facts.mjs:')));throw error }
 }
 export async function afterStep(context) {
   await riskAfter(context)

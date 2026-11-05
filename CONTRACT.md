@@ -1815,8 +1815,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 37 | 84 | 125 |
-| All | 5 | 37 | 84 | 126 |
+| Target and push further | 4 | 38 | 83 | 125 |
+| All | 5 | 38 | 83 | 126 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1938,7 +1938,7 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `BASE-AGENT-003` | Records are resources | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-004` | Business identity and short-lived, audience-bound tokens | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | missing | | Not yet judged through this seed's own doors. |
-| `BASE-AGENT-006` | Every action declares its risk class | target | missing | | Not yet judged through this seed's own doors. |
+| `BASE-AGENT-006` | Every action declares its risk class | target | partial | Acceptance points 1, 2, 3, 5 and 6, bounded installed-door subcases: `tests/agent-door/risk-facts.mjs` — riskBefore compares actual MCP discovery with every installed descriptor class and the fleet catalogue under autonomous and held policies; independently retained worker, run and native-grant targets, exact standard and security facts for masked record pages, workspace snapshots, uncalculated bonus preparation, review-link presentation and credential rotation. Hostile worker names and source text plus caller class and confirmation claims leave classification and policy unchanged; native preparation and presentation create no payroll approval, and a held rotation changes no credential before separate human approval. The installed class validator rejects an uncatalogued class, and the installed conformance comparison rejects a changed expected fact. riskAfter checks actual shared-policy-blocked rotation audit facts and native target; riskAudit reads the checked classifications through the signed-in owner audit door. All three run through `tests/agent-door/rotation-journey.mjs` in the existing push Verify agent-door conformance, with native fixtures in `tests/agent-door/fixtures.mjs` and exact expectations in `agent-surface.json`. | Remaining: full target-tool coverage and exact class facts, injection resistance and refused-call audit proof for every other tool and class; money, external, commitment, access, sensitive, destructive, accounts, gated and live obligations remain owed, including the point 4 amount, currency, counterparty, direction and item-count matrix. This finite standard and security slice does not establish those outcomes or full Base conformance. Existing sponsor and grant authority, licensed calculation catalog, authorized employer and rail, provider accounts and mandates, exact human approval, CT, device, approved visual corrections and feeder holds remain unchanged. Configured native owner reference sends require explicit consent; no automatic outbound action, automated retry or destructive recovery. |
 | `BASE-AGENT-007` | The company's policy decides, at one chokepoint | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-008` | Truthful attribution | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-009` | Every agent action is audited with its class and decision | target | missing | | Not yet judged through this seed's own doors. |
