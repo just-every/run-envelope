@@ -21,21 +21,29 @@ const bonusPreview=closed({
 })
 const bonusItem=closed({id:string,version:integer,personId:string,amountCents:count,periodStart:day,periodEnd:day,payDate:day,
   sourcesCurrent:{type:'boolean'},status:literal('uncalculated-earnings-run')})
+const proposalState={status:literal('uncalculated-proposal'),approval:literal('not-approved'),dispatch:literal('unavailable')}
+const proposalItem={id:string,personId:string,personVersion:integer,rateId:string,minutes:integer,
+  periodStart:day,periodEnd:day,payDate:day,stale:{type:'integer',enum:[0,1]}}
 export function outputSchema(name:string):JsonSchemaObject {
-  if(name==='records.list')return object({records:{type:'array',items:object({id:string,name:string,locationId:string,version:integer})},limit:integer,next:nullableString})
+  if(name==='records.list')return closed({records:array(closed({id:string,name:string,locationId:string,version:integer})),limit:integer,next:nullableString})
   if(name==='workspace.snapshot')return closed({people:count,drafts:count,bonuses:count,sha256})
-  if(name==='draft.prepare')return object({id:string,status:string,approval:string,dispatch:string})
-  if(name==='bonus.prepare')return object({id:string,version:integer,status:string,approval:string,dispatch:string})
-  if(name==='draft.read')return object({id:string,personId:string,minutes:integer,hourlyCents:integer,status:string,approval:string,dispatch:string})
+  if(name==='draft.prepare')return closed({id:string,...proposalState})
+  if(name==='bonus.prepare')return closed({id:string,version:integer,status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
+  if(name==='draft.read')return closed({...proposalItem,personName:string,hourlyCents:integer,sourceRef:string,...proposalState})
   if(name==='bonus.read')return closed({id:string,version:integer,preview:bonusPreview,sourcesCurrent:{type:'boolean'},
     status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
   if(name==='reports.bonuses')return closed({kind:literal('bonus-earnings-preparations'),bonuses:array(bonusItem),limit:integer,next:nullableString,
     payroll:literal('uncalculated'),payment:literal('unavailable'),filing:literal('unavailable')})
-  if(name.startsWith('reports.'))return object({kind:string,[name==='reports.bonuses'?'bonuses':'proposals']:{type:'array',items:{type:'object'}},limit:integer,next:nullableString})
-  if(name==='run.review')return object({runId:string,version:integer,reviewUrl:string,approval:string})
-  if(name==='notice.process')return object({id:string,noticeId:string,summary:string,proposedReply:string,sourceReference:string,status:string,approval:string})
-  if(name==='reply.dispatch')return object({id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString})
-  if(name==='credentials.rotate')return object({id:string,secretExpiresAt:integer,expiresAt:integer,algorithm:{type:'string',const:'RSA-OAEP-256'},encryptedToken:string})
-  if(name==='credentials.restrict')return object({id:string,version:integer,direction:string,peopleCount:integer,actions:{type:'array',items:string},fields:{type:'array',items:string},locations:{type:'array',items:string}})
+  if(name==='reports.proposals')return closed({kind:literal('run-input-proposals'),proposals:array(closed(proposalItem)),limit:integer,next:nullableString,
+    payroll:literal('uncalculated'),payment:literal('unavailable'),filing:literal('unavailable')})
+  if(name==='run.review')return closed({runId:string,version:integer,reviewUrl:{type:'string',format:'uri'},approval:literal('requires-separate-human-proof')})
+  if(name==='notice.process')return closed({id:string,noticeId:string,summary:string,proposedReply:string,sourceReference:string,status:literal('untrusted-proposal'),approval:literal('not-approved')})
+  if(name==='reply.dispatch') {
+    const dispatch={id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString}
+    // A native duplicate returns its retained state without asserting delivery.
+    return {type:'object',oneOf:[closed({...dispatch,delivered:literal('unconfirmed')}),closed({...dispatch,replayed:literal(true)})]}
+  }
+  if(name==='credentials.rotate')return closed({id:string,secretExpiresAt:integer,expiresAt:integer,algorithm:literal('RSA-OAEP-256'),encryptedToken:{type:'string',pattern:'^[A-Za-z0-9+/]+={0,2}$'}})
+  if(name==='credentials.restrict')return closed({id:string,version:integer,direction:{type:'string',enum:['narrow','unchanged']},peopleCount:integer,actions:array(string),fields:array(string),locations:array(string)})
   throw new Error('Undeclared native output schema')
 }

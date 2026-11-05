@@ -1,5 +1,5 @@
 import {replayStep,replayMutation} from './replay.mjs'
-import {toolContracts} from './tool-contracts.mjs'
+import {toolContracts,discoverToolContracts,installedToolContracts} from './tool-contracts.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 export default async function({database,request,origin,cookie}) {
@@ -16,8 +16,18 @@ export default async function({database,request,origin,cookie}) {
     assert.ok((await response.json()).activity.calls.some(row=>row.operationId===native.door_operation_id))
   }
 }
+export async function beforeStep(context) {
+  await discoverToolContracts(context)
+}
 export async function afterStep(context) {
-  await toolContracts(context)
+  try {
+    await toolContracts(context)
+    await installedToolContracts(context)
+  } catch(error) {
+    console.error('Tool contract assertion failed:',context.phase,context.step.id,
+      error.stack?.split('\n').find(line=>line.includes('tool-contracts.mjs'))?.trim())
+    throw error
+  }
   await replayStep(context)
   await replayMutation(context)
   const {phase,step,result,origin,request,database}=context

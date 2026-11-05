@@ -14,11 +14,16 @@ export async function seedToolContracts(context) {
   const unrelated=await data(base+'/people',{name:'Synthetic unrelated worker',locationId:location.id},201)
   const privateValue='synthetic-envelope-private-'+suffix
   await data(base+'/people/'+person.id+'/private',{kind:'bank',value:privateValue,version:0},201)
+  const rate=await data(base+'/people/'+person.id+'/rates',{version:person.version,hourlyCents:3275,effectiveDate:'2026-01-01',sourceRef:'synthetic-envelope-rate-'+suffix},201)
+  const review=await data(base+'/rates/'+rate.id)
+  await data(base+'/rates/'+rate.id+'/approve',{version:review.version,reviewToken:review.reviewToken})
   await data(base+'/agents/class-policy',{version:0,...answers})
   const grant=await data(base+'/agents',{name:'Synthetic contract agent',hours:24,actions:['records:read','drafts:prepare','drafts:read'],fields:['compensation'],locations:['*']},201)
   const inputs=[32109,8750].map((amountCents,i)=>({companyId:company.id,personId:person.id,amountCents,
     periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-'+suffix+'-'+i,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}))
-  contractFixtures.set(context.origin+':'+context.phase,{base,company,location,person,unrelated,name,privateValue,grant,inputs})
+  const hourlyInputs=[135,420].map((minutes,i)=>({companyId:company.id,personId:person.id,minutes,
+    periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-hours-'+suffix+'-'+i,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}))
+  contractFixtures.set(context.origin+':'+context.phase,{base,company,location,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs})
 }
 export default async function(context) {
   const saved=state.get(context.origin)
