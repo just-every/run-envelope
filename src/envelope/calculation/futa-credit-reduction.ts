@@ -31,7 +31,7 @@ interface Wages { taxYear: number; state: string; workerReference: string; compl
 interface Selection { personId: string; version: number }
 interface Preparation {
   fingerprint: string; taxYear: number; state: string; sourceVersion: number; workers: Selection[]
-  result: { taxYear: number; state: string; quarter: 4; status: string; unsigned: true; unfiled: true
+  result: { taxYear: number; state: string; quarter: 4; status: string; coverage: 'selected-reviewed-wages'; unsigned: true; unfiled: true
     sourceEdition: typeof edition; sourceVersion: number; sourceReference: string
     rows: { personId: string; evidenceVersion: number; annualWagesCents: number; taxableWagesCents: number }[]
     taxableWagesCents: number; grossFutaBeforeCreditsCents: number; additionalEmployerLiabilityCents: number
@@ -172,7 +172,7 @@ export class FutaCreditReduction {
     const taxableWagesCents = rows.reduce((n, row) => n + row.taxableWagesCents, 0)
     const additionalEmployerLiabilityCents = Math.floor((taxableWagesCents * edition.reductionBasisPoints + 5000) / 10000)
     const result: Preparation['result'] = {
-      taxYear: 2025, state: 'CA', quarter: 4, status: 'preparation-only', unsigned: true, unfiled: true,
+      taxYear: 2025, state: 'CA', quarter: 4, status: 'preparation-only', coverage: 'selected-reviewed-wages', unsigned: true, unfiled: true,
       sourceEdition: source.data.edition, sourceVersion, sourceReference: source.data.reference, rows, taxableWagesCents,
       grossFutaBeforeCreditsCents: Math.floor((taxableWagesCents * 600 + 5000) / 10000), additionalEmployerLiabilityCents,
       scheduleA: { state: 'CA', reductionRate: '0.012', taxableWagesCents, creditReductionCents: additionalEmployerLiabilityCents },
@@ -195,7 +195,7 @@ export class FutaCreditReduction {
     const rows = await this.store.list<Preparation>(actor, 'futa-preparation', undefined, true)
     for (const row of rows) for (const worker of row.data.workers) await this.scope(actor, worker.personId)
     await this.scope(actor)
-    return rows.map(row => ({ ...row, current: !!row.sourcesCurrent, unsigned: true, unfiled: true }))
+    return rows.map(row => ({ ...row, current: row.version === rows[0]?.version && !!row.sourcesCurrent, unsigned: true, unfiled: true }))
   }
   async reviewPreparation(actor: Actor, taxYear: unknown) {
     year(taxYear); await this.scope(actor)

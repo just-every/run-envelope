@@ -581,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "016db11dc150e3cfd787a938755349439bfeae107aeca7c2b9da4a6353e00b66",
+      "sha256": "cdda3a737f671c7359ca83360ff8701c9801204838d4c4c7b205726c33aca8e1",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2213,7 +2213,7 @@
       "executable": false
     },
     "src/envelope/calculation/futa-credit-reduction.ts": {
-      "sha256": "7624becde70ea81967485fb5cb2b2b4cb1c3e3d758f19b95ab1b1598fe6b0b6b",
+      "sha256": "f2329c9853b50a2bda4dd006f0240c1d4c830838a706af1f0f3eff797c5224e2",
       "executable": false
     },
     "src/envelope/calculation/maine.ts": {
@@ -4457,7 +4457,7 @@
       "executable": false
     },
     "tests/futa-credit-runtime.mjs": {
-      "sha256": "2dde7892b6ddcc5d383b7593b157fbc7e05fe69e18a06b9a3dd1b76b29497d56",
+      "sha256": "7726f4b5a0a3fe5d1bd153d1bcf80352cc1e98344d2ef703de19202c0f043116",
       "executable": false
     },
     "tests/hi-benefits-runtime.mjs": {

@@ -236,7 +236,8 @@ and competing company records with the same EIN are refused. There is one
 canonical preparation per company and year: later versions replace pending
 preparation; their amounts are never additive.
 
-The result reports `scheduleA.creditReductionCents` and `form940.line11Cents`,
+The result declares `coverage: "selected-reviewed-wages"` and reports
+`scheduleA.creditReductionCents` and `form940.line11Cents`,
 with the additional employer liability assigned to Q4. It separately identifies
 gross 6% FUTA before credits and zero employee withholding. `paidLiabilityCents`
 and `payrollApproval` remain null; `paymentReady` is false. This preparation
@@ -246,8 +247,9 @@ deposited, paid or filed. Approval, payment, deposit and filing attempts are
 refused. Complete deposit-threshold and deadline application, increased-cash
 approval, accepted filing and payment receipts remain unavailable.
 
-`GET` on the preparation door returns retained versions with their current-source
-state; `/review` reads only a current preparation. Changing source or wage evidence
+`GET` on the preparation door returns retained versions; only the latest version
+with current sources is marked current; `/review` reads only a current preparation.
+Changing source or wage evidence
 invalidates the preceding preparation and any pending review. Review the new input
 and explicitly prepare a new version. Older versions retain their original source
 references and amounts; this is historical preparation, not reproduction of an

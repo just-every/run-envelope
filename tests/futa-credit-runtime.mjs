@@ -113,6 +113,7 @@ export async function futaCreditJourney(context) {
   assert.deepEqual(result.scheduleA, { state: 'CA', reductionRate: '0.012', taxableWagesCents: 2100000, creditReductionCents: 25200 })
   assert.deepEqual(result.form940, { line11Cents: 25200 })
   assert.equal(result.quarter, 4)
+  assert.equal(result.coverage, 'selected-reviewed-wages')
   assert.equal(result.employeeWithholdingCents, 0)
   assert.equal(result.paidLiabilityCents, null)
   assert.equal(result.payrollApproval, null)
@@ -160,6 +161,27 @@ export async function futaCreditJourney(context) {
   const duplicateEin = await call(secondDoor, tenCapture)
   assert.equal(duplicateEin.status, 409); assert.equal((await duplicateEin.json()).error, 'futa_duplicate_ein_company')
   console.log('PROBE ENV-089 2 calculation: reviewed ten 7000 dollar annual bases -> 70000 taxable and 840 additional Q4 employer liability; deposit and payment unavailable')
+
+  // An expanded selected wage set replaces the earlier preparation without adding liabilities.
+  const rounded = await data('/api/envelope/companies', { name: 'Synthetic fractional FUTA employer', ein: '00-0008904' }, 201)
+  const roundedBase = '/api/envelope/companies/' + rounded.id, roundedDoor = roundedBase + '/futa-preparations/2025'
+  const roundedLocation = await data(roundedBase + '/locations', { name: 'California workplace', state: 'CA' }, 201)
+  await data(roundedBase + '/futa-credit-sources', sourceInput, 201); await approve(data, roundedBase + '/futa-credit-sources')
+  const small = []
+  for (let n = 0; n < 2; n++) {
+    const p = await data(roundedBase + '/people', { name: 'Synthetic fractional wage worker ' + n, locationId: roundedLocation.id }, 201)
+    const w = roundedBase + '/people/' + p.id + '/futa-wages/2025'
+    await data(w, wageInput('synthetic-envelope-futa-fractional-' + n, 4167), 201); await approve(data, w); small.push(p)
+  }
+  const originalSelection = preparationInput(small.slice(0, 1))
+  assert.equal((await data(roundedDoor, originalSelection, 201)).result.additionalEmployerLiabilityCents, 50)
+  const expanded = await data(roundedDoor, preparationInput(small, { version: 1 }), 201)
+  assert.equal(expanded.version, 2); assert.equal(expanded.result.taxableWagesCents, 8334)
+  assert.equal(expanded.result.additionalEmployerLiabilityCents, 100, 'Schedule A rounds the aggregate 1.00008 dollars to one dollar')
+  const selections = await data(roundedDoor)
+  assert.deepEqual(selections.map(row => [row.version, row.current]), [[2, true], [1, false]])
+  assert.equal(selections[1].data.result.additionalEmployerLiabilityCents, 50, 'retained historical amounts are not relabeled')
+  await refused(roundedDoor, originalSelection)
 
   // Corrected source editions invalidate pending preparation rather than relabeling history.
   await data(sources, { ...sourceInput, version: 1, reference: 'synthetic-envelope-futa-corrected-source' }, 201)
