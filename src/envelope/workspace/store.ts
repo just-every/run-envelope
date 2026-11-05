@@ -5,6 +5,9 @@ import { fence, auditStatement, requireAction, locationSql, fields, type Actor }
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'futa-source'
+  | 'futa-wages'
+  | 'futa-preparation'
   | 'hi-benefit-plan'
   | 'hi-benefit-preview'
   | 'extended-retirement'

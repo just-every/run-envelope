@@ -197,6 +197,18 @@
         "ENV-030",
         "ENV-056"
       ]
+    },
+    {
+      "name": "envelope.jobs.status",
+      "scope": "dispatch:execute",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "BASE-AGENT-012",
+        "ENV-025"
+      ]
     }
   ],
   "resources": [],
@@ -509,6 +521,25 @@
         },
         {
           "class": "external"
+        }
+      ]
+    },
+    {
+      "id": "reply-status",
+      "tool": "envelope.jobs.status",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "jobId": {
+          "$from": "reply-dispatch",
+          "pointer": "/jobId"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
         }
       ]
     },
