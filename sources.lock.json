@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "48769e458746284107fabdfb18765a88e69267c83f71a0c96f288491aeef6b18",
+      "sha256": "53403ed85d2ae748a0ea6109386ea4746039ff847a82f0311ed27eeed7f7549f",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "cb3e30091a94f01225771482231058fb5688dc6f8ea2ad6179ce7bced3425992",
+      "sha256": "76e96ae238c5da6b7dd9705628c6b9bc05ea4b8feccae05969d4fe4a58712b98",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -4265,7 +4265,7 @@
       "executable": false
     },
     "tests/agent-token-runtime.mjs": {
-      "sha256": "3be7cb040e1248aa79067e2cc4293a5d596395f695b5a14f0184ea74f52bf7aa",
+      "sha256": "320e71a7c4fe86a883f45a9fbc7a2032409c96565a5dcc209d4b18b1da6809bd",
       "executable": false
     },
     "tests/archive-adoption.mjs": {

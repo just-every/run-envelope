@@ -84,6 +84,9 @@ with the required tool scope in that same challenge. Query-string access tokens
 are refused even when an otherwise valid Authorization header is also present.
 An expired token is invalid at its exact expiry. A lifetime of 900 seconds is
 admissible; 901 seconds is refused. These checks do not extend native grants.
+Absent or nonpositive expiry and issuance beyond the permitted clock skew also
+refuse. An empty token scope cannot inherit read or preparation authority from
+the matching native grant; each refusal names the missing tool scope.
 
 `tests/agent-token-runtime.mjs` — `tokenJourney`, selected as `agent-tokens`
 in the push runtime shard, exercises these boundaries through both real MCP
