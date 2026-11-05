@@ -159,7 +159,7 @@ export async function toolContracts(context) {
   if(context.step.id!=='workspace-snapshot'||!['autonomous','held'].includes(context.phase))return
   const fixture=contractFixtures.get(context.origin+':'+context.phase)
   assert.ok(fixture,'the policy phase has independently seeded native records')
-  const {origin,request,phase,database}=context,{base,company,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs}=fixture
+  const {origin,request,phase,database}=context,{base,company,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs,bonusPeople}=fixture
   const owner=client(context),db=await database('DB')
   let seq=9900
   const wire=async(path,method,params={})=>{
@@ -219,7 +219,7 @@ export async function toolContracts(context) {
   for(const path of paths) {
     const snapshot=await call(path,names[0],{});valid(schemas.get(names[0]),snapshot)
     assert.deepEqual(Object.keys(snapshot).sort(),['bonuses','drafts','people','sha256'])
-    assert.deepEqual([snapshot.people,snapshot.drafts,snapshot.bonuses],[2,0,0])
+    assert.deepEqual([snapshot.people,snapshot.drafts,snapshot.bonuses],[3,0,0])
     assert.match(snapshot.sha256,/^[a-f0-9]{64}$/);snapshots.push(snapshot)
     const empty=await call(path,names[2],{companyId:company.id,limit:1},0)
     valid(schemas.get(names[2]),empty)
@@ -234,13 +234,14 @@ export async function toolContracts(context) {
     const result=await call(paths[i],'envelope.bonus.prepare',input)
     const id=digest(['bonus',company.id,grant.id,input.requestKey])
     assert.deepEqual(result,{id,version:1,status:'uncalculated-earnings-run',approval:'requires-separate-human-proof',dispatch:'unavailable'})
+    const selected=bonusPeople[i]
     const preview={periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',frequency:'off-cycle bonus',groupId:'',
-      people:[{id:person.id,name,earningsCents:input.amountCents,taxableCashCents:input.amountCents,reimbursementCents:0,afterTaxDeductionCents:0,
+      people:[{id:selected.id,name:selected.name,earningsCents:input.amountCents,taxableCashCents:input.amountCents,reimbursementCents:0,afterTaxDeductionCents:0,
         cashTipsCents:0,paycheckTipsCents:0,tipFundsCents:0}],
-      holds:[{personId:person.id,code:'bonus-calculation-incomplete'}],
-      destinations:[{personId:person.id,bankVersion:1}],grossCashCents:input.amountCents,taxableCashCents:input.amountCents,reimbursementCents:0,afterTaxDeductionCents:0,
+      holds:[{personId:selected.id,code:'bonus-calculation-incomplete'}],
+      destinations:[{personId:selected.id,bankVersion:selected.bankVersion}],grossCashCents:input.amountCents,taxableCashCents:input.amountCents,reimbursementCents:0,afterTaxDeductionCents:0,
       taxAmounts:null,netPay:null,paymentReady:false,setupFingerprint:'',locationStates:['PA'],ruleFingerprint:'',ruleSources:[],
-      bonusPreparation:{credentialId:grant.id,requestFingerprint:digest([person.id,input.amountCents,input.periodStart,input.periodEnd,input.payDate,input.sourceRef]),sourceRef:input.sourceRef,amountCents:input.amountCents}}
+      bonusPreparation:{credentialId:grant.id,requestFingerprint:digest([selected.id,input.amountCents,input.periodStart,input.periodEnd,input.payDate,input.sourceRef]),sourceRef:input.sourceRef,amountCents:input.amountCents}}
     expected.set(id,{id,version:1,preview,sourcesCurrent:true,status:'uncalculated-earnings-run',approval:'requires-separate-human-proof',dispatch:'unavailable'})
   }
   const nativeAfter=await retained()
@@ -252,26 +253,43 @@ export async function toolContracts(context) {
     assert.ok(row.data.people[0].details.some(detail=>detail.includes(row.data.bonusPreparation.sourceRef)))
     assert.ok(row.data.people[0].details.some(detail=>detail.includes(grant.id)))
     assert.ok(row.data.holds[0].reason.length>0,'the retained calculation hold has an explanation')
-    expected.get(row.id).preview=row.data
     const pin=await db.prepare("SELECT person_id FROM env_workspace_people WHERE company_id=? AND kind='earnings-run' AND object_id=? AND version=1").bind(company.id,row.id).first()
-    assert.equal(pin.person_id,person.id,'the retained native reference identifies the selected worker')
+    assert.equal(pin.person_id,expected.get(row.id).preview.people[0].id,'the retained native reference identifies the selected worker')
     assert.notEqual(pin.person_id,unrelated.id)
   }
-  const ordered=[...expected.keys()].sort()
+  const ordered=[...expected.keys()].sort(),bonusSnapshots=[]
   for(const path of paths) {
     const snapshot=await call(path,names[0],{});valid(schemas.get(names[0]),snapshot)
-    assert.deepEqual([snapshot.people,snapshot.drafts,snapshot.bonuses],[2,0,2])
+    assert.deepEqual([snapshot.people,snapshot.drafts,snapshot.bonuses],[3,0,2]);bonusSnapshots.push(snapshot)
     assert.notEqual(snapshot.sha256,snapshots[0].sha256,'persisted preparation changes the fingerprint')
     contractRejects(schemas.get(names[0]),snapshot)
     for(const id of ordered) {
       const read=await call(path,names[1],{companyId:company.id,runId:id})
-      valid(schemas.get(names[1]),read);assert.deepEqual(read,expected.get(id))
+      valid(schemas.get(names[1]),read)
+      assert.deepEqual({...read,preview:nativeValues(read.preview)},expected.get(id),'the MCP result matches independent native input values')
+      assert.deepEqual(read.preview,nativeAfter.runs.find(row=>row.id===id).data,'MCP and the native owner read the same retained preview')
       contractRejects(schemas.get(names[1]),read)
       for(const [field,value] of [['taxAmounts',0],['netPay',inputs[0].amountCents],['paymentReady',true]]) {
         const payable=structuredClone(read);payable.preview[field]=value
         assert.ok(schemaErrors(schemas.get(names[1]),payable).length,'an uncalculated bonus cannot claim '+field)
       }
       assert.ok(schemaErrors(schemas.get(names[1]),{...read,dispatch:'sent'}).length,'the contract cannot imply dispatch occurred')
+      // Detect a fabricated calculation, a lost hold or an expanded payee list.
+      const invalid=[
+        preview=>{preview.holds=[]},
+        preview=>{preview.people=[]},
+        preview=>{preview.destinations=[]},
+        preview=>{preview.people.push(structuredClone(preview.people[0]))},
+        preview=>{preview.people[0].cashTipsCents=1},
+        preview=>{preview.reimbursementCents=1},
+        preview=>{preview.setupFingerprint='synthetic-envelope-evaluated'},
+        preview=>{preview.ruleFingerprint='synthetic-envelope-evaluated'},
+        preview=>{preview.ruleSources=[{id:'synthetic-envelope-rule',version:1,name:'Synthetic rule',determination:'accepted',approved:true}]},
+      ]
+      for(const change of invalid) {
+        const corrupted=structuredClone(read);change(corrupted.preview)
+        assert.ok(schemaErrors(schemas.get(names[1]),corrupted).length,'discovery refuses an unsupported native bonus result')
+      }
     }
     let after
     const seen=[]
@@ -279,7 +297,7 @@ export async function toolContracts(context) {
       const report=await call(path,names[2],{companyId:company.id,limit:1,...(after?{after}:{})},page<2?1:0)
       valid(schemas.get(names[2]),report)
       const id=ordered[page],entry=id?expected.get(id):null
-      assert.deepEqual(report,{kind:'bonus-earnings-preparations',bonuses:entry?[{id,version:1,personId:person.id,amountCents:entry.preview.grossCashCents,
+      assert.deepEqual(report,{kind:'bonus-earnings-preparations',bonuses:entry?[{id,version:1,personId:entry.preview.people[0].id,amountCents:entry.preview.grossCashCents,
         periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourcesCurrent:true,status:'uncalculated-earnings-run'}]:[],
         limit:1,next:page===0?id:null,payroll:'uncalculated',payment:'unavailable',filing:'unavailable'})
       if(page===0)contractRejects(schemas.get(names[2]),report)
@@ -323,6 +341,40 @@ export async function toolContracts(context) {
   }
   assert.deepEqual(await owner(base+'/drafts'),retainedDrafts,'schema probes never change retained compensation')
   assert.deepEqual(await retained(),nativeAfter,'hourly inputs do not expand bonus selections or grants')
+  const populated=[]
+  for(const path of paths) {
+    const snapshot=await call(path,names[0],{});valid(schemas.get(names[0]),snapshot)
+    assert.deepEqual([snapshot.people,snapshot.drafts,snapshot.bonuses],[3,2,2])
+    assert.notEqual(snapshot.sha256,bonusSnapshots[0].sha256,'retained hourly inputs also change the workspace fingerprint')
+    populated.push(snapshot)
+  }
+  assert.deepEqual(populated[0],populated[1],'both paths reconcile the same populated workspace')
+  // A real native source change makes one retained bonus stale without
+  // changing its immutable amounts or the other worker's current preparation.
+  const changed=await owner(base+'/people/'+person.id+'/rates',{version:2,hourlyCents:3400,effectiveDate:'2026-09-01',sourceRef:'synthetic-envelope-contract-correction'},201)
+  assert.ok(changed.id)
+  const changedReview=await owner(base+'/rates/'+changed.id)
+  await owner(base+'/rates/'+changed.id+'/approve',{version:changedReview.version,reviewToken:changedReview.reviewToken})
+  assert.equal((await owner(base+'/people/'+person.id)).version,3)
+  for(const entry of expected.values())entry.sourcesCurrent=entry.preview.people[0].id!==person.id
+  const staleNative=await retained()
+  assert.deepEqual(staleNative.grants,nativeAfter.grants,'a source correction changes no grant')
+  for(const row of staleNative.runs)assert.equal(Boolean(row.sourcesCurrent),expected.get(row.id).sourcesCurrent,'the native retained source version independently identifies stale compensation')
+  for(const path of paths) {
+    const report=await call(path,names[2],{companyId:company.id},2)
+    valid(schemas.get(names[2]),report)
+    assert.deepEqual(report.bonuses.map(({id,personId,sourcesCurrent,amountCents})=>({id,personId,sourcesCurrent,amountCents})),
+      ordered.map(id=>{const row=expected.get(id);return {id,personId:row.preview.people[0].id,sourcesCurrent:row.sourcesCurrent,amountCents:row.preview.grossCashCents}}))
+    assert.equal(report.next,null)
+    for(const id of ordered) {
+      const read=await call(path,names[1],{companyId:company.id,runId:id})
+      valid(schemas.get(names[1]),read)
+      assert.deepEqual({...read,preview:nativeValues(read.preview)},expected.get(id))
+      assert.deepEqual(read.preview,nativeAfter.runs.find(row=>row.id===id).data,'stale source status never rewrites retained bonus values')
+    }
+  }
+  assert.deepEqual(await retained(),staleNative,'current and stale reads are read-only')
+  console.log('PROBE BASE-AGENT-002 native variants: '+phase+' both MCP paths -> bank version zero without bank data, two distinct payees, current and stale sources with immutable amounts; fabricated rule evaluation and missing calculation holds refused')
   console.log('PROBE BASE-AGENT-002 2: '+phase+' actual MCP paths -> native snapshot, bonus preview and empty and paginated report match independent records; missing, mistyped and private expansion rejected')
   console.log('PROBE BASE-AGENT-002 3: '+phase+' actual discovery and reads -> read-only annotations, standard snapshot and sensitive compensation with exact selected counts')
 }

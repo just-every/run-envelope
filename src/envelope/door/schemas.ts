@@ -6,21 +6,22 @@ const literal=(value:string|boolean):JsonSchema=>({type:typeof value,const:value
 const count={type:'integer',minimum:0},day={type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'},sha256={type:'string',pattern:'^[a-f0-9]{64}$'}
 const array=(items:JsonSchema):JsonSchema=>({type:'array',items})
 const immutableVersion={type:'integer',const:1}
+const zero={type:'integer',const:0},bonusAmount={type:'integer',minimum:1,maximum:100000000}
+const single=(items:JsonSchema):JsonSchema=>({...array(items) as JsonSchemaObject,minItems:1,maxItems:1})
 // This is the native bonus preparation, with calculation and release still held.
 const bonusPreview=closed({
   periodStart:day,periodEnd:day,payDate:day,frequency:literal('off-cycle bonus'),groupId:literal(''),
-  people:array(closed({id:string,name:string,earningsCents:count,taxableCashCents:count,reimbursementCents:count,afterTaxDeductionCents:count,
-    cashTipsCents:count,paycheckTipsCents:count,tipFundsCents:count,details:array(string)})),
-  holds:array(closed({personId:string,code:literal('bonus-calculation-incomplete'),reason:string})),
-  destinations:array(closed({personId:string,bankVersion:count})),
-  grossCashCents:count,taxableCashCents:count,reimbursementCents:count,afterTaxDeductionCents:count,
+  people:single(closed({id:string,name:string,earningsCents:bonusAmount,taxableCashCents:bonusAmount,reimbursementCents:zero,afterTaxDeductionCents:zero,
+    cashTipsCents:zero,paycheckTipsCents:zero,tipFundsCents:zero,details:{...array(string) as JsonSchemaObject,minItems:1}})),
+  holds:single(closed({personId:string,code:literal('bonus-calculation-incomplete'),reason:{type:'string',minLength:1}})),
+  destinations:single(closed({personId:string,bankVersion:count})),
+  grossCashCents:bonusAmount,taxableCashCents:bonusAmount,reimbursementCents:zero,afterTaxDeductionCents:zero,
   taxAmounts:{type:'null',description:'Tax has not been calculated.'},netPay:{type:'null',description:'Net pay has not been calculated.'},paymentReady:literal(false),
-  setupFingerprint:string,locationStates:array(string),ruleFingerprint:string,
-  ruleSources:array(closed({id:string,version:integer,name:string,determination:string,approved:{type:'boolean'},state:string,family:string,
-    details:{type:'object',additionalProperties:string}},['id','version','name','determination','approved'])),
-  bonusPreparation:closed({credentialId:string,requestFingerprint:sha256,sourceRef:string,amountCents:count}),
+  // This native tool records one bonus and does not evaluate setup or tax rules.
+  setupFingerprint:literal(''),locationStates:single(string),ruleFingerprint:literal(''),ruleSources:array(false),
+  bonusPreparation:closed({credentialId:string,requestFingerprint:sha256,sourceRef:string,amountCents:bonusAmount}),
 })
-const bonusItem=closed({id:string,version:immutableVersion,personId:string,amountCents:count,periodStart:day,periodEnd:day,payDate:day,
+const bonusItem=closed({id:string,version:immutableVersion,personId:string,amountCents:bonusAmount,periodStart:day,periodEnd:day,payDate:day,
   sourcesCurrent:{type:'boolean'},status:literal('uncalculated-earnings-run')})
 const proposalState={status:literal('uncalculated-proposal'),approval:literal('not-approved'),dispatch:literal('unavailable')}
 const proposalItem={id:string,personId:string,personVersion:integer,rateId:string,minutes:integer,
