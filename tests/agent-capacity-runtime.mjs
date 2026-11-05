@@ -105,6 +105,18 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     await advanceClock('2026-10-28T12:01:00.000Z')
     for(const route of routes)await read(credential,route)
     assert.deepEqual(await business(),admitted,'minute rollover restores reads without replaying refused writes')
+    // Simultaneous routes contend for one remaining slot in persistent D1.
+    const racing=await issue()
+    for(let slot=1;slot<limits.requestsPerMinute;slot++)await read(racing,routes[(slot-1)%routes.length])
+    const beforeRace=await business()
+    const attempts=await Promise.all(routes.map(route=>route==='rest'?rest(racing):wire(racing,route,'envelope.records.list',{companyId:company.id})))
+    assert.equal(attempts.filter(value=>value.response.status===200).length,1,'only one route may take the final capacity slot')
+    for(const refused of attempts.filter(value=>value.response.status!==200)) {
+      assert.equal(refused.response.status,429,JSON.stringify(refused.body))
+      assert.equal(refused.response.headers.get('retry-after'),'60')
+    }
+    assert.deepEqual(await business(),beforeRace,'contending reads cannot create business effects')
+    console.log('PROBE BASE-AGENT-011 1 '+phase+': simultaneous calls through both MCP routes and v1 REST with one slot left -> exactly one admitted and two HTTP 429, unchanged business state')
     // Resumed capacity supplies no authority after the owner revokes the grant.
     await owner(base+'/agents/'+credential.id+'/revoke',{version:1})
     const revoked=await business()
