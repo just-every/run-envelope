@@ -1,4 +1,5 @@
 import {replayStep,replayMutation} from './replay.mjs'
+import {toolContracts} from './tool-contracts.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 export default async function({database,request,origin,cookie}) {
@@ -16,6 +17,7 @@ export default async function({database,request,origin,cookie}) {
   }
 }
 export async function afterStep(context) {
+  await toolContracts(context)
   await replayStep(context)
   await replayMutation(context)
   const {phase,step,result,origin,request,database}=context

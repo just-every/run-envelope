@@ -1815,8 +1815,8 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 0 | 0 | 1 |
-| Target and push further | 4 | 38 | 83 | 125 |
-| All | 5 | 38 | 83 | 126 |
+| Target and push further | 4 | 39 | 82 | 125 |
+| All | 5 | 39 | 82 | 126 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1934,7 +1934,7 @@ Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f8099466
 | `ENV-070` | Explain a worker's own paycheck with citations | push-further | missing |  | No implementation exists; the complete explain a worker's own paycheck with citations behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |
 | `ENV-106` | Worker paycheck questions measured on a fixed corpus | push-further | missing |  | No implementation exists; the complete explain a worker's own paycheck with citations behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented. Buyer review 4 additions and acceptance remain unimplemented. |
 | `BASE-AGENT-001` | One MCP door per seed | target | missing | | Not yet judged through this seed's own doors. |
-| `BASE-AGENT-002` | The seed's jobs are tools, through the UI's own actions | target | missing | | Not yet judged through this seed's own doors. |
+| `BASE-AGENT-002` | The seed's jobs are tools, through the UI's own actions | target | partial | Acceptance points 2 and 3, bounded installed subset: `tests/agent-door/tool-contracts.mjs` — toolContracts, invoked by `tests/agent-door/rotation-journey.mjs` in the autonomous and held conformance phases, exercises actual MCP discovery and calls at both declared paths. Independently seeded native records in `tests/agent-door/fixtures.mjs` prove workspace counts and fingerprint changes, exact bonus preview fields and retained references, calculation holds, null tax and net pay, unavailable dispatch, empty and paginated bonus preparation reports, unchanged grants, sensitive selection counts and pending-read withholding. Discovery schemas reject missing, mistyped and expanded private fields; selected read annotations are read-only, nondestructive and closed-world. | Still unproved: complete Core-job tool coverage and truthful not-a-tool reasons, remaining tool schemas and annotations, matching UI refusal codes and record-state and audit parity, and embedded-agent use of the registry. The installed subset does not discharge the complete Base acceptance points. Existing SURFACE-001, SURFACE-003, SURFACE-004, SURFACE-006, BASE-AGENT-005 and BASE-AGENT-013 feeder holds and remaining class, policy, authority, replay and audit work remain owed. RL-101 retains its hold pending independent Opus review of the exact additive SURFACE-008 clauses. Existing sole hourly-pay and key-recovery writer custody, account and catalog, employer and rail, provider and mandate, sponsor and grant, exact-human-approval, CT, device and approved-look holds remain unchanged. Reference sends remain configured-native-owner-only, explicitly consented and audited; no automatic outbound action, automated retry or destructive recovery. |
 | `BASE-AGENT-003` | Records are resources | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-004` | Business identity and short-lived, audience-bound tokens | target | missing | | Not yet judged through this seed's own doors. |
 | `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | missing | | Not yet judged through this seed's own doors. |
