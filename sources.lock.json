@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f4a58896dcdda736d07ab27ba2aaf546be6154df80c204e9fbaf3959cb88e7de",
+      "sha256": "e0ce7598763478617d9a1766972b569583847124d6dac5b0834cc3cc29007577",
       "executable": false
     },
     "deploy-demo.json": {
@@ -581,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "f4f53dd3f5e02e9d7d8cf3ac0622b398f492f1088632cd75ee30196d2f272e29",
+      "sha256": "016db11dc150e3cfd787a938755349439bfeae107aeca7c2b9da4a6353e00b66",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2212,6 +2212,10 @@
       "sha256": "59a6f3551c31924746cf1bd822dfad29a175282ad231d3e42ac3f5d4a9b96b9b",
       "executable": false
     },
+    "src/envelope/calculation/futa-credit-reduction.ts": {
+      "sha256": "7624becde70ea81967485fb5cb2b2b4cb1c3e3d758f19b95ab1b1598fe6b0b6b",
+      "executable": false
+    },
     "src/envelope/calculation/maine.ts": {
       "sha256": "2655bdd7346a472c336f4dba43a94dc62c02e6cb9c85db7e6a3f1b6e30c55994",
       "executable": false
@@ -2385,7 +2389,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "b920bcc94a758641724ab2440a94e99be6c0b06f6b6f0b3069628f253af092a2",
+      "sha256": "57553facdc993cb301d27bd78232043b44c9543ca86a18a3c47d11c58ccce261",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2701,7 +2705,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "8305ee7da20cd04413f2fc5e847bfa7678676d25dbdf8c5a9775d18e410ce534",
+      "sha256": "114ca979698d8e62730f240c5decae0b7f217adc3619667cca7bb93f2c640851",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -4293,7 +4297,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "2361683c769fd5cf60f48652f7ad794a3e8a474b76149ae15116adeac7f95fd7",
+      "sha256": "e54cea813b4b3fa2e6726d4b12dea13baaf76a9514ca15c684e861ca16ca0195",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -4452,6 +4456,10 @@
       "sha256": "8e91e1da13d870d33704c0d78eeab809292a6e84deb24e39e4ce9641fe76919c",
       "executable": false
     },
+    "tests/futa-credit-runtime.mjs": {
+      "sha256": "2dde7892b6ddcc5d383b7593b157fbc7e05fe69e18a06b9a3dd1b76b29497d56",
+      "executable": false
+    },
     "tests/hi-benefits-runtime.mjs": {
       "sha256": "4a92d45f063c181baab204ecc35ebd060d4663886bea79df15db8917b688db1e",
       "executable": false
@@ -4513,7 +4521,7 @@
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
-      "sha256": "abecf27e99302941af31ea1072d6759dcc73c056d955e64adf0649d756b3df49",
+      "sha256": "918a11f9f3f4b6eb99f551c8d920d866baca1a50f68572cf89394c31b5685ea7",
       "executable": false
     },
     "tests/retirement-benefits-runtime.mjs": {
@@ -4525,7 +4533,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "854dbc673c8bf50c30ee88731de89c77f8a81a56e62026a00d560d9309e67c79",
+      "sha256": "09f02373190705e5f90e2d33fc109c7e8feae63965024ce1c9cca1db6d81f00a",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -4541,7 +4549,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "705be636d327e7d589d6ce18b5bc8eb535f09ff2fbd2ab17a421039bd09cf520",
+      "sha256": "322065e4cc1b292412d3011f52011f5177064d40ee9ce52a7e60e65a1be0a503",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

@@ -190,3 +190,75 @@ The current state publication is identified, but original state-table
 reconciliation remains unproved. Earlier state editions remain unmapped.
 The 51 ordinary component cases do not establish complete-state or complete
 program coverage: the complete-state count remains zero.
+
+## California 2025 FUTA credit reduction preparation
+
+The current configured native installation owner, with current company authority,
+can retain and review the supported final source edition through
+`POST /api/envelope/companies/{companyId}/futa-credit-sources`. Supply `version`
+(zero initially), `taxYear: 2025`, `state: "CA"`, `determination: "final"`,
+`sourceEdition: "CA-2025-final-2025-11-10"` and an employer `reference`.
+`GET` returns encrypted-at-rest source history to that authorized owner.
+Append `/review` to read the exact version and its review token, then POST
+`version` and `reviewToken` to `/approve`. This review establishes the adopted
+preparation input; it supplies no payroll approval, signature or filing authority.
+
+The source record retains the applicable IRS Schedule A and Form 940 instruction
+excerpts, original-edition digests and official links, plus DOL's final November 10,
+2025 determination. DOL approved California's potential 3.4% BCR add-on waiver;
+the applied final reduction is 1.2%, with no BCR or other add-on imposed here.
+This is a reviewed supported edition, not a live source-monitoring service or a
+complete original-document repository. Other years, jurisdictions, provisional
+sources and unrecognized final editions are refused. Zero is never inferred for
+an unsupported state or a future year's unavailable final notice.
+
+Retain each worker's complete annual California wages at
+`POST /api/envelope/companies/{companyId}/people/{personId}/futa-wages/2025`.
+Supply `version`, `taxYear: 2025`, `state: "CA"`, a stable employer
+`workerReference`, `completeYear: true`, `allWagesSubjectToSui: true`, and `items`.
+Each item has a stable source `reference`, actual `paidOn` date in 2025 and
+nonnegative integer `wagesCents`. The source reference identifies one wage item,
+not each import attempt or document revision. The evidence schema deliberately
+refuses incomplete annual coverage, other states and wages without the stated
+California unemployment-tax applicability. Multi-state wage allocation and
+exempt-wage cases require further implementation. Use the same exact-version
+`/review` and `/approve` ceremony for each worker's evidence.
+
+`POST /api/envelope/companies/{companyId}/futa-preparations/2025` takes `version`,
+`taxYear: 2025`, `state: "CA"`, the reviewed `sourceVersion`, and `workers` containing
+`personId` and reviewed evidence `version`. It sums each selected worker's annual
+wage items, caps that worker once at $7,000, and multiplies the combined taxable
+wages by 0.012, rounding once to the nearest cent. Three $20,000 workers produce
+$21,000 taxable wages and $252 extra; ten $7,000 workers produce $70,000 taxable
+wages and $840 extra. These are the selected reviewed wages, with no claim that
+an employer omitted no other workers. Duplicate workers, duplicate source claims
+and competing company records with the same EIN are refused. There is one
+canonical preparation per company and year: later versions replace pending
+preparation; their amounts are never additive.
+
+The result reports `scheduleA.creditReductionCents` and `form940.line11Cents`,
+with the additional employer liability assigned to Q4. It separately identifies
+gross 6% FUTA before credits and zero employee withholding. `paidLiabilityCents`
+and `payrollApproval` remain null; `paymentReady` is false. This preparation
+neither applies an assumed ordinary state-tax credit nor changes the existing
+hypothetical payroll preview's gross FUTA line. No amount is deducted, approved,
+deposited, paid or filed. Approval, payment, deposit and filing attempts are
+refused. Complete deposit-threshold and deadline application, increased-cash
+approval, accepted filing and payment receipts remain unavailable.
+
+`GET` on the preparation door returns retained versions with their current-source
+state; `/review` reads only a current preparation. Changing source or wage evidence
+invalidates the preceding preparation and any pending review. Review the new input
+and explicitly prepare a new version. Older versions retain their original source
+references and amounts; this is historical preparation, not reproduction of an
+actually filed return. Exact retries after a lost response or restart return the
+original version without a second preparation. Changed input cannot use that retry.
+
+All doors require the current native owner; staff, bearer credentials, foreign
+company selections, revoked sessions and held source data confer no access or
+preparation authority. Workspace person pins and dependencies include wage and
+preparation derivatives in statutory custody and eligible erasure, with erased
+source claims fenced against replay. The existing archive carries encrypted
+versions and retained source code, excludes native sessions, review tokens and
+company grants, and restores history without preparation or payment authority.
+No FUTA operation makes an outbound request.
