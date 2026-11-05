@@ -5,6 +5,7 @@ const closed=(properties:Record<string,JsonSchema>,required=Object.keys(properti
 const literal=(value:string|boolean):JsonSchema=>({type:typeof value,const:value})
 const count={type:'integer',minimum:0},day={type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'},sha256={type:'string',pattern:'^[a-f0-9]{64}$'}
 const array=(items:JsonSchema):JsonSchema=>({type:'array',items})
+const immutableVersion={type:'integer',const:1}
 // This is the native bonus preparation, with calculation and release still held.
 const bonusPreview=closed({
   periodStart:day,periodEnd:day,payDate:day,frequency:literal('off-cycle bonus'),groupId:literal(''),
@@ -19,7 +20,7 @@ const bonusPreview=closed({
     details:{type:'object',additionalProperties:string}},['id','version','name','determination','approved'])),
   bonusPreparation:closed({credentialId:string,requestFingerprint:sha256,sourceRef:string,amountCents:count}),
 })
-const bonusItem=closed({id:string,version:integer,personId:string,amountCents:count,periodStart:day,periodEnd:day,payDate:day,
+const bonusItem=closed({id:string,version:immutableVersion,personId:string,amountCents:count,periodStart:day,periodEnd:day,payDate:day,
   sourcesCurrent:{type:'boolean'},status:literal('uncalculated-earnings-run')})
 const proposalState={status:literal('uncalculated-proposal'),approval:literal('not-approved'),dispatch:literal('unavailable')}
 const proposalItem={id:string,personId:string,personVersion:integer,rateId:string,minutes:integer,
@@ -28,9 +29,9 @@ export function outputSchema(name:string):JsonSchemaObject {
   if(name==='records.list')return closed({records:array(closed({id:string,name:string,locationId:string,version:integer})),limit:integer,next:nullableString})
   if(name==='workspace.snapshot')return closed({people:count,drafts:count,bonuses:count,sha256})
   if(name==='draft.prepare')return closed({id:string,...proposalState})
-  if(name==='bonus.prepare')return closed({id:string,version:integer,status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
+  if(name==='bonus.prepare')return closed({id:string,version:immutableVersion,status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
   if(name==='draft.read')return closed({...proposalItem,personName:string,hourlyCents:integer,sourceRef:string,...proposalState})
-  if(name==='bonus.read')return closed({id:string,version:integer,preview:bonusPreview,sourcesCurrent:{type:'boolean'},
+  if(name==='bonus.read')return closed({id:string,version:immutableVersion,preview:bonusPreview,sourcesCurrent:{type:'boolean'},
     status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
   if(name==='reports.bonuses')return closed({kind:literal('bonus-earnings-preparations'),bonuses:array(bonusItem),limit:integer,next:nullableString,
     payroll:literal('uncalculated'),payment:literal('unavailable'),filing:literal('unavailable')})
@@ -41,7 +42,11 @@ export function outputSchema(name:string):JsonSchemaObject {
   if(name==='reply.dispatch') {
     const dispatch={id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString}
     // A native duplicate returns its retained state without asserting delivery.
-    return {type:'object',oneOf:[closed({...dispatch,delivered:literal('unconfirmed')}),closed({...dispatch,replayed:literal(true)})]}
+    return {type:'object',oneOf:[closed({...dispatch,delivered:literal('unconfirmed')}),closed({...dispatch,replayed:literal(true)})],
+      allOf:[{oneOf:[
+        object({state:literal('accepted'),providerReceipt:{type:'string',format:'uuid'}}),
+        object({state:{type:'string',enum:['pending','rejected','unknown']},providerReceipt:{type:'null'}}),
+      ]}]}
   }
   if(name==='credentials.rotate')return closed({id:string,secretExpiresAt:integer,expiresAt:integer,algorithm:literal('RSA-OAEP-256'),encryptedToken:{type:'string',pattern:'^[A-Za-z0-9+/]+={0,2}$'}})
   if(name==='credentials.restrict')return closed({id:string,version:integer,direction:{type:'string',enum:['narrow','unchanged']},peopleCount:integer,actions:array(string),fields:array(string),locations:array(string)})

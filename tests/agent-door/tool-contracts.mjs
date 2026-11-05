@@ -102,6 +102,7 @@ export async function installedToolContracts(context) {
     const row=(await owner(saved.base+'/pay-settings')).runs.find(row=>row.id===id)
     assert.equal(row.data.grossCashCents,50000);assert.equal(row.data.people[0].id,saved.person.id)
     assert.equal(row.data.taxAmounts,null);assert.equal(row.data.netPay,null);assert.equal(row.data.paymentReady,false)
+    assert.ok(schemaErrors(declared.outputSchema,{...result,version:2}).length,'an immutable bonus cannot claim a later preparation version')
   } else if(step.id==='run-review') {
     const link=new URL(result.reviewUrl),token=link.searchParams.get('presentation')
     assert.equal(link.origin,origin)
@@ -119,6 +120,8 @@ export async function installedToolContracts(context) {
     const retained=await one('SELECT state,provider_receipt AS providerReceipt FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND version=?',args.companyId,args.replyId,args.version)
     assert.equal(retained.state,'accepted');assert.match(retained.providerReceipt,/^[a-f0-9-]{36}$/)
     assert.deepEqual(result,{id:args.replyId,version:args.version,...retained,delivered:'unconfirmed'})
+    assert.ok(schemaErrors(declared.outputSchema,{...result,providerReceipt:null}).length,'acceptance requires the retained provider receipt')
+    assert.ok(schemaErrors(declared.outputSchema,{...result,state:'unknown'}).length,'uncertainty cannot claim an accepted provider receipt')
     // A new shared call reaches native replay; its receipt never proves delivery.
     const replayGrant=await owner(saved.base+'/agents',{name:'Synthetic result-contract replay',hours:1,
       actions:['dispatch:execute'],fields:['tax'],locations:['*'],providers:['resend']},201)

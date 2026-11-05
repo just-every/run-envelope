@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "adfd2859b41dc7f0e3869ba72bd1e9d49a1ed9f02870066149af69e3e3468b7e",
+      "sha256": "7d3d55982b1b20ff7b8950fd67afd390084a39e08e09a0181c9aecaf7380ef57",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "2607b527633a89315be944c380cc524b371106be43b66ea72412406fc44c300f",
+      "sha256": "8de380866421270743963ed137699102c8b2348d738f57cefd9f7b65a5d53a2d",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -2341,7 +2341,7 @@
       "executable": false
     },
     "src/envelope/door/schemas.ts": {
-      "sha256": "85ea69abb973c132ec3533ecfbba32199abb5d63eef2bcfd629963f7a4c61bc7",
+      "sha256": "bc6ebd40e071edd92df946f064cabb41aa3bc3b7daa63a0c5376930524b45e72",
       "executable": false
     },
     "src/envelope/door/tools.ts": {
@@ -4253,7 +4253,7 @@
       "executable": false
     },
     "tests/agent-door/tool-contracts.mjs": {
-      "sha256": "887a931ede946f948a87fcf387200c89b7429fb055830460fe84376424f86935",
+      "sha256": "e2b33ccd4f65e25b2f107d02c28d604695342b53ffdfd801cac5159079ebd8b0",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {

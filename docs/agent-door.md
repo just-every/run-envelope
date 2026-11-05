@@ -100,3 +100,19 @@ survive rotation or a native policy change. These fingerprints grant no scope.
 Native scope reduction (`envelope.credentials.restrict`) carries access, keeps the calling grant identity, and accepts only retained actions, fields and locations. Adding any power or naming another credential refuses without changing the grant. A reduction invalidates prior admissions; repeating the retained scope leaves its revision unchanged.
 
 The additive core migrations are 0044_business_settings.sql, 0045_business_people.sql, 0046_agent_door.sql, 0047_business_agent_bindings.sql, 0048_agent_door_policy_attribution.sql and 0049_agent_operation_lookup.sql; main’s existing 0001–0043 migrations remain unchanged.
+
+All installed tools publish closed output contracts. Hourly proposals retain their
+worker and reviewed-rate references, source, minutes, dates and numeric stale flag;
+they remain uncalculated with dispatch unavailable. Bonus preparations expose only
+the immutable first version, with tax and net pay null and the calculation hold
+intact. Both report families describe each returned row and their continuation
+cursor, including empty pages. A run-review link identifies an exact native
+presentation and supplies no human approval.
+
+Notice extraction remains an untrusted proposal. A correspondence dispatch result
+distinguishes provider acceptance and its retained receipt from delivery, which
+remains unconfirmed. Native duplicate results identify replay and retain that
+provider state without claiming another send. Scope reductions describe only the
+retained grant, and rotation returns encrypted delivery plus its actual expiry
+metadata; neither result includes a plaintext bearer. These contracts describe
+the installed subset, without implying full Core-job coverage or completed payroll.
