@@ -2213,7 +2213,7 @@
       "executable": false
     },
     "src/envelope/calculation/futa-credit-reduction.ts": {
-      "sha256": "f2329c9853b50a2bda4dd006f0240c1d4c830838a706af1f0f3eff797c5224e2",
+      "sha256": "bab1b8e61a20bdcfc4d64afda2d88b1874ab2a1e11b9adf2977e5077728fa433",
       "executable": false
     },
     "src/envelope/calculation/maine.ts": {
@@ -4457,7 +4457,7 @@
       "executable": false
     },
     "tests/futa-credit-runtime.mjs": {
-      "sha256": "7726f4b5a0a3fe5d1bd153d1bcf80352cc1e98344d2ef703de19202c0f043116",
+      "sha256": "25ce4470d469479c82ee11685340e6b8fba9aee1f8df3ff2a93d38cb938b953f",
       "executable": false
     },
     "tests/hi-benefits-runtime.mjs": {

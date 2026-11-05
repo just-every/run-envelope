@@ -49,7 +49,7 @@ const year = (value: unknown) => {
   return n
 }
 const sourceId = 'futa-source-2025-CA'
-const preparationId = 'futa-preparation-2025-CA'
+const preparationBaseId = 'futa-preparation-2025-CA'
 const wageId = (person: string) => objectId(person + '-2025')
 const noHold = (actor: Actor) => ({ sql: "NOT EXISTS(SELECT 1 FROM env_privacy_requests WHERE company_id=? AND status='held')", args: [actor.company] })
 const reviewed = (row: Revision<unknown>, version: number) => {
@@ -144,6 +144,17 @@ export class FutaCreditReduction {
       if (await unseal(key, JSON.stringify([row.id, 'ein']), row.ein_cipher) === ein) fail('futa_duplicate_ein_company', 409)
     }
   }
+  async preparationId(actor: Actor) {
+    // Erasure permanently retires the whole derivative identity. Advance only
+    // past retired generations; never clear a fence or accept a caller's ID.
+    const rows = await this.store.records.statement('SELECT source_hash FROM env_privacy_source_fences WHERE company_id=?', [actor.company]).all<{ source_hash: string }>()
+    const retired = new Set(rows.results.map(row => row.source_hash))
+    let id = preparationBaseId, generation = 0
+    while (retired.has(await digest(JSON.stringify(['futa-preparation', id])))) {
+      id = preparationBaseId + '-' + ++generation
+    }
+    return id
+  }
   async prepare(actor: Actor, taxYear: unknown, input: Input) {
     year(taxYear); await this.scope(actor)
     keys(input, ['version', 'taxYear', 'state', 'sourceVersion', 'workers'])
@@ -157,8 +168,9 @@ export class FutaCreditReduction {
     if (new Set(workers.map(w => w.personId)).size !== workers.length) fail('futa_duplicate_worker', 409)
     await this.uniqueEin(actor)
     const sourceVersion = integer(input.sourceVersion), { source, wages } = await this.inputs(actor, workers, sourceVersion)
-    // One canonical company-year preparation replaces its preceding version;
+    // One active company-year generation replaces its preceding version;
     // a second identifier cannot claim another annual base or liability.
+    const preparationId = await this.preparationId(actor)
     const fingerprint = await digest(JSON.stringify({ sourceVersion, workers }))
     const prior = latest(await this.store.list<Preparation>(actor, 'futa-preparation', undefined, true, false)).find(r => r.id === preparationId)
     if (prior?.data.fingerprint === fingerprint && prior.sourcesCurrent) {
@@ -199,6 +211,7 @@ export class FutaCreditReduction {
   }
   async reviewPreparation(actor: Actor, taxYear: unknown) {
     year(taxYear); await this.scope(actor)
+    const preparationId = await this.preparationId(actor)
     const row = await this.store.find<Preparation>(actor, 'futa-preparation', preparationId, undefined, true)
     if (!row.sourcesCurrent) fail('futa_preparation_stale', 409)
     await this.inputs(actor, row.data.workers, row.data.sourceVersion)
