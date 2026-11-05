@@ -84,7 +84,7 @@ export class AgentPolicy {
         v.object_id AS preparedRunId,v.version AS preparedRunVersion,v.cipher AS preparationCipher
         FROM env_agent_call_audit a JOIN env_agent_grants g ON g.id=a.credential_id JOIN oa_operators o ON o.id=a.sponsor_id
         LEFT JOIN env_agent_access prep ON a.tool='bonus.prepare' AND prep.company_id=a.company_id AND prep.credential_id=a.credential_id
-          AND prep.door_operation_id=a.door_operation_id AND prep.action='bonus.prepared'
+          AND prep.door_operation_id=a.door_operation_id AND prep.action IN ('bonus.prepared','bonus.prepare-replayed')
         LEFT JOIN env_workspace_versions v ON v.company_id=prep.company_id AND v.kind='earnings-run' AND v.object_id=prep.target_id AND v.version=1
           AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=a.company_id AND pr.status='held')
         WHERE ${filter} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args),

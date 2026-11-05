@@ -58,7 +58,7 @@ export async function prepareBonus(agent: AgentTools, input: Input) {
   if(existing) {
     const retained=JSON.parse(await unseal(key,JSON.stringify([agent.grant.company_id,'earnings-run',runId,1]),existing.cipher)) as EarningsRun
     if(retained.bonusPreparation?.requestFingerprint!==requestFingerprint) throw new PayrollError('bonus_idempotency_conflict',409)
-    return readPrepared(agent,runId,requestFingerprint)
+    return readPrepared(agent,runId,requestFingerprint,true)
   }
   const person=await agent.env.DB.prepare(`SELECT p.id,p.version,p.name,l.state_code AS state,
     COALESCE((SELECT version FROM env_private_records WHERE company_id=p.company_id AND person_id=p.id AND kind='bank'),0) AS bankVersion
@@ -94,15 +94,18 @@ export async function prepareBonus(agent: AgentTools, input: Input) {
     agent.log('bonus.prepared',runId,'EXISTS(SELECT 1 FROM env_workspace_versions WHERE change_id=?)',[event]),
   ])
   if(!result[0].results.length && !await agent.env.DB.prepare(`SELECT 1 FROM env_workspace_versions WHERE company_id=? AND kind='earnings-run' AND object_id=? AND ${f.sql}`).bind(agent.grant.company_id,runId,...f.args).first()) throw new PayrollError('bonus_input_or_authority_changed',409)
-  return readPrepared(agent,runId,requestFingerprint)
+  // A concurrent transport that lost the insert returns the retained run exactly like a replay.
+  return readPrepared(agent,runId,requestFingerprint,!result[0].results.length)
 }
-async function readPrepared(agent: AgentTools, runId:string, fingerprint:string) {
+/** `replay` records this call's own door operation against the retained run, never another preparation. */
+async function readPrepared(agent: AgentTools, runId:string, fingerprint:string, replay=false) {
   // Preparation-only grants receive a reference, never an implicit read power.
   const f=agent.fence()
   const row=await agent.env.DB.prepare(`SELECT cipher FROM env_workspace_versions WHERE company_id=? AND kind='earnings-run' AND object_id=? AND version=1 AND ${f.sql}`).bind(agent.grant.company_id,runId,...f.args).first<{cipher:string}>()
   if(!row) throw new PayrollError('agent_authority_revoked',403)
   const data=JSON.parse(await unseal(await recordKey(agent.env.ENVELOPE_RECORD_KEY),JSON.stringify([agent.grant.company_id,'earnings-run',runId,1]),row.cipher)) as EarningsRun
   if(data.bonusPreparation?.credentialId!==agent.grant.id || data.bonusPreparation.requestFingerprint!==fingerprint) throw new PayrollError('bonus_idempotency_conflict',409)
+  if(replay) await agent.log('bonus.prepare-replayed',runId).run()
   if(!await agent.env.DB.prepare(`SELECT 1 WHERE ${f.sql}`).bind(...f.args).first()) throw new PayrollError('agent_authority_revoked',403)
   return {id:runId,version:1,status:'uncalculated-earnings-run',approval:'requires-separate-human-proof',dispatch:'unavailable'}
 }

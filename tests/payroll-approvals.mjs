@@ -332,7 +332,11 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
       assert.deepEqual([entry.credentialId,entry.sponsorId,entry.runVersion],[agent.id,humans.admin.id,1])
       assert.deepEqual(entry.preparedBy,preparedBy)
       assert.doesNotMatch(JSON.stringify(entry),/25000|cipher|requestFingerprint/,'access download adds attribution, never compensation')
-      const activity=(await data(base+'/agents')).activity.calls.find(row=>row.preparedRunId===bonus.id)
+      const calls=(await data(base+'/agents')).activity.calls
+      const prepares=calls.filter(row=>row.tool==='bonus.prepare' && row.decision==='executed')
+      assert.ok(prepares.every(row=>row.preparedBy && row.preparedRunId),'every successful preparation, replay and concurrent loser keeps its actor labels')
+      assert.ok(prepares.filter(row=>row.preparedRunId===bonus.id).every(row=>row.preparedBy.label===preparedBy.label),'a replay shows the retained preparer, not the replaying transport')
+      const activity=calls.find(row=>row.preparedRunId===bonus.id)
       assert.deepEqual([activity.credentialId,activity.sponsorId,activity.preparedRunVersion],[agent.id,humans.admin.id,1])
       assert.deepEqual(activity.preparedBy,preparedBy)
       assert.equal(activity.agentName,preparerName)
@@ -476,6 +480,7 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     assert.equal(await page.locator('main img[src="x"],main [onerror],[data-bonus-preparer] b').count(),0)
     for(const width of [1440,390]) {
       await page.setViewportSize({width,height:1000})
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth)<=width,`expanded attributed calls fit a ${width}px view`)
       await page.screenshot({path:join(folder,`bonus-attributed-activity-${width}.png`),fullPage:true})
     }
     await refused(base+'/agents/access',undefined,'payroll_access_denied',humans.clerk.cookie,{},403)
