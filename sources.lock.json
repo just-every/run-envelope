@@ -2137,11 +2137,11 @@
       "executable": false
     },
     "src/envelope/agent-pages.tsx": {
-      "sha256": "484fb98534cf84cf09068d3c88c1885b3cd36b5d38787b70ff50b6a3f713201a",
+      "sha256": "dab5e3833636bb31138c6038d0a75991add3cf0d62fa7f59faebf553d052aee6",
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "6fda05123012e8bf83535a30aadecfcd306f32438aa43a5ae03d7c08f3d8ada8",
+      "sha256": "a4dd147d8ba641233968efe7e7eec04e127f6b597e5cc59ccaf84b672c848ff7",
       "executable": false
     },
     "src/envelope/agents.ts": {
@@ -2185,7 +2185,7 @@
       "executable": false
     },
     "src/envelope/bonus-runs.ts": {
-      "sha256": "27d93f3b801e2c7bfd812123e3e9c2f1eb0183cf081dfd92b4a51e541a224638",
+      "sha256": "15f84d9aafcfb1e85738f945406a7266850a61d9e5badadbcf23de1ff74a12b0",
       "executable": false
     },
     "src/envelope/calculation/alabama.ts": {
@@ -4497,7 +4497,7 @@
       "executable": false
     },
     "tests/payroll-approvals.mjs": {
-      "sha256": "95d28d901dfc01f53d5e6a8765acc27ea6bca79f2e79df6aa4d7b67c88bd45ab",
+      "sha256": "0e12ec69f178918836bd46e04113c3d71ae870b00af4af1098a78fdc9621a350",
       "executable": false
     },
     "tests/payroll-doors.mjs": {
