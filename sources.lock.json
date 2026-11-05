@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "7a039216ff3f6552693d294995653ce5ff4cc080b4adf8fd8fccc5c8788f50fe",
+      "sha256": "064bfcf7f8d4c622b4b5560c7d377566ecf4a66d71f111c84cf68b23a43f2e75",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -4205,7 +4205,7 @@
       "executable": false
     },
     "tests/agent-capacity-runtime.mjs": {
-      "sha256": "0c417e310c98dc9f3610ade354fed92bf805ad7b2f33d885b4abc64cd7ed235b",
+      "sha256": "c7bc361640c4124259e6d2e5d29642355fd38c44a581e6ee2544c573ed352716",
       "executable": false
     },
     "tests/agent-door/agent.mjs": {

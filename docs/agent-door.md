@@ -15,7 +15,8 @@ The last slot may execute; the next attempt receives HTTP 429 and a positive
 exhaustion uses `agent_rate_limited`; the shared guard uses `rate_limited`.
 Invalid credentials remain authentication refusals. Restarting the Worker or
 switching routes does not replenish capacity; independently issued credentials
-have independent budgets. Public discovery does not consume a native slot.
+have independent budgets. Public discovery does not consume a native slot. Concurrent requests through
+these routes compete for the same final slot; at most one is admitted.
 These installation protections are not daily business caps or provider spend
 budgets, and do not authorize retries, effects or broader native access.
 
