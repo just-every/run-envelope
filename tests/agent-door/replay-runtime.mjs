@@ -3,9 +3,10 @@ import {hashToken} from '../../src/modules/operator-auth/crypto.mjs'
 import {autonomousPolicy,heldPolicy} from '../../src/modules/agent-door/conformance/crypto.mjs'
 import {answers} from './native.mjs'
 import {prepared,refused,replayError} from './replay.mjs'
+import {replayFamilies} from './replay-families.mjs'
 
 /** Persistent emitted-Worker sanity journey; all agent state changes use doors. */
-export async function replayJourney({origin,cookie,settings,sql,restart,advanceClock}) {
+export async function replayJourney({origin,cookie,settings,sql,restart,advanceClock,edge}) {
   const owner=async(path,body,method=body===undefined?'GET':'POST',status=200)=>{
     const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
     assert.equal(response.status,status,path+' '+await response.clone().text())
@@ -179,4 +180,6 @@ export async function replayJourney({origin,cookie,settings,sql,restart,advanceC
     }
   }
   console.log('PROBE BASE-AGENT-012 retention: persistent MCP at 24 hours minus 1 ms, exactly 24 hours and plus 1 ms, rotated credentials and Worker restarts -> equal first outcomes and changed-argument conflicts under both policies, no repeated preparation')
+  await advanceClock('2026-10-28T12:00:00.000Z')
+  await replayFamilies({origin,cookie,settings,owner,sql,restart,advanceClock,edge,wire})
 }

@@ -1,4 +1,5 @@
 import {replayJourney} from './agent-door/replay-runtime.mjs'
+import {replayNetwork} from './agent-door/replay-families.mjs'
 import { agentPolicyWorker } from './agent-policy-worker.mjs'
 import { agentPolicyJourney } from './agent-policy-runtime.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
@@ -140,12 +141,13 @@ const clockEntrypoint = ['agent-policy','agent-replay'].includes(process.env.ENV
   : undefined
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
 let output = ''
+const replayEdge=process.env.ENVELOPE_JOURNEYS==='agent-replay'?replayNetwork():undefined
 async function launch(bindings) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
     ...((clockEntrypoint ?? operationsEntrypoint) ? {entrypoint:clockEntrypoint ?? operationsEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
-    dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
+    dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error',...(replayEdge?{outboundService:request=>replayEdge.fetch(request)}:{}) },
   })
   await instance.ready
   return instance
@@ -297,7 +299,10 @@ try {
       await waitForWorker()
     }
   }
-  if (selected?.includes('agent-replay')) await replayJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-replay')) {
+    let bindings=settings
+    await replayJourney({origin,cookie,sql,settings,edge:replayEdge,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async overrides=>{if(overrides)bindings={...settings,...overrides};await stopWorker();worker=await launch(bindings);await waitForWorker()}})
+  }
   if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})
   if (selected?.includes('accounting')) await accountingJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
