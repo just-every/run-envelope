@@ -37,7 +37,7 @@ import { sourcePage } from './intake/pages'
 import { LeaveLedger, leaveBucket, leaveId } from './leave/ledger'
 import { leavePage } from './leave/pages'
 import { AgentPolicy, AgentPolicyError, policyCall, toolClasses } from './agent-policy'
-import { AgentSettings, AgentTools } from './agents'
+import { AgentSettings, AgentTools, AgentCapacityError } from './agents'
 import { Lifecycle } from './lifecycle'
 import { Providers } from './providers'
 import { Notices, processNotice, dispatchReply } from './notices'
@@ -978,6 +978,8 @@ export async function payrollResponse(
     const known = error instanceof PayrollError,
       code = known ? error.code : 'payroll_unavailable',
       status = known ? error.status : 503
+    if (error instanceof AgentCapacityError)
+      return new Response(request.method==='HEAD'?null:JSON.stringify({error:code}),{status,headers:{...headers,'content-type':'application/json','retry-after':String(error.retryAfter)}})
     if (url.pathname === '/api/envelope/mcp')
       return json(
         {
