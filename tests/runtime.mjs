@@ -1,4 +1,5 @@
 import {replayJourney} from './agent-door/replay-runtime.mjs'
+import {agentPolicyDecisionsJourney} from './agent-policy-decisions-runtime.mjs'
 import { agentPolicyWorker } from './agent-policy-worker.mjs'
 import { agentPolicyJourney } from './agent-policy-runtime.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
@@ -56,7 +57,7 @@ import { firmJourney } from './firm-runtime.mjs'
 // historical-record fixtures in the core journey are not archive source data.
 if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
-    'records,approvals,sponsored,identity', 'agent-policy', 'agent-replay',
+    'records,approvals,sponsored,identity', 'agent-policy', 'agent-replay', 'agent-decisions',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
     'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
@@ -135,7 +136,7 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
-const clockEntrypoint = ['agent-policy','agent-replay'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
+const clockEntrypoint = ['agent-policy','agent-replay','agent-decisions'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
@@ -252,7 +253,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['agent-replay', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['agent-decisions', 'agent-replay', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -299,6 +300,7 @@ try {
   }
   if (selected?.includes('agent-replay')) await replayJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-decisions')) await agentPolicyDecisionsJourney({origin,cookie,settings,sql:command=>/^\s*SELECT\b/i.test(command)?inspectNativeSql(persist,command):sql(command),advanceClock:async instant=>{const response=await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}});assert.equal(response.status,200);return response.headers.get('x-synthetic-clock-now')},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})
   if (selected?.includes('accounting')) await accountingJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('automation')) await automationJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
