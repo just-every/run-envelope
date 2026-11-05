@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { credentialResponse } from './human-proof-fixture.mjs'
+import { outboundRequestCount } from './privacy-recorder.mjs'
 import { chromium } from '@playwright/test'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
@@ -305,6 +306,7 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     const bonusInput={companyId:company.id,personId:w1.id,amountCents:25000,
       periodStart:period.periodStart,periodEnd:period.periodEnd,payDate:period.payDate,
       sourceRef:'synthetic-envelope-915',requestKey:'synthetic-envelope-916'}
+    const bonusOutbound=outboundRequestCount()
     const bonus=await tool('bonus.prepare',bonusInput)
     assert.equal(bonus.dispatch,'unavailable')
     const bonusRead=await tool('bonus.read',{companyId:company.id,runId:bonus.id})
@@ -431,6 +433,7 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     page=await capture('bonus-human-review',bonusPath,'approver-b')
     assert.ok((await page.locator('main').innerText()).includes('Bonus: 25000 cents'))
     assert.ok((await page.locator('main').innerText()).includes('Supplemental withholding'))
+    await page.setViewportSize({width:1440,height:1000})
     assert.ok((await page.locator('[data-bonus-preparer]').textContent()).includes(preparedBy.label))
     assert.equal(await page.locator('main img[src="x"],main [onerror],[data-bonus-preparer] b').count(),0,'retained hostile labels render as text')
     const humanBonusReview=await data(bonusPath.replace('/app/','/api/'),undefined,200,humans['approver-b'].cookie)
@@ -452,6 +455,7 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     await refused(door+'/earnings-run/'+bonus.id+'/approve',approvedBody,'second_approver_must_differ',humans['approver-b'].cookie)
     await capture('bonus-human-approved',screen,'approver-b')
     const recordPage=pages['approver-b']
+    await recordPage.setViewportSize({width:1440,height:1000})
     assert.ok((await recordPage.locator('article').filter({has:recordPage.locator('h3',{hasText:bonus.id})}).innerText()).includes(preparedBy.label))
     await release(bonus.id,1,'run_not_payable')
     const oncePrepared=await sql(`SELECT COUNT(*) AS n FROM env_agent_access WHERE action='bonus.prepared' AND target_id='${bonus.id}'`)
@@ -466,6 +470,7 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     await bonusEvidence()
     const activityPath=base.replace('/api/','/app/')+'/agents'
     page=await capture('bonus-attributed-activity',activityPath)
+    await page.setViewportSize({width:1440,height:1000})
     await page.getByText('Attributed calls',{exact:true}).click()
     assert.ok((await page.locator('main').innerText()).includes(preparedBy.label))
     assert.equal(await page.locator('main img[src="x"],main [onerror],[data-bonus-preparer] b').count(),0)
@@ -493,6 +498,9 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     assert.equal((await data(door)).runs.find(row=>row.id===legacyId).data.bonusPreparation.preparedBy,undefined)
     await pages.owner.goto(origin+screen)
     assert.match(await pages.owner.locator('article').filter({has:pages.owner.locator('h3',{hasText:legacyId})}).innerText(),/Prepared by Attribution not retained/)
+    await pages.owner.goto(origin+screen+'/earnings-run/'+legacyId+'/review')
+    assert.match(await pages.owner.locator('[data-bonus-preparer]').innerText(),/Attribution not retained/)
+    assert.doesNotMatch(await pages.owner.locator('[data-bonus-preparer]').innerText(),/Synthetic renamed agent|Synthetic renamed sponsor/)
     await data('/auth/display-name',{displayName:'Synthetic admin'},200,humans.admin.cookie)
     await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${foreign.id}'`)
     assert.equal((await mcpStatus(await foreignCall('bonus.read'))),401)
@@ -502,6 +510,8 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     await bonusEvidence()
     assert.deepEqual((await retainedBonus()).data,originalBonus.data,'revocation preserves historical preparer and sponsor')
     assert.equal((await status(bonus.id)).approvals.length,1,'history and replay never add a human approval')
+    assert.equal(outboundRequestCount(),bonusOutbound,'preparation, review, history and denied release contact no provider')
+    await capture('bonus-human-approved',screen,'approver-b')
     await tool('reports.bonuses',{companyId:company.id},401)
     await tool('bonus.read',{companyId:company.id,runId:bonus.id},401)
     await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},401)
@@ -811,6 +821,11 @@ export async function approvalJourney({ origin, cookie, sql, settings, restart }
     const privacy=base+'/people/'+w1.id+'/privacy', inventory=await data(privacy)
     assert.ok(inventory.retained.some(r=>r.table==='env_workspace_versions' && r.key.object_id===custodyRun.id),'privacy inventory includes the encrypted native bonus derivative')
     await data(privacy+'/request',{consent:true,fingerprint:inventory.fingerprint})
+    const heldAccess=(await data(base+'/agents/access')).find(row=>row.targetId===custodyRun.id)
+    assert.equal(heldAccess.preparedBy,null,'held source is not decrypted for historical metadata')
+    assert.doesNotMatch(JSON.stringify(heldAccess),/25000|cipher|synthetic-envelope-915/)
+    const heldActivity=(await data(base+'/agents')).activity.calls.find(row=>row.operationId===heldAccess.operationId && row.tool==='bonus.prepare')
+    assert.equal(heldActivity.preparedBy,null,'activity cannot resurrect a held preparation snapshot')
     for(const resource of ['/bonus-runs/'+custodyRun.id,'/reports/bonus-runs']) {
       const held=await fetch(origin+'/api/envelope/v1/companies/'+company.id+resource,{headers:{authorization:'Bearer '+custodyClient.token}})
       assert.equal(held.status,403)
