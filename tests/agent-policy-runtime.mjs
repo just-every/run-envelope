@@ -298,6 +298,7 @@ export async function agentPolicyJourney({origin,cookie,settings,sql,restart}) {
       assert.equal(change?.facts.peopleCount,1)
     }
     await authorityRevocationJourney({origin,cookie,settings,sql,data,base,company,location,person,now:clockNow,agentMessage})
+    state=(await data(base+'/agents')).classPolicy
     // Seed the rest of one fixed UTC week through real calls, with real D1 time
     // supplied by the test-only clock rather than the machine's civil date.
     const expectedDays=['2026-10-28']

@@ -1,4 +1,4 @@
-import {beforeRestriction,afterRestriction} from './authority.mjs'
+import {beforeRestriction,afterRestriction,authorityInjectionStep} from './authority.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 export default async function({database,request,origin,cookie}) {
@@ -19,7 +19,7 @@ export async function beforeStep(context) {
   try {await beforeRestriction(context)} catch(error) {console.error('Native admission assertion in '+context.phase+': '+error.message);throw error}
 }
 export async function afterStep(context) {
-  try {await afterRestriction(context)} catch(error) {console.error('Native restriction assertion in '+context.phase+': '+error.message);throw error}
+  try {await afterRestriction(context);await authorityInjectionStep(context)} catch(error) {console.error('Native restriction assertion in '+context.phase+': '+error.message);throw error}
   const {phase,step,result,origin,request,database}=context
   if(step.tool!=='envelope.credentials.rotate')return
   assert.equal(Object.hasOwn(result,'token'),false,'the door never retains a plaintext native bearer')

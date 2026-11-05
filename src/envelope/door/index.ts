@@ -6,6 +6,7 @@ import { currentScopes, scopes } from './native'
 import { payrollPeople } from './people'
 import { notTools } from './catalogue'
 import { nativeTools } from './tools'
+import { selfAdministration } from './authority'
 
 export const capabilities = ['tools','policy','pause','audit','idempotency'] as const
 function trust(env: Bindings): Trust | null {
@@ -31,6 +32,8 @@ export function envelopeDoor(env: Bindings) {
   })
 }
 export async function agentResponse(request: Request, env: Bindings) {
+  const refused=await selfAdministration(request,env)
+  if(refused)return refused
   const path=new URL(request.url).pathname
   if(!['/mcp','/api/envelope/mcp','/api/rer/agent-policy','/api/rer/business-settings','/rer-business-logo','/rer-business.css','/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp','/agents'].includes(path) && !path.startsWith('/agents/')) return null
   const settings=createBusinessSettings({db:env.DB,trust:env.RER_BUSINESS_TRUST ?? null,

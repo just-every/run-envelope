@@ -120,15 +120,20 @@ export async function requireAgentPolicy(agent:AgentTools,tool:string) {
 export async function restrictionEscalation(agent:AgentTools,input:Input) {
   const restriction=agent.restriction(input)
   if(!restriction.widens)return false
+  await recordSelfEscalation(agent,'credentials.restrict',{direction:restriction.direction,peopleCount:1})
+  return true
+}
+
+/** Refusal audit contains computed authority facts, never supplied credentials. */
+export async function recordSelfEscalation(agent:AgentTools,tool:string,facts:Record<string,unknown>,transport='shared-door') {
   const id=crypto.randomUUID(),ctx=agent.doorContext
   const policy=await agent.env.DB.prepare('SELECT version FROM env_agent_class_policy WHERE company_id=?').bind(agent.grant.company_id).first<{version:number}>()
   await agent.env.DB.batch([
     agent.env.DB.prepare(`INSERT INTO env_agent_call_audit(id,company_id,credential_id,sponsor_id,tool,transport,classes,decision,policy_version,occurred_at,door_agent_id,door_agent_name,door_operation_id,door_consent,door_approvers)
-      VALUES(?,?,?,?,'credentials.restrict','shared-door','["access"]','self_escalation',?,?,?,?,?,?,?)`)
-      .bind(id,agent.grant.company_id,agent.grant.id,agent.grant.sponsor_id,policy?.version??0,Date.now(),ctx?.agent.id??null,ctx?.agent.name??null,ctx?.operationId??null,ctx?.consent??null,ctx?JSON.stringify(ctx.approvers):null),
-    agent.env.DB.prepare('INSERT INTO env_agent_call_facts(call_id,facts) VALUES(?,?)').bind(id,JSON.stringify({direction:restriction.direction,peopleCount:1})),
+      VALUES(?,?,?,?,?,?,'["access"]','self_escalation',?,?,?,?,?,?,?)`)
+      .bind(id,agent.grant.company_id,agent.grant.id,agent.grant.sponsor_id,tool,transport,policy?.version??0,Date.now(),ctx?.agent.id??null,ctx?.agent.name??null,ctx?.operationId??null,ctx?.consent??null,ctx?JSON.stringify(ctx.approvers):null),
+    agent.env.DB.prepare('INSERT INTO env_agent_call_facts(call_id,facts) VALUES(?,?)').bind(id,JSON.stringify(facts)),
   ])
-  return true
 }
 
 /** Restriction only: policy cannot supply a scope, a human decision or provider consent. */

@@ -88,3 +88,19 @@ survive rotation or a native policy change. These fingerprints grant no scope.
 Native scope reduction (`envelope.credentials.restrict`) carries access, keeps the calling grant identity, and accepts only retained actions, fields and locations. Adding any power or naming another credential refuses without changing the grant. A reduction invalidates prior admissions; repeating the retained scope leaves its revision unchanged.
 
 The additive core migrations are 0044_business_settings.sql, 0045_business_people.sql, 0046_agent_door.sql, 0047_business_agent_bindings.sql, 0048_agent_door_policy_attribution.sql and 0049_agent_operation_lookup.sql; main’s existing 0001–0043 migrations remain unchanged.
+
+A native agent bearer at the existing person administration doors receives
+`self_escalation` when it tries to promote its sponsoring installation role,
+widen its sponsor's company grant, or change native or shared policy or Pause.
+The same refusal applies with an attached owner cookie and under autonomous,
+approval and blocked access policies. The refusal records the actual sponsor,
+grant and computed access direction without changing any authority or policy.
+It supplies no person session, provider authority or Business token capability.
+
+Worker names, retained preparation sources and imported notice text remain
+untrusted data. Claims of owner access or an internal recipient in that data or
+in extra arguments do not change a tool's computed classes or permitted scope.
+Grant scope reductions and sponsor changes are rechecked by both MCP routes,
+the existing REST adapter and the CLI before any retained result is returned.
+Grant budgets, complete role parity and remaining data families are still owed;
+no provider spend enforcement is claimed.
