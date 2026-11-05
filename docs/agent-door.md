@@ -16,7 +16,10 @@ exhaustion uses `agent_rate_limited`; the shared guard uses `rate_limited`.
 Invalid credentials remain authentication refusals. Restarting the Worker or
 switching routes does not replenish capacity; independently issued credentials
 have independent budgets. Public discovery does not consume a native slot. Concurrent requests through
-these routes compete for the same final slot; at most one is admitted.
+these routes compete for the same final slot; at most one is admitted. A fresh
+human sign-in does not replenish an existing agent budget. Revocation is checked
+before capacity, so a revoked credential receives an authority refusal rather
+than an invitation to wait for more capacity.
 These installation protections are not daily business caps or provider spend
 budgets, and do not authorize retries, effects or broader native access.
 

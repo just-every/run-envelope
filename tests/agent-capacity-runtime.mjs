@@ -2,22 +2,41 @@ import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
-import {hashToken} from '../src/modules/operator-auth/crypto.mjs'
 import {autonomousPolicy,heldPolicy,accessToken,policyEnvelope,signJws} from '../src/modules/agent-door/conformance/crypto.mjs'
 import {answers} from './agent-door/native.mjs'
 
 /** Real issued credentials, emitted Worker, persistent D1 and public transports. */
-export async function agentCapacityJourney({origin,cookie,settings,sql,restart,advanceClock,edge}) {
+export async function agentCapacityJourney({origin,cookie,settings,sql,restart,advanceClock,edge,request}) {
   const owner=async(path,body,method=body===undefined?'GET':'POST',status=200)=>{
-    const response=await fetch(origin+path,{method,redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+    const response=await request(origin+path,{method,redirect:'manual',headers:{cookie,origin,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
     assert.equal(response.status,status,path+' '+await response.clone().text())
     return response.json()
   }
-  // Reuse the installation bootstrap's recent-proof seam. Agent credentials,
-  // policies, source reviews and business effects still use their public doors.
-  const now=Date.parse('2026-10-28T12:00:00Z'),ownerHash=await hashToken(settings.SESSION_SECRET,'session',cookie.split('=')[1])
-  await sql(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
-    SELECT 'synthetic-envelope-capacity-proof',token_hash,id,operator_id,operator_version,'credentials:mint','/app',${now},${now+600000},${now} FROM oa_sessions WHERE token_hash='${ownerHash}'`)
+  const auth=async(path,body,status,session=cookie)=>{
+    const response=await request(origin+path,{method:'POST',redirect:'manual',headers:{cookie:session,origin,'cf-connecting-ip':'192.0.2.64','content-type':'application/json'},body:JSON.stringify(body)})
+    assert.equal(response.status,status,path+' '+await response.clone().text())
+    return response
+  }
+  const confirm=async()=>{
+    const message=edge.mails.at(-1)
+    assert.deepEqual(message.to,[settings.OWNER_EMAIL],'the proof goes only to the native owner')
+    const link=new URL(message.text.match(/https:\/\/[^\s]+/)[0])
+    assert.equal(link.origin,origin)
+    assert.equal(link.pathname,'/auth/confirm')
+    const response=await auth(link.pathname,{token:link.searchParams.get('token')},303)
+    assert.equal((await auth(link.pathname,{token:link.searchParams.get('token')},400)).headers.has('set-cookie'),false,'a consumed human proof cannot be replayed')
+    return response
+  }
+  const signIn=async()=>{
+    const sent=edge.mails.length
+    await auth('/auth/magic-link',{email:settings.OWNER_EMAIL,returnTo:'/app'},202,'')
+    assert.equal(edge.mails.length,sent+1)
+    const response=await confirm()
+    cookie=response.headers.get('set-cookie').split(';')[0]
+    assert.ok(cookie.startsWith('__Host-operator_session='),'capacity fixtures use a genuine native sign-in session')
+    assert.equal((await request(origin+'/app',{redirect:'manual',headers:{cookie}})).status,200)
+  }
+  await signIn()
   const company=await owner('/api/envelope/companies',{name:'Synthetic capacity employer',ein:'00-0009851'},'POST',201),base='/api/envelope/companies/'+company.id
   const location=await owner(base+'/locations',{name:'Synthetic capacity workplace',state:'PA'},'POST',201)
   const person=await owner(base+'/people',{name:'Synthetic capacity worker',locationId:location.id},'POST',201)
@@ -28,13 +47,13 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   const issue=(businessAgentId)=>owner(base+'/agents',{businessAgentId,name:'Synthetic capacity agent',hours:24,actions:['records:read','drafts:read','drafts:prepare'],fields:['compensation'],locations:['*']},'POST',201)
   let sequence=0
   const wire=async(credential,path,name,args={},method='tools/call')=>{
-    const id=++sequence,response=await fetch(origin+path,{method:'POST',headers:{origin,...(credential?{authorization:'Bearer '+credential.token}:{}),'content-type':'application/json','MCP-Protocol-Version':'2026-07-28','Mcp-Method':method,...(method==='tools/call'?{'Mcp-Name':name}:{})},body:JSON.stringify({jsonrpc:'2.0',id,method,params:{...(method==='tools/call'?{name,arguments:args}:{}),_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}})})
+    const id=++sequence,response=await request(origin+path,{method:'POST',headers:{origin,...(credential?{authorization:'Bearer '+credential.token}:{}),'content-type':'application/json','MCP-Protocol-Version':'2026-07-28','Mcp-Method':method,...(method==='tools/call'?{'Mcp-Name':name}:{})},body:JSON.stringify({jsonrpc:'2.0',id,method,params:{...(method==='tools/call'?{name,arguments:args}:{}),_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}})})
     const body=await response.json()
     assert.equal(body.id,id,'capacity errors retain the parsed request id')
     return {response,body}
   }
   const rest=async(credential,body,method=body===undefined?'GET':'POST')=>{
-    const response=await fetch(origin+'/api/envelope/v1/companies/'+company.id+(body===undefined?'/records':'/drafts'),{method,headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
+    const response=await request(origin+'/api/envelope/v1/companies/'+company.id+(body===undefined?'/records':'/drafts'),{method,headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})
     return {response,body:method==='HEAD'?null:await response.json()}
   }
   const read=async(credential,route)=>{
@@ -52,7 +71,7 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     const folder=process.env.ENVELOPE_PROOF_DIR??'./test-results/envelope'
     await mkdir(folder,{recursive:true})
     try {
-      const context=await browser.newContext(),page=await context.newPage(),split=cookie.indexOf('=')
+      const context=await browser.newContext({ignoreHTTPSErrors:true}),page=await context.newPage(),split=cookie.indexOf('=')
       await context.addCookies([{name:cookie.slice(0,split),value:cookie.slice(split+1),url:origin}])
       for(const width of [1440,390]) {
         await page.setViewportSize({width,height:1000})
@@ -78,6 +97,7 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   const invalid={token:'A'.repeat(43)}
   for(const [phase,document] of [['autonomous',autonomousPolicy()],['held',heldPolicy()]]) {
     await advanceClock('2026-10-28T12:00:00.000Z')
+    if(phase==='held')await signIn()
     await owner('/agents/api/policy',{document},'PUT')
     const credential=await issue(),independent=await issue()
     const discovery=await wire(null,'/mcp',null,{},'server/discover'),alias=await wire(null,'/api/envelope/mcp',null,{},'server/discover')
@@ -120,6 +140,10 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     await advanceClock('2026-10-28T12:00:12.345Z')
     for(const route of routes)limited(route==='rest'?await rest(credential):await wire(credential,route,'envelope.records.list',{companyId:company.id}))
     assert.deepEqual(await business(),admitted,'persistent exhaustion survives Worker restart without business effects')
+    await signIn()
+    for(const route of routes)limited(route==='rest'?await rest(credential):await wire(credential,route,'envelope.records.list',{companyId:company.id}))
+    assert.deepEqual(await business(),admitted,'fresh human authentication does not replenish an existing agent budget')
+    console.log('PROBE BASE-AGENT-011 1 '+phase+': fresh native mail-link sign-in after restart -> owner access restored with no seeded proof; exhausted agent still receives HTTP 429 on both MCP routes and v1 REST')
     console.log('PROBE BASE-AGENT-011 1 '+phase+': advertised slots across both MCP routes and v1 REST -> last preparation admitted, first and mixed-route overruns 429 with Retry-After 48; invalid bearer 401, independent credential and browser session still work; restart retains exhaustion')
     await advanceClock('2026-10-28T12:00:59.999Z')
     const edge=await wire(credential,'/mcp','envelope.records.list',{companyId:company.id})
@@ -138,6 +162,14 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
       assert.equal(refused.response.headers.get('retry-after'),'60')
     }
     assert.deepEqual(await business(),beforeRace,'contending reads cannot create business effects')
+    await owner(base+'/agents/'+racing.id+'/revoke',{version:1})
+    const revokedAtCapacity=await business()
+    for(const route of routes) {
+      const denied=route==='rest'?await rest(racing):await wire(racing,route,'envelope.records.list',{companyId:company.id})
+      assert.equal(denied.response.status,route==='rest'?403:401,'revoked authority takes precedence over an exhausted budget')
+      assert.equal(denied.response.headers.get('retry-after'),null)
+    }
+    assert.deepEqual(await business(),revokedAtCapacity,'exhausted and revoked credentials cannot expose data or change business state')
     console.log('PROBE BASE-AGENT-011 1 '+phase+': simultaneous calls through both MCP routes and v1 REST with one slot left -> exactly one admitted and two HTTP 429, unchanged business state')
     // Neither the company control nor installation Pause can be resumed by a
     // bearer. A current human session remains usable throughout either pause.
@@ -155,7 +187,7 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
       }
       assert.ok(performance.now()-started<60000,'Pause survives restart and stops the next calls within 60 seconds')
       for(const path of ['/agents/api/pause',base+'/agents/pause']) {
-        const denied=await fetch(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+independent.token,'content-type':'application/json'},body:JSON.stringify({paused:false,version:(await owner(base+'/agents')).classPolicy.version})})
+        const denied=await request(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+independent.token,'content-type':'application/json'},body:JSON.stringify({paused:false,version:(await owner(base+'/agents')).classPolicy.version})})
         assert.equal(denied.status,403,'an agent token cannot resume '+control+' Pause')
       }
       assert.deepEqual(await business(),paused,'paused reads and agent resume attempts preserve business state')
@@ -241,12 +273,12 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   await advanceClock('2026-10-28T12:03:00.000Z')
   const businessId='synthetic-envelope-9872',subject='synthetic-envelope-9873',issuedAt=Date.parse('2026-10-28T12:03:00Z')/1000
   const signedSettings=await signJws(pair.privateKey,signer.kid,'rer-business-settings+jwt',{v:1,iss:signer.issuer,aud:origin,sub:signer.installationId,business:businessId,email:settings.OWNER_EMAIL,owner_id:subject,jti:crypto.randomUUID(),iat:issuedAt,exp:issuedAt+3600,rev:1,values:{},logo:null,team:null})
-  const applied=await fetch(origin+'/api/rer/business-settings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({settings:signedSettings})})
+  const applied=await request(origin+'/api/rer/business-settings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({settings:signedSettings})})
   assert.equal(applied.status,200,await applied.clone().text())
   let context={signer,origin,business:businessId,person:{sub:subject,email:settings.OWNER_EMAIL},consent:'synthetic-envelope-9874',surface:{specialist:'payroll',tools:[{scope:'records:read'},{scope:'drafts:prepare'},{scope:'drafts:read'}]},seq:0,revision:0,now:()=>Date.parse('2026-10-28T12:03:00Z')}
   const adopt=async(paused=false,document=autonomousPolicy())=>{
     const envelope=await policyEnvelope(context,document,{paused})
-    const response=await fetch(origin+'/api/rer/agent-policy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policy:envelope.policy})})
+    const response=await request(origin+'/api/rer/agent-policy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policy:envelope.policy})})
     assert.equal(response.status,200,await response.clone().text())
     context={...context,seq:envelope.payload.seq,revision:envelope.payload.revision}
     return envelope
@@ -289,11 +321,11 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     }
     assert.ok(performance.now()-started<60000,'paired Pause stops next calls within 60 seconds')
     for(const credential of [paired,other,native])for(const path of ['/agents/api/pause',base+'/agents/pause']) {
-      const response=await fetch(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json'},body:JSON.stringify({paused:false,version:1})})
+      const response=await request(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json'},body:JSON.stringify({paused:false,version:1})})
       assert.equal(response.status,403,'native or Business bearer never resumes a person control')
     }
     if(old) {
-      const stale=await fetch(origin+'/api/rer/agent-policy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policy:old.policy})})
+      const stale=await request(origin+'/api/rer/agent-policy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policy:old.policy})})
       assert.equal(stale.status,409,'replaying the pre-Pause signed envelope cannot resume agents')
       assert.equal((await owner('/agents/api/state')).paused.business,true)
       await capture('agents-business-paused',true)
@@ -317,10 +349,11 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   context={...context,now:()=>nextDay}
   await adopt(false,daily)
   assert.equal(edge.calls.length,3,'a day boundary never automatically sends a previously refused message')
-  // As above, fixture only the installation bootstrap's recent human proof;
-  // the new reply and its exact approval still go through current public doors.
-  await sql(`UPDATE oa_step_up_challenges SET created_at=${nextDay},expires_at=${nextDay+600000},consumed_at=${nextDay}
-    WHERE id='synthetic-envelope-capacity-proof' AND token_hash='${ownerHash}'`)
+  const proofMails=edge.mails.length
+  await auth('/auth/step-up',{action:'credentials:mint',returnTo:'/app'},202)
+  assert.equal(edge.mails.length,proofMails+1)
+  const proof=await confirm()
+  assert.equal(proof.headers.has('set-cookie'),false,'next-day step-up retains the current human session')
   const tomorrow=await prepareReply(9866)
   const fresh=await wire(dispatcher,'/mcp','envelope.notices.reply',tomorrow)
   assert.equal(fresh.body.result?.structuredContent?.state,'accepted',JSON.stringify(fresh.body))
@@ -328,5 +361,5 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   assert.equal((await dispatches()).length,4,'the next UTC day admits a newly reviewed explicit send')
   const today=await sql(`SELECT classes FROM agent_door_usage WHERE agent='${dispatcher.id}' AND at>=${nextDay}`)
   assert.equal(today.flatMap(row=>JSON.parse(row.classes)).filter(row=>row.class==='external').reduce((sum,row)=>sum+row.facts.measure,0),1)
-  console.log('PROBE BASE-AGENT-011 2: controlled next UTC day -> no automatic dispatch; a newly exact-human-approved explicit send receives one Resend-schema receipt and consumes one new-day recipient')
+  console.log('PROBE BASE-AGENT-011 2: controlled next UTC day and real same-session mail step-up -> no automatic dispatch; a newly exact-human-approved explicit send receives one Resend-schema receipt and consumes one new-day recipient')
 }
