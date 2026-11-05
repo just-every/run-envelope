@@ -2333,7 +2333,7 @@
       "executable": false
     },
     "src/envelope/door/protocol.ts": {
-      "sha256": "79942c5091d3da733e45305f8105cc64eaa7d229ed27b4a95ddc8bf54cbb88f4",
+      "sha256": "133129802bee94ae1cde05809d035ae2d108253cc805a5855cd43e94eb7d4b3b",
       "executable": false
     },
     "src/envelope/door/rest.ts": {
@@ -2349,7 +2349,7 @@
       "executable": false
     },
     "src/envelope/door/tools.ts": {
-      "sha256": "4e27a53d2fcc8156cd6715fb4ceb0187eff0f9cfca57b99ee45dffea40cbaeb5",
+      "sha256": "b3dc8f8ff12334ffcb081199345bee01b5c0a4fb3c14db499d813cc59f2df0b6",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {

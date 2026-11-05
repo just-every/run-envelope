@@ -17,7 +17,7 @@ export function preparationState(env: Bindings): ResourceDefinition {
       if(!match)return null
       const agent=await nativeAgent(env,ctx,match[1])
       agent.allow('records:read',match[1])
-      return {json:await policyCall(agent,'workspace.snapshot','shared-resource',()=>snapshot(env,ctx))}
+      return {json:await policyCall(agent,'workspace.snapshot','shared-resource',()=>snapshot(env,ctx,match[1]))}
     },
   }
 }

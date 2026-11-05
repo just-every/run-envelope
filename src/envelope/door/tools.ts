@@ -12,8 +12,8 @@ import { rotate, rotationKey } from './rotation'
 import { effect, sensitiveRecords } from './effects'
 import { catalogue } from './catalogue'
 
-export async function snapshot(env: Bindings, ctx: Pick<ToolContext,'agent'|'person'|'clientId'|'consent'|'scopes'>) {
-  const agent=await nativeAgent(env,ctx), f=agent.fence(), l=agent.location('location_id')
+export async function snapshot(env: Bindings, ctx: Pick<ToolContext,'agent'|'person'|'clientId'|'consent'|'scopes'>, company?: string) {
+  const agent=await nativeAgent(env,ctx,company), f=agent.fence(), l=agent.location('location_id')
   agent.allow('records:read',agent.grant.company_id)
   const people=(await env.DB.prepare(`SELECT id,name,version FROM env_people WHERE company_id=? AND ${l.sql} AND ${f.sql} ORDER BY id`).bind(agent.grant.company_id,...l.args,...f.args).all()).results
   const drafts=(await env.DB.prepare(`SELECT id,person_version,minutes,fingerprint FROM env_run_drafts WHERE company_id=? AND credential_id=? AND ${f.sql} ORDER BY id`).bind(agent.grant.company_id,agent.grant.id,...f.args).all()).results
