@@ -107,6 +107,7 @@ export default async function protocolJourney(context) {
     assert.equal(observed.people,visiblePeople.n)
     assert.equal(observed.drafts,visibleDrafts.n)
     assert.deepEqual(Object.keys(observed).sort(),['bonuses','drafts','people','sha256'],'resource contains only the existing counts and digest')
+    const beforePrompts=await retained(db,saved.company.id)
     for(const prompt of cacheLists.prompts) {
       const answer=await rpc('prompts/get',{name:prompt.name})
       assert.equal(answer.status,200)
@@ -118,12 +119,19 @@ export default async function protocolJourney(context) {
       const referenced=instructions.match(/envelope\.[a-z_]+\.[a-z_]+/g)
       assert.ok(referenced.length>0)
       assert.ok(referenced.every(name=>names.includes(name)),'the prompt refers only to installed tools')
+      assert.ok(isDeepStrictEqual(await retained(db,saved.company.id),beforePrompts),'retrieving a prompt has no native business or credential effect')
     }
     console.log('PROBE BASE-AGENT-001 1: '+phase+' '+path+' discovery -> versions, tools, resources, prompts, server identity and specialist instructions; populated preparation resource matches native state; prompt retrieves without action')
 
     const baseline=await retained(db,saved.company.id)
     assert.ok(baseline.drafts.length>0,'refusals are checked against retained native preparations')
     assert.ok(baseline.credentials.some(row=>row.id===issued.id),'the disposable credential is genuinely persisted')
+    for(const method of [['roots','list'],['sampling','createMessage'],['logging','setLevel']].map(parts=>parts.join('/'))) {
+      const absent=await rpc(method)
+      assert.equal(absent.status,404,'Roots, Sampling and Logging are not served')
+      assert.equal(absent.body.error.code,-32601)
+      assert.ok(isDeepStrictEqual(await retained(db,saved.company.id),baseline),'unsupported protocol families have no native effect')
+    }
     const prepare={name:'envelope.draft.prepare',arguments:{...args,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}}
     const refuse=async(label,params,options,status,code,message)=> {
       const answer=await rpc('tools/call',params,options)
@@ -165,6 +173,21 @@ export default async function protocolJourney(context) {
     const forbidden=await rpc('resources/read',{uri:'envelope://companies/'+foreign.id+'/preparation-state'})
     assert.deepEqual(forbidden.body.error,missing.body.error,'foreign and absent companies reveal no resource content')
     assert.equal(forbidden.body.result,undefined)
+    const restricted=await data(saved.base+'/agents',{name:'synthetic-envelope-protocol-restricted',hours:1,
+      actions:['drafts:read'],fields:['compensation'],locations:['*'],providers:[],models:[]},201)
+    const noScope=await rpc('resources/read',{uri:resourceUri},{token:restricted.token})
+    assert.equal(noScope.status,403,'a native credential without records authority cannot read preparation state')
+    assert.equal(noScope.body.error.data.code,'insufficient_scope')
+    assert.equal(noScope.body.result,undefined)
+    await data('/agents/api/pause',{paused:true})
+    try {
+      const pausedResource=await rpc('resources/read',{uri:resourceUri})
+      const pausedPrompt=await rpc('prompts/get',{name:cacheLists.prompts[0].name})
+      assert.equal(pausedResource.body.error.data.code,'agents_paused')
+      assert.equal(pausedResource.body.result,undefined)
+      assert.equal(pausedPrompt.body.error.data.code,'agents_paused')
+      assert.equal(pausedPrompt.body.result,undefined)
+    } finally {await data('/agents/api/pause',{paused:false})}
     const nativePolicy=await data(saved.base+'/agents')
     await data(saved.base+'/agents/pause',{version:nativePolicy.classPolicy.version,paused:true})
     try {

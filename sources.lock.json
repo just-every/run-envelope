@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3bcfb16f7a5fce2097aa540494dfe7fd5a3098da0218c05760e116e545a47470",
+      "sha256": "b6e327c23d935ec829e2e8100141e139cbc1611c9d1d835e6d87c328b2ae35e8",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2332,6 +2332,10 @@
       "sha256": "a82251664297b6ae72420398241b9de4f6ac05ca8427ad1bf796e9cbc563b391",
       "executable": false
     },
+    "src/envelope/door/protocol.ts": {
+      "sha256": "79942c5091d3da733e45305f8105cc64eaa7d229ed27b4a95ddc8bf54cbb88f4",
+      "executable": false
+    },
     "src/envelope/door/rest.ts": {
       "sha256": "51a08ac86880da0c165aa2e26884c1f4ba647c08ea9677f87a0c01218d198eb4",
       "executable": false
@@ -4229,7 +4233,7 @@
       "executable": false
     },
     "tests/agent-door/protocol.mjs": {
-      "sha256": "eccdcb20ddc91eaae59e7c71bcfe93977810ad77d099e58380ddc60effcc35fa",
+      "sha256": "de90d44f25b698e90f9a498cbace9fb540367a12efcd2f387808f23bef36835f",
       "executable": false
     },
     "tests/agent-door/record-key.mjs": {
