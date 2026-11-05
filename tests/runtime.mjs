@@ -142,6 +142,7 @@ const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
 const clockEntrypoint = ['agent-policy','agent-replay','agent-capacity','agent-decisions'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
+const capacityEdge={calls:[]}
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
 let output = ''
 const replayEdge=process.env.ENVELOPE_JOURNEYS==='agent-replay'?replayNetwork():undefined
@@ -150,7 +151,18 @@ async function launch(bindings) {
     config: resolve('dist/server/wrangler.json'),
     ...((clockEntrypoint ?? operationsEntrypoint) ? {entrypoint:clockEntrypoint ?? operationsEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
-    dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error',...(replayEdge?{outboundService:request=>replayEdge.fetch(request)}:{}) },
+    dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error',
+      ...(replayEdge?{outboundService:request=>replayEdge.fetch(request)}:{}),
+      ...(process.env.ENVELOPE_JOURNEYS==='agent-capacity'?{outboundService:async request=>{
+        assert.equal(request.url,'https://api.resend.com/emails','capacity journey admits only its declared Resend schema edge')
+        assert.equal(request.method,'POST')
+        assert.equal(request.headers.get('authorization'),'Bearer synthetic-envelope-9860')
+        const body=await request.json()
+        assert.ok(body.from&&body.to&&body.subject&&body.text)
+        capacityEdge.calls.push({body,idempotencyKey:request.headers.get('idempotency-key')})
+        return Response.json({id:crypto.randomUUID()})
+      }}:{})
+    },
   })
   await instance.ready
   return instance
@@ -302,7 +314,7 @@ try {
       await waitForWorker()
     }
   }
-  if (selected?.includes('agent-capacity')) await agentCapacityJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-capacity')) await agentCapacityJourney({origin,cookie,sql,settings,edge:capacityEdge,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async(overrides={})=>{Object.assign(settings,overrides);await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('agent-replay')) {
     let bindings=settings
     await replayJourney({origin,cookie,sql,settings,edge:replayEdge,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async overrides=>{if(overrides)bindings={...settings,...overrides};await stopWorker();worker=await launch(bindings);await waitForWorker()}})

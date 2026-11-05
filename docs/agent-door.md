@@ -20,6 +20,34 @@ these routes compete for the same final slot; at most one is admitted.
 These installation protections are not daily business caps or provider spend
 budgets, and do not authorize retries, effects or broader native access.
 
+Signed Business tokens use the same advertised minute rate, counted persistently
+per signed agent identity on both MCP routes. They require the existing trusted
+issuer, current Business subject mapping and an explicitly bound native grant.
+Refreshing a token or restarting the Worker does not reset its agent's capacity.
+The existing v1 REST routes continue to accept native credentials.
+
+Company business rules remain separate from capacity. A seed-scoped agent rule
+can allow three outside recipients per UTC day and send the next call to the
+class's fallback rule. Each generic correspondence message still needs its own
+exact native human approval and an explicit invocation. A restrictive rule runs
+before the provider request and dispatch reservation. Native reads remain usable
+when only the outside-recipient allowance is exhausted.
+
+Company Pause, installation Pause and an adopted signed Business Pause each
+refuse current native and bound Business agent calls on their supported routes.
+The controls survive restart; only a current authorized person's control or a
+newer valid Business policy can resume access. Replaying an older signed policy
+cannot resume agents. Native browser sessions remain usable while agents pause.
+A resume does not replay refused business work. This proof covers the native
+and paired adapter; it is not a live sibling Business installation receipt or
+complete device and future-transport coverage.
+
+The pinned Base door cannot register provider-cost estimates or enforce spend
+reservations. Standalone spend-cap configuration is refused; paired policy state
+reports caps as `not_enforced`. A saved cap supplies no spending guarantee.
+Exhausted-cap refusal, no-cap provider spending and full per-agent money and
+provider-spend usage remain unimplemented Base dependencies of BASE-AGENT-011.
+
 This installation offers the CORE capabilities `tools`, `policy`, `pause`,
 `audit` and `idempotency`. It explicitly refuses resources, events, prompts and
 subscriptions. These are target capabilities, not implemented payroll outcomes.

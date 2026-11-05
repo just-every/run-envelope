@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "064bfcf7f8d4c622b4b5560c7d377566ecf4a66d71f111c84cf68b23a43f2e75",
+      "sha256": "a79d8b0b7bdaf1f057ea4d742d5e00a1be0c5367d3988edf862cf771dbdfc396",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -4205,7 +4205,7 @@
       "executable": false
     },
     "tests/agent-capacity-runtime.mjs": {
-      "sha256": "c7bc361640c4124259e6d2e5d29642355fd38c44a581e6ee2544c573ed352716",
+      "sha256": "6801750f259593ce118759a2a2de3f9b956c967c7cedba3602b886a29f34193f",
       "executable": false
     },
     "tests/agent-door/agent.mjs": {
@@ -4545,7 +4545,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "550cb141fdde7fa4889ca2372dc9bf692d0ff92acbc4cc7b0fb97687135014d0",
+      "sha256": "4aa23f38c86514a58a634f7734c9c2391c31478dafd051ed5561bab22c78499c",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
