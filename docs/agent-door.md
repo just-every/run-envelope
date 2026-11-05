@@ -27,7 +27,17 @@ Signed Business tokens use the same advertised minute rate, counted persistently
 per signed agent identity on both MCP routes. They require the existing trusted
 issuer, current Business subject mapping and an explicitly bound native grant.
 Refreshing a token or restarting the Worker does not reset its agent's capacity.
+New token identifiers, client identifiers and company policy revisions do not
+refill that same signed agent's minute budget. An expired signed token remains
+unauthenticated even when the agent has exhausted its budget.
 The existing v1 REST routes continue to accept native credentials.
+
+Replacing an exhausted native bearer also preserves its grant's minute budget.
+The bound signed agent can use the existing encrypted credential-rotation door;
+under a held security policy it still needs exact human approval. The decrypted
+replacement remains rate limited through both MCP routes and v1 REST, including
+after restart; the old bearer is unauthenticated. Neither replacement nor resume
+automatically performs refused payroll work.
 
 Company business rules remain separate from capacity. A seed-scoped agent rule
 can allow three outside recipients per UTC day and send the next call to the

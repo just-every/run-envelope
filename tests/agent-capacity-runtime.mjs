@@ -299,6 +299,26 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     assert.equal(refused.response.status,429,JSON.stringify(refused.body));assert.equal(refused.response.headers.get('retry-after'),'60');assert.equal(errorOf(refused),'rate_limited')
     assert.deepEqual(await business(),admitted)
   }
+  for(const [phase,document] of [['autonomous',autonomousPolicy()],['held',heldPolicy()]]) {
+    await adopt(false,document)
+    const refreshed={token:await accessToken({...context,agentId:boundId},{client_id:'synthetic-envelope-'+phase})}
+    assert.notEqual(refreshed.token,paired.token,'a refresh issues a genuinely different signed token')
+    const expired={token:await accessToken({...context,agentId:boundId},{iat:issuedAt-300,exp:issuedAt})}
+    for(const route of routes.slice(0,2)) {
+      const refused=await wire(refreshed,route,'envelope.draft.prepare',{...args,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()})
+      assert.equal(refused.response.status,429,JSON.stringify(refused.body))
+      assert.equal(refused.response.headers.get('retry-after'),'60')
+      assert.equal(refused.response.headers.get('www-authenticate'),null)
+      assert.equal(errorOf(refused),'rate_limited')
+      const unauthenticated=await wire(expired,route,'envelope.records.list',{companyId:company.id})
+      assert.equal(unauthenticated.response.status,401,'an expired signed token never becomes a capacity refusal')
+      assert.equal(unauthenticated.response.headers.get('retry-after'),null)
+      assert.ok(unauthenticated.response.headers.get('www-authenticate'))
+    }
+    assert.deepEqual(await business(),admitted,'refresh and policy changes cannot refill capacity or prepare business work')
+    console.log('PROBE BASE-AGENT-011 1 paired '+phase+': new signed token and client identity after exhaustion and policy adoption -> both MCP routes still 429 with Retry-After 60; expired token 401 without Retry-After; no business effect')
+  }
+  await adopt()
   await restart();await advanceClock('2026-10-28T12:03:00.000Z')
   assert.equal((await wire(paired,'/mcp','envelope.records.list',{companyId:company.id})).response.status,429)
   for(const route of routes.slice(0,2))await read(other,route)
@@ -336,6 +356,51 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     for(const route of routes)await read(native,route)
     assert.deepEqual(await business(),before,'current human resume restores each supported token and transport')
     console.log('PROBE BASE-AGENT-011 6,7 paired '+control+': durable Pause -> native and both signed Business tokens refused on supported transports within 60 seconds, owner reads continue, bearer resumes 403; human resume restores reads without replaying refused preparation')
+  }
+
+  // A supported credential replacement changes its bearer, never its native
+  // grant identity or capacity. The signed bound agent provides delivery even
+  // when the native bearer is exhausted; held policy still needs the person.
+  const delivery=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt'])
+  const {kty,n,e}=await crypto.subtle.exportKey('jwk',delivery.publicKey)
+  for(const [phase,document] of [['autonomous',autonomousPolicy()],['held',heldPolicy()]]) {
+    await adopt(false,document)
+    const boundId='synthetic-envelope-capacity-rotation-'+phase,local=await issue(boundId)
+    const signed={token:await accessToken({...context,agentId:boundId},{scope:'records:read credentials:rotate'})}
+    for(let slot=0;slot<capacity;slot++)await read(local,routes[slot%routes.length])
+    const before=await business(),rotation={companyId:company.id,publicKey:{kty,n,e},idempotency_key:crypto.randomUUID()}
+    let answer=await wire(signed,'/mcp','envelope.credentials.rotate',rotation)
+    assert.equal(answer.response.status,200,JSON.stringify(answer.body))
+    if(phase==='held') {
+      const handle=answer.body.result._meta['com.runeditrun/approval']
+      assert.ok(handle?.id,'held rotation exposes the existing exact human approval door')
+      assert.deepEqual(await business(),before,'pending rotation neither replaces the credential nor prepares payroll')
+      const path='/agents/api/approvals/'+handle.id,{approval}=await owner(path)
+      const approved=await owner(path+'/approve',{revision:approval.revision,summary_sha256:approval.summary_sha256})
+      assert.equal(approved.approval.state,'executed',JSON.stringify(approved))
+      answer=await wire(signed,'/api/envelope/mcp','envelope.credentials.rotate',rotation)
+    }
+    const replacement=answer.body.result.structuredContent
+    assert.equal(replacement.id,local.id,JSON.stringify(answer.body))
+    assert.equal(Object.hasOwn(replacement,'token'),false)
+    assert.equal(replacement.algorithm,'RSA-OAEP-256')
+    const renewed={token:new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},delivery.privateKey,Buffer.from(replacement.encryptedToken,'base64')))}
+    assert.notEqual(renewed.token,local.token)
+    assert.deepEqual(await business(),before,'credential replacement preserves the grant, scope and all payroll records')
+    for(const route of routes) {
+      const refused=route==='rest'?await rest(renewed):await wire(renewed,route,'envelope.records.list',{companyId:company.id})
+      assert.equal(refused.response.status,429,JSON.stringify(refused.body))
+      assert.equal(refused.response.headers.get('retry-after'),'60')
+      assert.equal(refused.response.headers.get('www-authenticate'),null)
+      const old=route==='rest'?await rest(local):await wire(local,route,'envelope.records.list',{companyId:company.id})
+      assert.equal(old.response.status,401,'the replaced bearer stays unauthenticated despite the exhausted grant')
+      assert.equal(old.response.headers.get('retry-after'),null)
+    }
+    await restart();await advanceClock('2026-10-28T12:04:00.000Z')
+    assert.equal((await wire(renewed,'/mcp','envelope.records.list',{companyId:company.id})).response.status,429,'replacement does not reset persisted exhaustion on restart')
+    for(const route of routes.slice(0,2))await read(signed,route)
+    assert.deepEqual(await business(),before,'separate signed capacity remains usable without payroll effects')
+    console.log('PROBE BASE-AGENT-011 1 rotation '+phase+': exhausted native grant replaced through its bound signed agent'+(phase==='held'?' and exact person approval':'')+' -> decrypted replacement remains 429 on both MCP routes and v1 REST after restart; old bearer 401, signed reads usable, unchanged payroll and grant scope')
   }
   const capped=autonomousPolicy();capped.spend={caps:[{seed:'envelope',specialist:'payroll',microusd_per_day:0}]}
   await adopt(false,capped)
