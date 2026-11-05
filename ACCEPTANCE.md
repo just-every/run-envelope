@@ -9,9 +9,9 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Core | 5 | 33 | 61 | 99 |
-| Agent surface | 0 | 2 | 18 | 20 |
+| Agent surface | 0 | 3 | 17 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 5 | 37 | 84 | 126 |
+| Full target | 5 | 38 | 83 | 126 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1734,7 +1734,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-011 — Limits are policy, and Pause stops everything
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Business limits are rules in the company's policy: per-call and per-day thresholds on any class's measure, such as money moved, outside recipients or items destroyed; spend caps on provider cost (models, SMS, email) per seed, specialist or agent, which setup asks with the classes; "no cap" is an answer. Tools with provider cost declare an estimate before they run, and an exhausted cap returns `budget_exhausted` before any partial effect. The seed's capacity limits (request rate, body and byte sizes) protect the installation: they bound rate and size, never daily business volume, are documented and are not policy. A grant carries budgets only when the person granting it sets them. A **Pause agents** control in the seed, and Pause all agents in Business when paired, refuses every agent token within 60 seconds until a person resumes; browser sessions and devices keep working.
 
@@ -1747,8 +1747,8 @@ Agent surface · target · **missing**
 6. Pause and Pause all agents each stop the next call within 60 seconds, and resume restores access.
 7. An agent token cannot resume.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance point 1, native-credential subset: `tests/agent-capacity-runtime.mjs` — agentCapacityJourney, invoked by `tests/runtime.mjs` in push Verify, exercises genuinely issued credentials through both MCP routes and existing v1 REST under autonomous and held policies. The advertised final slot prepares one retained hourly proposal; mixed-route overruns return HTTP 429 with positive Retry-After before further business effects. Invalid bearers remain unauthenticated; independently issued credentials and owner sessions remain available. Persistent exhaustion survives Worker restart, the final millisecond returns a one-second wait, the next minute restores reads and current native revocation refuses without business changes. The privacy recorder observes no outbound request.
+**Gap.** Still unproved: complete capacity coverage for other identities and transports; per-call and per-day business thresholds, including the fourth outside recipient; provider cost estimates, spend caps with budget_exhausted before any partial effect, no-cap spending and usage accounting; complete per-agent calls, class decisions, money and provider-spend views; complete local and paired Business Pause, resume and agent-resume refusal across every token and transport. Provider spending, recipient delivery and paired Business outcomes require their separately evidenced integrations and authority; native capacity proof supplies none of them. Existing sponsor and grant restrictions, exact human approval, account and catalog, rail and company, provider and mandate, CT, device, visual-correction and feeder holds remain unchanged. Reference sends remain configured-native-owner-only with explicit consent and audit; no automatic outbound action, automated retry or destructive recovery is authorized.
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
 
