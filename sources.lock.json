@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "03170c1b028ef06ec1a0071d03a0f7fe8e079826d5c96bce3f3ea07488165b99",
+      "sha256": "dcc5d049b027a13073c6dd27c6e66986542625e11cab8cd03f7fe88c0922e0e8",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "cc43256f93ba7f4c7fceffdc1470123a30ee89a6b69b4de0aad54273f8dd343d",
+      "sha256": "efb68b9cad52ad523a9e6a47128357d7e802e6651b4ebe1036ec0ccbce345337",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -4209,7 +4209,7 @@
       "executable": false
     },
     "tests/agent-door/decisions.mjs": {
-      "sha256": "948dbaa534a640508f342fa9c21e57b411be7b3e74a84b02de41ec46c9ed4d22",
+      "sha256": "b3c7397843f2fe7d3d715bf42791def438653b40caf8a30d1304e76eeac84f04",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
@@ -4257,7 +4257,7 @@
       "executable": false
     },
     "tests/agent-policy-decisions-runtime.mjs": {
-      "sha256": "d71672f2782ac5a5e5236b3a56b6a6ad928b8a633ca4b5ce68583af148d89eea",
+      "sha256": "5a573f6bad9ec1bcb424a47a14b7d231ee0d303d492b1643e4c2edbb5e2b0b43",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {

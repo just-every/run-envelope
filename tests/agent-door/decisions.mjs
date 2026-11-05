@@ -12,7 +12,10 @@ export function decisionMeta(answer, disposition, revision) {
 
 export function preparedBonus(answer) {
   assert.equal(answer.result?.isError, false, JSON.stringify(answer.result?._meta?.['com.runeditrun/error']))
-  const result = answer.result.structuredContent
+  return preparedBonusValue(answer.result.structuredContent)
+}
+
+export function preparedBonusValue(result) {
   assert.ok(result.id)
   assert.equal(result.version, 1)
   assert.equal(result.status, 'uncalculated-earnings-run')

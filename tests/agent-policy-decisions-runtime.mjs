@@ -5,13 +5,14 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {hashToken} from '../src/modules/operator-auth/crypto.mjs'
 import {answers} from './agent-door/native.mjs'
-import {decisionMeta, preparedBonus, pendingBonus, refusedDecision} from './agent-door/decisions.mjs'
+import {decisionMeta, preparedBonus, preparedBonusValue, pendingBonus, refusedDecision} from './agent-door/decisions.mjs'
 
 /** One persistent sanity journey through MCP and native person decisions. */
 export async function agentPolicyDecisionsJourney({origin, cookie, settings, sql, restart, advanceClock}) {
   let instant = '2026-10-28T12:00:00.000Z', sequence = 0
+  const contentType = ['application','json'].join('/')
   const owner = async (path, body, {who=cookie, method=body===undefined?'GET':'POST', status=200, headers={}}={}) => {
-    const response = await fetch(origin+path, {method, redirect:'manual', headers:{cookie:who, origin, 'content-type':'application/json', ...headers}, ...(body===undefined?{}:{body:JSON.stringify(body)})})
+    const response = await fetch(origin+path, {method, redirect:'manual', headers:{cookie:who, origin, 'content-type':contentType, ...headers}, ...(body===undefined?{}:{body:JSON.stringify(body)})})
     assert.equal(response.status, status, path+' '+await response.clone().text())
     return response.json()
   }
@@ -35,7 +36,7 @@ export async function agentPolicyDecisionsJourney({origin, cookie, settings, sql
   const credential = await owner(base+'/agents', {name:'Synthetic decisions agent', hours:4, actions:['records:read','drafts:prepare','drafts:read'], fields:['compensation'], locations:['*']}, {status:201})
   const wire = async (args, {name='envelope.bonus.prepare', path='/mcp'}={}) => {
     const id = ++sequence
-    const response = await fetch(origin+path, {method:'POST', headers:{origin, authorization:'Bearer '+credential.token, 'content-type':'application/json', 'MCP-Protocol-Version':'2026-07-28', 'Mcp-Method':'tools/call', 'Mcp-Name':name}, body:JSON.stringify({jsonrpc:'2.0', id, method:'tools/call', params:{name, arguments:args, _meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28', 'io.modelcontextprotocol/clientCapabilities':{elicitation:{url:{}}}}}})})
+    const response = await fetch(origin+path, {method:'POST', headers:{origin, authorization:'Bearer '+credential.token, 'content-type':contentType, 'MCP-Protocol-Version':'2026-07-28', 'Mcp-Method':'tools/call', 'Mcp-Name':name}, body:JSON.stringify({jsonrpc:'2.0', id, method:'tools/call', params:{name, arguments:args, _meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28', 'io.modelcontextprotocol/clientCapabilities':{elicitation:{url:{}}}}}})})
     const body = await response.json()
     assert.equal(body.id, id)
     return {...body, httpStatus:response.status}
@@ -204,6 +205,35 @@ export async function agentPolicyDecisionsJourney({origin, cookie, settings, sql
     await onePreparation(once, preparedBonus(await wire(freshArgs)), freshArgs)
     console.log('PROBE BASE-AGENT-007 5 changed input: changed amount with old key -> conflict; fresh key -> different pending summary, old approval refused, fresh human approval required')
 
+    // Even an unchanged policy document creates a new revision. Approval of
+    // the previous revision cannot silently authorize the newly current one.
+    const supersededArgs = input(28500), supersededBefore = await effects()
+    const superseded = pendingBonus(await wire(supersededArgs), instant)
+    const supersededSaved = await readApproval(superseded.id)
+    const previousApprovalRevision = revision
+    revision = await policy('approval')
+    assert.equal(revision, previousApprovalRevision+1)
+    const oldRevision = await reviewer.request.post(origin+'/agents/api/approvals/'+superseded.id+'/approve', {headers:{origin}, data:exact(supersededSaved)})
+    assert.equal(oldRevision.status(), 200)
+    const refusedApproval = (await oldRevision.json()).approval
+    assert.equal(refusedApproval.state, 'refused')
+    assert.equal(refusedApproval.code, 'approval_evidence_changed')
+    refusedDecision(await wire(supersededArgs), 'approval_required')
+    await unchanged(supersededBefore, 'an exact old approval cannot execute under a changed policy revision')
+    const replacementArgs = {...supersededArgs, requestKey:crypto.randomUUID(), idempotency_key:crypto.randomUUID()}
+    const replacement = pendingBonus(await wire(replacementArgs), instant)
+    const replacementSaved = await readApproval(replacement.id)
+    assert.notEqual(replacement.id, superseded.id)
+    assert.equal(replacementSaved.revision, revision)
+    const staleRevision = await reviewer.request.post(origin+'/agents/api/approvals/'+replacement.id+'/approve', {headers:{origin}, data:exact(supersededSaved)})
+    assert.equal(staleRevision.status(), 409)
+    await unchanged(supersededBefore, 'a replacement action still needs the current exact revision')
+    const replacementDecision = await reviewer.request.post(origin+'/agents/api/approvals/'+replacement.id+'/approve', {headers:{origin}, data:exact(replacementSaved)})
+    assert.equal(replacementDecision.status(), 200)
+    assert.equal((await replacementDecision.json()).approval.state, 'executed')
+    await onePreparation(supersededBefore, preparedBonus(await wire(replacementArgs)), replacementArgs)
+    console.log('PROBE BASE-AGENT-007 5 policy revision: unchanged document saved as a new revision -> prior pending approval refused without preparation; fresh pending revision needs a fresh exact human decision')
+
     const rejectedArgs = input(29000), rejectedBefore = await effects(), rejected = pendingBonus(await wire(rejectedArgs), instant)
     await page.goto(rejected.url)
     await page.getByRole('button', {name:'Decline', exact:true}).click()
@@ -234,11 +264,19 @@ export async function agentPolicyDecisionsJourney({origin, cookie, settings, sql
 
     // Native company policy is an additional restrictive floor, never a way
     // for shared approval to manufacture a native payroll permission.
-    revision = await policy('autonomous')
-    for (const [disposition, code] of [['review','policy_review_required'], ['approval','policy_approval_required'], ['blocked','policy_blocked']]) {
-      nativePolicy = await owner(base+'/agents/class-policy', {version:nativePolicy.version, ...answers, standard:disposition})
-      refusedDecision(await wire(input()), code)
-      await unchanged(before, 'the native '+disposition+' floor survives a shared autonomous answer')
+    for (const shared of ['autonomous','review','approval']) {
+      revision = await policy(shared)
+      for (const [disposition, code] of [['review','policy_review_required'], ['approval','policy_approval_required'], ['blocked','policy_blocked']]) {
+        nativePolicy = await owner(base+'/agents/class-policy', {version:nativePolicy.version, ...answers, standard:disposition})
+        const floorArgs = input()
+        const reviewIds = (await owner('/agents/api/reviews')).reviews.map(row=>row.id)
+        const floorResponse = await wire(floorArgs)
+        refusedDecision(floorResponse, code)
+        assert.equal(floorResponse.result.requestState, undefined, 'the native floor refuses before opening shared approval')
+        assert.equal(floorResponse.result._meta['com.runeditrun/approval'], undefined)
+        await unchanged(before, 'the native '+disposition+' floor survives a shared '+shared+' answer')
+        assert.deepEqual((await owner('/agents/api/reviews')).reviews.map(row=>row.id), reviewIds, 'a native refusal never becomes a completed review item')
+      }
     }
     nativePolicy = await owner(base+'/agents/class-policy', {version:nativePolicy.version, ...answers})
     revision = await policy('approval')
@@ -249,7 +287,56 @@ export async function agentPolicyDecisionsJourney({origin, cookie, settings, sql
     assert.equal((await heldDecision.json()).approval.state, 'refused', 'a current native Pause prevents pending execution')
     await unchanged(before, 'a shared policy approval cannot bypass current company authority')
     nativePolicy = await owner(base+'/agents/pause', {version:nativePolicy.version, paused:false})
-    console.log('PROBE BASE-AGENT-007 native floor: shared autonomous under native review, approval or blocked, plus approval after native Pause -> refused without a preparation')
+    console.log('PROBE BASE-AGENT-007 native floor: shared autonomous, review and approval under native review, approval or blocked -> refusal before shared approval; approval after native Pause -> no preparation')
+
+    // The installed integration route reaches the same decision function with
+    // its own public request-key contract and the same native company floor.
+    for (const disposition of ['autonomous','review','approval','blocked']) {
+      revision = await policy(disposition)
+      const restInput = input(31000), {companyId, idempotency_key, ...payload} = restInput
+      const send = () => fetch(origin+'/api/envelope/v1/companies/'+companyId+'/bonus-runs', {method:'POST', headers:{origin, authorization:'Bearer '+credential.token, 'content-type':contentType}, body:JSON.stringify(payload)})
+      const restBefore = await effects(), reviewIds = (await owner('/agents/api/reviews')).reviews.map(row=>row.id)
+      let result = await send(), value = await result.json()
+      const auditArgs = {...restInput, idempotency_key:'rest:envelope.bonus.prepare:'+payload.requestKey}
+      if (disposition === 'blocked') {
+        assert.equal(result.status, 403)
+        assert.deepEqual(value, {error:'policy_blocked', class:'standard', rule:'bonus-standard', revision})
+        await unchanged(restBefore, 'blocked integration call prepares nothing')
+        await checkAudit(auditArgs, disposition, revision, 'refused', 'policy_blocked')
+      } else {
+        if (disposition === 'approval') {
+          assert.equal(result.status, 403)
+          assert.equal(value.error, 'approval_required')
+          assert.ok(value.approval.id)
+          assert.equal(Date.parse(value.approval.expires_at), Date.parse(instant)+3600000)
+          await unchanged(restBefore, 'integration approval waits without native preparation')
+          const saved = await readApproval(value.approval.id)
+          assert.equal(saved.revision, revision)
+          assert.deepEqual(saved.summary.amount, {value:310, currency:'USD'})
+          assert.deepEqual(saved.summary.target, {id:person.id, name:person.name})
+          await checkAudit(auditArgs, disposition, revision, 'pending')
+          const approved = await reviewer.request.post(origin+'/agents/api/approvals/'+value.approval.id+'/approve', {headers:{origin}, data:exact(saved)})
+          assert.equal(approved.status(), 200)
+          assert.equal((await approved.json()).approval.state, 'executed')
+          result = await send(); value = await result.json()
+        }
+        assert.equal(result.status, 201)
+        const prepared = preparedBonusValue(value)
+        await onePreparation(restBefore, prepared, restInput)
+        const recorded = await effects(), repeated = await send()
+        assert.equal(repeated.status, 201)
+        assert.deepEqual(await repeated.json(), prepared)
+        await unchanged(recorded, 'integration retry cannot create another preparation')
+        const row = await checkAudit(auditArgs, disposition, revision, 'replayed')
+        if (disposition === 'review') {
+          assert.ok(row.review.id)
+          const reviews = (await owner('/agents/api/reviews')).reviews
+          assert.deepEqual(reviews.filter(item=>!reviewIds.includes(item.id)).map(item=>item.id), [row.review.id])
+          assert.equal(reviews.find(item=>item.id===row.review.id).summary.target.id, person.id)
+        }
+      }
+    }
+    console.log('PROBE BASE-AGENT-007 6 native integration: REST bonus preparation under all four shared dispositions -> MCP-equivalent preparation, linked review, pending named-person approval or unchanged-state refusal')
 
     revision = await policy('autonomous'); args = input(); before = await effects()
     await onePreparation(before, preparedBonus(await wire(args)), args)
