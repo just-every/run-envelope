@@ -4,6 +4,9 @@ const object=(properties:Record<string,JsonSchema>,required=Object.keys(properti
 const closed=(properties:Record<string,JsonSchema>,required=Object.keys(properties)):JsonSchemaObject=>({...object(properties,required),additionalProperties:false})
 const literal=(value:string|boolean):JsonSchema=>({type:typeof value,const:value})
 const count={type:'integer',minimum:0},day={type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'},sha256={type:'string',pattern:'^[a-f0-9]{64}$'}
+const pageLimit={type:'integer',minimum:1,maximum:100}
+const bonusCursor={type:['string','null'],pattern:'^[a-f0-9]{64}$'}
+const sourceReference={type:'string',minLength:1,maxLength:240}
 const array=(items:JsonSchema):JsonSchema=>({type:'array',items})
 const immutableVersion={type:'integer',const:1}
 const zero={type:'integer',const:0},bonusAmount={type:'integer',minimum:1,maximum:100000000}
@@ -19,9 +22,9 @@ const bonusPreview=closed({
   taxAmounts:{type:'null',description:'Tax has not been calculated.'},netPay:{type:'null',description:'Net pay has not been calculated.'},paymentReady:literal(false),
   // This native tool records one bonus and does not evaluate setup or tax rules.
   setupFingerprint:literal(''),locationStates:single(string),ruleFingerprint:literal(''),ruleSources:array(false),
-  bonusPreparation:closed({credentialId:string,requestFingerprint:sha256,sourceRef:string,amountCents:bonusAmount}),
+  bonusPreparation:closed({credentialId:string,requestFingerprint:sha256,sourceRef:sourceReference,amountCents:bonusAmount}),
 })
-const bonusItem=closed({id:string,version:immutableVersion,personId:string,amountCents:bonusAmount,periodStart:day,periodEnd:day,payDate:day,
+const bonusItem=closed({id:sha256,version:immutableVersion,personId:string,amountCents:bonusAmount,periodStart:day,periodEnd:day,payDate:day,
   sourcesCurrent:{type:'boolean'},status:literal('uncalculated-earnings-run')})
 const proposalState={status:literal('uncalculated-proposal'),approval:literal('not-approved'),dispatch:literal('unavailable')}
 const proposalItem={id:string,personId:string,personVersion:integer,rateId:string,minutes:integer,
@@ -30,11 +33,11 @@ export function outputSchema(name:string):JsonSchemaObject {
   if(name==='records.list')return closed({records:array(closed({id:string,name:string,locationId:string,version:integer})),limit:integer,next:nullableString})
   if(name==='workspace.snapshot')return closed({people:count,drafts:count,bonuses:count,sha256})
   if(name==='draft.prepare')return closed({id:string,...proposalState})
-  if(name==='bonus.prepare')return closed({id:string,version:immutableVersion,status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
+  if(name==='bonus.prepare')return closed({id:sha256,version:immutableVersion,status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
   if(name==='draft.read')return closed({...proposalItem,personName:string,hourlyCents:integer,sourceRef:string,...proposalState})
-  if(name==='bonus.read')return closed({id:string,version:immutableVersion,preview:bonusPreview,sourcesCurrent:{type:'boolean'},
+  if(name==='bonus.read')return closed({id:sha256,version:immutableVersion,preview:bonusPreview,sourcesCurrent:{type:'boolean'},
     status:literal('uncalculated-earnings-run'),approval:literal('requires-separate-human-proof'),dispatch:literal('unavailable')})
-  if(name==='reports.bonuses')return closed({kind:literal('bonus-earnings-preparations'),bonuses:array(bonusItem),limit:integer,next:nullableString,
+  if(name==='reports.bonuses')return closed({kind:literal('bonus-earnings-preparations'),bonuses:{...array(bonusItem) as JsonSchemaObject,maxItems:100},limit:pageLimit,next:bonusCursor,
     payroll:literal('uncalculated'),payment:literal('unavailable'),filing:literal('unavailable')})
   if(name==='reports.proposals')return closed({kind:literal('run-input-proposals'),proposals:array(closed(proposalItem)),limit:integer,next:nullableString,
     payroll:literal('uncalculated'),payment:literal('unavailable'),filing:literal('unavailable')})

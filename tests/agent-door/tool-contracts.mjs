@@ -159,7 +159,7 @@ export async function toolContracts(context) {
   if(context.step.id!=='workspace-snapshot'||!['autonomous','held'].includes(context.phase))return
   const fixture=contractFixtures.get(context.origin+':'+context.phase)
   assert.ok(fixture,'the policy phase has independently seeded native records')
-  const {origin,request,phase,database}=context,{base,company,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs,bonusPeople}=fixture
+  const {origin,request,phase,database}=context,{base,company,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs,bonusPeople,boundaryInputs}=fixture
   const owner=client(context),db=await database('DB')
   let seq=9900
   const wire=async(path,method,params={})=>{
@@ -374,6 +374,61 @@ export async function toolContracts(context) {
     }
   }
   assert.deepEqual(await retained(),staleNative,'current and stale reads are read-only')
+  // Exercise the native amount and source-reference boundaries, independently
+  // of discovery, so a closed schema cannot silently exclude accepted results.
+  const boundaryIds=[]
+  for(const [i,input] of boundaryInputs.entries()) {
+    const prepared=await call(paths[i],'envelope.bonus.prepare',input)
+    const id=digest(['bonus',company.id,grant.id,input.requestKey]);boundaryIds.push(id)
+    assert.deepEqual(prepared,{id,version:1,status:'uncalculated-earnings-run',approval:'requires-separate-human-proof',dispatch:'unavailable'})
+    const preparationSchema=installedSchemas.get(origin+':'+phase).get('envelope.bonus.prepare').outputSchema
+    valid(preparationSchema,prepared)
+    assert.ok(schemaErrors(preparationSchema,{...prepared,id:'synthetic-envelope-wrong-reference'}).length,
+      'preparation discovery refuses a fabricated bonus reference')
+    for(const path of paths) {
+      const read=await call(path,names[1],{companyId:company.id,runId:id})
+      valid(schemas.get(names[1]),read)
+      const native=(await retained()).runs.find(row=>row.id===id)
+      assert.deepEqual(read.preview,native.data)
+      assert.equal(read.preview.grossCashCents,input.amountCents)
+      assert.equal(read.preview.people[0].earningsCents,input.amountCents)
+      assert.equal(read.preview.people[0].id,input.personId)
+      assert.equal(read.preview.bonusPreparation.sourceRef,input.sourceRef)
+      assert.equal(read.preview.periodEnd,'2024-02-29')
+      assert.equal(read.preview.taxAmounts,null);assert.equal(read.preview.netPay,null)
+      assert.equal(read.preview.paymentReady,false);assert.equal(read.dispatch,'unavailable')
+      for(const sourceRef of ['',input.sourceRef+'x']) {
+        const invalid=structuredClone(read);invalid.preview.bonusPreparation.sourceRef=sourceRef
+        assert.ok(schemaErrors(schemas.get(names[1]),invalid).length,'discovery refuses a source reference the native preparation cannot retain')
+      }
+      assert.ok(schemaErrors(schemas.get(names[1]),{...read,id:'synthetic-envelope-wrong-reference'}).length,
+        'discovery refuses a fabricated bonus reference')
+    }
+  }
+  const boundaries=await retained()
+  assert.equal(boundaries.runs.length,4)
+  assert.deepEqual(boundaries.grants,staleNative.grants,'boundary preparations do not expand grants')
+  for(const path of paths) {
+    const report=await call(path,names[2],{companyId:company.id,limit:100},4)
+    valid(schemas.get(names[2]),report)
+    assert.equal(report.bonuses.length,4);assert.equal(report.limit,100);assert.equal(report.next,null)
+    for(const [i,id] of boundaryIds.entries())assert.equal(report.bonuses.find(row=>row.id===id).amountCents,boundaryInputs[i].amountCents)
+    const page=await call(path,names[2],{companyId:company.id,limit:1},1)
+    assert.equal(page.bonuses.length,1);assert.equal(page.next,page.bonuses[0].id)
+    valid(schemas.get(names[2]),page)
+    for(const limit of [0,101]) {
+      assert.ok(schemaErrors(schemas.get(names[2]),{...page,limit}).length,'discovery refuses a page limit outside native capacity')
+      const refused=await wire(path,toolsCall,{name:names[2],arguments:{companyId:company.id,limit}})
+      assert.equal(refused.result.isError,true)
+      assert.equal(refused.result.structuredContent,undefined)
+    }
+    assert.ok(schemaErrors(schemas.get(names[2]),{...page,next:'synthetic-envelope-wrong-cursor'}).length,
+      'discovery refuses a cursor that cannot identify a native bonus')
+    const expanded=structuredClone(page);expanded.bonuses[0].id='synthetic-envelope-wrong-reference'
+    assert.ok(schemaErrors(schemas.get(names[2]),expanded).length,'report entries retain native bonus references')
+  }
+  assert.deepEqual(await retained(),boundaries,'invalid report queries and boundary reads change no preparation or grant')
+  console.log('PROBE BASE-AGENT-002 native boundaries: '+phase+' both MCP paths -> one-cent and maximum native bonus, full source reference and leap day preserved; invalid limits, references and cursors detected without business effects')
   console.log('PROBE BASE-AGENT-002 native variants: '+phase+' both MCP paths -> bank version zero without bank data, two distinct payees, current and stale sources with immutable amounts; fabricated rule evaluation and missing calculation holds refused')
   console.log('PROBE BASE-AGENT-002 2: '+phase+' actual MCP paths -> native snapshot, bonus preview and empty and paginated report match independent records; missing, mistyped and private expansion rejected')
   console.log('PROBE BASE-AGENT-002 3: '+phase+' actual discovery and reads -> read-only annotations, standard snapshot and sensitive compensation with exact selected counts')

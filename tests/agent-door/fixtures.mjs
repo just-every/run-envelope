@@ -25,7 +25,10 @@ export async function seedToolContracts(context) {
     periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-'+suffix+'-'+i,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}))
   const hourlyInputs=[135,420].map((minutes,i)=>({companyId:company.id,personId:person.id,minutes,
     periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-hours-'+suffix+'-'+i,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}))
-  contractFixtures.set(context.origin+':'+context.phase,{base,company,location,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs,bonusPeople})
+  const boundaryInputs=[1,100000000].map((amountCents,i)=>({companyId:company.id,personId:bonusPeople[i].id,amountCents,
+    periodStart:'2024-02-28',periodEnd:'2024-02-29',payDate:'2024-02-29',sourceRef:('synthetic-envelope-boundary-'+suffix+'-'+i+'-').padEnd(240,'x'),
+    requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}))
+  contractFixtures.set(context.origin+':'+context.phase,{base,company,location,person,unrelated,name,privateValue,grant,inputs,rate,hourlyInputs,bonusPeople,boundaryInputs})
 }
 export default async function(context) {
   const saved=state.get(context.origin)
