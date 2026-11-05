@@ -1,7 +1,9 @@
+import {riskBefore,riskAfter,riskAudit} from './risk-facts.mjs'
 import {replayStep,replayMutation} from './replay.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 export default async function({database,request,origin,cookie}) {
+  await riskAudit({database,request,origin,cookie})
   const db=await database('DB')
   const rows=(await db.prepare("SELECT * FROM env_agent_call_audit WHERE rowid IN (SELECT MIN(rowid) FROM env_agent_call_audit WHERE door_operation_id IS NOT NULL GROUP BY tool)").all()).results
   for(const native of rows) {
@@ -15,7 +17,11 @@ export default async function({database,request,origin,cookie}) {
     assert.ok((await response.json()).activity.calls.some(row=>row.operationId===native.door_operation_id))
   }
 }
+export async function beforeStep(context) {
+  await riskBefore(context)
+}
 export async function afterStep(context) {
+  await riskAfter(context)
   await replayStep(context)
   await replayMutation(context)
   const {phase,step,result,origin,request,database}=context

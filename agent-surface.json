@@ -269,7 +269,10 @@
       "args": {},
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -284,7 +287,10 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -344,13 +350,16 @@
           "pointer": ""
         },
         "personId": {
-          "$fixture": "person",
+          "$fixture": "riskPerson",
           "pointer": ""
         },
         "periodStart": "2026-10-01",
         "periodEnd": "2026-10-07",
         "payDate": "2026-10-09",
-        "sourceRef": "native-conformance",
+        "sourceRef": {
+          "$fixture": "riskSource",
+          "pointer": ""
+        },
         "requestKey": {
           "$fixture": "key",
           "pointer": ""
@@ -359,9 +368,19 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "worker",
+        "id": {
+          "$fixture": "riskPerson",
+          "pointer": ""
+        }
+      }
     },
     {
       "id": "bonus-read",
@@ -427,9 +446,19 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "earnings-run",
+        "id": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      }
     },
     {
       "id": "notice-process",
@@ -494,9 +523,20 @@
       },
       "expect": [
         {
-          "class": "security"
+          "class": "security",
+          "facts": {
+            "measure": 1,
+            "setting": "native-agent-credential"
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "agent-grant",
+        "id": {
+          "$fixture": "nativeGrant",
+          "pointer": ""
+        }
+      }
     }
   ],
   "spend": {

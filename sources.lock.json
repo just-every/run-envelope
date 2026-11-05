@@ -365,7 +365,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "059934f77d572d9e0eea1c24407f760eb99c5d51d4faa8e7ff02752635bdcb57",
+      "sha256": "4cf7393411e3126c1810008b5e6328d9bb0db513ef61ff1441d6836f8fd9a060",
       "executable": false
     },
     "AGENTS.md": {
@@ -4205,7 +4205,7 @@
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
-      "sha256": "f5d9b32496b0a4f5d5cee30cdc4efc640ac39a08d05fec1f806cc53a3eed9b9e",
+      "sha256": "a1832d60ec4377ae5640d8a281564ad9da791e46daa397f8705c9170b1830a53",
       "executable": false
     },
     "tests/agent-door/mail-from.mjs": {
@@ -4245,7 +4245,7 @@
       "executable": false
     },
     "tests/agent-door/rotation-journey.mjs": {
-      "sha256": "d103bd458adedbedf7d02910ed783e71b327b66bcbc16e1bf7c5a58f419fc080",
+      "sha256": "b2fc90d2790cf9accb05b6bf12c892a34b888b8a11ea88ff6cf157cabd87721f",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
