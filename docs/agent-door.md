@@ -80,6 +80,31 @@ The shared signed policy receiver is `/api/rer/agent-policy`. Native people use
 configure the shared policy there; paired installations use Business. The native
 company's existing class restrictions and Pause remain additional restrictions,
 including at native SQL effects. Neither policy supplies missing native authority.
+
+For the installed bonus-preparation tool, a shared autonomous answer prepares an
+uncalculated earnings run. Review also prepares it and returns the linked review
+handle. Approval returns `input_required`, a pending handle, expiry and URL-mode
+elicitation when the modern MCP client advertises URL elicitation support. It
+retains the server's target, amount, summary and class facts without preparing a
+run. The named person signs in separately and approves the saved policy revision
+and summary. Retrying the same call returns the completed result and approval
+receipt; it cannot prepare a second run. Changed arguments cannot reuse that
+approval: use a fresh key and obtain a fresh exact approval. Rejection and expiry
+return `approval_rejected` and `approval_expired` without preparation. Blocked
+returns `policy_blocked` with its class, rule and policy revision. A changed
+shared policy applies to the next call and is recorded in its audit.
+
+This shared decision is permission to attempt preparation under the native
+company floor. Native review and approval restrictions still refuse execution,
+and native Pause also prevents an already pending action from executing. Shared
+approval never supplies native payroll approval, tax or net calculation, payment
+readiness or dispatch authority. The emitted-Worker journey
+`tests/agent-policy-decisions-runtime.mjs` exercises this bounded bonus path,
+including named-person browser decisions, restart and a controlled expiry clock.
+Other tools and classes, thresholds, daily caps, multi-class decisions, complete
+setup and upgrade behavior, signed-policy rejection, delegated policy
+administration and full transport parity remain separate unproved obligations.
+
 Native access records retain the signed agent, sponsor, originating operation,
 consent and named approvers alongside the original grant ID. For shared-door
 correspondence, native extraction attribution is incorporated into the saved
