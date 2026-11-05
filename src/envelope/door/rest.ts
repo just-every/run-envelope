@@ -1,5 +1,5 @@
 import type { Bindings } from '../../auth.server'
-import { AgentTools } from '../agents'
+import { AgentTools, agentRetryAfter } from '../agents'
 import type { Input } from '../records'
 import { PayrollError } from '../security'
 import { envelopeDoor } from './index'
@@ -50,6 +50,6 @@ export async function agentRest(request:Request,env:Bindings,read:()=>Promise<In
   const code=result.code??'approval_required',fields={...result.fields},nativeStatus=Number(fields.native_status)
   delete fields.native_status
   if(typeof fields.setup_url==='string'&&!fields.setupLink)fields.setupLink=fields.setup_url
-  const failure=Number.isInteger(nativeStatus)&&nativeStatus>=400&&nativeStatus<=599?nativeStatus:['idempotency_conflict','revision_conflict'].includes(code)?409:code==='invalid_arguments'?400:code==='unauthenticated'?401:code==='execution_failed'?500:403
-  return Response.json({error:code,...fields,...(result.approval?{approval:result.approval}:{})},{status:failure,headers})
+  const failure=Number.isInteger(nativeStatus)&&nativeStatus>=400&&nativeStatus<=599?nativeStatus:code==='rate_limited'?429:['idempotency_conflict','revision_conflict'].includes(code)?409:code==='invalid_arguments'?400:code==='unauthenticated'?401:code==='execution_failed'?500:403
+  return Response.json({error:code,...fields,...(result.approval?{approval:result.approval}:{})},{status:failure,headers:{...headers,...(failure===429?{'retry-after':String(agentRetryAfter())}:{})}})
 }

@@ -7,6 +7,18 @@ OAuth metadata; send the negotiated protocol and method/name headers. Tools
 have JSON input/output schemas, scopes, computed classes and contract citations.
 Refusals use `code` and MCP `com.runeditrun/error` metadata.
 
+Native credentials share one persistent capacity budget of 120 authenticated
+requests per UTC minute across `/mcp`, `/api/envelope/mcp` and the existing v1
+REST routes. Discovery advertises that same request rate and the MCP body limit.
+The last slot may execute; the next attempt receives HTTP 429 and a positive
+`Retry-After` in seconds until the next minute, before tool execution. Native
+exhaustion uses `agent_rate_limited`; the shared guard uses `rate_limited`.
+Invalid credentials remain authentication refusals. Restarting the Worker or
+switching routes does not replenish capacity; independently issued credentials
+have independent budgets. Public discovery does not consume a native slot.
+These installation protections are not daily business caps or provider spend
+budgets, and do not authorize retries, effects or broader native access.
+
 This installation offers the CORE capabilities `tools`, `policy`, `pause`,
 `audit` and `idempotency`. It explicitly refuses resources, events, prompts and
 subscriptions. These are target capabilities, not implemented payroll outcomes.
