@@ -9,9 +9,9 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Core | 5 | 33 | 61 | 99 |
-| Agent surface | 0 | 1 | 19 | 20 |
+| Agent surface | 0 | 2 | 18 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 5 | 36 | 85 | 126 |
+| Full target | 5 | 37 | 84 | 126 |
 
 Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1752,7 +1752,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Every mutating tool requires an idempotency key and takes an optional expected revision. The same key with the same arguments returns the first outcome for at least 24 hours; the same key with different arguments returns `idempotency_conflict`; a stale revision returns `revision_conflict` with the current revision. Long work returns a job handle and a status tool, with no dependence on the Tasks extension.
 
@@ -1763,8 +1763,8 @@ Agent surface · target · **missing**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance points 1–4, native hourly preparation subcases: `tests/agent-door/replay.mjs` — replayStep, invoked after the real draft step under autonomous and held conformance policies; actual retained preparation and one attributed native write, equal retries with new JSON-RPC ids, changed-argument conflict and stale-revision refusal naming the independently retained current revision. `tests/agent-door/replay-runtime.mjs` — replayJourney, invoked by `tests/runtime.mjs` in push Verify: actual MCP and alias calls, discarded response streams, persistent Worker restart, one preparation per key, equal saved outcomes, changed-argument and stale-revision conflicts, acceptance of the advertised revision after a genuine reviewed rate change; clock-controlled retention at 24 hours minus one millisecond, exactly 24 hours and plus one millisecond with rotated credentials and persistent Worker restarts under both policies; current shared and native Pause, blocked policy, new approval requirements, removed preparation scope and shared and native grant revocation refuse saved results without business changes, with attributed refusal audit where a principal is admitted. `tests/agent-door/replay.mjs` — replayMutation additionally checks equal retries, changed-argument conflicts and unchanged native state and write attribution for the installed bonus, notice processing, reviewed reply, review-link and credential tools under both conformance policies, including stale-revision refusals naming each independently retained target revision. Credential restriction now reports its actual grant revision rather than null. A real native scope reduction also replays without a second grant revision. The descriptor declares the installed replayAdmission proof using the mutating draft step.
+**Gap.** Remaining: complete lost-response, restart and retention-boundary coverage for every other mutating family; the full target mutation surface; long-work job and status behavior and another person's job-handle not-found refusal. Full calculation, payment, filing and uncertain provider-effect outcomes retain existing licensed-catalog, authorized employer and rail, provider-account and mandate, exact-human-approval, sponsor and grant, CT, device, visual-correction and feeder holds. Configured native owner reference sends still require explicit consent; no automatic outbound action, automated retry or destructive recovery.
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
 
