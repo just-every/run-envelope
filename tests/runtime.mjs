@@ -324,7 +324,8 @@ try {
       });recordPrivateInput(url,init.body);outgoing.on('error',reject);outgoing.end(init.body)
     })
     worker=await launch(settings);await waitForWorker()
-    await agentCapacityJourney({origin:capacityOrigin,cookie:'__Host-operator_session='+cookie.split('=')[1],sql,settings,edge:capacityEdge,request,
+    await agentCapacityJourney({origin:capacityOrigin,cookie:'',settings,edge:capacityEdge,request,
+      sql:statement=>{assert.match(statement,/^\s*SELECT\b/i,'capacity proof may only inspect native persistence');return inspectNativeSql(persist,statement)},
       advanceClock:async instant=>{assert.equal((await request(capacityOrigin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},
       restart:async(overrides={})=>{Object.assign(settings,overrides);await stopWorker();worker=await launch(settings);await waitForWorker()}})
   }
