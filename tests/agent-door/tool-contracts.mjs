@@ -408,6 +408,22 @@ export async function toolContracts(context) {
   const boundaries=await retained()
   assert.equal(boundaries.runs.length,4)
   assert.deepEqual(boundaries.grants,staleNative.grants,'boundary preparations do not expand grants')
+  for(const sourceRef of ['',boundaryInputs[0].sourceRef+'x']) {
+    const input={...boundaryInputs[0],sourceRef,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}
+    for(const path of paths) {
+      const refused=await wire(path,toolsCall,{name:'envelope.bonus.prepare',arguments:input})
+      assert.equal(refused.result.isError,true)
+      assert.equal(refused.result.structuredContent,undefined)
+      assert.equal(refused.result._meta['com.runeditrun/error'].code,'invalid_input',
+        'MCP preserves the native source-reference refusal')
+    }
+    const {companyId,idempotency_key,...nativeInput}=input
+    const response=await request(origin+'/api/envelope/v1/companies/'+companyId+'/bonus-runs',{
+      method:'POST',headers:{origin,authorization:'Bearer '+grant.token,'content-type':'application/json'},body:JSON.stringify(nativeInput)})
+    assert.equal(response.status,400)
+    assert.equal((await response.json()).error,'invalid_input','REST preserves the same native refusal code')
+  }
+  assert.deepEqual(await retained(),boundaries,'refused bonus inputs create no preparation and change no grant')
   for(const path of paths) {
     const report=await call(path,names[2],{companyId:company.id,limit:100},4)
     valid(schemas.get(names[2]),report)
