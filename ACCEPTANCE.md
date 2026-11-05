@@ -8,10 +8,10 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 33 | 61 | 99 |
+| Core | 5 | 34 | 60 | 99 |
 | Agent surface | 1 | 2 | 17 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 6 | 37 | 83 | 126 |
+| Full target | 6 | 38 | 82 | 126 |
 
 Judged from the code and tests at commit `43360723047d43e6787402589b3769b876884fda` (5 November 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -555,7 +555,7 @@ Core · target · **missing** · Rules D-2, D-3, D-4, D-5 · Register R-2
 
 #### ENV-089 — FUTA credit reduction on Schedule A
 
-Core · target · **missing** · From ENV-014 · Rules D-4, D-5
+Core · target · **partial** · From ENV-014 · Rules D-4, D-5
 
 **Requirement.** Prepare year-and-state-specific FUTA credit reductions on Form 940 Schedule A and carry its total to line 11. Source final annual reductions and applicable benefit-cost-ratio (BCR) add-ons, other statutory add-ons and waivers from DOL's November determination, reconciled to that year's IRS Schedule A. Keep potential/forecast rates visibly provisional until final; do not treat a potential BCR add-on as due after an effective waiver or reuse another year's final rate. Credit reduction is employer liability attributed to Q4, with the additional deposit/payment deadline and $500 deposit-threshold treatment from that year's Form 940 instructions; never deduct it from workers. Show the increased cash requirement and exact filing/deposit items for human approval, with separate submission/acceptance/payment evidence. A late source change recalculates affected pending items and invalidates their earlier approval, preserving historical filed editions and amendment responsibility.
 
@@ -564,8 +564,8 @@ Core · target · **missing** · From ENV-014 · Rules D-4, D-5
 2. Repeat with ten fully taxable $7,000 bases, producing $840 extra and a timely required Q4 deposit at the official date, never worker withholding.
 3. Inject a DOL November potential-to-final source change with distinct BCR imposed/waived official-schema cases, assert the correct state/year combined rate, invalidated pending approval, one authorized payment/filing and retained prior-year reproduction; an as-yet-unpublished 2026 final notice cannot be labeled final on 20 October.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete federal deposits and employment returns behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented.
+**Evidence.** Acceptance 1 and the calculation and reporting-data portion of acceptance 2: `tests/futa-credit-runtime.mjs` — futaCreditJourney, registered in `tests/runtime.mjs` and the industry push shard, exercises current native owner source and annual wage review, the independent IRS three-worker $252 and ten-worker $840 goldens, annual per-worker caps, duplicate worker and wage-source refusals, separate gross FUTA and zero worker withholding, Q4 Schedule A and Form 940 line 11 preparation, immutable source and wage corrections, replay after lost response and restart, held-source and current-authority refusals, privacy inventory, eligible erasure and erased-source replay fences, with unchanged payroll approvals, deductions, payments, filings and outbound requests. `tests/archive-runtime.mjs` — archiveJourney with futaArchiveFixture retains encrypted source, wage and preparation history through the actual CLI archive and refuses restored authority. Schema and honest boundaries: `docs/payroll-calculation.md`.
+**Gap.** Still unproved: timely Q4 deposit and official deadline and $500 deposit-threshold application; complete DOL potential-to-final, imposed or waived BCR and other add-on cases across states and years; source monitoring, recalculation and invalidation of payable approvals, one exact-human-authorized payment and filing with separate submission, acceptance and payment receipts; retained prior-year filed reproduction and amendment responsibility; complete annual employer wage reconciliation, exempt and multi-state wage allocation and original-source custody. The complete federal deposits and employment returns public-door journey remains unproved. This increment is selected reviewed California-2025 preparation only, unsigned and unfiled, with no ordinary state-tax payment credit or payable authority inferred. Current configured native owner only under the standing conservative preparation floor; scoped delegation and complete provider boundaries remain owed. Existing licensed calculation catalog, employer and funded rail authority, filing authority and agency enrolment (including 8655 and SSA), and unbuilt filing preparation remain held; preparation and source review supply none of those outcomes.
 
 #### ENV-015 — State, local, paid-leave and disability filings
 
