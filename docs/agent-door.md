@@ -92,11 +92,40 @@ material, the existing signed Business settings and policy receivers, and an
 agent bound by the native credential issuance route. It independently compares
 retained native business and credential state around refusals and checks
 populated durable audit and captured diagnostics for bearer retention. The
-local owner email-proof fixture uses the existing operator-auth test seam;
-the journey adds no production authentication path. This proves the installed
-paired-token slice only. Actual sibling-seed execution, the complete native
-issuer and OAuth lifecycle, consent-revocation timing, unpairing and the
-remaining role and transport matrix are still owed by BASE-AGENT-004.
+owner obtains fresh native proof through real single-use email-link requests
+and confirmation, with only the declared mail provider faked at its network
+edge. The journey runs the emitted production Worker over isolated HTTPS and
+adds no production authentication path.
+
+An adopted signed Business policy can withdraw a consent immediately. Both MCP
+routes refuse its next read, preparation, discovery and saved-result replay;
+a captured older policy cannot reinstate it. Unrelated consent remains usable.
+The existing owner action at `/agents/api/agents/:id/revoke` withdraws the whole
+recorded Business agent, including its consent-bearing tokens; it does not
+revoke an independently issued native credential. Native preparation repeats
+the current consent check in its storage transaction, so a withdrawal after
+admission cannot leave a new payroll preparation.
+
+The native owner's Sign-in settings expose the existing Business settings stop
+action at `POST /auth/settings/business`. It requires the current owner session
+and recent native identity proof, repeated atomically with the retained stop
+and attributed audit. Signed-out requests, Business bearers, native members,
+foreign origins and sessions revoked during the stop cannot unpair. A stop
+also withdraws Business token authority, removes that issuer from resource
+metadata and refuses later signed settings and policy delivery. An in-flight
+Business preparation repeats the stop check before its native effect. Restart
+preserves the withdrawal. Existing native data and grants remain; native
+email-link sign-in still works. Local policy is initially unanswered unless
+the owner had already configured it, and the owner must explicitly configure
+that policy before native agent work can resume. Stopping updates neither
+adds a grant nor issues a replacement Business token.
+
+These are installed native lifecycle proofs. Actual sibling-seed execution,
+the complete OAuth and native JWT issuer and signing-key lifecycle, end-to-end
+Business revocation delivery within 60 seconds, dedicated native consent
+selection and the remaining role and transport matrix are still owed by
+BASE-AGENT-004. Receiving a disposable signed revocation is not evidence of
+delivery from the production Business service.
 
 The shared signed policy receiver is `/api/rer/agent-policy`. Native people use
 `/agents`, its approval/review pages and person JSON doors. Standalone owners

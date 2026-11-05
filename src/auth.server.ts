@@ -10,6 +10,9 @@ import { payRunDocument } from './ui/page.server'
 import { Records } from './envelope/records'
 import { installationDataResponse } from './envelope/installation-data'
 import { identityAudit } from './envelope/identity-audit'
+import { createBusinessSettings } from './modules/business-settings/index.ts'
+import { sessionFence } from './envelope/access'
+import { sessionProofFence } from './envelope/step-up'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
 const theme = { href: '/rer-theme.css', productName: branding.name, accentColor: branding.primaryColor }
@@ -55,8 +58,25 @@ export interface Bindings {
 
 export const runtimeBindings = (env: Bindings): Bindings => env.RER_DEV_ORIGIN && env.AUTH_LOCAL === 'true' ? { ...env, AUTH_ORIGIN: env.RER_DEV_ORIGIN } : env
 export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true', OWNER_EMAIL: env.OWNER_EMAIL, SESSION_SECRET: env.SESSION_SECRET, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, SETUP_TOKEN: env.SETUP_TOKEN, MAIL_FROM: env.MAIL_FROM, branding: { productName: branding.name, accentColor: branding.primaryColor, signInPath: '/signin', theme: theme.href } })
-export function operatorAuth(env: Bindings) {
- return createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '', hooks: {audit:event=>identityAudit(env.DB,event)} })
+export function payrollBusinessSettings(env: Bindings, team?: ReturnType<typeof createOperatorAuth>['businessTeam']) {
+ return createBusinessSettings({db:env.DB,trust:env.RER_BUSINESS_TRUST ?? null,team,
+  business:{settings:1,values:['display_name','owner_name','brand_color','logo','timezone'],team:{roles:{admin:'admin',member:'member'}}}})
+}
+export function operatorAuth(env: Bindings, request?: Request) {
+ // Reading provenance and stopping updates require no Business verification key.
+ const settings=payrollBusinessSettings({...env,RER_BUSINESS_TRUST:undefined})
+ const auth: ReturnType<typeof createOperatorAuth> = createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '', hooks: {audit:event=>identityAudit(env.DB,event)},
+  businessSettings:{...settings,async stop(actor) {
+   if (!request) throw new Error('business_stop_context_required')
+   const session=await auth.requireStepUp(request,'business:stop'),f=sessionFence(session),p=sessionProofFence(session)
+   if (session.operator.id!==actor) throw new Error('business_stop_actor_changed')
+   // Repeat this request's owner, session and fresh-proof checks in the stop batch.
+   await settings.stop(actor,{sql:`(${f.sql}) AND (${p.sql}) AND ?=(SELECT o.id FROM oa_operators o
+    LEFT JOIN oa_bootstrap b ON b.claim_id=o.id WHERE o.role='owner' AND o.status='active'
+    ORDER BY b.claim_id IS NULL,o.created_at,o.id LIMIT 1)`,args:[...f.args,...p.args,actor]})
+  }},
+ })
+ return auth
 }
 
 const privateHeaders = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff', 'x-robots-tag': 'noindex, nofollow' }
@@ -84,7 +104,7 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
   if (page) return fontDocumentResponse(page)
  }
  if (url.pathname.startsWith('/auth/')) {
-  const response = await createAuthHandler(operatorAuth(env))(request)
+  const response = await createAuthHandler(operatorAuth(env,request))(request)
   return fontDocumentResponse(response && url.pathname === '/auth/settings/identity' && request.method === 'GET'
    ? await installationDataResponse(response, env) : response)
  }

@@ -14,7 +14,7 @@ export async function scopes(agent: AgentTools) {
 }
 /** Business credentials require an explicit native binding. A local client must
  * be the actual grant identity, with its original retained admission fingerprint. */
-export async function nativeAgent(env: Bindings, who: Pick<ToolContext, 'agent' | 'person' | 'clientId' | 'consent' | 'scopes'>, company?: unknown) {
+export async function nativeAgent(env: Bindings, who: Pick<ToolContext, 'agent' | 'person' | 'clientId' | 'consent' | 'scopes'>, company?: unknown, checkConsent=true) {
   const local=!who.consent && who.agent.id===who.clientId
   const row = await env.DB.prepare(`SELECT g.*,c.secret_expires_at,c.token_hash
     FROM env_agent_grants g JOIN env_agent_credentials c ON c.id=g.id
@@ -23,12 +23,16 @@ export async function nativeAgent(env: Bindings, who: Pick<ToolContext, 'agent' 
       WHERE b.agent_id=? AND b.grant_id=g.id AND b.sponsor_id=g.sponsor_id)))
     ORDER BY g.created_at DESC,g.id LIMIT 1`).bind(who.person.id,company ?? null,company ?? null,local?1:0,who.clientId ?? '',local?1:0,who.agent.id).first<AgentGrant>()
   if (!row) throw new ToolRefusal('native_agent_grant_required')
-  const agent = new AgentTools(env,row), fence=agent.fence()
+  const agent = new AgentTools(env,row)
+  if (checkConsent) agent.businessConsent=who.consent
+  const fence=agent.fence()
   if (!await env.DB.prepare(`SELECT 1 WHERE ${fence.sql}`).bind(...fence.args).first()) throw new ToolRefusal('native_agent_grant_revoked')
   agent.authenticatedPolicyVersion = (await env.DB.prepare('SELECT version FROM env_agent_class_policy WHERE company_id=?').bind(row.company_id).first<{version:number}>())?.version ?? 0
   if(local && !who.scopes.includes(await admission(agent)))throw new ToolRefusal('native_agent_admission_changed','native_agent_admission_changed',{native_status:403})
   return agent
 }
 export async function currentScopes(env: Bindings, who: Principal) {
-  try { return await scopes(await nativeAgent(env,who)) } catch { return [] }
+  // The shared transport returns its canonical consent challenge. Native
+  // classification and execution additionally repeat consent at the SQL edge.
+  try { return await scopes(await nativeAgent(env,who,undefined,false)) } catch { return [] }
 }

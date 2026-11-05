@@ -1,7 +1,7 @@
 import {replayJourney} from './agent-door/replay-runtime.mjs'
 import {agentCapacityJourney} from './agent-capacity-runtime.mjs'
 import {tokenJourney} from './agent-token-runtime.mjs'
-import {tokenInstallation} from './agent-door/tokens.mjs'
+import {tokenInstallation,tokenTransport} from './agent-door/tokens.mjs'
 import { agentPolicyWorker } from './agent-policy-worker.mjs'
 import { agentPolicyJourney } from './agent-policy-runtime.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
@@ -138,19 +138,21 @@ const settings = {
   ENVELOPE_RECORD_KEY: randomBytes(32).toString('base64'),
 }
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
-const tokens = clockJourneys.includes('agent-tokens') ? await tokenInstallation(origin,settings.OWNER_EMAIL) : null
+const tokens = clockJourneys.includes('agent-tokens') ? await tokenInstallation(`https://127.0.0.1:${port}`,settings.OWNER_EMAIL) : null
 if (tokens) Object.assign(settings,tokens.bindings)
 const clockEntrypoint = ['agent-policy','agent-replay','agent-tokens','agent-capacity'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
 let output = ''
-async function launch(bindings) {
+async function launch(bindings, {secure=false,outboundService}={}) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
     ...((clockEntrypoint ?? operationsEntrypoint) ? {entrypoint:clockEntrypoint ?? operationsEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
-    dev: { server:{hostname:new URL(origin).hostname,port}, inspector:false, remote:false, watch:false, persist, logLevel:'error' },
+    dev: { server:{hostname:new URL(origin).hostname,port,...(secure?{secure:true}:{})},
+      ...(secure?{origin:{hostname:new URL(bindings.AUTH_ORIGIN).host,secure:true}}:{}),
+      ...(outboundService?{outboundService}:{}),inspector:false, remote:false, watch:false, persist, logLevel:'error' },
   })
   await instance.ready
   return instance
@@ -302,7 +304,21 @@ try {
       await waitForWorker()
     }
   }
-  if (selected?.includes('agent-tokens')) await tokenJourney({origin,cookie,settings,installation:tokens,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-tokens')) {
+    await stopWorker()
+    const tokenSettings={...settings,AUTH_LOCAL:'false',AUTH_ORIGIN:tokens.context.origin,
+      MAIL_PROVIDER:'resend',MAIL_FROM:settings.OWNER_EMAIL,MAIL_API_KEY:'synthetic-envelope-9852'}
+    const request=tokenTransport(tokens.context.origin)
+    const start=async()=>{worker=await launch(tokenSettings,{secure:true,outboundService:tokens.mailEdge});await waitForWorker()}
+    try {
+      await start()
+      await tokenJourney({origin:tokens.context.origin,cookie:'__Host-operator_session='+cookie.split('=')[1],settings:tokenSettings,installation:tokens,request,
+        sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),
+        advanceClock:async instant=>{assert.equal((await request(tokens.context.origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},
+        restart:async()=>{await stopWorker();await start()},
+      })
+    } finally { await stopWorker();worker=await launch(settings);await waitForWorker() }
+  }
   if (selected?.includes('agent-capacity')) await agentCapacityJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('agent-replay')) await replayJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})

@@ -256,6 +256,7 @@ export class AgentSettings {
 }
 export class AgentTools {
   doorContext?: ToolContext
+  businessConsent?: string
   callPolicyVersion?: number
   authenticatedPolicyVersion?: number
   constructor(
@@ -300,6 +301,7 @@ export class AgentTools {
   }
   authorityFence() {
     const g = this.grant
+    const consent=this.businessConsent
     return {
       sql: `EXISTS(SELECT 1 FROM env_agent_grants a JOIN env_agent_credentials c ON c.id=a.id JOIN env_grants s ON s.company_id=a.company_id AND s.operator_id=a.sponsor_id JOIN oa_operators o ON o.id=a.sponsor_id
     WHERE a.id=? AND a.company_id=? AND a.version=? AND a.revoked_at IS NULL AND a.expires_at>unixepoch('subsec')*1000
@@ -309,8 +311,10 @@ export class AgentTools {
     AND (s.role='owner' OR (NOT EXISTS(SELECT 1 FROM env_agent_policy pol WHERE pol.company_id=a.company_id AND pol.owner_only=1)
       AND NOT EXISTS(SELECT 1 FROM json_each(a.fields) af WHERE af.value NOT IN (SELECT value FROM json_each(s.fields)))
       AND (EXISTS(SELECT 1 FROM json_each(s.locations) WHERE value='*') OR NOT EXISTS(SELECT 1 FROM json_each(a.locations) al WHERE al.value NOT IN (SELECT value FROM json_each(s.locations))))
-      AND NOT EXISTS(SELECT 1 FROM json_each(?) req WHERE req.value NOT IN (SELECT value FROM json_each(s.actions))))))`,
-      args: [g.id, g.company_id, g.version, g.token_hash, JSON.stringify([...new Set((JSON.parse(g.actions) as string[]).flatMap(a => inheritedActions[a] ?? ['ungrantable']))])],
+      AND NOT EXISTS(SELECT 1 FROM json_each(?) req WHERE req.value NOT IN (SELECT value FROM json_each(s.actions))))))
+    ${consent ? `AND EXISTS(SELECT 1 FROM bs_settings WHERE singleton=1 AND stopped=0)
+     AND NOT EXISTS(SELECT 1 FROM agent_door_state state,json_each(state.envelope,'$.revoked.consents') revoked WHERE state.id=1 AND revoked.value=?)` : ''}`,
+      args: [g.id, g.company_id, g.version, g.token_hash, JSON.stringify([...new Set((JSON.parse(g.actions) as string[]).flatMap(a => inheritedActions[a] ?? ['ungrantable']))]),...(consent?[consent]:[])],
     }
   }
   async rotate() {

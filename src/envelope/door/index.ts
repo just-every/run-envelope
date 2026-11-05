@@ -1,6 +1,5 @@
 import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
-import { createBusinessSettings } from '../../modules/business-settings/index.ts'
-import { operatorAuth, type Bindings } from '../../auth.server'
+import { operatorAuth, payrollBusinessSettings, type Bindings } from '../../auth.server'
 import { AgentTools, AgentCapacityError, agentRequestsPerMinute } from '../agents'
 import { currentScopes, scopes } from './native'
 import { payrollPeople } from './people'
@@ -14,7 +13,9 @@ function trust(env: Bindings): Trust | null {
   if (!issuer || !installationId || !keys) throw new Error('Incomplete agent trust')
   return {issuer,installationId,appOrigin:env.AUTH_ORIGIN,publicKeys:JSON.parse(keys)}
 }
-export function envelopeDoor(env: Bindings) {
+export async function envelopeDoor(env: Bindings) {
+  const stopped=await env.DB.prepare('SELECT stopped FROM bs_settings WHERE singleton=1').first<{stopped:number}>()
+  if (stopped?.stopped) env={...env,RER_BUSINESS_TRUST:undefined,RER_OWNER_CLAIM_ISSUER:undefined,RER_OWNER_CLAIM_INSTALLATION_ID:undefined,RER_OWNER_CLAIM_PUBLIC_KEYS:undefined}
   const exhausted = new WeakMap<Request, AgentCapacityError>()
   const door = createAgentDoor({seed:'envelope',name:'Envelope',specialist:'payroll',db:env.DB,origin:env.AUTH_ORIGIN,trust:trust(env),capabilities,
     limits:{requestsPerMinute:agentRequestsPerMinute},
@@ -49,8 +50,7 @@ export function envelopeDoor(env: Bindings) {
 export async function agentResponse(request: Request, env: Bindings) {
   const path=new URL(request.url).pathname
   if(!['/mcp','/api/envelope/mcp','/api/rer/agent-policy','/api/rer/business-settings','/rer-business-logo','/rer-business.css','/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp','/agents'].includes(path) && !path.startsWith('/agents/')) return null
-  const settings=createBusinessSettings({db:env.DB,trust:env.RER_BUSINESS_TRUST ?? null,
-    team:operatorAuth(env).businessTeam,
-    business:{settings:1,values:['display_name','owner_name','brand_color','logo','timezone'],team:{roles:{admin:'admin',member:'member'}}}})
-  return await settings.handle(request) ?? await envelopeDoor(env).handle(request)
+  if (['/api/rer/business-settings','/rer-business-logo','/rer-business.css'].includes(path))
+    return payrollBusinessSettings(env,operatorAuth(env).businessTeam).handle(request)
+  return (await envelopeDoor(env)).handle(request)
 }

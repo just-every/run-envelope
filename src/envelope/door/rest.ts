@@ -45,7 +45,7 @@ export async function agentRest(request:Request,env:Bindings,read:()=>Promise<In
       name=kind==='drafts'?'envelope.draft.read':'envelope.bonus.read';args={companyId,[kind==='drafts'?'draftId':'runId']:id}
     } else throw new PayrollError('agent_tool_denied',403)
   } else throw new PayrollError('agent_tool_denied',403)
-  const result=await envelopeDoor(env).invoke(name,args,{person:{id:agent.grant.sponsor_id},agent:{id:agent.grant.id,name:agent.grant.name,specialist:'payroll'},clientId:agent.grant.id,scopes:originalScopes})
+  const result=await (await envelopeDoor(env)).invoke(name,args,{person:{id:agent.grant.sponsor_id},agent:{id:agent.grant.id,name:agent.grant.name,specialist:'payroll'},clientId:agent.grant.id,scopes:originalScopes})
   if(result.outcome==='done')return request.method==='HEAD'?new Response(null,{headers}):Response.json(result.result,{status,headers})
   const code=result.code??'approval_required',fields={...result.fields},nativeStatus=Number(fields.native_status)
   delete fields.native_status
