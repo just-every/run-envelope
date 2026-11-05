@@ -6,7 +6,7 @@ export default async function({database,request,origin,cookie}) {
   const rows=(await db.prepare("SELECT * FROM env_agent_call_audit WHERE rowid IN (SELECT MIN(rowid) FROM env_agent_call_audit WHERE door_operation_id IS NOT NULL GROUP BY tool)").all()).results
   for(const native of rows) {
     const audits=(await db.prepare("SELECT row FROM agent_door_audit WHERE json_extract(row,'$.operation_id')=?").bind(native.door_operation_id).all()).results.map(value=>JSON.parse(value.row))
-    const name=({'run.review':'envelope.runs.review_link','notice.process':'envelope.notices.process','reply.dispatch':'envelope.notices.reply'})[native.tool]??'envelope.'+native.tool
+    const name=({'run.review':'envelope.runs.review_link','notice.process':'envelope.notices.process','reply.dispatch':'envelope.notices.reply','job.status':'envelope.jobs.status'})[native.tool]??'envelope.'+native.tool
     const matching=audits.find(row=>row.tool===name&&row.agent.id===native.door_agent_id&&row.sponsor.id===native.sponsor_id)
     assert.ok(matching,'native activity and shared audit identify the same agent, sponsor and operation')
     assert.deepEqual(JSON.parse(native.classes).sort(),matching.classes.map(value=>value.class).sort())

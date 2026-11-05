@@ -26,8 +26,8 @@ export async function replayJourney({origin,cookie,settings,sql,restart,advanceC
   let nativePolicy=await owner(base+'/agents/class-policy',{version:0,...answers}),seq=1000,currentRate=rate
   const shared=async document=>owner('/agents/api/policy',{document},'PUT')
   const issue=()=>owner(base+'/agents',{name:'Synthetic replay agent',hours:24,actions:['records:read','drafts:read','drafts:prepare'],fields:['compensation'],locations:['*']},'POST',201)
-  const wire=async(credential,name,args,{path='/mcp',discard=false}={})=>{
-    const id=++seq,response=await fetch(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}})})
+  const wire=async(credential,name,args,{path='/mcp',discard=false,requestState}={})=>{
+    const id=++seq,response=await fetch(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args,...(requestState?{requestState}:{}),_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}})})
     if(discard) {assert.equal(response.status,200);await response.body.cancel();return {id}}
     const answer=await response.json();assert.equal(answer.id,id,'each retry uses its own JSON-RPC id')
     return {...answer,httpStatus:response.status}

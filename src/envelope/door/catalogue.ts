@@ -1,4 +1,10 @@
 export const catalogue = [
+  {
+    name:'envelope.jobs.status',nativeName:'job.status',
+    description:'Read only this agent and sponsor delivery job. A handle grants no authority; uncertain delivery is never retried.',
+    properties:{companyId:{type:'string'},jobId:{type:'string'}},required:['companyId','jobId'],
+    scope:'dispatch:execute',readOnly:true,classes:['standard'],clauses:['BASE-AGENT-012','ENV-025'],
+  },
 {
   "name": "envelope.credentials.restrict",
 "sponsorEscalation": false,
@@ -113,7 +119,7 @@ export const catalogue = [
   },
   {
     "name": "envelope.notices.reply",
-    "description": "Dispatch only the exact latest unexpired human-approved notice reply through declared Resend. Rechecks current human and sponsor authority. Never approves, pays wages or files returns.",
+    "description": "Dispatch only the exact latest unexpired human-approved notice reply through declared Resend. Optional background delivery returns a durable jobId for envelope.jobs.status. Rechecks current human and sponsor authority. Never approves, pays wages or files returns.",
     "properties": {
       "companyId": {
         "type": "string"
@@ -121,6 +127,7 @@ export const catalogue = [
       "replyId": {
         "type": "string"
       },
+      "background": {"type":"boolean"},
       "version": {
         "type": "integer"
       },

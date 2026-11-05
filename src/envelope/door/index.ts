@@ -14,13 +14,13 @@ function trust(env: Bindings): Trust | null {
   if (!issuer || !installationId || !keys) throw new Error('Incomplete agent trust')
   return {issuer,installationId,appOrigin:env.AUTH_ORIGIN,publicKeys:JSON.parse(keys)}
 }
-export function envelopeDoor(env: Bindings) {
+export function envelopeDoor(env: Bindings,execution?: ExecutionContext) {
   const exhausted = new WeakMap<Request, AgentCapacityError>()
   const door = createAgentDoor({seed:'envelope',name:'Envelope',specialist:'payroll',db:env.DB,origin:env.AUTH_ORIGIN,trust:trust(env),capabilities,
     limits:{requestsPerMinute:agentRequestsPerMinute},
     paths:['/mcp','/api/envelope/mcp'],
     people:payrollPeople(env),
-    tools:nativeTools(env),resources:[],
+    tools:nativeTools(env,execution?work=>execution.waitUntil(work):undefined),resources:[],
     currentScopes:who=>currentScopes(env,who),
     async localCredentials(request) {
       const value=request.headers.get('authorization')?.replace(/^Bearer /,'')
@@ -46,11 +46,11 @@ export function envelopeDoor(env: Bindings) {
     return Response.json({jsonrpc:'2.0',id:body.id,error:{code:-32000,message:'Capacity exceeded',data:{code:capacity.code}}},{status:429,headers})
   }}
 }
-export async function agentResponse(request: Request, env: Bindings) {
+export async function agentResponse(request: Request, env: Bindings, execution?: ExecutionContext) {
   const path=new URL(request.url).pathname
   if(!['/mcp','/api/envelope/mcp','/api/rer/agent-policy','/api/rer/business-settings','/rer-business-logo','/rer-business.css','/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp','/agents'].includes(path) && !path.startsWith('/agents/')) return null
   const settings=createBusinessSettings({db:env.DB,trust:env.RER_BUSINESS_TRUST ?? null,
     team:operatorAuth(env).businessTeam,
     business:{settings:1,values:['display_name','owner_name','brand_color','logo','timezone'],team:{roles:{admin:'admin',member:'member'}}}})
-  return await settings.handle(request) ?? await envelopeDoor(env).handle(request)
+  return await settings.handle(request) ?? await envelopeDoor(env,execution).handle(request)
 }

@@ -365,7 +365,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "059934f77d572d9e0eea1c24407f760eb99c5d51d4faa8e7ff02752635bdcb57",
+      "sha256": "05ea3ecfb66f884179ecf051dc8b467a33460d1f9e501a25471bffb03969b4d3",
       "executable": false
     },
     "AGENTS.md": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "2607b527633a89315be944c380cc524b371106be43b66ea72412406fc44c300f",
+      "sha256": "aad6f13c07890ede2b7e644324910072c314fbfce1c453283e3fa4e385b9aa34",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -2141,7 +2141,7 @@
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "c9d6093acfa8830b9b1b2cb4f55eb6bba0ba18bf4a295e2295149422838920a0",
+      "sha256": "decf62da37f1555d9fcd178d1ef4c8f923dc8f2285a3ed36681245eace2d7e11",
       "executable": false
     },
     "src/envelope/agents.ts": {
@@ -2313,7 +2313,7 @@
       "executable": false
     },
     "src/envelope/door/catalogue.ts": {
-      "sha256": "5f875632ebde9c3fc45072135447cda4131ab3ffb32e52366331589d2f60fb35",
+      "sha256": "3bbf7666d7a68eb237cfccd682c4b003dbaaec17a11a3fffd5533e215d36c687",
       "executable": false
     },
     "src/envelope/door/effects.ts": {
@@ -2321,7 +2321,7 @@
       "executable": false
     },
     "src/envelope/door/index.ts": {
-      "sha256": "875250c899c1602d0c125936cbda63d7f789a0a6086eb6f1dbe5b75218a41fc3",
+      "sha256": "1f5f9fdcaa77068a6013ffda336bf239590260c3e2a75a0bab23ca4309b3332a",
       "executable": false
     },
     "src/envelope/door/native.ts": {
@@ -2341,11 +2341,11 @@
       "executable": false
     },
     "src/envelope/door/schemas.ts": {
-      "sha256": "0cb46da0545a85f784596dc657be6b561329065a3c9773022e04d68fef509e42",
+      "sha256": "46232b093a2cd8a487b8e599f88a1973d284b8db3bb9e89cdfd73ff75a0b1029",
       "executable": false
     },
     "src/envelope/door/tools.ts": {
-      "sha256": "0ba364415c903288ee9b467e0c32208467788be39165fdd1bba9d42642533de1",
+      "sha256": "a906f910e4499e428df013443b7739e7e37ac67a48c440e337cc633c929ebd38",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -2509,7 +2509,7 @@
       "executable": false
     },
     "src/envelope/notices.ts": {
-      "sha256": "09f461eaf0fb263312b254bc60d547a4054bef45091735b8f745119d6b69785c",
+      "sha256": "6d61685c7549959355edcff78f58223da3dd07b754879bd8c4d3f5c226253894",
       "executable": false
     },
     "src/envelope/pages.tsx": {
@@ -4045,7 +4045,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "ebd066885fb281875e0c8db63d1eeaf79e4df39bad1142623685c21b51126466",
+      "sha256": "b81b3e16a53c74d1a04c3db39b47711e7aead5f9e99da0b58494616438709596",
       "executable": false
     },
     "src/site/docs.ts": {
@@ -4237,11 +4237,11 @@
       "executable": false
     },
     "tests/agent-door/replay-families.mjs": {
-      "sha256": "df7c9239334fdc9c838af7454dce88e28ca95c329c2e6acc44db2d6015743564",
+      "sha256": "eae2fe1e8139a6869826d49df44e9e8309053ff57da22e1b4fc0ca274408a035",
       "executable": false
     },
     "tests/agent-door/replay-runtime.mjs": {
-      "sha256": "a46bc2d14ad88e7ba48fff0a2c043975da36996d9519e5a9b83cf107021603ac",
+      "sha256": "045499219887e9c77833e07e866f74aa11bc324f52c0495a0dc41c95d4f66fd9",
       "executable": false
     },
     "tests/agent-door/replay.mjs": {
@@ -4253,7 +4253,7 @@
       "executable": false
     },
     "tests/agent-door/rotation-journey.mjs": {
-      "sha256": "d103bd458adedbedf7d02910ed783e71b327b66bcbc16e1bf7c5a58f419fc080",
+      "sha256": "580b726c52a12962416e95c7c37cef859b378a703bab9e92af555c5a36aed47e",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
@@ -4541,7 +4541,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "ae41e044f744a3bea8c0125c79ab7154728b1c60248d2115eff65b9baf65947d",
+      "sha256": "705be636d327e7d589d6ce18b5bc8eb535f09ff2fbd2ab17a421039bd09cf520",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
