@@ -7,10 +7,19 @@ OAuth metadata; send the negotiated protocol and method/name headers. Tools
 have JSON input/output schemas, scopes, computed classes and contract citations.
 Refusals use `code` and MCP `com.runeditrun/error` metadata.
 
-This installation offers the CORE capabilities `tools`, `policy`, `pause`,
-`audit` and `idempotency`. It explicitly refuses resources, events, prompts and
-subscriptions. These are target capabilities, not implemented payroll outcomes.
+This installation offers `tools`, `policy`, `pause`, `audit`, `idempotency`,
+`resources` and `prompts`. It explicitly refuses events and subscriptions.
 The machine-readable registry and native journey are in `agent-surface.json`.
+
+The resource `envelope://companies/{company}/preparation-state` returns the
+same counts and digest as `envelope.workspace.snapshot` under the current native
+`records:read` grant, company policy and Pause. It contains no worker identities,
+compensation or document bytes. Missing and inaccessible companies return the
+same refusal. Primary payroll record resources remain a separate target.
+The `payroll-preparation` prompt describes the installed preparation and separate
+human-review tools. Retrieving it performs no payroll action and supplies no
+approval, payment, filing or outbound authority. Resource and prompt lists are
+deterministic, private and available through both negotiated protocol versions.
 
 | Tool | Class | Native job |
 | --- | --- | --- |
@@ -76,7 +85,7 @@ agent and sponsor in native activity and the outbound attribution header. It nev
 
 Installation, archive import, device clients and a person's own authentication
 or payroll approval screens retain their own doors. There is no agent queue
-executor, resource catalogue, streaming event feed, specialist prompt catalogue,
+executor, complete primary-record catalogue, streaming event feed,
 full payroll week, funded payment or agency filing claim in this CORE subset.
 The broader SURFACE clauses remain targets until those native jobs are delivered.
 

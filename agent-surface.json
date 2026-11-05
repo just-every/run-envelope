@@ -7,7 +7,9 @@
     "policy",
     "pause",
     "audit",
-    "idempotency"
+    "idempotency",
+    "resources",
+    "prompts"
   ],
   "tools": [
     {
@@ -199,7 +201,9 @@
       ]
     }
   ],
-  "resources": [],
+  "resources": [
+    "envelope://companies/{company}/preparation-state"
+  ],
   "notTools": [
     {
       "clauses": [

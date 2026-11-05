@@ -30,9 +30,9 @@ export default async function protocolJourney(context) {
       const version=options.version??VERSION
       const body=JSON.stringify({jsonrpc:'2.0',id:++id,method,params:{...params,
         ...(version===legacy?{}:{_meta:{...versionMeta(version),...params._meta}})}})
-      const headers={authorization:'Bearer '+issued.token,origin,'content-type':'application/json',
+      const headers={authorization:'Bearer '+(options.token??issued.token),origin,'content-type':'application/json',
         accept:'application/json, text/event-stream','MCP-Protocol-Version':version,'Mcp-Method':method,
-        ...(method==='tools/call'?{'Mcp-Name':params.name}:{}),...options.headers}
+        ...(['tools/call','prompts/get','resources/read'].includes(method)?{'Mcp-Name':method==='resources/read'?params.uri:params.name}:{}),...options.headers}
       const response=await request(origin+path,{method:'POST',headers,
         body:options.stream?new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode(body));controller.close()}}):body,
         ...(options.stream?{duplex:'half'}:{})})
@@ -52,7 +52,10 @@ export default async function protocolJourney(context) {
     assert.equal(discovered.status,200)
     assert.ok(discovery.supportedVersions.includes(VERSION)&&discovery.supportedVersions.includes(legacy))
     assert.ok(discovery.capabilities.tools)
+    assert.ok(discovery.capabilities.resources)
+    assert.ok(discovery.capabilities.prompts)
     assert.ok(discovery._meta['io.modelcontextprotocol/serverInfo'].name)
+    assert.ok(discovery._meta['io.modelcontextprotocol/serverInfo'].version)
     assert.ok(discovery.instructions.includes('payroll'))
     for(const unsupported of ['roots','sampling','logging']) assert.equal(Object.hasOwn(discovery.capabilities,unsupported),false)
 
@@ -73,6 +76,50 @@ export default async function protocolJourney(context) {
     const oldTools=await rpc('tools/list',{}, {version:legacy})
     assert.equal(oldTools.status,200)
     assert.deepEqual(oldTools.body.result,first.body.result,'legacy initialization exposes the identical tools and cache metadata')
+
+    const resourceUri='envelope://companies/'+saved.company.id+'/preparation-state'
+    const cacheLists={}
+    for(const [method,field] of [['resources/templates/list','resourceTemplates'],['prompts/list','prompts']]) {
+      const listed=await rpc(method),again=await rpc(method),old=await rpc(method,{}, {version:legacy})
+      assert.equal(listed.status,200)
+      assert.deepEqual(listed.body.result,again.body.result,'resource and prompt lists are deterministic')
+      assert.deepEqual(listed.body.result,old.body.result,'both protocols expose identical resource and prompt lists')
+      assert.equal(listed.body.result.cacheScope,'private')
+      assert.ok(Number.isFinite(listed.body.result.ttlMs)&&listed.body.result.ttlMs>=0)
+      assert.ok(listed.body.result[field].length>0,'offered capabilities have usable entries')
+      cacheLists[field]=listed.body.result[field]
+    }
+    assert.ok(cacheLists.resourceTemplates.some(item=>resourceUri===item.uriTemplate.replace('{company}',saved.company.id)))
+    const prepared=await rpc('tools/call',{name:'envelope.draft.prepare',arguments:{...args,requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}})
+    assert.equal(prepared.body.result.isError,false,'the disposable native credential prepares real hourly inputs')
+    const snapshot=await rpc('tools/call',{name:'envelope.workspace.snapshot',arguments:{}})
+    const resource=await rpc('resources/read',{uri:resourceUri})
+    assert.equal(resource.status,200)
+    assert.equal(resource.body.error,undefined)
+    assert.equal(resource.body.result.contents.length,1)
+    assert.equal(resource.body.result.contents[0].uri,resourceUri)
+    const observed=JSON.parse(resource.body.result.contents[0].text)
+    assert.equal(snapshot.body.result.isError,false)
+    assert.deepEqual(observed,snapshot.body.result.structuredContent,'the resource uses the existing scoped native action')
+    const visiblePeople=await db.prepare('SELECT COUNT(*) AS n FROM env_people WHERE company_id=?').bind(saved.company.id).first()
+    const visibleDrafts=await db.prepare('SELECT COUNT(*) AS n FROM env_run_drafts WHERE company_id=? AND credential_id=?').bind(saved.company.id,issued.id).first()
+    assert.ok(visiblePeople.n>0&&visibleDrafts.n>0,'the resource checks populated native state')
+    assert.equal(observed.people,visiblePeople.n)
+    assert.equal(observed.drafts,visibleDrafts.n)
+    assert.deepEqual(Object.keys(observed).sort(),['bonuses','drafts','people','sha256'],'resource contains only the existing counts and digest')
+    for(const prompt of cacheLists.prompts) {
+      const answer=await rpc('prompts/get',{name:prompt.name})
+      assert.equal(answer.status,200)
+      assert.equal(answer.body.error,undefined)
+      assert.ok(answer.body.result.messages.length>0)
+      const messages=answer.body.result.messages
+      assert.ok(messages.every(message=>message.role==='user'&&message.content.type==='text'&&message.content.text.length>0))
+      const instructions=messages.map(message=>message.content.text).join('\n')
+      const referenced=instructions.match(/envelope\.[a-z_]+\.[a-z_]+/g)
+      assert.ok(referenced.length>0)
+      assert.ok(referenced.every(name=>names.includes(name)),'the prompt refers only to installed tools')
+    }
+    console.log('PROBE BASE-AGENT-001 1: '+phase+' '+path+' discovery -> versions, tools, resources, prompts, server identity and specialist instructions; populated preparation resource matches native state; prompt retrieves without action')
 
     const baseline=await retained(db,saved.company.id)
     assert.ok(baseline.drafts.length>0,'refusals are checked against retained native preparations')
@@ -113,6 +160,26 @@ export default async function protocolJourney(context) {
     assert.equal(stillValid.status,200,'protocol refusals do not invalidate the real native credential')
     assert.ok((await stillValid.json()).records.some(record=>record.id===saved.person.id))
     assert.ok(isDeepStrictEqual(await retained(db,saved.company.id),baseline),'native read confirms unchanged state independently of protocol errors')
+    const foreign=await data('/api/envelope/companies',{name:'Synthetic protocol isolation',ein:'00-0000081'},201)
+    const missing=await rpc('resources/read',{uri:'envelope://companies/'+crypto.randomUUID()+'/preparation-state'})
+    const forbidden=await rpc('resources/read',{uri:'envelope://companies/'+foreign.id+'/preparation-state'})
+    assert.deepEqual(forbidden.body.error,missing.body.error,'foreign and absent companies reveal no resource content')
+    assert.equal(forbidden.body.result,undefined)
+    const nativePolicy=await data(saved.base+'/agents')
+    await data(saved.base+'/agents/pause',{version:nativePolicy.classPolicy.version,paused:true})
+    try {
+      const paused=await rpc('resources/read',{uri:resourceUri})
+      assert.equal(paused.body.result,undefined,'native company Pause prevents resource delivery')
+      assert.ok(paused.body.error)
+    } finally {
+      const current=await data(saved.base+'/agents')
+      await data(saved.base+'/agents/pause',{version:current.classPolicy.version,paused:false})
+    }
+    const issuedGrant=nativePolicy.grants.find(grant=>grant.id===issued.id)
+    await data(saved.base+'/agents/'+issued.id+'/revoke',{version:issuedGrant.version})
+    const revoked=await rpc('resources/read',{uri:resourceUri})
+    assert.equal(revoked.status,401)
+    assert.equal(revoked.body.result,undefined,'revocation prevents resource delivery')
     console.log('PROBE BASE-AGENT-001 6: '+phase+' '+path+' oversized body and stream -> 413, unchanged populated preparation and credential state, bearer still reads native records')
   }
 }
