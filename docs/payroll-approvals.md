@@ -119,3 +119,21 @@ a later grant happens to reuse the old version number. Run-linked challenge and 
 existing foreign-key custody graph. This does not prove all archive, erasure or
 future transport cases. Genuine bonus preparation, complete calculation, payable
 release, bank verification and rail cancellation remain outside this proof.
+
+## Native bonus preparation attribution
+
+New native bonus versions retain `bonusPreparation.preparedBy`: the actual agent
+and sponsoring person, each with an ID and the name used at preparation, plus
+their combined label. The workspace creator remains the sponsor. Native review
+and the run record show the retained preparer separately from the signed-in
+person who approves with fresh user verification. Company activity and the
+permitted `agent-access.json` download project the same exact retained version;
+they never add compensation to access metadata. Current company and sponsor
+authority still fence those reads. Renaming or revoking a credential cannot
+relabel its historical preparation. Records predating that snapshot explicitly
+report that attribution was not retained; current names never fill the gap.
+
+This evidence concerns uncalculated bonus earnings only. Approval never supplies
+tax or net calculation, payment authority or a provider request. Other agent
+actions, confirmation and device-token cases, certificates and outside messages
+retain the separate obligations in CONTRACT.md.

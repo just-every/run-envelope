@@ -10,7 +10,7 @@ import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { localCookieName } from '../src/modules/operator-auth/http.mjs'
 
 /** RUN-APPROVALS: preview/approve/release doors bind one exact current run version. */
-export async function approvalJourney({ origin, cookie, sql, settings }) {
+export async function approvalJourney({ origin, cookie, sql, settings, restart }) {
   const call = (path, body, who = cookie, extra = {}) =>
     fetch(origin + path, {
       method: body === undefined ? 'GET' : 'POST',
@@ -236,7 +236,10 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     await refused(door + '/earnings-run/' + waRun + '/approve', { version, reviewToken: firstReview.reviewToken }, 'review_stale', humans['approver-b'].cookie)
     await stepUp()
     await answerAgentPolicy({origin,cookie,company:company.id})
-    const agent = await data(base + '/agents', { name: 'synthetic-envelope-342', hours: 1, actions: ['records:read', 'drafts:prepare', 'drafts:read'],
+    const preparerName = 'Synthetic <img src=x onerror=alert(1)> agent'
+    const sponsorName = 'Synthetic <b> sponsor & person'
+    await data('/auth/display-name',{displayName:sponsorName},200,humans.admin.cookie)
+    const agent = await data(base + '/agents', { name: preparerName, hours: 1, actions: ['records:read', 'drafts:prepare', 'drafts:read'],
       locations: ['*'], fields: ['compensation'], providers: [], models: [] }, 201, humans.admin.cookie)
     const mcp=(method,params)=>fetch(origin+'/api/envelope/mcp',{method:'POST',headers:{authorization:'Bearer '+agent.token,origin,'MCP-Protocol-Version':'2025-11-25','content-type':'application/json'},body:JSON.stringify(agentMessage(method,params))})
     const tools = (await (await mcp('tools/list', {})).json()).result.tools.map((t) => t.name)
@@ -311,6 +314,29 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     assert.equal(bonusRead.preview.netPay,null)
     assert.equal(bonusRead.preview.paymentReady,false)
     assert.equal(bonusRead.preview.bonusPreparation.credentialId,agent.id)
+    const preparedBy={agent:{id:agent.id,name:preparerName},for:{id:humans.admin.id,name:sponsorName},label:preparerName+' for '+sponsorName}
+    assert.deepEqual(bonusRead.preview.bonusPreparation.preparedBy,preparedBy)
+    const retainedBonus=()=>data(door).then(view=>view.runs.find(row=>row.id===bonus.id))
+    const originalBonus=await retainedBonus()
+    assert.equal(originalBonus.version,1)
+    assert.equal(originalBonus.createdBy,humans.admin.id,'workspace creator remains the sponsor, not the agent or approver')
+    assert.deepEqual(originalBonus.data.bonusPreparation.preparedBy,preparedBy,'native record independently retains both actor identities')
+    const bonusEvidence=async()=>{
+      const download=await call(base+'/agents/access')
+      assert.equal(download.status,200)
+      assert.match(download.headers.get('content-disposition'),/attachment/)
+      assert.match(download.headers.get('cache-control'),/no-store/)
+      const entry=(await download.json()).find(row=>row.action==='bonus.prepared' && row.targetId===bonus.id)
+      assert.deepEqual([entry.credentialId,entry.sponsorId,entry.runVersion],[agent.id,humans.admin.id,1])
+      assert.deepEqual(entry.preparedBy,preparedBy)
+      assert.doesNotMatch(JSON.stringify(entry),/25000|cipher|requestFingerprint/,'access download adds attribution, never compensation')
+      const activity=(await data(base+'/agents')).activity.calls.find(row=>row.preparedRunId===bonus.id)
+      assert.deepEqual([activity.credentialId,activity.sponsorId,activity.preparedRunVersion],[agent.id,humans.admin.id,1])
+      assert.deepEqual(activity.preparedBy,preparedBy)
+      assert.equal(activity.agentName,preparerName)
+      assert.equal(activity.sponsorName,sponsorName)
+    }
+    await bonusEvidence()
     assert.ok(bonusRead.preview.holds.some(h=>h.code==='bonus-calculation-incomplete'))
     const bonusCli=(command,body,token=agent.token)=>new Promise((resolve,reject)=>{
       const child=spawn(process.execPath,['scripts/envelope-cli.mjs',command,company.id,...(command==='bonus-status'?[bonus.id]:[])],
@@ -405,23 +431,77 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
     page=await capture('bonus-human-review',bonusPath,'approver-b')
     assert.ok((await page.locator('main').innerText()).includes('Bonus: 25000 cents'))
     assert.ok((await page.locator('main').innerText()).includes('Supplemental withholding'))
+    assert.ok((await page.locator('[data-bonus-preparer]').textContent()).includes(preparedBy.label))
+    assert.equal(await page.locator('main img[src="x"],main [onerror],[data-bonus-preparer] b').count(),0,'retained hostile labels render as text')
     const humanBonusReview=await data(bonusPath.replace('/app/','/api/'),undefined,200,humans['approver-b'].cookie)
     await refused(door+'/earnings-run/'+bonus.id+'/approve',{version:1,reviewToken:humanBonusReview.reviewToken,human:true,confirmation:'yes'},'human_step_up_required',humans['approver-b'].cookie,{},403)
     await refused(door+'/earnings-run/'+bonus.id+'/approve',{version:1,human:true},'human_session_required','',{authorization:'Bearer '+agent.token},403)
+    const approvalRequest=page.waitForRequest(request=>request.url().endsWith('/earnings-run/'+bonus.id+'/approve'))
     await page.getByRole('button',{name:'Approve this exact run version',exact:true}).click()
+    const approvedBody=(await approvalRequest).postDataJSON()
     await page.waitForURL(origin+screen)
     const bonusApproval=await status(bonus.id)
     assert.equal(bonusApproval.current,1)
     assert.equal(bonusApproval.approvals[0].approverId,humans['approver-b'].id)
     assert.equal(bonusApproval.approvals[0].presentingClient,agent.id)
     assert.equal(bonusApproval.approvals[0].proofMethod,'passkey-uv')
+    assert.equal(bonusApproval.version,1)
+    assert.equal(bonusApproval.approvals.some(row=>[agent.id,humans.admin.id].includes(row.approverId)),false,'neither preparer nor sponsor is relabeled as approver')
+    const approvalRow=(await sql(`SELECT approver_id,version,session_id,proof_method FROM env_run_approvals WHERE company_id='${company.id}' AND run_id='${bonus.id}'`))[0]
+    assert.deepEqual(approvalRow,{approver_id:humans['approver-b'].id,version:1,session_id:'synthetic-envelope-run-session-approver-b',proof_method:'passkey-uv'})
+    await refused(door+'/earnings-run/'+bonus.id+'/approve',approvedBody,'second_approver_must_differ',humans['approver-b'].cookie)
     await capture('bonus-human-approved',screen,'approver-b')
+    const recordPage=pages['approver-b']
+    assert.ok((await recordPage.locator('article').filter({has:recordPage.locator('h3',{hasText:bonus.id})}).innerText()).includes(preparedBy.label))
     await release(bonus.id,1,'run_not_payable')
+    const oncePrepared=await sql(`SELECT COUNT(*) AS n FROM env_agent_access WHERE action='bonus.prepared' AND target_id='${bonus.id}'`)
+    assert.deepEqual(oncePrepared,[{n:1}])
+    await data('/auth/display-name',{displayName:'Synthetic renamed sponsor'},200,humans.admin.cookie)
+    // No native agent rename door exists; change only the mutable fixture label.
+    await sql(`UPDATE env_agent_grants SET name='Synthetic renamed agent' WHERE id='${agent.id}'`)
+    if(restart)await restart()
+    assert.deepEqual((await retainedBonus()).data,originalBonus.data,'rename and restart cannot relabel immutable preparation')
+    assert.equal((await tool('bonus.prepare',bonusInput)).id,bonus.id)
+    assert.deepEqual(await sql(`SELECT COUNT(*) AS n FROM env_agent_access WHERE action='bonus.prepared' AND target_id='${bonus.id}'`),oncePrepared,'renamed replay adds no preparation')
+    await bonusEvidence()
+    const activityPath=base.replace('/api/','/app/')+'/agents'
+    page=await capture('bonus-attributed-activity',activityPath)
+    await page.getByText('Attributed calls',{exact:true}).click()
+    assert.ok((await page.locator('main').innerText()).includes(preparedBy.label))
+    assert.equal(await page.locator('main img[src="x"],main [onerror],[data-bonus-preparer] b').count(),0)
+    for(const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000})
+      await page.screenshot({path:join(folder,`bonus-attributed-activity-${width}.png`),fullPage:true})
+    }
+    await refused(base+'/agents/access',undefined,'payroll_access_denied',humans.clerk.cookie,{},403)
+    const signedOut=await call(base+'/agents/access',undefined,'')
+    assert.equal(signedOut.status,401)
+    assert.doesNotMatch(await signedOut.text(),/synthetic-envelope-run-admin|25000/)
+    const attributionCompany=await data('/api/envelope/companies',{name:'Synthetic attribution other company',ein:'00-0000927'},201)
+    assert.deepEqual(await data('/api/envelope/companies/'+attributionCompany.id+'/agents/access'),[])
+    await refused('/api/envelope/companies/'+attributionCompany.id+'/pay-settings/earnings-run/'+bonus.id+'/review',undefined,'record_not_found',cookie,{},404)
+    // A genuine historical shape omits attribution; never fill it with current names.
+    const legacyId='synthetic-envelope-legacy-bonus', legacyData=structuredClone(originalBonus.data)
+    delete legacyData.bonusPreparation.preparedBy
+    legacyData.people[0].details=['Historical bonus preparation; label not retained.']
+    const key=await crypto.subtle.importKey('raw',Buffer.from(settings.ENVELOPE_RECORD_KEY,'base64'),'AES-GCM',false,['encrypt'])
+    const iv=randomBytes(12), encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:Buffer.from(JSON.stringify([company.id,'earnings-run',legacyId,1]))},key,Buffer.from(JSON.stringify(legacyData)))
+    const legacyCipher=JSON.stringify({v:1,iv:iv.toString('base64'),data:Buffer.from(encrypted).toString('base64')})
+    await sql(`INSERT INTO env_workspace_versions(company_id,kind,object_id,version,cipher,created_by,created_at,change_id) VALUES('${company.id}','earnings-run','${legacyId}',1,'${legacyCipher}','${humans.admin.id}',1,'synthetic-envelope-legacy-bonus-change'); INSERT INTO env_agent_access(id,company_id,credential_id,sponsor_id,action,target_id,occurred_at) VALUES('synthetic-envelope-legacy-bonus-access','${company.id}','${agent.id}','${humans.admin.id}','bonus.prepared','${legacyId}',1)`)
+    const legacyDownload=(await data(base+'/agents/access')).find(row=>row.targetId===legacyId)
+    assert.equal(legacyDownload.preparedBy,null)
+    assert.equal((await data(door)).runs.find(row=>row.id===legacyId).data.bonusPreparation.preparedBy,undefined)
+    await pages.owner.goto(origin+screen)
+    assert.match(await pages.owner.locator('article').filter({has:pages.owner.locator('h3',{hasText:legacyId})}).innerText(),/Prepared by Attribution not retained/)
+    await data('/auth/display-name',{displayName:'Synthetic admin'},200,humans.admin.cookie)
     await sql(`UPDATE env_agent_grants SET expires_at=1 WHERE id='${foreign.id}'`)
     assert.equal((await mcpStatus(await foreignCall('bonus.read'))),401)
-    console.log('BONUS-PREPARATION passed: native encrypted exact bonus earnings via CLI and conversational MCP, cross-transport idempotency, no foreign credential or scope escalation, separately authenticated passkey approval and client attribution, calculation holds and no release; 1440 and 390.')
+    console.log('BONUS-PREPARATION passed: native encrypted exact bonus earnings via CLI and conversational MCP, cross-transport idempotency, no foreign credential or scope escalation, immutable preparer and sponsor labels across rename, restart and revocation, escaped native record and company activity plus permitted download, separately authenticated exact-version passkey approval and replay without duplicate preparation or approval, unattributed legacy history, calculation holds and no release; 1440 and 390.')
 
     await data(base+'/agents/'+agent.id+'/revoke',{version:1},200,humans.admin.cookie)
+    await bonusEvidence()
+    assert.deepEqual((await retainedBonus()).data,originalBonus.data,'revocation preserves historical preparer and sponsor')
+    assert.equal((await status(bonus.id)).approvals.length,1,'history and replay never add a human approval')
     await tool('reports.bonuses',{companyId:company.id},401)
     await tool('bonus.read',{companyId:company.id,runId:bonus.id},401)
     await tool('bonus.prepare',{...bonusInput,requestKey:'synthetic-envelope-920'},401)

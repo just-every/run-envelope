@@ -3,6 +3,7 @@ import { auditStatement, fence } from './access'
 import type { Input, Records } from './records'
 import type { AgentTools } from './agents'
 import { PayrollError, date } from './security'
+import { retainedBonusPreparer } from './bonus-runs'
 
 export const agentClasses = ['standard', 'money', 'commitment', 'external', 'sensitive', 'destructive', 'accounts', 'access', 'security', 'gated'] as const
 export const policyDecisions = ['autonomous', 'review', 'approval', 'blocked'] as const
@@ -79,8 +80,13 @@ export class AgentPolicy {
     // New restriction calls require the migrated facts table and fail closed without it.
     const migrated=Boolean(await this.records.statement("SELECT 1 FROM sqlite_master WHERE type='view' AND name='env_classified_actions'").first())
     const [calls, counts, changes, installation] = await this.records.env.DB.batch<Record<string,unknown>>([
-      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,COALESCE(a.door_agent_name,g.name) AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,${migrated ? "COALESCE((SELECT facts FROM env_agent_call_facts WHERE call_id=a.id),'{}')" : "'{}'"} AS facts,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt,a.door_operation_id AS operationId
+      this.records.statement(`SELECT a.id,a.credential_id AS credentialId,COALESCE(a.door_agent_name,g.name) AS agentName,a.sponsor_id AS sponsorId,o.display_name AS sponsorName,a.tool,a.transport,a.classes,${migrated ? "COALESCE((SELECT facts FROM env_agent_call_facts WHERE call_id=a.id),'{}')" : "'{}'"} AS facts,a.decision,a.policy_version AS policyVersion,a.occurred_at AS occurredAt,a.door_operation_id AS operationId,
+        v.object_id AS preparedRunId,v.version AS preparedRunVersion,v.cipher AS preparationCipher
         FROM env_agent_call_audit a JOIN env_agent_grants g ON g.id=a.credential_id JOIN oa_operators o ON o.id=a.sponsor_id
+        LEFT JOIN env_agent_access prep ON a.tool='bonus.prepare' AND prep.company_id=a.company_id AND prep.credential_id=a.credential_id
+          AND prep.door_operation_id=a.door_operation_id AND prep.action='bonus.prepared'
+        LEFT JOIN env_workspace_versions v ON v.company_id=prep.company_id AND v.kind='earnings-run' AND v.object_id=prep.target_id AND v.version=1
+          AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=a.company_id AND pr.status='held')
         WHERE ${filter} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,args),
       this.records.statement(`SELECT c.value AS class,a.decision,COUNT(*) AS count FROM env_agent_call_audit a,json_each(a.classes) c WHERE ${filter} GROUP BY c.value,a.decision ORDER BY c.value,a.decision`,args),
       migrated ? this.records.statement(`SELECT a.id,a.actor_id AS actorId,o.display_name AS actorName,a.action,a.target_id AS targetId,a.classes,a.facts,a.occurred_at AS occurredAt
@@ -93,7 +99,13 @@ export class AgentPolicy {
         ORDER BY a.created_at DESC,a.id DESC LIMIT 200`,[Date.parse(start),Date.parse(end)+86400000,actor.session.kind,actor.session.operator.id,this.records.env.OWNER_EMAIL.trim().toLowerCase(),...f.args]) : this.records.statement('SELECT 1 WHERE 0'),
     ])
     const decoded=(c:Record<string,unknown>): Record<string,unknown> & {classes:string[];facts:Record<string,unknown>}=>({...c,classes:JSON.parse(String(c.classes)),facts:JSON.parse(String(c.facts))})
-    return {from:start,through:end,calls:calls.results.map(decoded),counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
+    const attributed = await Promise.all(calls.results.map(async ({preparationCipher,preparedRunId,preparedRunVersion,...call}) => {
+      if (call.tool !== 'bonus.prepare') return decoded(call)
+      const preparedBy = await retainedBonusPreparer(this.records.env,actor.company,String(preparedRunId),Number(preparedRunVersion),preparationCipher as string | null,String(call.credentialId))
+      return decoded({...call,agentName:preparedBy?.agent.name ?? 'Attribution not retained',sponsorName:preparedBy?.for.name ?? 'Attribution not retained',preparedBy,preparedRunId,preparedRunVersion})
+    }))
+    if (!await this.records.statement(`SELECT 1 WHERE ${f.sql}`,f.args).first()) throw new PayrollError('payroll_access_denied',403)
+    return {from:start,through:end,calls:attributed,counts:counts.results,changes:changes.results.map(decoded),installation:installation.results.map(decoded)}
   }
 }
 

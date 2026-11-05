@@ -1,4 +1,5 @@
 import type { AgentTools } from './agents'
+import type { PreparedBy } from '../modules/agent-door/index.ts'
 import type { Bindings } from '../auth.server'
 import type { Input } from './records'
 import type { EarningsRun } from './workspace/pay-items'
@@ -8,9 +9,17 @@ import { PayrollError, date, integer, text, recordKey, seal, unseal } from './se
 
 export interface BonusPreparation {
   credentialId: string
+  /** Absent on older records; never reconstruct historical labels. */
+  preparedBy?: PreparedBy
   requestFingerprint: string
   sourceRef: string
   amountCents: number
+}
+/** Read only retained attribution from the authorized exact native version. */
+export async function retainedBonusPreparer(env: Bindings, company: string, id: string, version: number, cipher: string | null, credentialId: string) {
+  if (!cipher) return null
+  const run = JSON.parse(await unseal(await recordKey(env.ENVELOPE_RECORD_KEY), JSON.stringify([company,'earnings-run',id,version]), cipher)) as EarningsRun
+  return run.bonusPreparation?.credentialId === credentialId ? run.bonusPreparation.preparedBy ?? null : null
 }
 function authority(agent: AgentTools, input: Input, action: string) {
   agent.allow(action, input.companyId)
@@ -60,13 +69,14 @@ export async function prepareBonus(agent: AgentTools, input: Input) {
     (SELECT COUNT(*) FROM env_workspace_decisions WHERE company_id=? AND kind='rule') AS decisions WHERE ${f.sql}`).bind(agent.grant.company_id,agent.grant.company_id,...f.args).first<{versions:number;decisions:number}>()
   if(!counts) throw new PayrollError('agent_authority_revoked',403)
   const rules=reviewInputFence(agent.grant.company_id,[{kind:'rule',personId:'',exceptId:'',...counts}])
+  const preparedBy = await agent.preparationActor()
   const preview:EarningsRun={periodStart,periodEnd,payDate,frequency:'off-cycle bonus',groupId:'',
     people:[{id:person.id,name:person.name,earningsCents:amountCents,taxableCashCents:amountCents,reimbursementCents:0,afterTaxDeductionCents:0,cashTipsCents:0,paycheckTipsCents:0,tipFundsCents:0,
-      details:[`Bonus: ${amountCents} cents. Source: ${sourceRef}`,`Prepared by scoped credential ${agent.grant.id}; human approval is separate.`]}],
+      details:[`Bonus: ${amountCents} cents. Source: ${sourceRef}`,`Prepared by ${preparedBy.label}; human approval is separate.`]}],
     holds:[{personId:person.id,code:'bonus-calculation-incomplete',reason:'Supplemental withholding, bonus-related overtime, full tax obligations and net pay are not calculated. No payment or filing can be released.'}],
     destinations:[{personId:person.id,bankVersion:person.bankVersion}],grossCashCents:amountCents,taxableCashCents:amountCents,reimbursementCents:0,afterTaxDeductionCents:0,taxAmounts:null,netPay:null,paymentReady:false,
     setupFingerprint:'',locationStates:[person.state],ruleFingerprint:'',ruleSources:[],
-    bonusPreparation:{credentialId:agent.grant.id,requestFingerprint,sourceRef,amountCents}}
+    bonusPreparation:{credentialId:agent.grant.id,preparedBy,requestFingerprint,sourceRef,amountCents}}
   const cipher=await seal(key,JSON.stringify([agent.grant.company_id,'earnings-run',runId,1]),JSON.stringify(preview)), event=crypto.randomUUID(), now=Date.now()
   // The record, custody pin and credential attribution commit in one transaction.
   const result=await agent.env.DB.batch([

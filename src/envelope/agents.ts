@@ -5,6 +5,7 @@ import type { Records, Input } from './records'
 import { fence, auditStatement, type Actor } from './access'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { PayrollError, text, integer, date } from './security'
+import { retainedBonusPreparer } from './bonus-runs'
 
 export const agentRequestsPerMinute = 120
 export const agentRetryAfter = (now = Date.now()) => Math.max(1, Math.ceil((60000 - now % 60000) / 1000))
@@ -232,14 +233,23 @@ export class AgentSettings {
   async access(actor: Actor) {
     this.sponsor(actor)
     const f = fence(actor)
-    return (
-      await this.records
-        .statement(
-          `SELECT credential_id AS credentialId,sponsor_id AS sponsorId,action,target_id AS targetId,occurred_at AS occurredAt,door_agent_name AS agentLabel,door_operation_id AS operationId,door_approvers AS approvers FROM env_agent_access WHERE company_id=? AND (?='owner' OR sponsor_id=?) AND ${f.sql} ORDER BY occurred_at DESC,id DESC LIMIT 200`,
-          [actor.company, actor.grant.role, actor.session.operator.id, ...f.args],
-        )
-        .all<Record<string, unknown>>()
-    ).results
+    const rows = (await this.records.statement(
+      `SELECT a.credential_id AS credentialId,a.sponsor_id AS sponsorId,a.action,a.target_id AS targetId,a.occurred_at AS occurredAt,
+        a.door_agent_name AS agentLabel,a.door_operation_id AS operationId,a.door_approvers AS approvers,
+        v.version AS runVersion,v.cipher AS preparationCipher
+        FROM env_agent_access a LEFT JOIN env_workspace_versions v ON a.action='bonus.prepared'
+          AND v.company_id=a.company_id AND v.kind='earnings-run' AND v.object_id=a.target_id AND v.version=1
+          AND NOT EXISTS(SELECT 1 FROM env_privacy_requests pr WHERE pr.company_id=a.company_id AND pr.status='held')
+        WHERE a.company_id=? AND (?='owner' OR a.sponsor_id=?) AND ${f.sql} ORDER BY a.occurred_at DESC,a.id DESC LIMIT 200`,
+      [actor.company, actor.grant.role, actor.session.operator.id, ...f.args],
+    ).all<Record<string, unknown>>()).results
+    const access = await Promise.all(rows.map(async ({preparationCipher,runVersion, ...row}) => row.action === 'bonus.prepared' ? {
+      ...row,runVersion,
+      preparedBy: await retainedBonusPreparer(this.records.env,actor.company,String(row.targetId),Number(runVersion),preparationCipher as string | null,String(row.credentialId)),
+    } : row))
+    // A suspended private projection cannot outlive the requesting person's grant.
+    if (!await this.records.statement(`SELECT 1 WHERE ${f.sql}`,f.args).first()) throw new PayrollError('payroll_access_denied',403)
+    return access
   }
   async drafts(actor: Actor) {
     this.owner(actor)
@@ -359,6 +369,15 @@ export class AgentTools {
     return JSON.parse(this.grant.locations).includes('*')
       ? { sql: '1', args: [] }
       : { sql: `${column} IN (SELECT value FROM json_each(?))`, args: [this.grant.locations] }
+  }
+  async preparationActor() {
+    const f = this.fence()
+    const sponsor = await this.env.DB.prepare(`SELECT display_name AS name FROM oa_operators WHERE id=? AND ${f.sql}`)
+      .bind(this.grant.sponsor_id,...f.args).first<{name:string}>()
+    if (!sponsor) throw new PayrollError('agent_authority_revoked',403)
+    const agent = this.doorContext?.actor.agent ?? {id:this.grant.id,name:this.grant.name}
+    const person = this.doorContext?.actor.for ?? {id:this.grant.sponsor_id,name:sponsor.name}
+    return {agent:{...agent},for:{...person},label:`${agent.name} for ${person.name}`}
   }
   log(action: string, target: string, condition = '1', args: unknown[] = [], event = uuid()) {
     const f = this.fence()

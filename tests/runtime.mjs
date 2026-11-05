@@ -332,7 +332,7 @@ try {
     await payItemsJourney({ origin, cookie, sql })
   if (!selected || selected.includes('rules')) await rulesJourney({ origin, cookie, sql })
   if (!selected || selected.includes('approvals'))
-    await approvalJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings })
+    await approvalJourney({ origin, cookie, sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement), settings, restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()} })
   if (!selected || selected.includes('records')) {
     const records = await payrollJourney({ origin, cookie, settings, sql, receiverState, restart:async(overrides={})=>{await stopWorker();worker=await launch({...settings,...overrides});await waitForWorker()} })
     await stopWorker()

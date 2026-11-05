@@ -11,8 +11,15 @@ const dollars = (cents: number) =>
   '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const when = (ms: number) => new Date(ms).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
 
+const RunPreparer = ({ run }: { run: EarningsRun }) => run.bonusPreparation ? (
+  <p data-bonus-preparer="">Prepared by {run.bonusPreparation.preparedBy?.label ?? 'Attribution not retained'}.
+    {' '}Preparation is separate from the signed-in person's approval.</p>
+) : null
+
 /** What one exact run version binds, as the approver sees it before deciding. */
 export const RunBinding = ({ run }: { run: EarningsRun }) => (
+  <>
+  <RunPreparer run={run} />
   <dl>
     <div>
       <dt>Period and pay date</dt>
@@ -49,6 +56,7 @@ export const RunBinding = ({ run }: { run: EarningsRun }) => (
       </dd>
     </div>
   </dl>
+  </>
 )
 
 export const RunApproval = ({
@@ -63,8 +71,10 @@ export const RunApproval = ({
   status?: RunApprovalStatus
   latest: boolean
   current: boolean
-}) =>
-  run.data.holds.some((h) => h.code?.startsWith('proration-')) ? (
+}) => (
+  <>
+  <RunPreparer run={run.data} />
+  {run.data.holds.some((h) => h.code?.startsWith('proration-')) ? (
     <p>
       Not approvable: salary proration previews stay preview-only until stricter work-state and
       final-pay rules exist. Nothing can be released from this version.
@@ -105,7 +115,9 @@ export const RunApproval = ({
         rail do not exist yet, so nothing is sent.
       </p>
     </div>
-  ) : null
+  ) : null}
+  </>
+)
 
 export const ApprovalPolicyForm = ({
   base,
