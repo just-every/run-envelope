@@ -207,8 +207,10 @@ export async function processNotice(agent:AgentTools,input:Input) {
 }
 
 /** Durable, once-only outbound intent. An unknown effect is held for a human. */
-export async function dispatchReply(agent:AgentTools,input:Input) {
-  exactKeys(input,['companyId','replyId','version','digest'])
+export async function dispatchReply(agent:AgentTools,input:Input,defer?: (work:Promise<unknown>)=>void) {
+  exactKeys(input,['companyId','replyId','version','digest','background'])
+  if(input.background!==undefined && typeof input.background!=='boolean') throw new PayrollError('invalid_notice_input')
+  if(input.background && !defer) throw new PayrollError('background_unavailable',503)
   agent.allow('dispatch:execute',input.companyId)
   const id=text(input.replyId), version=integer(input.version), hash=text(input.digest), company=agent.grant.company_id,
     f=agent.fence(), l=agent.location('n.location_id')
@@ -240,31 +242,69 @@ export async function dispatchReply(agent:AgentTools,input:Input) {
     agent.log('dispatch:execute',id,'EXISTS(SELECT 1 FROM env_notice_dispatches WHERE id=?)',[execution]),
   ])
   if (!claimed[0].results.length) {
-    const existing=await agent.env.DB.prepare(`SELECT state,provider_receipt AS providerReceipt FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND version=? AND digest=? AND ${f.sql}`).bind(company,id,version,hash,...f.args).first()
+    const existing=await agent.env.DB.prepare(`SELECT id AS jobId,state,provider_receipt AS providerReceipt FROM env_notice_dispatches WHERE company_id=? AND reply_id=? AND version=? AND digest=? AND ${f.sql}`).bind(company,id,version,hash,...f.args).first()
     if (existing) return {...existing,id,version,replayed:true}
     throw new PayrollError('exact_approval_or_authority_changed',409)
   }
-  const current=await agent.env.DB.prepare(`SELECT 1 WHERE ${f.sql} AND ${eligible}`).bind(...f.args,...eligibilityArgs).first()
-  if (!current) {
-    await agent.env.DB.prepare("UPDATE env_notice_dispatches SET state='rejected',updated_at=? WHERE id=? AND state='pending'").bind(Date.now(),execution).run()
-    throw new PayrollError('exact_approval_or_authority_changed',409)
-  }
-  let state='unknown', receipt:string|null=null
-  try {
-    const response=await fetch(externalFlows.resend.url,{
-      method:'POST',redirect:'manual',signal:AbortSignal.timeout(30000),
-      headers:{authorization:'Bearer '+secret,'content-type':'application/json','Idempotency-Key':'envelope-notice-'+execution},
-      body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload),...(agent.doorContext?{headers:{'X-RER-Attribution':agent.doorContext.actor.label.replace(/[\r\n]/g,' ')}}:{})}),
-    })
-    if (response.status>=400 && response.status<500 && ![408,409,429].includes(response.status)) state='rejected'
-    if (response.ok) {
-      const wire=await response.text()
-      if (wire.length<64000) {
-        const value=JSON.parse(wire)
-        if (typeof value.id==='string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.id)) {state='accepted';receipt=value.id}
-      }
+  // Capture the current shared policy as well as the native SQL fences. A
+  // deferred send cannot survive a policy or Pause change while it waits.
+  const shared=agent.doorContext ? await agent.env.DB.prepare('SELECT envelope,local_document,local_revision,local_paused FROM agent_door_state WHERE id=1').first() : null
+  const send=async()=>{
+    const policy=agent.doorContext ? await agent.env.DB.prepare('SELECT envelope,local_document,local_revision,local_paused FROM agent_door_state WHERE id=1').first() : null
+    const envelope=policy?.envelope ? JSON.parse(String(policy.envelope)) : null
+    const sharedAgent=agent.doorContext ? await agent.env.DB.prepare('SELECT revoked,sponsor FROM agent_door_agents WHERE id=?').bind(agent.doorContext.agent.id).first<{revoked:number;sponsor:string}>() : null
+    const revoked=agent.doorContext && (sharedAgent?.revoked || (sharedAgent && sharedAgent.sponsor!==agent.grant.sponsor_id) || envelope?.revoked?.agents?.includes(agent.doorContext.agent.id) || (agent.doorContext.consent && envelope?.revoked?.consents?.includes(agent.doorContext.consent)))
+    const admitted=JSON.stringify(shared)===JSON.stringify(policy) && !policy?.local_paused && !envelope?.paused && !revoked && (!envelope || envelope.exp*1000>Date.now())
+    const current=admitted && await agent.env.DB.prepare(`SELECT 1 WHERE ${f.sql} AND ${eligible}`).bind(...f.args,...eligibilityArgs).first()
+    if (!current) {
+      await agent.env.DB.prepare("UPDATE env_notice_dispatches SET state='rejected',updated_at=? WHERE id=? AND state='pending'").bind(Date.now(),execution).run()
+      throw new PayrollError('exact_approval_or_authority_changed',409)
     }
-  } catch { /* A timeout cannot prove that Resend did not accept the email. */ }
-  await agent.env.DB.prepare("UPDATE env_notice_dispatches SET state=?,provider_receipt=?,updated_at=? WHERE id=? AND state='pending'").bind(state,receipt,Date.now(),execution).run()
-  return {id,version,state,providerReceipt:receipt,delivered:'unconfirmed'}
+    let state='unknown', receipt:string|null=null
+    try {
+      const response=await fetch(externalFlows.resend.url,{
+        method:'POST',redirect:'manual',signal:AbortSignal.timeout(30000),
+        headers:{authorization:'Bearer '+secret,'content-type':'application/json','Idempotency-Key':'envelope-notice-'+execution},
+        body:JSON.stringify({from:payload.sender,to:[payload.to],subject:payload.subject,text:replyBody(payload),...(agent.doorContext?{headers:{'X-RER-Attribution':agent.doorContext.actor.label.replace(/[\r\n]/g,' ')}}:{})}),
+      })
+      if (response.status>=400 && response.status<500 && ![408,409,429].includes(response.status)) state='rejected'
+      if (response.ok) {
+        const wire=await response.text()
+        if (wire.length<64000) {
+          const value=JSON.parse(wire)
+          if (typeof value.id==='string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.id)) {state='accepted';receipt=value.id}
+        }
+      }
+    } catch { /* A timeout cannot prove that Resend did not accept the email. */ }
+    await agent.env.DB.prepare("UPDATE env_notice_dispatches SET state=?,provider_receipt=?,updated_at=? WHERE id=? AND state='pending'").bind(state,receipt,Date.now(),execution).run()
+    return {id,version,jobId:execution,state,providerReceipt:receipt,delivered:'unconfirmed'}
+  }
+  if(input.background) {
+    // The explicit, already approved call starts one attempt. There is no
+    // scheduler, retry or restore-time executor. An interrupted attempt stays
+    // uncertain and needs human reconciliation; status never sends anything.
+    defer!(send().catch(()=>undefined))
+    return {id,version,jobId:execution,state:'pending',providerReceipt:null,delivered:'unconfirmed'}
+  }
+  return send()
+}
+
+/** Dispatch handles are references, never transferable authority. */
+export async function dispatchStatus(agent:AgentTools,input:Input) {
+  exactKeys(input,['companyId','jobId'])
+  agent.allow('dispatch:execute',input.companyId)
+  if(!JSON.parse(agent.grant.fields).includes('tax')) throw new PayrollError('agent_scope_denied',403)
+  const f=agent.fence(),l=agent.location('n.location_id'),jobId=text(input.jobId)
+  const row=await agent.env.DB.prepare(`SELECT d.id AS jobId,d.reply_id AS id,d.version,d.state,d.provider_receipt AS providerReceipt,d.updated_at AS updatedAt
+    FROM env_notice_dispatches d JOIN env_notice_replies r ON r.company_id=d.company_id AND r.id=d.reply_id AND r.version=d.version
+    JOIN env_notices n ON n.company_id=r.company_id AND n.id=r.notice_id
+    WHERE d.company_id=? AND d.id=? AND d.credential_id=? AND ${l.sql} AND ${f.sql}
+    AND EXISTS(SELECT 1 FROM env_agent_access a WHERE a.company_id=d.company_id AND a.credential_id=d.credential_id AND a.target_id=d.reply_id AND a.action='dispatch:execute'
+      AND a.sponsor_id=? AND a.door_agent_id=?)`).bind(agent.grant.company_id,jobId,agent.grant.id,...l.args,...f.args,agent.grant.sponsor_id,agent.doorContext?.agent.id??agent.grant.id).first<{jobId:string;id:string;version:number;state:string;providerReceipt:string|null;updatedAt:number}>()
+  if(!row) throw new PayrollError('job_not_found',404)
+  const logged=await agent.log('jobs:read',jobId).run()
+  if(!logged.meta.changes) throw new PayrollError('job_not_found',404)
+  // A stale pending ledger cannot establish whether an interrupted request
+  // reached its receiver. Report uncertainty without resending or rewriting it.
+  return {jobId:row.jobId,id:row.id,version:row.version,state:row.state==='pending'&&Date.now()-row.updatedAt>=30000?'unknown':row.state,providerReceipt:row.providerReceipt,delivered:'unconfirmed'}
 }

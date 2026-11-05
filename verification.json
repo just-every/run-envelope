@@ -24,8 +24,7 @@
       "commands": [
         "pnpm run build",
         "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity pnpm run test:runtime",
-        "ENVELOPE_JOURNEYS=agent-policy pnpm run test:runtime",
-        "ENVELOPE_JOURNEYS=agent-replay pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=agent-policy pnpm run test:runtime"
       ]
     },
     {
@@ -99,11 +98,12 @@
     },
     {
       "name": "agent-door",
-      "browser": false,
+      "browser": true,
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "pnpm run typecheck"
+        "pnpm run typecheck",
+        "ENVELOPE_JOURNEYS=agent-replay pnpm run test:runtime"
       ]
     }
   ],

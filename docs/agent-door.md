@@ -24,6 +24,7 @@ The machine-readable registry and native journey are in `agent-surface.json`.
 | `envelope.runs.review_link` | standard | Separate native human review handoff |
 | `envelope.notices.process` | sensitive, external | Redacted notice extraction at OpenAI |
 | `envelope.notices.reply` | commitment, external | Exact human-reviewed Resend correspondence |
+| `envelope.jobs.status` | standard | This agent and sponsor's retained delivery status |
 | `envelope.credentials.rotate` | security | Replace this native grant's bearer |
 | `envelope.workspace.snapshot` | standard | Counts and digest of visible native state |
 
@@ -44,6 +45,27 @@ people, remit tax, file returns, create an outside account or satisfy a human's
 step-up. Native review and exact-version authority remain separate from company
 policy approval. There is no invented Undo, provider cost registration or spend
 reservation. Unknown provider outcomes remain held in the native dispatch ledger.
+
+For an explicitly requested background delivery, call `envelope.notices.reply`
+with `background: true` and the exact previously human-approved reply. The MCP
+call returns a durable `jobId` and the initial `pending` outcome without waiting
+for Resend. Read `envelope.jobs.status` with `companyId` and `jobId` to observe
+`pending`, `accepted`, `rejected` or `unknown`. Provider acceptance still means
+delivery is unconfirmed. Both MCP routes support this ordinary tool; the Tasks
+extension is unnecessary. A native transport without a background executor
+refuses the option before creating a dispatch.
+
+The same mutation key always returns its first outcome, including an initial
+pending handle; status is the separate current observation. Status never sends,
+retries or supplies authority. It requires current company, location, tax-field,
+dispatch, policy, Pause, sponsor and agent admission. Another person's credential
+or a different agent sees the same `job_not_found` as an absent handle. The
+existing dispatch ledger retains the originating agent and sponsor. Interrupted
+pending work becomes uncertain after the provider timeout; no process restart or
+archive restore retries it. A human must reconcile uncertain delivery. Native
+credential rotation immediately retires the old bearer; a still-authorized
+paired Business client can recover the original encrypted delivery after a lost
+response, using its original idempotency key and RSA recipient key.
 
 Business access uses the installation's existing issuer, installation identity,
 canonical origin and public key ring. Signed Business settings bind owner/team
@@ -75,8 +97,8 @@ reply as a separate attribution field **before** human review, encryption and ha
 agent and sponsor in native activity and the outbound attribution header. It never appends unreviewed text after approval.
 
 Installation, archive import, device clients and a person's own authentication
-or payroll approval screens retain their own doors. There is no agent queue
-executor, resource catalogue, streaming event feed, specialist prompt catalogue,
+or payroll approval screens retain their own doors. There is no automatic agent
+queue executor, resource catalogue, streaming event feed, specialist prompt catalogue,
 full payroll week, funded payment or agency filing claim in this CORE subset.
 The broader SURFACE clauses remain targets until those native jobs are delivered.
 
