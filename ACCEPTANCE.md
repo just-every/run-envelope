@@ -9,9 +9,9 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Core | 5 | 34 | 60 | 99 |
-| Agent surface | 1 | 2 | 17 | 20 |
+| Agent surface | 1 | 3 | 16 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 6 | 38 | 82 | 126 |
+| Full target | 6 | 39 | 81 | 126 |
 
 Judged from the code and tests at commit `43360723047d43e6787402589b3769b876884fda` (5 November 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1662,7 +1662,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Every agent door calls one decision function: MCP, the integration API with agent tokens, and the seed's embedded agents. It evaluates the call's classes against the company's policy, as above. The seed ships no dispositions and fills no gap with one: agent access opens only under a complete policy that setup has asked for (RISK-POLICY.md), and before then every agent call returns `policy_unset` with the setup link and changes nothing. *Autonomous* runs the call. *Review* runs it and adds it to the review feed. *Approval* saves a pending action with server-computed facts and returns `input_required`, with a URL-mode elicitation to the seed's approval page and a pending handle. Each person the rule names approves the exact saved revision in a signed-in browser, and changed inputs need a new approval. The retried call returns the result and a receipt. A rejection returns `approval_rejected`, and a lapse past the wait the rule sets returns `approval_expired`. *Blocked* returns `policy_blocked`, naming the class, rule and revision.
 
@@ -1676,8 +1676,8 @@ Agent surface · target · **missing**
 7. A policy change applies to the next call within 60 seconds, and the audit cites the new revision.
 8. A policy document with a bad signature or another Business's id is rejected, and the door keeps the last valid revision.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance points 1, 5, 6 and 7, bounded native bonus subcases: `tests/agent-policy-decisions-runtime.mjs` — agentPolicyDecisionsJourney, using `tests/agent-door/decisions.mjs` and invoked by `tests/runtime.mjs` in push Verify, exercises actual MCP, its alias and native v1 integration bonus preparation under shared autonomous, review, approval and blocked rules. Independent retained-run and preparation counts prove one uncalculated effect for autonomous and review, the exact linked review feed, no preparation while pending or blocked, server-computed target, amount, class facts and expiry, URL elicitation and pending handle, a separately signed-in named person's exact browser approval and receipt, stale summary and revision refusals, changed-input fresh approval, pending invalidation after a shared policy revision change with fresh exact reapproval, rejection, controlled-clock expiry and persistent Worker restart. The next call and its person-readable audit use the changed shared revision immediately. Native company review, approval and blocked floors remain restrictive under shared autonomous, review and approval policies before a pending action opens; refused native calls add no completed review item. Pause at pending execution remains restrictive; no policy decision supplies native payroll approval, payable calculation or dispatch. Pending, approved and review screens are recorded at 1440 and 390.
+**Gap.** Remaining: every other tool and class under every disposition; complete setup and upgrade unanswered-class behavior; money thresholds and daily caps; multi-class precedence; complete integration and embedded parity; signed-policy rejection and last-valid-revision matrix; delegated policy administration and the held SURFACE-006 remainder. The bounded native proof does not establish complete Base conformance or the full payroll week. All existing sponsor and grant, exact-human-approval, licensed-catalog, authorized employer and rail, provider-account and mandate, CT, device, visual-correction and feeder holds remain unchanged. Configured native owner reference sends still require explicit consent; no automatic outbound action, automated retry or destructive recovery.
 
 #### BASE-AGENT-008 — Truthful attribution
 
