@@ -257,7 +257,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['agent-decisions', futa-credit', 'agent-capacity', 'agent-replay', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['agent-decisions', 'futa-credit', 'agent-capacity', 'agent-replay', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
