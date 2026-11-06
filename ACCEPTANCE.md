@@ -9,9 +9,9 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Core | 5 | 34 | 60 | 99 |
-| Agent surface | 1 | 3 | 16 | 20 |
+| Agent surface | 1 | 4 | 15 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 6 | 39 | 81 | 126 |
+| Full target | 6 | 40 | 80 | 126 |
 
 Judged from the code and tests at commit `43360723047d43e6787402589b3769b876884fda` (5 November 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
@@ -1645,7 +1645,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-006 — Every action declares its risk class
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Classes come from the fleet list in RISK-POLICY.md: standard, external, money, commitment, accounts, gated, access, security, destructive, sensitive and live. In the registry, each tool declares the classes it can carry and a server-side classifier that decides them per call from the arguments, current records and, for gated, the provider's answer. The classifier also supplies each class's facts: the measure (items, recipients, amount and currency, people or records), the counterparty (internal, known, new or public), the direction for access, the provider and step for gated, and the data kind for sensitive. A classifier never reads a flag, label or claim supplied by the agent or by record text. A seed cannot add a class; it proposes one for the fleet list.
 
@@ -1657,8 +1657,8 @@ Agent surface · target · **missing**
 5. No tool in `tools / list` declares a class outside the fleet list, and `rer check` fails on one.
 6. A refused call's audit row still records its computed classes.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance points 1, 2, 3, 5 and 6, bounded installed-door subcases: `tests/agent-door/risk-facts.mjs` — riskBefore compares actual MCP discovery with every installed descriptor class and the fleet catalogue under autonomous and held policies; independently retained worker, run and native-grant targets, exact standard and security facts for masked record pages, workspace snapshots, uncalculated bonus preparation, review-link presentation and credential rotation. Hostile worker names and source text plus caller class and confirmation claims leave classification and policy unchanged; native preparation and presentation create no payroll approval, and a held rotation changes no credential before separate human approval. The installed class validator rejects an uncatalogued class, and the installed conformance comparison rejects an independently altered measure or security setting. riskBefore also checks every populated masked page and its empty terminal page against retained native identity fields; one-cent and large uncalculated bonus preparations against the native human review contents and current worker revision; subsequent workspace counts; and invalid-period and changed-bonus refusals with unchanged native business state. Invalid masked-read queries retain their standard facts and native error. Caller confirmation claims cannot change any of these facts, remove a native refusal or supply payroll approval. riskAfter checks actual shared-policy-blocked rotation audit facts and native target; riskAudit reads every checked classification, including the native refusals, through the signed-in owner audit door. All three run through `tests/agent-door/rotation-journey.mjs` in the existing push Verify agent-door conformance, with native fixtures in `tests/agent-door/fixtures.mjs` and exact expectations in `agent-surface.json`.
+**Gap.** Remaining: full target-tool coverage and exact class facts, injection resistance and refused-call audit proof for every other tool and class; money, external, commitment, access, sensitive, destructive, accounts, gated and live obligations remain owed, including the point 4 amount, currency, counterparty, direction and item-count matrix. This finite standard and security slice does not establish those outcomes or full Base conformance. Existing sponsor and grant authority, licensed calculation catalog, authorized employer and rail, provider accounts and mandates, exact human approval, CT, device, approved visual corrections and feeder holds remain unchanged. Configured native owner reference sends require explicit consent; no automatic outbound action, automated retry or destructive recovery.
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
 
