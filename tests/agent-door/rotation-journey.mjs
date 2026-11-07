@@ -1,12 +1,20 @@
+import {riskBefore,riskAfter,riskAudit} from './risk-facts.mjs'
+import {replayStep,replayMutation} from './replay.mjs'
 import assert from 'node:assert/strict'
 import {state,rotationKeys} from './native.mjs'
 import {docsJourney} from './docs.mjs'
-export default async function({database,request,origin,cookie}) {
+import maskedResources from './masked-resources.mjs'
+// Phase preparation lets Base retain every native fixture call in its audit
+// accounting, including resource reads made with the declared local client.
+export const prepareResources=context=>maskedResources(context)
+export default async function(context) {
+  const {database,request,origin,cookie}=context
+  try { await riskAudit({database,request,origin,cookie}) } catch(error) { console.error('Risk facts audit',error.code,error.stack?.split('\n').find(line=>line.includes('risk-facts.mjs:')));throw error }
   const db=await database('DB')
   const rows=(await db.prepare("SELECT * FROM env_agent_call_audit WHERE rowid IN (SELECT MIN(rowid) FROM env_agent_call_audit WHERE door_operation_id IS NOT NULL GROUP BY tool)").all()).results
   for(const native of rows) {
     const audits=(await db.prepare("SELECT row FROM agent_door_audit WHERE json_extract(row,'$.operation_id')=?").bind(native.door_operation_id).all()).results.map(value=>JSON.parse(value.row))
-    const name=({'run.review':'envelope.runs.review_link','notice.process':'envelope.notices.process','reply.dispatch':'envelope.notices.reply'})[native.tool]??'envelope.'+native.tool
+    const name=({'records.person':'resources/read','run.review':'envelope.runs.review_link','notice.process':'envelope.notices.process','reply.dispatch':'envelope.notices.reply','job.status':'envelope.jobs.status'})[native.tool]??'envelope.'+native.tool
     const matching=audits.find(row=>row.tool===name&&row.agent.id===native.door_agent_id&&row.sponsor.id===native.sponsor_id)
     assert.ok(matching,'native activity and shared audit identify the same agent, sponsor and operation')
     assert.deepEqual(JSON.parse(native.classes).sort(),matching.classes.map(value=>value.class).sort())
@@ -15,7 +23,13 @@ export default async function({database,request,origin,cookie}) {
     assert.ok((await response.json()).activity.calls.some(row=>row.operationId===native.door_operation_id))
   }
 }
+export async function beforeStep(context) {
+  try { await riskBefore(context) } catch(error) { console.error('Risk facts before',context.phase,context.step.id,error.code,error.stack?.split('\n').find(line=>line.includes('risk-facts.mjs:')));throw error }
+}
 export async function afterStep(context) {
+  await riskAfter(context)
+  await replayStep(context)
+  await replayMutation(context)
   const {phase,step,result,origin,request,database}=context
   if(step.tool!=='envelope.credentials.rotate')return
   assert.equal(Object.hasOwn(result,'token'),false,'the door never retains a plaintext native bearer')

@@ -8,6 +8,7 @@
     "pause",
     "audit",
     "idempotency",
+    "resources",
     "prompts"
   ],
   "tools": [
@@ -327,9 +328,32 @@
           "step": "workspace-snapshot"
         }
       ]
+    },
+    {
+      "name": "envelope.jobs.status",
+      "scope": "dispatch:execute",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "BASE-AGENT-012",
+        "ENV-025"
+      ],
+      "job": "Notice correspondence",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reply-status",
+          "step": "reply-status"
+        }
+      ]
     }
   ],
-  "resources": [],
+  "resources": [
+    "envelope://companies/{company}/people/{person}"
+  ],
   "notTools": [
     {
       "clauses": [
@@ -491,13 +515,16 @@
           "pointer": ""
         },
         "personId": {
-          "$fixture": "person",
+          "$fixture": "riskPerson",
           "pointer": ""
         },
         "periodStart": "2026-10-01",
         "periodEnd": "2026-10-07",
         "payDate": "2026-10-09",
-        "sourceRef": "native-conformance",
+        "sourceRef": {
+          "$fixture": "riskSource",
+          "pointer": ""
+        },
         "requestKey": {
           "$fixture": "key",
           "pointer": ""
@@ -511,7 +538,14 @@
             "measure": 1
           }
         }
-      ]
+      ],
+      "target": {
+        "kind": "worker",
+        "id": {
+          "$fixture": "riskPerson",
+          "pointer": ""
+        }
+      }
     },
     {
       "id": "bonus-read",
@@ -592,7 +626,14 @@
             "measure": 1
           }
         }
-      ]
+      ],
+      "target": {
+        "kind": "earnings-run",
+        "id": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      }
     },
     {
       "id": "notice-process",
@@ -664,6 +705,25 @@
       ]
     },
     {
+      "id": "reply-status",
+      "tool": "envelope.jobs.status",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "jobId": {
+          "$from": "reply-dispatch",
+          "pointer": "/jobId"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
       "id": "credentials-rotate",
       "tool": "envelope.credentials.rotate",
       "args": {
@@ -680,7 +740,14 @@
             "setting": "native-agent-credential"
           }
         }
-      ]
+      ],
+      "target": {
+        "kind": "agent-grant",
+        "id": {
+          "$fixture": "nativeGrant",
+          "pointer": ""
+        }
+      }
     }
   ],
   "spend": {
@@ -742,7 +809,12 @@
         "initializer": "tests/agent-door/negative-sponsor.mjs"
       }
     ],
-    "journey": "tests/agent-door/rotation-journey.mjs"
+    "journey": "tests/agent-door/rotation-journey.mjs",
+    "replayAdmission": {
+      "prepare": [
+        "draft"
+      ]
+    }
   },
   "documentation": {
     "path": "/docs/agents",
@@ -786,7 +858,8 @@
       "job": "Notice correspondence",
       "tools": [
         "envelope.notices.process",
-        "envelope.notices.reply"
+        "envelope.notices.reply",
+        "envelope.jobs.status"
       ]
     },
     {

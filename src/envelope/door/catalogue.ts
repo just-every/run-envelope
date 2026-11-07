@@ -1,4 +1,10 @@
 const definitions = [
+  {
+    name:'envelope.jobs.status',nativeName:'job.status',
+    description:'Read only this agent and sponsor delivery job. A handle grants no authority; uncertain delivery is never retried.',
+    properties:{companyId:{type:'string'},jobId:{type:'string'}},required:['companyId','jobId'],
+    scope:'dispatch:execute',readOnly:true,classes:['standard'],clauses:['BASE-AGENT-012','ENV-025'],
+  },
 {
   "name": "envelope.credentials.restrict",
 "sponsorEscalation": false,
@@ -113,7 +119,7 @@ const definitions = [
   },
   {
     "name": "envelope.notices.reply",
-    "description": "Dispatch only the exact latest unexpired human-approved notice reply through declared Resend. Rechecks current human and sponsor authority. Never approves, pays wages or files returns.",
+    "description": "Dispatch only the exact latest unexpired human-approved notice reply through declared Resend. Optional background delivery returns a durable jobId for envelope.jobs.status. Rechecks current human and sponsor authority. Never approves, pays wages or files returns.",
     "properties": {
       "companyId": {
         "type": "string"
@@ -121,6 +127,7 @@ const definitions = [
       "replyId": {
         "type": "string"
       },
+      "background": {"type":"boolean"},
       "version": {
         "type": "integer"
       },
@@ -504,6 +511,7 @@ export const notTools = [
 
 // Class proof declarations are independent of the runtime classifier classes.
 const documentation = {
+  "job.status": {job:"Notice correspondence", step:"reply-status", classes:["standard"]},
   "credentials.restrict": {
     "job": "Credential management",
     "step": "credentials-restrict",
@@ -605,8 +613,7 @@ export const catalogue = definitions.map(entry => {
     test:'BASE-AGENT-006.2.<policy>.'+proof.step, step:proof.step,
   }))}
 })
-export const capacityLimits = {requestsPerMinute:600, maxBodyBytes:1048576} as const
-export const resourceDeclarations: import('../../modules/agent-door/index.ts').ResourceDefinition[] = []
+export const capacityLimits = {requestsPerMinute:120, maxBodyBytes:1048576} as const
 export const unfinishedJobs = [
   'Complete payroll tool coverage and the stranger-agent payroll week remain unfinished. Specialist prompts cover only the installed native jobs.',
   'Full Base conformance and the remaining Agent surface acceptance journeys remain unproved.',

@@ -1,10 +1,17 @@
-import type { ToolContext } from '../modules/agent-door/index.ts'
+import type { ToolContext, ResourceContext } from '../modules/agent-door/index.ts'
 import { policyFence } from './agent-policy'
 import type { Bindings } from '../auth.server'
 import type { Records, Input } from './records'
+import { maskedPerson, type Person } from './records'
 import { fence, auditStatement, type Actor } from './access'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { PayrollError, text, integer, date } from './security'
+
+export const agentRequestsPerMinute = 120
+export const agentRetryAfter = (now = Date.now()) => Math.max(1, Math.ceil((60000 - now % 60000) / 1000))
+export class AgentCapacityError extends PayrollError {
+  constructor(public retryAfter: number) { super('agent_rate_limited', 429) }
+}
 
 export const agentActions = ['records:read', 'drafts:prepare', 'drafts:read', 'notices:process', 'dispatch:execute'] as const
 // Delegation never manufactures a human power. These are the ENV-028 powers
@@ -250,6 +257,7 @@ export class AgentSettings {
 }
 export class AgentTools {
   doorContext?: ToolContext
+  resourceContext?: ResourceContext
   callPolicyVersion?: number
   authenticatedPolicyVersion?: number
   constructor(
@@ -275,7 +283,7 @@ export class AgentTools {
     )
       throw new PayrollError('agent_authority_revoked', 403)
     tools.authenticatedPolicyVersion = (await env.DB.prepare('SELECT version FROM env_agent_class_policy WHERE company_id=?').bind(row.company_id).first<{version:number}>())?.version ?? 0
-    const window = Math.floor(Date.now() / 60000)
+    const now = Date.now(), window = Math.floor(now / 60000)
     const count = await env.DB.prepare(
       `INSERT INTO oa_limits(key,window,count) SELECT ?,?,1 WHERE ${f.sql}
       ON CONFLICT(key) DO UPDATE SET window=excluded.window,count=CASE WHEN oa_limits.window=excluded.window THEN oa_limits.count+1 ELSE 1 END RETURNING count`,
@@ -283,7 +291,7 @@ export class AgentTools {
       .bind('envelope-agent:' + row.id, window, ...f.args)
       .first<{ count: number }>()
     if (!count) throw new PayrollError('agent_authority_revoked', 403)
-    if (count.count > 120) throw new PayrollError('agent_rate_limited', 429)
+    if (count.count > agentRequestsPerMinute) throw new AgentCapacityError(agentRetryAfter(now))
     return tools
   }
   fence() {
@@ -366,10 +374,10 @@ export class AgentTools {
       action,
       target,
       Date.now(),
-      this.doorContext?.agent.id ?? null,
-      this.doorContext?.actor.label ?? null,
-      this.doorContext?.operationId ?? null,
-      this.doorContext?.consent ?? null,
+      (this.doorContext ?? this.resourceContext)?.agent.id ?? null,
+      this.doorContext?.actor.label ?? this.resourceContext?.agent.name ?? null,
+      (this.doorContext ?? this.resourceContext)?.operationId ?? null,
+      (this.doorContext ?? this.resourceContext)?.consent ?? null,
       this.doorContext ? JSON.stringify(this.doorContext.approvers) : null,
       ...f.args,
       ...args,
@@ -394,6 +402,17 @@ export class AgentTools {
     if (!result[0].meta.changes) throw new PayrollError('agent_authority_revoked', 403)
     const records = result[1].results.slice(0, limit)
     return { records, limit, next: result[1].results.length > limit ? records.at(-1)?.id : null }
+  }
+  async person(company: string, id: string) {
+    this.allow('records:read',company)
+    const f=this.fence(),l=this.location('location_id'),event=uuid()
+    const result=await this.env.DB.batch<Person>([
+      this.log('records:read',id,'EXISTS(SELECT 1 FROM env_people WHERE company_id=? AND id=? AND '+l.sql+')',[company,id,...l.args],event),
+      this.env.DB.prepare(`SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND id=? AND ${l.sql} AND ${f.sql} AND EXISTS(SELECT 1 FROM env_agent_access WHERE id=?)`)
+        .bind(company,id,...l.args,...f.args,event),
+    ])
+    const person=result[1].results[0]
+    return person ? maskedPerson(person) : null
   }
   async proposalReport(input: Input) {
     this.allow('drafts:read',input.companyId)
