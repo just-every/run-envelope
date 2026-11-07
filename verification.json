@@ -25,9 +25,11 @@
         "pnpm run build",
         "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=agent-policy pnpm run test:runtime",
-        "ENVELOPE_JOURNEYS=agent-replay pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=agent-tokens pnpm run test:runtime",
-        "ENVELOPE_JOURNEYS=agent-capacity pnpm run test:runtime"
+        "ENVELOPE_JOURNEYS=agent-docs pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-capacity pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-decisions pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=masked-resources pnpm run test:runtime"
       ]
     },
     {
@@ -63,7 +65,7 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=industry,calculation,ny-dbl,extended-retirement,hi-benefits pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=retirement pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=multi-company pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=accounting pnpm run test:runtime"
@@ -101,11 +103,13 @@
     },
     {
       "name": "agent-door",
-      "browser": false,
+      "browser": true,
       "hosted": true,
       "commands": [
         "pnpm run build",
-        "pnpm run typecheck"
+        "pnpm run typecheck",
+        "node tests/agent-door/failures.mjs",
+        "ENVELOPE_JOURNEYS=agent-replay pnpm run test:runtime"
       ]
     }
   ],

@@ -57,6 +57,14 @@ export async function archiveAuthority(context, company, notice) {
   assert.equal(active.status, 200, 'the sponsored bearer works before the archive is made')
   const activeRecords = JSON.parse((await active.json()).result.content[0].text).records
   assert.ok(activeRecords.some(row => row.id === company.people[0].id), 'the live bearer reads its native scoped worker')
+  const resourceUri='envelope://companies/'+company.id+'/people/'+company.people[0].id
+  for(const path of ['/mcp','/api/envelope/mcp']) {
+    const response=await worker.fetch(origin+path,{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',authorization:'Bearer '+agent.token,'content-type':mime},body:JSON.stringify({jsonrpc:'2.0',id:37,method:'resources/read',params:{uri:resourceUri}})})
+    assert.equal(response.status,200)
+    const body=await response.json(),person=JSON.parse(body.result.contents[0].text)
+    assert.equal(person.id,company.people[0].id)
+    assert.deepEqual(Object.keys(person).sort(),['id','locationId','name','version'])
+  }
 
   const reply = await data(company.base + '/notices/' + notice.id + '/replies', {
     version: 0, to: 'agency@example.com', subject: 'Reviewed payroll notice response',
@@ -103,6 +111,16 @@ export async function archiveAuthority(context, company, notice) {
   }
 
   const webhook=await data(company.base+'/webhooks',{consent:true},201)
-  return { webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
+  return { resourceUri, webhookId:webhook.id, webhookSecret:webhook.secret, effects, agentToken: agent.token, agentId: agent.id, replyId: reply.id,
     replyVersion: reply.version, replyDigest: reply.digest, providerSecret }
+}
+
+export async function restoredResourceAuthority(context,authority) {
+  const before=context.edge.mails.length
+  for(const path of ['/mcp','/api/envelope/mcp']) {
+    const response=await context.worker.fetch(context.origin+path,{method:'POST',headers:{'MCP-Protocol-Version':'2025-11-25',authorization:'Bearer '+authority.agentToken,'content-type':['application','json'].join('/')},body:JSON.stringify({jsonrpc:'2.0',id:38,method:'resources/read',params:{uri:authority.resourceUri}})})
+    assert.equal(response.status,401,'restored identity history supplies no resource authority')
+    const body=await response.json();assert.equal(body.result,undefined)
+  }
+  assert.equal(context.edge.mails.length,before,'resource replay makes no outbound request')
 }

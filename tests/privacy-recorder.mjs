@@ -18,6 +18,7 @@ export function recordPublicSite(origin) {
   installations.add(origin)
   return () => installations.delete(origin)
 }
+export const recordedOutboundCount = () => counts.outbound
 const counts = { outbound: 0, browserRequests: 0, browserLogs: 0, workerLogs: 0, bundles: 0, privateInputs: 0 }
 function inspect(value, channel) {
   const serialized = typeof value === 'string' ? value : JSON.stringify(value)
