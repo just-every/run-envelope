@@ -2,11 +2,16 @@ import {replayJourney} from './agent-door/replay-runtime.mjs'
 import {agentCapacityJourney} from './agent-capacity-runtime.mjs'
 import {tokenJourney} from './agent-token-runtime.mjs'
 import {tokenInstallation,tokenTransport} from './agent-door/tokens.mjs'
+import {replayNetwork} from './agent-door/replay-families.mjs'
+import {agentPolicyDecisionsJourney} from './agent-policy-decisions-runtime.mjs'
 import { agentPolicyWorker } from './agent-policy-worker.mjs'
+import { agentDocsJourney } from './agent-docs-runtime.mjs'
 import { agentPolicyJourney } from './agent-policy-runtime.mjs'
+import { maskedResourceJourney } from './agent-door/masked-resources.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
 import { extendedRetirementJourney } from './extended-retirement-runtime.mjs'
 import { retirementBenefitsJourney } from './retirement-benefits-runtime.mjs'
+import { futaCreditJourney } from './futa-credit-runtime.mjs'
 import { nyDblJourney } from './ny-dbl-runtime.mjs'
 import { calculationJourney } from './calculation-runtime.mjs'
 import { accountingJourney } from './accounting-runtime.mjs'
@@ -26,7 +31,7 @@ import { copyFile, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
-import { startRecordedWorker as unstable_startWorker, finishPrivacyRecording, recordPrivateInput } from './privacy-recorder.mjs'
+import { startRecordedWorker as unstable_startWorker, finishPrivacyRecording, recordPrivateInput, recordedOutboundCount, outboundRequestCount } from './privacy-recorder.mjs'
 import {
   paperOnboardingJourney,
   incomeVerificationJourney,
@@ -59,9 +64,9 @@ import { firmJourney } from './firm-runtime.mjs'
 // historical-record fixtures in the core journey are not archive source data.
 if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
-    'records,approvals,sponsored,identity', 'agent-policy', 'agent-replay', 'agent-tokens', 'agent-capacity',
+    'records,approvals,sponsored,identity', 'agent-docs', 'agent-policy', 'agent-tokens', 'masked-resources', 'agent-replay', 'agent-capacity', 'agent-decisions',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
-    'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
+    'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -140,19 +145,32 @@ const settings = {
 const clockJourneys = process.env.ENVELOPE_JOURNEYS.split(',')
 const tokens = clockJourneys.includes('agent-tokens') ? await tokenInstallation(`https://127.0.0.1:${port}`,settings.OWNER_EMAIL) : null
 if (tokens) Object.assign(settings,tokens.bindings)
-const clockEntrypoint = ['agent-policy','agent-replay','agent-tokens','agent-capacity'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
+const clockEntrypoint = ['agent-tokens','masked-resources','agent-policy','agent-replay','agent-capacity','agent-decisions'].includes(process.env.ENVELOPE_JOURNEYS) ? await agentPolicyWorker() : clockJourneys.some(j => ['new-hires','automation','tax-notices','source-intake'].includes(j))
   ? await newHireClockWorker(clockJourneys.includes('automation') ? '2026-11-10T12:00:00Z' : clockJourneys.includes('source-intake') ? '2026-10-27T00:00:00Z' : undefined)
   : undefined
+const capacityEdge={calls:[],mails:[]}
 const operationsEntrypoint = process.env.ENVELOPE_JOURNEYS.split(',').includes('records') ? await operationsFaultWorker() : undefined
 let output = ''
-async function launch(bindings, {secure=false,outboundService}={}) {
+const replayEdge=process.env.ENVELOPE_JOURNEYS==='agent-replay'?replayNetwork():undefined
+async function launch(bindings, {secure=bindings.AUTH_LOCAL==='false',outboundService}={}) {
   const instance = await unstable_startWorker({
     config: resolve('dist/server/wrangler.json'),
     ...((clockEntrypoint ?? operationsEntrypoint) ? {entrypoint:clockEntrypoint ?? operationsEntrypoint} : {}),
     bindings: Object.fromEntries(Object.entries(bindings).map(([key,value]) => [key,{type:'plain_text',value}])),
-    dev: { server:{hostname:new URL(origin).hostname,port,...(secure?{secure:true}:{})},
-      ...(secure?{origin:{hostname:new URL(bindings.AUTH_ORIGIN).host,secure:true}}:{}),
-      ...(outboundService?{outboundService}:{}),inspector:false, remote:false, watch:false, persist, logLevel:'error' },
+    dev: { server:{hostname:new URL(origin).hostname,port,...(secure?{secure:true}:{})}, ...(secure?{origin:{hostname:new URL(bindings.AUTH_ORIGIN).host,secure:true}}:{}), inspector:false, remote:false, watch:false, persist, logLevel:'error',
+      ...(outboundService?{outboundService}:{}),
+      ...(replayEdge?{outboundService:request=>replayEdge.fetch(request)}:{}),
+      ...(process.env.ENVELOPE_JOURNEYS==='agent-capacity'?{outboundService:async request=>{
+        assert.equal(request.url,'https://api.resend.com/emails','capacity journey admits only its declared Resend schema edge')
+        assert.equal(request.method,'POST')
+        assert.equal(request.headers.get('authorization'),'Bearer synthetic-envelope-9860')
+        const body=await request.json()
+        assert.ok(body.from&&body.to&&body.subject&&body.text)
+        if(body.headers?.['Auto-Submitted']==='auto-generated')capacityEdge.mails.push(body)
+        else capacityEdge.calls.push({body,idempotencyKey:request.headers.get('idempotency-key')})
+        return Response.json({id:crypto.randomUUID()})
+      }}:{})
+    },
   })
   await instance.ready
   return instance
@@ -259,7 +277,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['agent-capacity', 'agent-tokens', 'agent-replay', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['agent-tokens', 'masked-resources', 'agent-decisions', 'futa-credit', 'agent-capacity', 'agent-replay', 'agent-docs', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -323,9 +341,36 @@ try {
       })
     } finally { await stopWorker();worker=await launch(settings);await waitForWorker() }
   }
-  if (selected?.includes('agent-capacity')) await agentCapacityJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
-  if (selected?.includes('agent-replay')) await replayJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-docs')) await agentDocsJourney({origin,cookie,settings})
+  if (selected?.includes('masked-resources')) {
+    let bindings={...settings}
+    await maskedResourceJourney({origin,cookie,sql,settings,outbound:outboundRequestCount,restart:async(overrides={})=>{bindings={...bindings,...overrides};await stopWorker();worker=await launch(bindings);await waitForWorker()}})
+  }
+  if (selected?.includes('agent-capacity')) {
+    await stopWorker()
+    const capacityOrigin=origin.replace('http:','https:')
+    Object.assign(settings,{AUTH_LOCAL:'false',AUTH_ORIGIN:capacityOrigin,MAIL_PROVIDER:'resend',MAIL_API_KEY:'synthetic-envelope-9860',MAIL_FROM:['capacity','example.test'].join(String.fromCharCode(64))})
+    // Trust only this disposable Worker's self-signed loopback certificate.
+    // The emitted runtime still uses its production native authentication doors.
+    const request=(url,init={})=>new Promise((resolve,reject)=>{
+      assert.equal(new URL(url).origin,capacityOrigin)
+      const outgoing=httpsRequest(url,{method:init.method,headers:init.headers,rejectUnauthorized:false},response=>{
+        const chunks=[];response.on('data',chunk=>chunks.push(chunk));response.on('error',reject)
+        response.on('end',()=>{const headers=new Headers();for(let i=0;i<response.rawHeaders.length;i+=2)headers.append(response.rawHeaders[i],response.rawHeaders[i+1]);resolve(new Response([204,304].includes(response.statusCode)||init.method==='HEAD'?null:Buffer.concat(chunks),{status:response.statusCode,headers}))})
+      });recordPrivateInput(url,init.body);outgoing.on('error',reject);outgoing.end(init.body)
+    })
+    worker=await launch(settings);await waitForWorker()
+    await agentCapacityJourney({origin:capacityOrigin,cookie:'',settings,edge:capacityEdge,request,
+      sql:statement=>{assert.match(statement,/^\s*SELECT\b/i,'capacity proof may only inspect native persistence');return inspectNativeSql(persist,statement)},
+      advanceClock:async instant=>{assert.equal((await request(capacityOrigin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},
+      restart:async(overrides={})=>{Object.assign(settings,overrides);await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  }
+  if (selected?.includes('agent-replay')) {
+    let bindings=settings
+    await replayJourney({origin,cookie,sql,settings,edge:replayEdge,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async overrides=>{if(overrides)bindings={...settings,...overrides};await stopWorker();worker=await launch(bindings);await waitForWorker()}})
+  }
   if (selected?.includes('agent-policy')) await agentPolicyJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('agent-decisions')) await agentPolicyDecisionsJourney({origin,cookie,settings,sql:command=>/^\s*SELECT\b/i.test(command)?inspectNativeSql(persist,command):sql(command),advanceClock:async instant=>{const response=await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}});assert.equal(response.status,200);return response.headers.get('x-synthetic-clock-now')},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('tax-notices')) await taxNoticeJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)}})
   if (selected?.includes('accounting')) await accountingJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('automation')) await automationJourney({origin,cookie,sql,settings,advanceClock:async instant=>{assert.equal((await fetch(origin+'/health',{headers:{'x-synthetic-clock':instant}})).status,200)},restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
@@ -335,6 +380,7 @@ try {
   if (selected?.includes('hi-benefits')) await hiBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('extended-retirement')) cookie = await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('retirement')) await retirementBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('futa-credit')) await futaCreditJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,outboundCount:recordedOutboundCount,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (!selected || selected.includes('industry')) await industryJourney({ origin, cookie, sql, settings })

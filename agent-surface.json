@@ -7,7 +7,9 @@
     "policy",
     "pause",
     "audit",
-    "idempotency"
+    "idempotency",
+    "resources",
+    "prompts"
   ],
   "tools": [
     {
@@ -21,7 +23,16 @@
         "SURFACE-006",
         "ENV-052"
       ],
-      "sponsorEscalation": false
+      "sponsorEscalation": false,
+      "job": "Credential management",
+      "classTests": [
+        {
+          "class": "access",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.credentials-restrict",
+          "step": "credentials-restrict"
+        }
+      ]
     },
     {
       "name": "envelope.credentials.rotate",
@@ -35,7 +46,16 @@
         "SURFACE-006",
         "ENV-052"
       ],
-      "sponsorEscalation": false
+      "sponsorEscalation": false,
+      "job": "Credential management",
+      "classTests": [
+        {
+          "class": "security",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.credentials-rotate",
+          "step": "credentials-rotate"
+        }
+      ]
     },
     {
       "name": "envelope.notices.process",
@@ -51,6 +71,21 @@
         "ENV-025",
         "ENV-055",
         "ENV-062"
+      ],
+      "job": "Notice correspondence",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.notice-process",
+          "step": "notice-process"
+        },
+        {
+          "class": "external",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.notice-process",
+          "step": "notice-process"
+        }
       ]
     },
     {
@@ -67,6 +102,21 @@
         "ENV-025",
         "ENV-055",
         "ENV-062"
+      ],
+      "job": "Notice correspondence",
+      "classTests": [
+        {
+          "class": "commitment",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reply-dispatch",
+          "step": "reply-dispatch"
+        },
+        {
+          "class": "external",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reply-dispatch",
+          "step": "reply-dispatch"
+        }
       ]
     },
     {
@@ -82,6 +132,15 @@
         "ENV-009",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Bonus preparation",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.bonus",
+          "step": "bonus"
+        }
       ]
     },
     {
@@ -96,6 +155,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Bonus preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.bonus-read",
+          "step": "bonus-read"
+        }
       ]
     },
     {
@@ -110,6 +178,15 @@
         "SURFACE-006",
         "ENV-029",
         "ENV-034"
+      ],
+      "job": "Native human review",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.run-review",
+          "step": "run-review"
+        }
       ]
     },
     {
@@ -124,6 +201,15 @@
         "SURFACE-006",
         "ENV-028",
         "ENV-052"
+      ],
+      "job": "Worker records",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.records-list",
+          "step": "records-list"
+        }
       ]
     },
     {
@@ -138,6 +224,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Hourly preparation",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.draft",
+          "step": "draft"
+        }
       ]
     },
     {
@@ -153,6 +248,15 @@
         "ENV-024",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Bonus preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reports-bonuses",
+          "step": "reports-bonuses"
+        }
       ]
     },
     {
@@ -168,6 +272,15 @@
         "ENV-024",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Hourly preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reports-proposals",
+          "step": "reports-proposals"
+        }
       ]
     },
     {
@@ -182,6 +295,15 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-052"
+      ],
+      "job": "Hourly preparation",
+      "classTests": [
+        {
+          "class": "sensitive",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.draft-read",
+          "step": "draft-read"
+        }
       ]
     },
     {
@@ -196,10 +318,42 @@
         "SURFACE-006",
         "ENV-030",
         "ENV-056"
+      ],
+      "job": "Reconciliation",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.workspace-snapshot",
+          "step": "workspace-snapshot"
+        }
+      ]
+    },
+    {
+      "name": "envelope.jobs.status",
+      "scope": "dispatch:execute",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "BASE-AGENT-012",
+        "ENV-025"
+      ],
+      "job": "Notice correspondence",
+      "classTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "test": "BASE-AGENT-006.2.<policy>.reply-status",
+          "step": "reply-status"
+        }
       ]
     }
   ],
-  "resources": [],
+  "resources": [
+    "envelope://companies/{company}/people/{person}"
+  ],
   "notTools": [
     {
       "clauses": [
@@ -259,7 +413,11 @@
       },
       "expect": [
         {
-          "class": "access"
+          "class": "access",
+          "facts": {
+            "measure": 1,
+            "direction": "narrows"
+          }
         }
       ]
     },
@@ -269,7 +427,10 @@
       "args": {},
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -284,7 +445,10 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -312,7 +476,10 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -331,7 +498,11 @@
       },
       "expect": [
         {
-          "class": "sensitive"
+          "class": "sensitive",
+          "facts": {
+            "kind": "compensation",
+            "measure": 1
+          }
         }
       ]
     },
@@ -344,13 +515,16 @@
           "pointer": ""
         },
         "personId": {
-          "$fixture": "person",
+          "$fixture": "riskPerson",
           "pointer": ""
         },
         "periodStart": "2026-10-01",
         "periodEnd": "2026-10-07",
         "payDate": "2026-10-09",
-        "sourceRef": "native-conformance",
+        "sourceRef": {
+          "$fixture": "riskSource",
+          "pointer": ""
+        },
         "requestKey": {
           "$fixture": "key",
           "pointer": ""
@@ -359,9 +533,19 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "worker",
+        "id": {
+          "$fixture": "riskPerson",
+          "pointer": ""
+        }
+      }
     },
     {
       "id": "bonus-read",
@@ -378,7 +562,11 @@
       },
       "expect": [
         {
-          "class": "sensitive"
+          "class": "sensitive",
+          "facts": {
+            "kind": "compensation",
+            "measure": 1
+          }
         }
       ]
     },
@@ -393,7 +581,10 @@
       },
       "expect": [
         {
-          "class": "sensitive"
+          "class": "sensitive",
+          "facts": {
+            "kind": "compensation"
+          }
         }
       ]
     },
@@ -408,7 +599,10 @@
       },
       "expect": [
         {
-          "class": "sensitive"
+          "class": "sensitive",
+          "facts": {
+            "kind": "compensation"
+          }
         }
       ]
     },
@@ -427,9 +621,19 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "earnings-run",
+        "id": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      }
     },
     {
       "id": "notice-process",
@@ -446,10 +650,18 @@
       },
       "expect": [
         {
-          "class": "sensitive"
+          "class": "sensitive",
+          "facts": {
+            "kind": "tax-notice",
+            "measure": 1
+          }
         },
         {
-          "class": "external"
+          "class": "external",
+          "facts": {
+            "measure": 1,
+            "counterparty": "known"
+          }
         }
       ]
     },
@@ -476,10 +688,38 @@
       },
       "expect": [
         {
-          "class": "commitment"
+          "class": "commitment",
+          "facts": {
+            "measure": 0,
+            "currency": "USD",
+            "counterparty": "known"
+          }
         },
         {
-          "class": "external"
+          "class": "external",
+          "facts": {
+            "measure": 1,
+            "counterparty": "known"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reply-status",
+      "tool": "envelope.jobs.status",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "jobId": {
+          "$from": "reply-dispatch",
+          "pointer": "/jobId"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
         }
       ]
     },
@@ -494,9 +734,20 @@
       },
       "expect": [
         {
-          "class": "security"
+          "class": "security",
+          "facts": {
+            "measure": 1,
+            "setting": "native-agent-credential"
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "agent-grant",
+        "id": {
+          "$fixture": "nativeGrant",
+          "pointer": ""
+        }
+      }
     }
   ],
   "spend": {
@@ -564,5 +815,67 @@
         "draft"
       ]
     }
-  }
+  },
+  "documentation": {
+    "path": "/docs/agents",
+    "format": "Accept: application/json returns the same public declarations"
+  },
+  "prompts": [
+    {
+      "name": "payroll-workers",
+      "job": "Worker records",
+      "tools": [
+        "envelope.records.list"
+      ]
+    },
+    {
+      "name": "payroll-hourly-preparation",
+      "job": "Hourly preparation",
+      "tools": [
+        "envelope.draft.prepare",
+        "envelope.reports.proposals",
+        "envelope.draft.read"
+      ]
+    },
+    {
+      "name": "payroll-bonus-preparation",
+      "job": "Bonus preparation",
+      "tools": [
+        "envelope.bonus.prepare",
+        "envelope.bonus.read",
+        "envelope.reports.bonuses"
+      ]
+    },
+    {
+      "name": "payroll-human-review",
+      "job": "Native human review",
+      "tools": [
+        "envelope.runs.review_link"
+      ]
+    },
+    {
+      "name": "payroll-notice-correspondence",
+      "job": "Notice correspondence",
+      "tools": [
+        "envelope.notices.process",
+        "envelope.notices.reply",
+        "envelope.jobs.status"
+      ]
+    },
+    {
+      "name": "payroll-reconciliation",
+      "job": "Reconciliation",
+      "tools": [
+        "envelope.workspace.snapshot"
+      ]
+    },
+    {
+      "name": "payroll-credentials",
+      "job": "Credential management",
+      "tools": [
+        "envelope.credentials.restrict",
+        "envelope.credentials.rotate"
+      ]
+    }
+  ]
 }
