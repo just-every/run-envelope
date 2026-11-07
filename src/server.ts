@@ -30,7 +30,7 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
-    const agent = await agentResponse(request, runtimeBindings(env))
+    const agent = await agentResponse(request, runtimeBindings(env), execution)
     if (agent) return rejectedResponse(request, agent)
     const auth = await authResponse(request, env)
     if (auth) return auth

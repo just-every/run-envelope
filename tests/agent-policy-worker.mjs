@@ -23,7 +23,7 @@ export default {
   if(next)instant=SystemDate.parse(next)
   const control=request.headers.get('x-synthetic-policy-batch')
   if(control==='release') { release?.();release=undefined;phase='idle' }
-  let held=false
+  let held=false,resourceReads=0
   const actual=new WeakMap(),queries=new WeakMap()
   const statement=(value,query)=>{const proxy=new Proxy(value,{get(target,key){if(key==='bind')return(...args)=>statement(target.bind(...args),query);const item=Reflect.get(target,key,target);return typeof item==='function'?item.bind(target):item}});actual.set(proxy,value);queries.set(proxy,query);return proxy}
   const database=new Proxy(env.DB,{
@@ -31,21 +31,32 @@ export default {
     if(key==='prepare')return sql=>statement(target.prepare(sql.replaceAll("unixepoch('subsec')*1000",String(instant))),sql)
     if(key==='batch') return async (...args)=>{
      const native=args[0].some(item=>(queries.get(item)||'').includes('env_'))
-     if(control==='hold'&&!held&&native) {
+     const person=args[0].some(item=>(queries.get(item)||'').includes('SELECT id,name,location_id AS locationId,version FROM env_people WHERE company_id=? AND id=?'))
+     if(person)resourceReads++
+     const resource=(control==='resource-classify'&&resourceReads===1 || control==='resource-delivery'&&resourceReads===2)&&person
+     if(!held&&(control==='hold'&&native || resource)) {
       held=true;phase='waiting'
       let timer
       try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }
       finally { clearTimeout(timer) }
      }
-     return target.batch(args[0].map(item=>actual.get(item)||item),...args.slice(1))
+     const result=await target.batch(args[0].map(item=>actual.get(item)||item),...args.slice(1))
+     if(!held&&control==='resource-return'&&resourceReads===2&&person) {
+      held=true;phase='waiting'
+      let timer
+      try { await new Promise(resolve=>{release=resolve;timer=setTimeout(()=>{phase='timed-out';resolve()},10000)}) }
+      finally { clearTimeout(timer) }
+     }
+     return result
     }
     const value=Reflect.get(target,key,target)
     return typeof value==='function' ? value.bind(target) : value
    }
   })
   const response=await worker.fetch(request,{...env,DB:database},context)
-  if(control==='observe'||control==='release') {
+  if(next||control==='observe'||control==='release') {
    const headers=new Headers(response.headers);headers.set('x-synthetic-policy-state',phase)
+   headers.set('x-synthetic-clock-now',new SystemDate(instant).toISOString())
    return new Response(response.body,{status:response.status,headers})
   }
   return response
