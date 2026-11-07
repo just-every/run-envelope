@@ -23,6 +23,7 @@ export const toolClasses: Record<string, readonly string[]> = {
   'credentials.restrict': ['access'],
   'notice.process': ['sensitive', 'external'],
   'reply.dispatch': ['commitment', 'external'],
+  'job.status': ['standard'],
 }
 interface PolicyRow { version: number; answers: string | null; paused: number }
 export class AgentPolicyError extends PayrollError {

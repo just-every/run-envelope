@@ -198,6 +198,18 @@
         "ENV-030",
         "ENV-056"
       ]
+    },
+    {
+      "name": "envelope.jobs.status",
+      "scope": "dispatch:execute",
+      "readOnly": true,
+      "classes": [
+        "standard"
+      ],
+      "clauses": [
+        "BASE-AGENT-012",
+        "ENV-025"
+      ]
     }
   ],
   "resources": [
@@ -272,7 +284,10 @@
       "args": {},
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -287,7 +302,10 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
       ]
     },
@@ -347,13 +365,16 @@
           "pointer": ""
         },
         "personId": {
-          "$fixture": "person",
+          "$fixture": "riskPerson",
           "pointer": ""
         },
         "periodStart": "2026-10-01",
         "periodEnd": "2026-10-07",
         "payDate": "2026-10-09",
-        "sourceRef": "native-conformance",
+        "sourceRef": {
+          "$fixture": "riskSource",
+          "pointer": ""
+        },
         "requestKey": {
           "$fixture": "key",
           "pointer": ""
@@ -362,9 +383,19 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "worker",
+        "id": {
+          "$fixture": "riskPerson",
+          "pointer": ""
+        }
+      }
     },
     {
       "id": "bonus-read",
@@ -430,9 +461,19 @@
       },
       "expect": [
         {
-          "class": "standard"
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "earnings-run",
+        "id": {
+          "$from": "bonus",
+          "pointer": "/id"
+        }
+      }
     },
     {
       "id": "notice-process",
@@ -487,6 +528,25 @@
       ]
     },
     {
+      "id": "reply-status",
+      "tool": "envelope.jobs.status",
+      "args": {
+        "companyId": {
+          "$fixture": "company",
+          "pointer": ""
+        },
+        "jobId": {
+          "$from": "reply-dispatch",
+          "pointer": "/jobId"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
       "id": "credentials-rotate",
       "tool": "envelope.credentials.rotate",
       "args": {
@@ -497,9 +557,20 @@
       },
       "expect": [
         {
-          "class": "security"
+          "class": "security",
+          "facts": {
+            "measure": 1,
+            "setting": "native-agent-credential"
+          }
         }
-      ]
+      ],
+      "target": {
+        "kind": "agent-grant",
+        "id": {
+          "$fixture": "nativeGrant",
+          "pointer": ""
+        }
+      }
     }
   ],
   "spend": {
@@ -561,6 +632,11 @@
         "initializer": "tests/agent-door/negative-sponsor.mjs"
       }
     ],
-    "journey": "tests/agent-door/rotation-journey.mjs"
+    "journey": "tests/agent-door/rotation-journey.mjs",
+    "replayAdmission": {
+      "prepare": [
+        "draft"
+      ]
+    }
   }
 }

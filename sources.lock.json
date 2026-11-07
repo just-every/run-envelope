@@ -361,11 +361,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "86df610c600de9e1c2c9267b76cb1d28a9ebc6be55364a70b10f15dc9efe02ab",
+      "sha256": "932e05a8e8c3f62bed0221cf443cc4cd9263827f2ac7c03450391892f477317c",
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "300c4af868da5272603260dd97b0dd634859495a8d3ed5235d9c39c4bc93834d",
+      "sha256": "fbb7afda72084cc9e5731083888ac2380326e718a5a2ae23a085f7e1b7e26b8b",
       "executable": false
     },
     "AGENTS.md": {
@@ -389,7 +389,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "71985b5b89bc6456834c17cfe711fb5d0ef245b4195da4ce987a094ec6e1df18",
+      "sha256": "8e931ad8b8e7791d9f0d9386b3c93ccab7717cd4c297a3caf754293647760f3e",
       "executable": false
     },
     "deploy-demo.json": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "b8e68a7fd1c52a72dbb77b9312284b94f1b59938af2eca75bbd5311039fcce67",
+      "sha256": "b904850b3560fb9d784febc94de6c0a52ee0f13ba1d8371706051ecd972b54ad",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -524,6 +524,10 @@
       "sha256": "5e9debeed985046ecf46de1a4c0f1d9d1dc4d11ef43529ebfdeb608ccab85ee9",
       "executable": false
     },
+    "docs/contract/SURFACE-008-rubric.md": {
+      "sha256": "9a3bd2cea399e391b26cf988d0779702e30feee866f5ec3c12cd8384f4be74af",
+      "executable": false
+    },
     "docs/extended-retirement.md": {
       "sha256": "47e57b220c545df0c93f6d9ec277b17e6fb6e3693b2a6333bfbce1c80e3f319b",
       "executable": false
@@ -577,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "f4f53dd3f5e02e9d7d8cf3ac0622b398f492f1088632cd75ee30196d2f272e29",
+      "sha256": "cdda3a737f671c7359ca83360ff8701c9801204838d4c4c7b205726c33aca8e1",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -1213,7 +1217,7 @@
       "executable": false
     },
     "RULINGS.md": {
-      "sha256": "8a3b17ac3c82f5f9304e3d433fecd3a2b0d57dad38c245134261b0bf740e6d14",
+      "sha256": "d99a5a8f6a0eb0c9a6939b6b533024e6b13cb7944a760d804ab94cc30f451aaa",
       "executable": false
     },
     "RUN-LOCALLY.md": {
@@ -2137,11 +2141,11 @@
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "a8e354e81733574463f7d394d6f0a3a51a59531183d49a521621076a8039eec4",
+      "sha256": "ce04fb269156c7ddd4dca744ddd7d7d7255b993f3064a9cb39aa12c0607e9ebc",
       "executable": false
     },
     "src/envelope/agents.ts": {
-      "sha256": "8ed05208906f1906ee8991379ab0f5d5bf6444ee591bfd0983a6e457b91bb240",
+      "sha256": "a54458138e8160e4e506d8d9bb82981d61fcfab1f71fd3365185fad67419af9b",
       "executable": false
     },
     "src/envelope/archive-history.ts": {
@@ -2206,6 +2210,10 @@
     },
     "src/envelope/calculation/earnings.ts": {
       "sha256": "59a6f3551c31924746cf1bd822dfad29a175282ad231d3e42ac3f5d4a9b96b9b",
+      "executable": false
+    },
+    "src/envelope/calculation/futa-credit-reduction.ts": {
+      "sha256": "bab1b8e61a20bdcfc4d64afda2d88b1874ab2a1e11b9adf2977e5077728fa433",
       "executable": false
     },
     "src/envelope/calculation/maine.ts": {
@@ -2309,7 +2317,7 @@
       "executable": false
     },
     "src/envelope/door/catalogue.ts": {
-      "sha256": "5f875632ebde9c3fc45072135447cda4131ab3ffb32e52366331589d2f60fb35",
+      "sha256": "3bbf7666d7a68eb237cfccd682c4b003dbaaec17a11a3fffd5533e215d36c687",
       "executable": false
     },
     "src/envelope/door/effects.ts": {
@@ -2317,7 +2325,7 @@
       "executable": false
     },
     "src/envelope/door/index.ts": {
-      "sha256": "33527986d263740032f1d7ebf3ce628e0ea05e5a88ba6be1b5f963cfa2ff1621",
+      "sha256": "7d4f4beca67365f64c413866c65bcba77f9d40e69fe4559b9812ce2ef4f73e1d",
       "executable": false
     },
     "src/envelope/door/native.ts": {
@@ -2333,7 +2341,7 @@
       "executable": false
     },
     "src/envelope/door/rest.ts": {
-      "sha256": "51a08ac86880da0c165aa2e26884c1f4ba647c08ea9677f87a0c01218d198eb4",
+      "sha256": "9d7e986f7eed36a3b2f1a7322ef65bdd4d061358d439e063438197c070018539",
       "executable": false
     },
     "src/envelope/door/rotation.ts": {
@@ -2341,11 +2349,11 @@
       "executable": false
     },
     "src/envelope/door/schemas.ts": {
-      "sha256": "0cb46da0545a85f784596dc657be6b561329065a3c9773022e04d68fef509e42",
+      "sha256": "46232b093a2cd8a487b8e599f88a1973d284b8db3bb9e89cdfd73ff75a0b1029",
       "executable": false
     },
     "src/envelope/door/tools.ts": {
-      "sha256": "3c3405e52fef754356f3ffe15f1d60f78a83287148fb042b29f1b10c2668b2d2",
+      "sha256": "2de11a008bbae5ee9fa38a4b49caee3b4ebaa24ee158018baddda42add408af9",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -2385,7 +2393,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "7eae182225949e3128d66ec86e7663799de88f86bffe98a192bf36eeadc43f77",
+      "sha256": "57553facdc993cb301d27bd78232043b44c9543ca86a18a3c47d11c58ccce261",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2509,7 +2517,7 @@
       "executable": false
     },
     "src/envelope/notices.ts": {
-      "sha256": "09f461eaf0fb263312b254bc60d547a4054bef45091735b8f745119d6b69785c",
+      "sha256": "6d61685c7549959355edcff78f58223da3dd07b754879bd8c4d3f5c226253894",
       "executable": false
     },
     "src/envelope/pages.tsx": {
@@ -2701,7 +2709,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "8305ee7da20cd04413f2fc5e847bfa7678676d25dbdf8c5a9775d18e410ce534",
+      "sha256": "114ca979698d8e62730f240c5decae0b7f217adc3619667cca7bb93f2c640851",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -4045,7 +4053,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "ebd066885fb281875e0c8db63d1eeaf79e4df39bad1142623685c21b51126466",
+      "sha256": "b81b3e16a53c74d1a04c3db39b47711e7aead5f9e99da0b58494616438709596",
       "executable": false
     },
     "src/site/docs.ts": {
@@ -4200,12 +4208,20 @@
       "sha256": "a7f5430fd016b1ba1c4ca55d3450a4683d1240a0941d16c5e506c8ad7061a140",
       "executable": false
     },
+    "tests/agent-capacity-runtime.mjs": {
+      "sha256": "6f60d85fc393dbdbb6776652e0c3340c8447043307635b44f071738279935ccc",
+      "executable": false
+    },
     "tests/agent-door/agent.mjs": {
       "sha256": "73dd0e431c6f604d1dc907b32748af0a4c8d81e6c27f0ec119792248177f69dd",
       "executable": false
     },
+    "tests/agent-door/decisions.mjs": {
+      "sha256": "b3c7397843f2fe7d3d715bf42791def438653b40caf8a30d1304e76eeac84f04",
+      "executable": false
+    },
     "tests/agent-door/fixtures.mjs": {
-      "sha256": "7cebecf2961d8ed3d2ec209ec2499ab90df49028f081d0caa78e6f464ea48a84",
+      "sha256": "39d9a93049f46a534077098ee22f418b7633a725890272188e0a307c43452342",
       "executable": false
     },
     "tests/agent-door/mail-from.mjs": {
@@ -4236,12 +4252,32 @@
       "sha256": "83f2dbd483bcb1812f9d4d48fd2bddcfb4da6d896efd1a650b51eb7e09419ca2",
       "executable": false
     },
+    "tests/agent-door/replay-families.mjs": {
+      "sha256": "776cac4f990da9b713dfbe3c65610bc9a1d4b6b435b9bc5915b33cf6523d5558",
+      "executable": false
+    },
+    "tests/agent-door/replay-runtime.mjs": {
+      "sha256": "045499219887e9c77833e07e866f74aa11bc324f52c0495a0dc41c95d4f66fd9",
+      "executable": false
+    },
+    "tests/agent-door/replay.mjs": {
+      "sha256": "9b232b120445b65147a75b18dbe3749971ac765168ab9ef43bf6ee845670e0b6",
+      "executable": false
+    },
     "tests/agent-door/reviewer.mjs": {
       "sha256": "34c5c74f51271497e0dfdfefa3e0916895af320f994dfde0cdaf59a01c675564",
       "executable": false
     },
+    "tests/agent-door/risk-facts.mjs": {
+      "sha256": "ac65cde2929e11b4eda889e7aa04576fd1f5641118e615f80aa35c7d706c5c93",
+      "executable": false
+    },
     "tests/agent-door/rotation-journey.mjs": {
-      "sha256": "9a3dddc1266da1a47f3a669dac210821268e3327649b713ca7fa1701656c83eb",
+      "sha256": "722db3eb3d69e17dd5c8cb6a8e607e44ad88d3a70c533a8ac762aa9bbb34c3a8",
+      "executable": false
+    },
+    "tests/agent-policy-decisions-runtime.mjs": {
+      "sha256": "5a573f6bad9ec1bcb424a47a14b7d231ee0d303d492b1643e4c2edbb5e2b0b43",
       "executable": false
     },
     "tests/agent-policy-runtime.mjs": {
@@ -4249,7 +4285,7 @@
       "executable": false
     },
     "tests/agent-policy-worker.mjs": {
-      "sha256": "721f8bc0e280f9102455e09d6ccb0ee1f7218059d063579bc8209a356c729663",
+      "sha256": "ffaeecb27009b785937eb8e1e7b8a321355d1c69028dddef883bcd36a679244a",
       "executable": false
     },
     "tests/archive-adoption.mjs": {
@@ -4281,7 +4317,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "2f8680f2ccef94c9755b3aad3e2d03644fc89b74a73cb0bf3851caa11c6629e7",
+      "sha256": "4fe1ee4ed975415eb3bbee5d02d22c19b4db698d2b153001a230324045e7ecad",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -4440,6 +4476,10 @@
       "sha256": "8e91e1da13d870d33704c0d78eeab809292a6e84deb24e39e4ce9641fe76919c",
       "executable": false
     },
+    "tests/futa-credit-runtime.mjs": {
+      "sha256": "25ce4470d469479c82ee11685340e6b8fba9aee1f8df3ff2a93d38cb938b953f",
+      "executable": false
+    },
     "tests/hi-benefits-runtime.mjs": {
       "sha256": "4a92d45f063c181baab204ecc35ebd060d4663886bea79df15db8917b688db1e",
       "executable": false
@@ -4501,7 +4541,7 @@
       "executable": false
     },
     "tests/privacy-recorder.mjs": {
-      "sha256": "abecf27e99302941af31ea1072d6759dcc73c056d955e64adf0649d756b3df49",
+      "sha256": "918a11f9f3f4b6eb99f551c8d920d866baca1a50f68572cf89394c31b5685ea7",
       "executable": false
     },
     "tests/retirement-benefits-runtime.mjs": {
@@ -4513,7 +4553,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "2bdc00c606a45b36d990c7713d66f30932cdff99e01d0d31f56ceeee064ef8db",
+      "sha256": "98e2b5f23766d84ee6935543b8fe53bd89ca078d653200c0419c0b2a743d3b7b",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -4529,7 +4569,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "89c7e800e7be81a31f1e2c32c07d9ae6bff561194404c93c8af6c4e116d3bb04",
+      "sha256": "82960f7ffab329db632043d2b079eee8b93f4d1495f8c6d916dad1933cfd4edf",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

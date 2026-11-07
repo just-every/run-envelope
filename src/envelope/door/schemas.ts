@@ -12,6 +12,7 @@ export function outputSchema(name:string):JsonSchemaObject {
   if(name==='run.review')return object({runId:string,version:integer,reviewUrl:string,approval:string})
   if(name==='notice.process')return object({id:string,noticeId:string,summary:string,proposedReply:string,sourceReference:string,status:string,approval:string})
   if(name==='reply.dispatch')return object({id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString})
+  if(name==='job.status')return object({jobId:string,id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString,delivered:string})
   if(name==='credentials.rotate')return object({id:string,secretExpiresAt:integer,expiresAt:integer,algorithm:{type:'string',const:'RSA-OAEP-256'},encryptedToken:string})
   if(name==='credentials.restrict')return object({id:string,version:integer,direction:string,peopleCount:integer,actions:{type:'array',items:string},fields:{type:'array',items:string},locations:{type:'array',items:string}})
   throw new Error('Undeclared native output schema')

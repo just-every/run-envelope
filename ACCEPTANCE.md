@@ -8,12 +8,12 @@ The primary journey: a US employer hires through Willow, brings in time and tips
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 5 | 33 | 60 | 98 |
-| Agent surface | 0 | 1 | 19 | 20 |
+| Core | 5 | 34 | 60 | 99 |
+| Agent surface | 1 | 5 | 14 | 20 |
 | Later | 0 | 2 | 5 | 7 |
-| Full target | 5 | 36 | 84 | 125 |
+| Full target | 6 | 41 | 79 | 126 |
 
-Judged from the code and tests at commit `a503b84bab248aa332df3c17fd0f76f809946654` (27 October 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
+Judged from the code and tests at commit `43360723047d43e6787402589b3769b876884fda` (5 November 2026). Field proof register: 10 rows; 0 passed, 0 failed, 10 not run.
 
 ## Core
 
@@ -555,7 +555,7 @@ Core · target · **missing** · Rules D-2, D-3, D-4, D-5 · Register R-2
 
 #### ENV-089 — FUTA credit reduction on Schedule A
 
-Core · target · **missing** · From ENV-014 · Rules D-4, D-5
+Core · target · **partial** · From ENV-014 · Rules D-4, D-5
 
 **Requirement.** Prepare year-and-state-specific FUTA credit reductions on Form 940 Schedule A and carry its total to line 11. Source final annual reductions and applicable benefit-cost-ratio (BCR) add-ons, other statutory add-ons and waivers from DOL's November determination, reconciled to that year's IRS Schedule A. Keep potential/forecast rates visibly provisional until final; do not treat a potential BCR add-on as due after an effective waiver or reuse another year's final rate. Credit reduction is employer liability attributed to Q4, with the additional deposit/payment deadline and $500 deposit-threshold treatment from that year's Form 940 instructions; never deduct it from workers. Show the increased cash requirement and exact filing/deposit items for human approval, with separate submission/acceptance/payment evidence. A late source change recalculates affected pending items and invalidates their earlier approval, preserving historical filed editions and amendment responsibility.
 
@@ -564,8 +564,8 @@ Core · target · **missing** · From ENV-014 · Rules D-4, D-5
 2. Repeat with ten fully taxable $7,000 bases, producing $840 extra and a timely required Q4 deposit at the official date, never worker withholding.
 3. Inject a DOL November potential-to-final source change with distinct BCR imposed/waived official-schema cases, assert the correct state/year combined rate, invalidated pending approval, one authorized payment/filing and retained prior-year reproduction; an as-yet-unpublished 2026 final notice cannot be labeled final on 20 October.
 
-**Evidence.** None.
-**Gap.** No implementation exists; the complete federal deposits and employment returns behavior and its public-door acceptance journey remain to be built and proven. Round 3 additions and their acceptance cases are also unimplemented.
+**Evidence.** Acceptance 1 and the calculation and reporting-data portion of acceptance 2: `tests/futa-credit-runtime.mjs` — futaCreditJourney, registered in `tests/runtime.mjs` and the industry push shard, exercises current native owner source and annual wage review, the independent IRS three-worker $252 and ten-worker $840 goldens, annual per-worker caps, duplicate worker and wage-source refusals, separate gross FUTA and zero worker withholding, Q4 Schedule A and Form 940 line 11 preparation, immutable source and wage corrections, replay after lost response and restart, held-source and current-authority refusals, privacy inventory, eligible erasure and erased-source replay fences, with unchanged payroll approvals, deductions, payments, filings and outbound requests. `tests/archive-runtime.mjs` — archiveJourney with futaArchiveFixture retains encrypted source, wage and preparation history through the actual CLI archive and refuses restored authority. Schema and honest boundaries: `docs/payroll-calculation.md`.
+**Gap.** Still unproved: timely Q4 deposit and official deadline and $500 deposit-threshold application; complete DOL potential-to-final, imposed or waived BCR and other add-on cases across states and years; source monitoring, recalculation and invalidation of payable approvals, one exact-human-authorized payment and filing with separate submission, acceptance and payment receipts; retained prior-year filed reproduction and amendment responsibility; complete annual employer wage reconciliation, exempt and multi-state wage allocation and original-source custody. The complete federal deposits and employment returns public-door journey remains unproved. This increment is selected reviewed California-2025 preparation only, unsigned and unfiled, with no ordinary state-tax payment credit or payable authority inferred. Current configured native owner only under the standing conservative preparation floor; scoped delegation and complete provider boundaries remain owed. Existing licensed calculation catalog, employer and funded rail authority, filing authority and agency enrolment (including 8655 and SSA), and unbuilt filing preparation remain held; preparation and source review supply none of those outcomes.
 
 #### ENV-015 — State, local, paid-leave and disability filings
 
@@ -1398,6 +1398,24 @@ Core · target · **missing** · Rules D-6
 **Evidence.** None.
 **Gap.** No implementation exists; the complete us-first complete payroll and honest product boundaries behavior and its public-door acceptance journey remain to be built and proven.
 
+### Agent surface
+
+#### SURFACE-008 — Independently named Business senders retain exact native authority
+
+Core · target · **missing** · From new · Cites BASE-AGENT-004, BASE-AGENT-005, BASE-AGENT-008, BASE-AGENT-009 · Rules D-5, D-6
+
+**Requirement.** Envelope accepts a valid Business agent bound to an authorized native credential when their display names differ. Supported generic notice replies retain the actual sending Business identity and sponsor attribution through preparation, exact review and dispatch, within current native authority and company policy. Display-name equality is no condition of that authority.
+
+**Acceptance.**
+1. Under the held company policy, a valid independently named Business agent's unchanged supported generic notice reply dispatches once after separate human review of the exact binding and reply, without a label-equality refusal.
+2. Review, the outgoing message, the native record, activity and permitted export retain the actual sending Business identity and sponsor attribution.
+3. A fresh exact review using the same unchanged independently named binding remains actionable; a display-name difference alone cannot make it stale or unavailable.
+4. A real sender identity, sponsor, authority or payload change requires fresh exact human review. Stale, revoked or unapproved send attempts refuse with no outbound or native effect.
+5. Ordinary notice review and attribution screens show the sending identity, sponsor and current review state at 1440 and 390 CSS pixels.
+
+**Evidence.** None.
+**Gap.** Independently named Business-to-native credential preparation, actionable exact review and supported generic notice dispatch with actual sender/sponsor attribution and unchanged-state refusal controls remain unbuilt or unproved.
+
 ### Agents carrying payroll through to evidence
 
 #### ENV-059 — Prepare every run and explain every changed paycheck
@@ -1627,7 +1645,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-006 — Every action declares its risk class
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Classes come from the fleet list in RISK-POLICY.md: standard, external, money, commitment, accounts, gated, access, security, destructive, sensitive and live. In the registry, each tool declares the classes it can carry and a server-side classifier that decides them per call from the arguments, current records and, for gated, the provider's answer. The classifier also supplies each class's facts: the measure (items, recipients, amount and currency, people or records), the counterparty (internal, known, new or public), the direction for access, the provider and step for gated, and the data kind for sensitive. A classifier never reads a flag, label or claim supplied by the agent or by record text. A seed cannot add a class; it proposes one for the fleet list.
 
@@ -1639,12 +1657,12 @@ Agent surface · target · **missing**
 5. No tool in `tools / list` declares a class outside the fleet list, and `rer check` fails on one.
 6. A refused call's audit row still records its computed classes.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance points 1, 2, 3, 5 and 6, bounded installed-door subcases: `tests/agent-door/risk-facts.mjs` — riskBefore compares actual MCP discovery with every installed descriptor class and the fleet catalogue under autonomous and held policies; independently retained worker, run and native-grant targets, exact standard and security facts for masked record pages, workspace snapshots, uncalculated bonus preparation, review-link presentation and credential rotation. Hostile worker names and source text plus caller class and confirmation claims leave classification and policy unchanged; native preparation and presentation create no payroll approval, and a held rotation changes no credential before separate human approval. The installed class validator rejects an uncatalogued class, and the installed conformance comparison rejects an independently altered measure or security setting. riskBefore also checks every populated masked page and its empty terminal page against retained native identity fields; one-cent and large uncalculated bonus preparations against the native human review contents and current worker revision; subsequent workspace counts; and invalid-period and changed-bonus refusals with unchanged native business state. Invalid masked-read queries retain their standard facts and native error. Caller confirmation claims cannot change any of these facts, remove a native refusal or supply payroll approval. riskAfter checks actual shared-policy-blocked rotation audit facts and native target; riskAudit reads every checked classification, including the native refusals, through the signed-in owner audit door. All three run through `tests/agent-door/rotation-journey.mjs` in the existing push Verify agent-door conformance, with native fixtures in `tests/agent-door/fixtures.mjs` and exact expectations in `agent-surface.json`.
+**Gap.** Remaining: full target-tool coverage and exact class facts, injection resistance and refused-call audit proof for every other tool and class; money, external, commitment, access, sensitive, destructive, accounts, gated and live obligations remain owed, including the point 4 amount, currency, counterparty, direction and item-count matrix. This finite standard and security slice does not establish those outcomes or full Base conformance. Existing sponsor and grant authority, licensed calculation catalog, authorized employer and rail, provider accounts and mandates, exact human approval, CT, device, approved visual corrections and feeder holds remain unchanged. Configured native owner reference sends require explicit consent; no automatic outbound action, automated retry or destructive recovery.
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Every agent door calls one decision function: MCP, the integration API with agent tokens, and the seed's embedded agents. It evaluates the call's classes against the company's policy, as above. The seed ships no dispositions and fills no gap with one: agent access opens only under a complete policy that setup has asked for (RISK-POLICY.md), and before then every agent call returns `policy_unset` with the setup link and changes nothing. *Autonomous* runs the call. *Review* runs it and adds it to the review feed. *Approval* saves a pending action with server-computed facts and returns `input_required`, with a URL-mode elicitation to the seed's approval page and a pending handle. Each person the rule names approves the exact saved revision in a signed-in browser, and changed inputs need a new approval. The retried call returns the result and a receipt. A rejection returns `approval_rejected`, and a lapse past the wait the rule sets returns `approval_expired`. *Blocked* returns `policy_blocked`, naming the class, rule and revision.
 
@@ -1658,8 +1676,8 @@ Agent surface · target · **missing**
 7. A policy change applies to the next call within 60 seconds, and the audit cites the new revision.
 8. A policy document with a bad signature or another Business's id is rejected, and the door keeps the last valid revision.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance points 1, 5, 6 and 7, bounded native bonus subcases: `tests/agent-policy-decisions-runtime.mjs` — agentPolicyDecisionsJourney, using `tests/agent-door/decisions.mjs` and invoked by `tests/runtime.mjs` in push Verify, exercises actual MCP, its alias and native v1 integration bonus preparation under shared autonomous, review, approval and blocked rules. Independent retained-run and preparation counts prove one uncalculated effect for autonomous and review, the exact linked review feed, no preparation while pending or blocked, server-computed target, amount, class facts and expiry, URL elicitation and pending handle, a separately signed-in named person's exact browser approval and receipt, stale summary and revision refusals, changed-input fresh approval, pending invalidation after a shared policy revision change with fresh exact reapproval, rejection, controlled-clock expiry and persistent Worker restart. The next call and its person-readable audit use the changed shared revision immediately. Native company review, approval and blocked floors remain restrictive under shared autonomous, review and approval policies before a pending action opens; refused native calls add no completed review item. Pause at pending execution remains restrictive; no policy decision supplies native payroll approval, payable calculation or dispatch. Pending, approved and review screens are recorded at 1440 and 390.
+**Gap.** Remaining: every other tool and class under every disposition; complete setup and upgrade unanswered-class behavior; money thresholds and daily caps; multi-class precedence; complete integration and embedded parity; signed-policy rejection and last-valid-revision matrix; delegated policy administration and the held SURFACE-006 remainder. The bounded native proof does not establish complete Base conformance or the full payroll week. All existing sponsor and grant, exact-human-approval, licensed-catalog, authorized employer and rail, provider-account and mandate, CT, device, visual-correction and feeder holds remain unchanged. Configured native owner reference sends still require explicit consent; no automatic outbound action, automated retry or destructive recovery.
 
 #### BASE-AGENT-008 — Truthful attribution
 
@@ -1716,7 +1734,7 @@ Agent surface · target · **missing**
 
 #### BASE-AGENT-011 — Limits are policy, and Pause stops everything
 
-Agent surface · target · **missing**
+Agent surface · target · **partial**
 
 **Requirement.** Business limits are rules in the company's policy: per-call and per-day thresholds on any class's measure, such as money moved, outside recipients or items destroyed; spend caps on provider cost (models, SMS, email) per seed, specialist or agent, which setup asks with the classes; "no cap" is an answer. Tools with provider cost declare an estimate before they run, and an exhausted cap returns `budget_exhausted` before any partial effect. The seed's capacity limits (request rate, body and byte sizes) protect the installation: they bound rate and size, never daily business volume, are documented and are not policy. A grant carries budgets only when the person granting it sets them. A **Pause agents** control in the seed, and Pause all agents in Business when paired, refuses every agent token within 60 seconds until a person resumes; browser sessions and devices keep working.
 
@@ -1729,12 +1747,12 @@ Agent surface · target · **missing**
 6. Pause and Pause all agents each stop the next call within 60 seconds, and resume restores access.
 7. An agent token cannot resume.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance point 1, native-credential subset: `tests/agent-capacity-runtime.mjs` — agentCapacityJourney, invoked by `tests/runtime.mjs` in push Verify, exercises genuinely issued credentials through both MCP routes and existing v1 REST under autonomous and held policies. The advertised final slot prepares one retained hourly proposal; mixed-route overruns return HTTP 429 with positive Retry-After before further business effects. Invalid bearers remain unauthenticated; independently issued credentials and owner sessions remain available. Persistent exhaustion survives Worker restart, the final millisecond returns a one-second wait, the next minute restores reads and current native revocation refuses without business changes. The privacy recorder observes no outbound request.
+**Gap.** Still unproved: complete capacity coverage for other identities and transports; per-call and per-day business thresholds, including the fourth outside recipient; provider cost estimates, spend caps with budget_exhausted before any partial effect, no-cap spending and usage accounting; complete per-agent calls, class decisions, money and provider-spend views; complete local and paired Business Pause, resume and agent-resume refusal across every token and transport. Provider spending, recipient delivery and paired Business outcomes require their separately evidenced integrations and authority; native capacity proof supplies none of them. Existing sponsor and grant restrictions, exact human approval, account and catalog, rail and company, provider and mandate, CT, device, visual-correction and feeder holds remain unchanged. Reference sends remain configured-native-owner-only with explicit consent and audit; no automatic outbound action, automated retry or destructive recovery is authorized.
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
 
-Agent surface · target · **missing**
+Agent surface · target · **done**
 
 **Requirement.** Every mutating tool requires an idempotency key and takes an optional expected revision. The same key with the same arguments returns the first outcome for at least 24 hours; the same key with different arguments returns `idempotency_conflict`; a stale revision returns `revision_conflict` with the current revision. Long work returns a job handle and a status tool, with no dependence on the Tasks extension.
 
@@ -1745,8 +1763,8 @@ Agent surface · target · **missing**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** None.
-**Gap.** Not yet judged through this seed's own doors.
+**Evidence.** Acceptance points 1–4, native hourly preparation subcases: `tests/agent-door/replay.mjs` — replayStep, invoked after the real draft step under autonomous and held conformance policies; actual retained preparation and one attributed native write, equal retries with new JSON-RPC ids, changed-argument conflict and stale-revision refusal naming the independently retained current revision. `tests/agent-door/replay-runtime.mjs` — replayJourney, invoked by `tests/runtime.mjs` in push Verify: actual MCP and alias calls, discarded response streams, persistent Worker restart, one preparation per key, equal saved outcomes, changed-argument and stale-revision conflicts, acceptance of the advertised revision after a genuine reviewed rate change; clock-controlled retention at 24 hours minus one millisecond, exactly 24 hours and plus one millisecond with rotated credentials and persistent Worker restarts under both policies; current shared and native Pause, blocked policy, new approval requirements, removed preparation scope and shared and native grant revocation refuse saved results without business changes, with attributed refusal audit where a principal is admitted. `tests/agent-door/replay.mjs` — replayMutation additionally checks equal retries, changed-argument conflicts and unchanged native state and write attribution for the installed bonus, notice processing, reviewed reply, review-link and credential tools under both conformance policies, including stale-revision refusals naming each independently retained target revision. Credential restriction now reports its actual grant revision rather than null. A real native scope reduction also replays without a second grant revision. The descriptor declares the installed replayAdmission proof using the mutating draft step. Acceptance 1–4: `tests/agent-door/replay.mjs` — replayStep and replayMutation, through the actual autonomous and held MCP conformance journeys, assert one retained native effect, equal results, changed-argument conflicts and independently retained current revisions for every installed mutating tool. `tests/agent-door/replay-runtime.mjs` — replayJourney, invoked by `tests/runtime.mjs`, proves real hourly preparation, dropped response recovery with new JSON-RPC ids, both MCP routes, persistent Worker restart, genuine reviewed-source revision changes and current Pause, policy, scope and revocation refusals with unchanged business state and attributed audit. `tests/agent-door/replay-families.mjs` — replayFamilies, in the same persistent journey, covers the other six mutating families: bonus preparation, review presentation, notice extraction, exact human-approved correspondence, scope restriction and encrypted credential rotation. Independently counted native records and write audit plus the official OpenAI and Resend HTTP edges prove exactly one effect after lost responses, retries and restart. All seven families retain equal original outcomes and changed-argument conflicts at 24 hours minus one millisecond, exactly 24 hours and plus one millisecond with actual native credential renewal and process restarts under both policies. Acceptance 5 and long work: replayFamilies explicitly requests background approved correspondence, observes its durable pending handle and accepted or unknown status through envelope.jobs.status, proves current Pause refusal, restart persistence and no resend after uncertain delivery, and compares foreign and absent handles using another genuinely admitted person and native company grant. The installed shared conformance journey, including the status tool, runs from the hosted push Verify shard; that shard also invokes the persistent replay journey. All existing calculation, payment, filing, provider and authority holds stay with their receiving business clauses; future mutating doors inherit this duty through the Agent surface inheritance.
+**Gap.** None.
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
 
@@ -1768,7 +1786,7 @@ Agent surface · target · **missing**
 
 #### SURFACE-001 — The registry equals this table and the Base harness passes
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-001, BASE-AGENT-002, BASE-AGENT-003, BASE-AGENT-013
+Agent surface · target · **partial** · From new · Cites BASE-AGENT-001, BASE-AGENT-002, BASE-AGENT-003, BASE-AGENT-013
 
 **Requirement.** Envelope serves the Base MCP door at `/mcp` with the tools, resources, events and prompts in this section, each tool calling the same server action as the payroll UI. The existing `/api/envelope/mcp` tools move onto that door under their table names.
 
@@ -1780,8 +1798,8 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-001, BASE
 5. The existing `/api/envelope/mcp` tools answer at `/mcp` under their table names, and the old path stays an alias.
 6. `/docs/agents` lists every tool, class, resource, event type and prompt in this section.
 
-**Evidence.** None.
-**Gap.** New Agent surface clause, not yet built. Today `/api/envelope/mcp` speaks protocol 2025-03-26 with eleven tools (`credentials.rotate`, `notice.process`, `reply.dispatch`, `bonus.prepare`, `bonus.read`, `run.review`, `records.list`, `draft.prepare`, `draft.read`, `reports.bonuses`, `reports.proposals`) and no risk classes, company policy or Base harness.
+**Evidence.** Acceptance 4 masked-person portion and acceptance 5 alias subcase: `tests/agent-door/masked-resources.mjs` — maskedResourceJourney and maskedResources exercise actual MCP and native viewer doors, exact identity projection, page-scoped links, standard classification, untrusted names, current native and shared policy, Pause, sponsor, grant and consent revocation, pending and approved retries, changed records before and after the native read, restart, erasure and held custody. `tests/agent-door/rotation-journey.mjs` — prepareResources invokes the masked resource proof through the existing fixture preparation; Base conformance reads returned links under autonomous and review policies. `tests/runtime.mjs` — masked-resources push journey includes native viewer comparisons at 1440 and 390. `tests/archive-authority.mjs` — archiveAuthority and restoredResourceAuthority exercise live then inactive restored resource authority through both MCP paths. Bounded resource documentation: `docs/agent-door.md`.
+**Gap.** Only the masked-person portion of acceptance 4 and its bounded alias and documentation subcases are implemented. Full target tool table, remaining company, run, filing, notice, case, coverage and report resource families, sensitive reads and exports, file-byte budgets, complete UI and tool state and audit parity, complete Base conformance, complete agent documentation and the full payroll week remain owed. Live SURFACE-003 and SURFACE-004 work remains separate. Existing account, catalog, rail, company, provider, mandate, exact-human-approval, sponsor, grant, CT, device, visual-correction and feeder holds remain unchanged, including owner-only explicitly consented reference sends; no automatic outbound action, automated retry or destructive recovery.
 
 #### SURFACE-002 — Money calls carry their amount and counterparty
 

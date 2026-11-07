@@ -7,6 +7,12 @@ import { fence, auditStatement, type Actor } from './access'
 import { requirePayrollProof, stepUpFence } from './step-up'
 import { PayrollError, text, integer, date } from './security'
 
+export const agentRequestsPerMinute = 120
+export const agentRetryAfter = (now = Date.now()) => Math.max(1, Math.ceil((60000 - now % 60000) / 1000))
+export class AgentCapacityError extends PayrollError {
+  constructor(public retryAfter: number) { super('agent_rate_limited', 429) }
+}
+
 export const agentActions = ['records:read', 'drafts:prepare', 'drafts:read', 'notices:process', 'dispatch:execute'] as const
 // Delegation never manufactures a human power. These are the ENV-028 powers
 // needed by each actual tool; approval and bank powers are never delegated.
@@ -277,7 +283,7 @@ export class AgentTools {
     )
       throw new PayrollError('agent_authority_revoked', 403)
     tools.authenticatedPolicyVersion = (await env.DB.prepare('SELECT version FROM env_agent_class_policy WHERE company_id=?').bind(row.company_id).first<{version:number}>())?.version ?? 0
-    const window = Math.floor(Date.now() / 60000)
+    const now = Date.now(), window = Math.floor(now / 60000)
     const count = await env.DB.prepare(
       `INSERT INTO oa_limits(key,window,count) SELECT ?,?,1 WHERE ${f.sql}
       ON CONFLICT(key) DO UPDATE SET window=excluded.window,count=CASE WHEN oa_limits.window=excluded.window THEN oa_limits.count+1 ELSE 1 END RETURNING count`,
@@ -285,7 +291,7 @@ export class AgentTools {
       .bind('envelope-agent:' + row.id, window, ...f.args)
       .first<{ count: number }>()
     if (!count) throw new PayrollError('agent_authority_revoked', 403)
-    if (count.count > 120) throw new PayrollError('agent_rate_limited', 429)
+    if (count.count > agentRequestsPerMinute) throw new AgentCapacityError(agentRetryAfter(now))
     return tools
   }
   fence() {

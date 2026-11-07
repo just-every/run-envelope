@@ -54,8 +54,9 @@ export default {
    }
   })
   const response=await worker.fetch(request,{...env,DB:database},context)
-  if(control==='observe'||control==='release') {
+  if(next||control==='observe'||control==='release') {
    const headers=new Headers(response.headers);headers.set('x-synthetic-policy-state',phase)
+   headers.set('x-synthetic-clock-now',new SystemDate(instant).toISOString())
    return new Response(response.body,{status:response.status,headers})
   }
   return response
