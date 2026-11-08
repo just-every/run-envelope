@@ -1,16 +1,17 @@
 import type { Bindings } from '../../auth.server'
 import { ToolRefusal, type ToolDefinition, type ToolContext, type ClassAndFacts } from '../../modules/agent-door/index.ts'
-import { policyCall, requireAgentPolicy } from '../agent-policy'
+import { policyCall, requireAgentPolicy, restrictionEscalation } from '../agent-policy'
 import { PayrollError } from '../security'
 import { prepareBonus, readBonus, bonusReport } from '../bonus-runs'
 import { presentReview } from '../review-presentation'
-import { processNotice, dispatchReply } from '../notices'
+import { processNotice, dispatchReply, dispatchStatus } from '../notices'
 import { digest } from '../workspace/store'
 import { nativeAgent } from './native'
 import { outputSchema } from './schemas'
 import { rotate, rotationKey } from './rotation'
 import { effect, sensitiveRecords } from './effects'
 import { catalogue } from './catalogue'
+import { personUri } from './resources'
 
 async function snapshot(env: Bindings, ctx: ToolContext) {
   const agent=await nativeAgent(env,ctx), f=agent.fence(), l=agent.location('location_id')
@@ -25,8 +26,9 @@ async function snapshot(env: Bindings, ctx: ToolContext) {
   return {people:people.length,drafts:drafts.length,bonuses:bonuses.length,sha256:await digest(JSON.stringify([people,drafts,bonuses,notices,analyses,dispatches,presentations,agent.grant.token_hash]))}
 }
 
-export function nativeTools(env: Bindings): ToolDefinition[] {
+export function nativeTools(env: Bindings,defer?: (work:Promise<unknown>)=>void): ToolDefinition[] {
   const titles:Record<string,string>={'credentials.restrict':'Reduce this credential scope','records.list':'Read worker records','draft.prepare':'Prepare hourly inputs','draft.read':'Read an hourly proposal','bonus.prepare':'Prepare bonus earnings','bonus.read':'Read bonus earnings','reports.proposals':'Read hourly preparations','reports.bonuses':'Read bonus preparations','run.review':'Present a run for human review','notice.process':'Extract a tax notice','reply.dispatch':'Send the approved reply','credentials.rotate':'Rotate this native credential','workspace.snapshot':'Check preparation state'}
+  titles['job.status']='Read a delivery job status'
   return catalogue.map(entry=> {
     const name=entry.name, nativeName=entry.nativeName
     const tool: ToolDefinition = {
@@ -61,11 +63,16 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
             if (nativeName==='reports.proposals') return agent.proposalReport(args)
             if (nativeName==='run.review') return presentReview(agent,args)
             if (nativeName==='notice.process') return processNotice(agent,args)
-            if (nativeName==='reply.dispatch') return dispatchReply(agent,args)
+            if (nativeName==='reply.dispatch') return dispatchReply(agent,args,defer)
+            if (nativeName==='job.status') return dispatchStatus(agent,args)
             if (nativeName==='credentials.restrict') return agent.restrict(args)
             if (nativeName==='credentials.rotate') return rotate(agent,args.publicKey)
             throw new ToolRefusal('tool_not_found')
           },args)
+          if(nativeName==='records.list') {
+            const page=value as Awaited<ReturnType<typeof agent.records>>
+            return {result:page,resources:page.records.map(person=>({uri:personUri(agent.grant.company_id,String(person.id)),name:String(person.name)}))}
+          }
           return {result:value}
         } catch(error) {
           if (error instanceof PayrollError) throw new ToolRefusal(error.code,error.code,{native_status:error.status,...('setupLink' in error?{setupLink:error.setupLink}:{})})
@@ -85,7 +92,12 @@ export function nativeTools(env: Bindings): ToolDefinition[] {
       }
       tool.revisionType='string'
     }
-    if (nativeName==='credentials.restrict') tool.authority=async(_args,ctx)=>({subject:(await nativeAgent(env,ctx)).grant.id,widens:false})
+    if (nativeName==='credentials.restrict') tool.authority=async(args,ctx)=>{
+      const agent=await nativeAgent(env,ctx)
+      agent.doorContext=ctx
+      try {return {subject:ctx.agent.id,widens:await restrictionEscalation(agent,args)}}
+      catch(error) {if(error instanceof PayrollError)throw new ToolRefusal(error.code,error.code,{native_status:error.status});throw error}
+    }
     if (nativeName==='credentials.rotate') tool.authority=async(_args,ctx)=>({subject:(await nativeAgent(env,ctx)).grant.id,widens:false})
     return tool
   })

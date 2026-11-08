@@ -40,7 +40,7 @@ export function outputSchema(name:string):JsonSchemaObject {
   if(name==='run.review')return closed({runId:string,version:integer,reviewUrl:{type:'string',format:'uri'},approval:literal('requires-separate-human-proof')})
   if(name==='notice.process')return closed({id:string,noticeId:string,summary:string,proposedReply:string,sourceReference:string,status:literal('untrusted-proposal'),approval:literal('not-approved')})
   if(name==='reply.dispatch') {
-    const dispatch={id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString}
+    const dispatch={id:string,version:integer,jobId:string,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString}
     // A native duplicate returns its retained state without asserting delivery.
     return {type:'object',oneOf:[closed({...dispatch,delivered:literal('unconfirmed')}),closed({...dispatch,replayed:literal(true)})],
       allOf:[{oneOf:[
@@ -50,5 +50,6 @@ export function outputSchema(name:string):JsonSchemaObject {
   }
   if(name==='credentials.rotate')return closed({id:string,secretExpiresAt:integer,expiresAt:integer,algorithm:literal('RSA-OAEP-256'),encryptedToken:{type:'string',pattern:'^[A-Za-z0-9+/]+={0,2}$'}})
   if(name==='credentials.restrict')return closed({id:string,version:integer,direction:{type:'string',enum:['narrow','unchanged']},peopleCount:integer,actions:array(string),fields:array(string),locations:array(string)})
+  if(name==='job.status')return closed({jobId:string,id:string,version:integer,state:{type:'string',enum:['pending','accepted','rejected','unknown']},providerReceipt:nullableString,delivered:literal('unconfirmed')})
   throw new Error('Undeclared native output schema')
 }

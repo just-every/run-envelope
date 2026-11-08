@@ -27,7 +27,7 @@ const changes={
 /** Reuse the same conformance journey for every other installed mutating family. */
 export async function replayMutation({phase,step,args,result,tool,database,origin}) {
   if(!changes[step.tool]||!['autonomous','held'].includes(phase))return
-  const db=await database('DB'),grant=state.get(origin).grantId
+  const saved=state.get(origin),db=await database('DB'),grant=step.client==='restriction'?saved.restriction.id:saved.grantId
   const writes=async()=>(await db.prepare("SELECT action,target_id,door_agent_id,sponsor_id FROM env_agent_access WHERE credential_id=? AND action NOT IN ('records:read','drafts:read','bonus:read','reports:read') ORDER BY id").bind(grant).all()).results
   const witness=async()=>(await tool('envelope.workspace.snapshot',{})).result.structuredContent
   const before=await witness(),audit=await writes(),options=step.client?{client:step.client}:{}

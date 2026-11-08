@@ -1,3 +1,4 @@
+import { FutaCreditReduction } from './calculation/futa-credit-reduction'
 import { agentRest } from './door/rest'
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
 import { ExtendedRetirement } from './benefits/extended-retirement'
@@ -303,7 +304,27 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!ui && tail[0] === 'people' && tail[2] === 'hi-benefits') {
+      if (!ui && tail[0] === 'futa-credit-sources') {
+        const futa = new FutaCreditReduction(new WorkspaceStore(records))
+        if (tail.length === 1) response = json(post ? await futa.saveSource(actor, value) : await futa.sources(actor), post ? 201 : 200)
+        else if (tail.length === 2 && tail[1] === 'review' && !post) response = json(await futa.reviewSource(actor))
+        else if (tail.length === 2 && tail[1] === 'approve' && post) response = json(await futa.approveSource(actor, value))
+        else throw new PayrollError('not_found', 404)
+      } else if (!ui && tail[0] === 'people' && tail[2] === 'futa-wages') {
+        const futa = new FutaCreditReduction(new WorkspaceStore(records)), person = tail[1], taxYear = tail[3]
+        if (tail.length === 4) response = json(post ? await futa.saveWages(actor, person, taxYear, value) : await futa.wages(actor, person, taxYear), post ? 201 : 200)
+        else if (tail.length === 5 && tail[4] === 'review' && !post) response = json(await futa.reviewWages(actor, person, taxYear))
+        else if (tail.length === 5 && tail[4] === 'approve' && post) response = json(await futa.approveWages(actor, person, taxYear, value))
+        else throw new PayrollError('not_found', 404)
+      } else if (!ui && tail[0] === 'futa-preparations') {
+        const futa = new FutaCreditReduction(new WorkspaceStore(records)), taxYear = tail[1]
+        if (tail.length === 2) response = json(post ? await futa.prepare(actor, taxYear, value) : await futa.preparations(actor, taxYear), post ? 201 : 200)
+        else if (tail.length === 3 && tail[2] === 'review' && !post) response = json(await futa.reviewPreparation(actor, taxYear))
+        else if (tail.length === 3 && ['approve', 'file', 'pay', 'deposit'].includes(tail[2]) && post) {
+          await futa.scope(actor)
+          throw new PayrollError('futa_payment_and_filing_unavailable', 409)
+        } else throw new PayrollError('not_found', 404)
+      } else if (!ui && tail[0] === 'people' && tail[2] === 'hi-benefits') {
         const benefits = new HiPlanShares(new WorkspaceStore(records)), personId = tail[1]
         await benefits.scope(actor,personId)
         if (tail.length===3 && !post) response=json(await benefits.list(actor,personId))
