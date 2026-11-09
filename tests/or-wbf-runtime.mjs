@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { hashToken } from '../src/modules/operator-auth/crypto.mjs'
 import { ordinaryW4 } from './industry-fixture.mjs'
+import { privateValue } from './privacy-recorder.mjs'
 
 const source = {version:0,taxYear:2026,state:'OR',sourceEdition:'OR-WBF-2026-order-25-054-period-rounding',rounding:'nearest-cent-per-pay-period-half-up',reference:'synthetic-envelope-wbf-source'}
 const hours = (from,through,value,extra={}) => ({version:0,taxYear:2026,state:'OR',subject:true,from,through,payDate:through,frequency:'weekly',hours:value,actualHoursTracked:true,method:'actual',reference:'synthetic-envelope-wbf-'+from,methodReference:'synthetic-envelope-approved-time-'+from,methodExplanation:'Exact covered work hours including fractional hours, with no leave or standby.',...extra})
@@ -20,6 +21,7 @@ const previewInput = (person,from,through,version=1,extra={}) => ({edition:'2026
 
 /** One native money and custody journey, independently worked from adopted OAR 436-070-0020. */
 export async function orWbfJourney(context) {
+ privateValue(source.reference)
  const {cookie,sql,settings,restart,outboundCount}=context,call=native(context),data=reader(call),outbound=outboundCount()
  const company=await data('/api/envelope/companies',{name:'Synthetic Oregon WBF employer',ein:'00-0009606'},201)
  const base='/api/envelope/companies/'+company.id,sources=base+'/or-wbf-sources',door=base+'/or-wbf-preparations/2026/1',preview=base+'/calculation-preview'
@@ -49,6 +51,7 @@ export async function orWbfJourney(context) {
  await data(sources,source,201)
  const first=hours('2026-01-01','2026-01-07','10.5'),second=hours('2026-01-08','2026-01-14','10.6')
  await data(period(first.from),first,201);await data(period(second.from),second,201)
+ privateValue(first.reference);privateValue(first.methodReference)
  const capture=request([selection(person,first.from),selection(person,second.from)])
  await refused(door,capture)
  const reviewedSource=await approve(data,sources)

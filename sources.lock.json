@@ -2240,6 +2240,10 @@
       "sha256": "5259f306062861814c24701c092a84e822adfa1a159f9967591bfcb8386998f8",
       "executable": false
     },
+    "src/envelope/calculation/or-wbf.ts": {
+      "sha256": "9dd745cde745d399872714f2db3f1db7052ccf3a99f59b5b0be49e0546d14148",
+      "executable": false
+    },
     "src/envelope/calculation/oregon.ts": {
       "sha256": "d6eef75e257a99410d1646e26224cac60a85e7964868e176418bb8bcd934b543",
       "executable": false
@@ -4353,7 +4357,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "b194976bf639050aeedd11d836e0f61cd758ca4b165ebd80f9d284ffd6d03cbd",
+      "sha256": "3ce85689b254fd5668a5f5daa3a9da7f3963c2a84a27895c33b633feded4bc45",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -4562,6 +4566,10 @@
     },
     "tests/ny-dbl-runtime.mjs": {
       "sha256": "a89b284c9f45bc7e01951c9bbe663fce79855a119f22c5cb18d6b047475cf192",
+      "executable": false
+    },
+    "tests/or-wbf-runtime.mjs": {
+      "sha256": "4bdf45cb41c7520c4667912abe171152adfc095addd4bfeb0ccbed3cc93c3c0b",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

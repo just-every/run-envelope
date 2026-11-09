@@ -14,7 +14,7 @@ export const wbfEdition = {
     sha256: '8cab16f8cea0f9c0dae8f18236911466ea7a77defcfb15ef8b14e695d18657a4',
     sections: ['436-070-0010(1)', '436-070-0020(1)(a)', '436-070-0020(1)(b)', '436-070-0020(2)', '436-070-0020(3)'],
     interpretation: '2026 rate 1.8 cents per hour; retain half for each employee each pay period, round half cents upward; employer matches the sum of retained employee amounts. Untracked hours require documented flat, contract or reasonable method. Combined reporting remains separately authorized.' }],
-  excludedAmbiguousEdition: 'DCBS 440-4999 COM/12/25 contains inconsistent rounding examples; it supplies no rounding authority here.',
+  excludedAmbiguousEdition: 'DCBS 440-4999 December 2025 contains inconsistent rounding examples; it supplies no rounding authority here.',
 } as const
 const sourceId = 'or-wbf-source-2026'
 function fail(code: string, status = 409): never { throw new PayrollError(code, status) }
