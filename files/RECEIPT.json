@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "tag": "sx-envelope-c-f104",
+  "repository": "just-every/run-envelope",
+  "productBranch": "cloud/sx-envelope-c-f104",
+  "productHead": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+  "observedMain": "2913789638d9f6da2cccb65ea318cc9b92f185e1",
+  "checks": [
+    {
+      "name": "build",
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "build.log"
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm run typecheck",
+      "exit": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "name": "WA native journey",
+      "command": "CI=true ENVELOPE_JOURNEYS=wa-li pnpm run test:runtime",
+      "exit": 0,
+      "log": "wa-li-runtime.log"
+    },
+    {
+      "name": "repaired verification shard",
+      "command": "CI=true ENVELOPE_JOURNEYS=income-verification pnpm run test:runtime",
+      "exit": 0,
+      "log": "verification-repair.log"
+    },
+    {
+      "name": "baseline verification shard",
+      "head": "2913789638d9f6da2cccb65ea318cc9b92f185e1",
+      "command": "CI=true ENVELOPE_JOURNEYS=income-verification pnpm run test:runtime",
+      "exit": 0,
+      "log": "verification-main.log"
+    },
+    {
+      "name": "contract views",
+      "command": "node src/base/contract-docs.mjs write then check",
+      "exit": 0,
+      "log": "views.log"
+    },
+    {
+      "name": "source integrity",
+      "command": "node scripts/edition-authoring/cli.mjs lock then check",
+      "exit": 0,
+      "log": "source-check.log"
+    },
+    {
+      "name": "first-party",
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0,
+      "log": "first-party.log"
+    }
+  ],
+  "sourceRows": [
+    {
+      "path": "docs/payroll-calculation.md",
+      "sha256": "cf4e7586ebc98a37855c07aa637c4e997642c9e8dfd22653a883345239382b7f",
+      "matchesCandidate": true
+    },
+    {
+      "path": "sources.lock.json",
+      "sha256": "fed42d9b9930dbac1465e586ee26c02231f78393256c1f5fe56e3b58712299da",
+      "matchesCandidate": true
+    },
+    {
+      "path": "src/envelope/calculation/preview.ts",
+      "sha256": "b32f6e9bbd475d8aa84eb6d63cb92989179da26dabb41758a05013154b41b6fd",
+      "matchesCandidate": true
+    },
+    {
+      "path": "src/envelope/calculation/wa-li.ts",
+      "sha256": "178d914a8dbc3d45ce82e58dbec04d130a59d982d7c268cb4a12968f0b3260f1",
+      "matchesCandidate": true
+    },
+    {
+      "path": "src/envelope/http.ts",
+      "sha256": "2d29ee13a71ee3b4e07e4b2b566392583e93529ebb6f65ca2c3d7f4d8e2c0b8d",
+      "matchesCandidate": true
+    },
+    {
+      "path": "src/envelope/workspace/rules.ts",
+      "sha256": "e1d70bf1c5af7b94d35c3c07cb03d525db536651d6eb09cc236eebc9b0fa8492",
+      "matchesCandidate": true
+    },
+    {
+      "path": "src/envelope/workspace/store.ts",
+      "sha256": "2af040b5062ca1c17c910765dbc68a1db514fce75a5fbd449f232f35e245cef7",
+      "matchesCandidate": true
+    },
+    {
+      "path": "tests/archive-runtime.mjs",
+      "sha256": "3c00b49ec55306064de83b1fcd52a11900a5831ffe972f739dd328b59b1db587",
+      "matchesCandidate": true
+    },
+    {
+      "path": "tests/runtime.mjs",
+      "sha256": "1abc7c3c442c2abefdd82a74414c80b6cd42d484f61a2cec98434335f3f9098c",
+      "matchesCandidate": true
+    },
+    {
+      "path": "tests/wa-li-runtime.mjs",
+      "sha256": "34c13bef297dc23ccfd7bfccb3fe2d7650c1ff750ff91816de7d76ed31574a43",
+      "matchesCandidate": true
+    },
+    {
+      "path": "verification.json",
+      "sha256": "a4e8b06c1d1023659b349b7faf9ddfb22853d7dd576dc3fb3ebb2cd54a5e0664",
+      "matchesCandidate": true
+    }
+  ],
+  "ci": {
+    "conclusion": null,
+    "event": "push",
+    "head_sha": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+    "html_url": "https://github.com/just-every/run-envelope/actions/runs/42606279615",
+    "id": 42606279615,
+    "name": "Verify",
+    "status": "in_progress"
+  },
+  "githubApiCalls": 8,
+  "repairReproduction": "VERIFY_REPRODUCED.json",
+  "publicationScan": {
+    "status": "guarded-lander-pending",
+    "complete": null,
+    "historyScanned": null,
+    "findings": null
+  },
+  "authority": {
+    "preparationOnly": true,
+    "coverageEstablished": false,
+    "accountAuthority": false,
+    "collectedPremiums": null,
+    "paymentReady": false
+  },
+  "contractDiffBytes": 0,
+  "generatedViewDiffBytes": 0,
+  "sharedSourceHelperDiffBytes": 0,
+  "ciAuthenticationFailure": {
+    "command": "gh api repos/just-every/run-envelope/actions/runs/42606279615",
+    "http": 401,
+    "lastObservedStatus": "in_progress"
+  },
+  "evidenceTransfer": "pending credential refresh and bounded retries"
+}

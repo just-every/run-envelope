@@ -1,0 +1,36 @@
+
+> envelope@0.1.0 test:runtime /home/agent/rer-consolidation/work/sx-envelope-c-f104/run-envelope
+> rer queue test:runtime -- sh -c "node tests/runtime.mjs"
+
+test:runtime
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+(node:16757) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {"error":"payroll_unavailable"}
+
+503 !== 409
+
+    at data (file://[REDACTED]/tests/payroll-runtime.mjs:4504:96)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file://[REDACTED]/tests/payroll-runtime.mjs:4571:29
+    at async noWrite (file://[REDACTED]/tests/payroll-runtime.mjs:4523:59)
+    at async incomeVerificationJourney (file://[REDACTED]/tests/payroll-runtime.mjs:4571:5)
+    at async file://[REDACTED]/tests/runtime.mjs:366:62 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 503,
+  expected: 409,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.20.0
+ ELIFECYCLE  Command failed with exit code 1.

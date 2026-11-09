@@ -1,0 +1,10 @@
+{
+  "head": "b0346ee6273edf79dd8f3983e58e1ade50c427a7",
+  "job": 129096683450,
+  "run": 42598416358,
+  "command": "CI=true ENVELOPE_JOURNEYS=income-verification pnpm run test:runtime",
+  "node": "22.20.0",
+  "test": "incomeVerificationJourney; tests/payroll-runtime.mjs:4571",
+  "exit": 1,
+  "failure": "503 !== 409; response {\"error\":\"payroll_unavailable\"}"
+}

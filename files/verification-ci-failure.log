@@ -1,0 +1,86 @@
+shards (verification, true)	Run this shard	﻿2026-11-09T10:07:11.3818260Z ##[group]Run node scripts/verify-ci.mjs "$SHARD"
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3818488Z [36;1mnode scripts/verify-ci.mjs "$SHARD"[0m
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3832469Z shell: /usr/bin/bash -e {0}
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3832604Z env:
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3832709Z   CI: true
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3832818Z   WRANGLER_SEND_METRICS: false
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3832955Z   PLAYWRIGHT_SKIP_BROWSER_GC: 1
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3833093Z   SHARD: verification
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.3833222Z ##[endgroup]
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.4050599Z > pnpm run verify:app
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.5624779Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.5625665Z > envelope@0.1.0 verify:app /home/runner/work/run-envelope/run-envelope
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.5626120Z > node scripts/verify-app.mjs
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.5626283Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.5866384Z > pnpm run build
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.7449552Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.7450178Z > envelope@0.1.0 build /home/runner/work/run-envelope/run-envelope
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.7450433Z > rer build
+shards (verification, true)	Run this shard	2026-11-09T10:07:11.7450501Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:12.1057707Z Checking pinned pnpm
+shards (verification, true)	Run this shard	2026-11-09T10:07:12.2563609Z 10.12.4
+shards (verification, true)	Run this shard	2026-11-09T10:07:12.3111995Z Building your application
+shards (verification, true)	Run this shard	2026-11-09T10:07:12.5447612Z build:app
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.7869346Z vite v8.2.2 building client environment for production...
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.7953563Z transforming...
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.8558004Z ✓ 141 modules transformed.
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.8743838Z rendering chunks...
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9105548Z computing gzip size...
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9142763Z dist/client/.assetsignore               0.02 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9143543Z dist/client/assets/index-D54FMOiU.js  313.49 kB │ gzip: 101.67 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9143791Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9780307Z ✓ built in 193ms
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9783738Z vite v8.2.2 building ssr environment for production...
+shards (verification, true)	Run this shard	2026-11-09T10:07:13.9840863Z transforming...
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.3408781Z ✓ 876 modules transformed.
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.4348600Z rendering chunks...
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.6870057Z computing gzip size...
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7407582Z dist/server/wrangler.json                                      1.57 kB │ gzip:     0.78 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7408501Z dist/server/.vite/manifest.json                                2.36 kB │ gzip:     0.53 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7409574Z dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:     0.18 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7410412Z dist/server/assets/start-CHdegNwm.js                           0.28 kB │ gzip:     0.20 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7411153Z dist/server/assets/_tanstack-start-manifest_v-BTU8ZwKt.js      0.37 kB │ gzip:     0.26 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7411893Z dist/server/assets/rolldown-runtime-DC62tzP2.js                1.44 kB │ gzip:     0.67 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7412616Z dist/server/assets/router-CUV5wGFM.js                         38.74 kB │ gzip:    10.44 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7413260Z dist/server/assets/heading-hGZXJ5yI.js                       164.70 kB │ gzip:    41.45 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7413873Z dist/server/index.js                                       5,419.08 kB │ gzip: 1,199.19 kB
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7414316Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:14.7604355Z ✓ built in 780ms
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.0246641Z Your application is built
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.0422841Z build: complete (exit 0)
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.0565369Z > ENVELOPE_JOURNEYS=income-verification pnpm run test:runtime
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.2127271Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.2128067Z > envelope@0.1.0 test:runtime /home/runner/work/run-envelope/run-envelope
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.2128474Z > rer queue test:runtime -- sh -c "node tests/runtime.mjs"
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.2129030Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:15.2743978Z test:runtime
+shards (verification, true)	Run this shard	2026-11-09T10:07:16.1583462Z (node:3192) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+shards (verification, true)	Run this shard	2026-11-09T10:07:16.1583912Z (Use `node --trace-warnings ...` to show where the warning was created)
+shards (verification, true)	Run this shard	2026-11-09T10:07:32.8867598Z HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+shards (verification, true)	Run this shard	2026-11-09T10:07:34.7897861Z APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8901530Z node:internal/modules/run_main:123
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8901935Z     triggerUncaughtException(
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8902163Z     ^
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8902274Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8902444Z AssertionError [ERR_ASSERTION]: {"error":"payroll_unavailable"}
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8902728Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8902798Z 503 !== 409
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8902900Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8903122Z     at data (file://[REDACTED]/tests/payroll-runtime.mjs:4504:96)
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8903669Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8904017Z     at async file://[REDACTED]/tests/payroll-runtime.mjs:4571:29
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8904548Z     at async noWrite (file://[REDACTED]/tests/payroll-runtime.mjs:4523:59)
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8904899Z     at async incomeVerificationJourney (file://[REDACTED]/tests/payroll-runtime.mjs:4571:5)
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8905187Z     at async file://[REDACTED]/tests/runtime.mjs:366:62 {
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8905392Z   generatedMessage: false,
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8905538Z   code: 'ERR_ASSERTION',
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8905671Z   actual: 503,
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8905792Z   expected: 409,
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8905922Z   operator: 'strictEqual',
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8906052Z   diff: 'simple'
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8906166Z }
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8906229Z 
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.8906280Z Node.js v22.20.0
+shards (verification, true)	Run this shard	2026-11-09T10:07:44.9836434Z  ELIFECYCLE  Command failed with exit code 1.
+shards (verification, true)	Run this shard	2026-11-09T10:07:45.0104561Z  ELIFECYCLE  Command failed with exit code 1.
+shards (verification, true)	Run this shard	2026-11-09T10:07:45.0311402Z ##[error]Process completed with exit code 1.

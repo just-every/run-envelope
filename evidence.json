@@ -1,0 +1,178 @@
+{
+  "files": [
+    {
+      "blob": "02d004caa19d87fda4fd5e7a3f3cd339d3f8c70d",
+      "bytes": 2297,
+      "path": "PLAN.md",
+      "sha256": "b97096bb8ce8ce78e1940300c3dc8bff95f171f38e39094665955f3685cf4211"
+    },
+    {
+      "blob": "284686b3aa451d3d0517c6a04dfb7659e855eec9",
+      "bytes": 4569,
+      "path": "RECEIPT.json",
+      "sha256": "778ce4216ce3ecff90bf18032a7b51271c540dffa15fa858bcfd14f030de4910"
+    },
+    {
+      "blob": "e447b2be186d00cfdfa4829d68f6db01fb0042e2",
+      "bytes": 14064,
+      "path": "REPORT.md",
+      "sha256": "e62f5ef24d636a2abc9527f86aaea68b8e22932ba50cfa63734c77bbcf28e1ab"
+    },
+    {
+      "blob": "b445db202b88f42092e54e359845414580b8352e",
+      "bytes": 365,
+      "path": "VERIFY_REPRODUCED.json",
+      "sha256": "6942eaec58efb5b91e07032cde1a1fb75403236d3a854b6f0f98b4ffb1bf9e21"
+    },
+    {
+      "blob": "339cb86fb10bf06011e5d59c7450fe71d9a2539a",
+      "bytes": 169563,
+      "path": "archive-failure.log",
+      "sha256": "1307ea6428bf54a4399013340b6ca82948131f0055618bcd870d8cc0304c29d2"
+    },
+    {
+      "blob": "3c27ce4f7083a0d118a28c47cfb41682ba5b5046",
+      "bytes": 1459,
+      "path": "archive-invocation.log",
+      "sha256": "f6f34747952d94a6130d71a23af748a3ed96bb9b49fa6cfb4fe3727685386f33"
+    },
+    {
+      "blob": "b7c53f5765e7b8458e93f3633b30929452a8c877",
+      "bytes": 521,
+      "path": "baseline-ci.json",
+      "sha256": "8a8c76e078c74cddf85e41546e576c33acd590b5f12df72f0053611eca9f94a8"
+    },
+    {
+      "blob": "fd223c1b24f4f63762609129dc8dd05c2ceea4c7",
+      "bytes": 2014,
+      "path": "build.log",
+      "sha256": "1b7f6be6d8e1ede75a4e4d9f51e337279831dbe52a18bba488fba8a0862d7b1f"
+    },
+    {
+      "blob": "0aadef20552be76cc52538485f19bfce80945cde",
+      "bytes": 228,
+      "path": "candidate-ci.json",
+      "sha256": "87116973ea04797ce7fa7d2e29d8866f678870881545260fdc779ecf2747d65b"
+    },
+    {
+      "blob": "19aae49d51ebd3d6c5b9b8ecb2a9a7e6f97b8051",
+      "bytes": 112,
+      "path": "ci-auth-failure.json",
+      "sha256": "15cefd0528700471275adcd28427cb4efc001367156b099ea3300fc79d9c1292"
+    },
+    {
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "path": "first-party.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "blob": "950bc740eb862f40ec5595ca3f42d2ebddd6d3de",
+      "bytes": 1425,
+      "path": "first-repair-failure.log",
+      "sha256": "12ddfc2d88d5474e2d73da07802c8d9fe4e7f21b8bb9ba26359c9e331ce2b43b"
+    },
+    {
+      "blob": "f88f6a75b155c46555a500fde3e51f63799aa36e",
+      "bytes": 181,
+      "path": "initial-ci-status.json",
+      "sha256": "4d2ce50ec02d53e704c1b785c68c2bd77a648a8cd634beb6a090fc524d9462e7"
+    },
+    {
+      "blob": "a78037ff53881a0b54189b8d5ce9f433fe2ac858",
+      "bytes": 228,
+      "path": "initial-ci.json",
+      "sha256": "0e9f4e7cae82866fbbe2f7503948d51537f0fb9dc75f03aa4f50fd4363b893a0"
+    },
+    {
+      "blob": "45a747548d44fa5577cdf5cdec9686730ecb0a80",
+      "bytes": 1472,
+      "path": "initial-jobs.json",
+      "sha256": "0842d8d52bdf2a8ec5fc4bf374dc89dd36465c57aec2da5f3d3766d69d74b565"
+    },
+    {
+      "blob": "8fff924a2de9a9e24940eeebe67523f12e604cf1",
+      "bytes": 332,
+      "path": "initial-source-check.json",
+      "sha256": "53d14024bbca58cdb49a1fe1395866b3b578f59f2ab1ea8e654dafc16defaf68"
+    },
+    {
+      "blob": "2dad01745c47bad49b1afb25c11a65e376bb8e80",
+      "bytes": 1044,
+      "path": "official-sources.json",
+      "sha256": "421e1a44bc0e8d9a7b8b35515a77e7d071c55c4e47a85483d9a3d7f93d7f6115"
+    },
+    {
+      "blob": "db2466af105da4b1b48341b409f88b7c5c2596a2",
+      "bytes": 474,
+      "path": "probes.txt",
+      "sha256": "35b6622035c012f085d69f27d936234d8c991bede32557654d111aef74d0991a"
+    },
+    {
+      "blob": "79717c489a2adf4a3034972654fc75e967f96994",
+      "bytes": 431,
+      "path": "product-provenance.txt",
+      "sha256": "6204e2b5ed27cc0f5fdf90fa63f36956697920e7292bcf7abc04bc9282bfc903"
+    },
+    {
+      "blob": "16048c1e94638e64cbe9f51adfaa01c7f50e029b",
+      "bytes": 635,
+      "path": "product-push.log",
+      "sha256": "268179eb9de69a1c6116391275361cfce562c8d2fdcaf6758a265d3963f5a60a"
+    },
+    {
+      "blob": "84e3c40b9c61531c6a7c4d1a5ecaa02cd6e3e246",
+      "bytes": 188641,
+      "path": "source-check.log",
+      "sha256": "ee66c74617d302ff481347643ffb57317e30e7a50292f9d342291d0684cf5b0d"
+    },
+    {
+      "blob": "fb74038017b355cb092b6361b51f6d01f6a41a74",
+      "bytes": 124,
+      "path": "typecheck.log",
+      "sha256": "21c41f82ed714b362ac7635c95f540082092e79daa2c353482f16b27a61c8e3d"
+    },
+    {
+      "blob": "3fa22224dcccbd82d6389996360b3cd33de81f7f",
+      "bytes": 9518,
+      "path": "verification-ci-failure.log",
+      "sha256": "27789e45b02c3a23e1accd27261494c3a485b4571a0e61b1bbee3a4f3e48b5a2"
+    },
+    {
+      "blob": "a87a46b6947e14377c58abbd0b3a94a757d01692",
+      "bytes": 1587,
+      "path": "verification-main.log",
+      "sha256": "5c12b73884123897249deeab8fd6aa2fd1c7525384c0cdd943c012c457f17560"
+    },
+    {
+      "blob": "423377e5f692a78e2cbbe2482bd53ab852864f51",
+      "bytes": 1591,
+      "path": "verification-repair.log",
+      "sha256": "6d9addf529b3e71c70fc07b9145ef372bf044caff87263fafaeb02720d697a0a"
+    },
+    {
+      "blob": "cfd5671c6d5a022409c69c78f082b3b3c47daa89",
+      "bytes": 1425,
+      "path": "verification-reproduced.log",
+      "sha256": "ac88728a9d21fc2e3cb5ea559a21aa254439d05691c593d57c62b017095cf627"
+    },
+    {
+      "blob": "7f08ad713eb644515ca188ca96c07a87314528b5",
+      "bytes": 60,
+      "path": "views.log",
+      "sha256": "cdada4f46860989b6e41904b5bffd1be7976cfde8b8dba1b4a7dcf41c522fcda"
+    },
+    {
+      "blob": "dfaf1b2a1f3786977b20cd128cbe818610d7333e",
+      "bytes": 1515,
+      "path": "wa-li-runtime.log",
+      "sha256": "c4b1df16602b5818d2b4c1cc3ba3c009a4ebb878e8f86bfa4889cc0ca9fb357e"
+    }
+  ],
+  "product_branch": "cloud/sx-envelope-c-f104",
+  "product_head": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+  "ref": "refs/heads/evidence/sx-envelope-c-f104",
+  "repository": "just-every/run-envelope",
+  "schema": 1,
+  "tag": "sx-envelope-c-f104"
+}

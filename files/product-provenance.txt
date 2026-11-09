@@ -1,0 +1,4 @@
+a0be89405b7b9dd0f1b6035f74b611fca8a1e81c Keep WA source freshness in its preparation boundary
+b0346ee6273edf79dd8f3983e58e1ade50c427a7 Prove consistent actual-hours WA preparation and effective rule boundary
+d7f2798eec84a30815118339c3744a717981632a Prepare reviewed Washington L&I worksheets [skip ci]
+All candidate author and committer identities passed the fleet policy. No trailers. Full history; no force push; main unchanged.

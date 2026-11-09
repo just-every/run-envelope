@@ -1,0 +1,4 @@
+
+> envelope@0.1.0 typecheck /home/agent/rer-consolidation/work/sx-envelope-c-f104/run-envelope
+> tsc --build --incremental
+

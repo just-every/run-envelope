@@ -1,0 +1,15 @@
+
+> envelope@0.1.0 test:runtime /home/agent/rer-consolidation/work/sx-envelope-c-f104/run-envelope
+> rer queue test:runtime -- sh -c "node tests/runtime.mjs"
+
+test:runtime
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+(node:24873) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home
+VERIFICATION-ARCHIVE passed: exact encrypted history and inactive consent authority; erased derivatives absent; actual older archive refused with later journal and no publication.
+INCOME-VERIFICATION passed: former-worker native return with retained history and termination provenance, native worker and requester identity, scoped consent, broad/foreign/forged refusals with zero disclosure writes, exact owner review, minimal protected facts, source provenance, separate receipt, worker correction and history, linked source correction, revocation, actual expiry and selected retention boundary; native screens 1440 and 390. Consent-bound legal-authority review, linked correction, exact archive history, older-archive erasure fence, retained API and HTML transports and Spanish empty, held, failed and completed states proved.
+PRIVACY-RECORDER passed {"outbound":0,"browserRequests":783,"browserLogs":55,"workerLogs":0,"bundles":78,"privateInputs":0}

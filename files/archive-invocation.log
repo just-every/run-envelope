@@ -1,0 +1,34 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+verify:runtime
+Heavy job admitted: Envelope verify:runtime:suite [b913735b1130]
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home
+ARCHIVE-UPGRADE passed: populated prior schema, unknown notice obligations, unchanged ciphertext and authority history, idempotent native migration
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a real earlier archive retains the soon-erased unused worker: {"version":1,"verb":"export","event":"error","code":"invalid_invocation","message":"--no-queue requires the original caller CI=true.","exitCode":2}
+{"version":1,"verb":"export","event":"result","ok":false,"exitCode":2}
+
+
+2 !== 0
+
+    at archiveJourney (file://[REDACTED]/tests/archive-runtime.mjs:192:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async withArchiveWorker (file://[REDACTED]/tests/archive-worker.mjs:51:12)
+    at async file://[REDACTED]/tests/runtime.mjs:404:11 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

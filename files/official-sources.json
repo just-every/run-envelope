@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "url": "https://app.leg.wa.gov/wac/default.aspx?cite=296-17-31021",
+      "sha256": "8a35fd227622a673425c4cbd3a340ae0f49f50dacd3fae178e6347dca359e33e",
+      "bytes": 117118,
+      "retrieved": "2026-11-09",
+      "purpose": "Official hours-method rule"
+    },
+    {
+      "url": "https://www.lni.wa.gov/insurance/rates-risk-classes/rates-for-workers-compensation/",
+      "sha256": "fd9e4aedb723a1a60f61169721e228c7605ccfb2b34f18d28dae2adadacff479",
+      "bytes": 26460,
+      "retrieved": "2026-11-09",
+      "purpose": "Assigned-rate source context; no general base rate is substituted for an employer notice"
+    }
+  ],
+  "methodExcerpt": "All salaried employees of an employer must be reported by the same method. Actual hours worked or assumed hours of one hundred-sixty hours per month.",
+  "rateEvidence": "Synthetic employer-assigned notice transcriptions, independently specified total and permitted employee rates. No genuine employer account, notice authenticity or state coverage proof is claimed."
+}

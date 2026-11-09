@@ -1,0 +1,16 @@
+
+> envelope@0.1.0 test:runtime /home/agent/rer-consolidation/work/sx-envelope-c-f104/run-envelope
+> rer queue test:runtime -- sh -c "node tests/runtime.mjs"
+
+test:runtime
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+(node:26926) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home
+PROBE ENV-095 1: actual notice setup, exact review, private calculation preview and worksheet -> hourly two-class 270.00 total, 52.00 employee, 218.00 employer; salaried quarter 480 hours, 720.00 total, 144.00 employee, 576.00 employer; unsigned and unfiled
+PROBE ENV-095 2 calculation and mixed-method refusal: new actual-hours salaried worker -> old preparation and mixed election refused; corrected 160 method plus fresh complete-roster review -> both salaries 480 hours
+WA-LI passed: independently notice and WAC-derived amounts, exact notice and company binding, complete salaried election, source correction, immutable history, lost-response replay and restart, scoped refusals, privacy holds and erasure, no collected premiums or payment authority
+PRIVACY-RECORDER passed {"outbound":0,"browserRequests":22,"browserLogs":0,"workerLogs":0,"bundles":78,"privateInputs":0}

@@ -1,0 +1,11 @@
+# sx-envelope-c-f104 plan and scope
+
+1. Read launcher and repository instructions, ENV-095, the shipped plan extract, rulings and DONE riders. Map the existing reviewed-rule metadata, encrypted workspace, current native authority and calculation-preview door.
+2. Retain exact employer notice snapshots bound to company, EIN, assigned class, effective dates, source edition, total hourly rate and permitted employee rate. Require current native owner authority and exact human review.
+3. Retain reviewed actual class hours and complete-month assumed salary hours. Require an explicit complete salaried roster and one employer-wide method, including consistency across overlapping monthly and quarterly evidence.
+4. Prepare immutable unsigned worksheets with independent per-class employee shares, employer remainders, source provenance and truthful authority holds. Expose the same current worksheet through the existing private calculation preview without applying payroll deductions or granting payment power.
+5. Exercise setup, exact review and preparation through real native HTTP doors: two-class hourly goldens, 160 monthly and 480 quarterly salaried goldens, consistently actual salary fractions, corrections, replay after lost response and restart, mismatched or absent notices, held sources, foreign companies, revoked sessions and non-owner refusals. Check unchanged payroll and outbound effects.
+6. Extend the existing archive journey with actual encrypted notices, hours and worksheet rows and former-session refusal after real CLI restore. Prove worker privacy inventory, holds and eligible erasure using existing native custody doors.
+7. Run touched runtime journeys, typecheck, build, first-party check, contract generation and its check, restore generated views, regenerate source lock last, preserve commits on the named product branch and publish this separate public evidence packet.
+
+Scope ends at native reviewed preparation. Actual paid deductions and stubs, accepted quarterly reports and payments, required zero-hours filings, complete alternative-exposure applicability and genuine state-certified self-insurance require the held employer, state and rail authority and remain owed. No contract judgment cells, homepage, workflow or Base pin changes are authorized or made.
