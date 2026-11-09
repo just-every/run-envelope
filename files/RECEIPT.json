@@ -114,15 +114,114 @@
     }
   ],
   "ci": {
-    "conclusion": null,
+    "conclusion": "cancelled",
     "event": "push",
     "head_sha": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
     "html_url": "https://github.com/just-every/run-envelope/actions/runs/42606279615",
     "id": 42606279615,
     "name": "Verify",
-    "status": "in_progress"
+    "status": "completed",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "id": 129122992008,
+        "name": "plan",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123046878,
+        "name": "shards (workspace, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123046883,
+        "name": "shards (source, false)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "cancelled",
+        "id": 129123046886,
+        "name": "shards (runtime, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123046906,
+        "name": "shards (archive, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123046918,
+        "name": "shards (industry, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123046989,
+        "name": "shards (verification, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123047036,
+        "name": "shards (typecheck, false)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123047052,
+        "name": "shards (firm, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123047083,
+        "name": "shards (new-hires, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123047139,
+        "name": "shards (claims, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "success",
+        "id": 129123047176,
+        "name": "shards (agent-door, true)",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "failure",
+        "id": 129128793011,
+        "name": "verify",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Require every shard"
+          }
+        ]
+      }
+    ],
+    "assessment": "Overall cancelled; runtime shard cancelled; aggregate requires all shards. Industry, archive, verification, source and typecheck succeeded on the exact head; no failed product assertion was returned."
   },
-  "githubApiCalls": 8,
+  "githubApiCalls": 10,
   "repairReproduction": "VERIFY_REPRODUCED.json",
   "publicationScan": {
     "status": "guarded-lander-pending",
@@ -143,7 +242,33 @@
   "ciAuthenticationFailure": {
     "command": "gh api repos/just-every/run-envelope/actions/runs/42606279615",
     "http": 401,
-    "lastObservedStatus": "in_progress"
+    "lastObservedStatus": "in_progress",
+    "recovered": true
   },
-  "evidenceTransfer": "pending credential refresh and bounded retries"
+  "evidenceTransfer": {
+    "status": "published",
+    "previousHead": "49784924e7d28d142fa282fd02a88510ada209fe",
+    "recoveryAttempt": 2,
+    "finalPacketPublication": "selected after final observations"
+  },
+  "additionalArchiveObservation": {
+    "command": "CI=true PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium ENVELOPE_JOURNEYS=archive pnpm run test:runtime",
+    "node": "22.20.0",
+    "exit": 143,
+    "status": "stopped duplicate local run after exact-head CI archive success was established",
+    "observed": "ARCHIVE-UPGRADE passed; local TLS certificate-trust diagnostics during CLI imports; no final successful local archive assertion claimed",
+    "log": "archive-final-local.log",
+    "authoritativeArchiveProof": {
+      "head": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+      "run": 42606279615,
+      "job": 129123046906,
+      "event": "push",
+      "conclusion": "success"
+    }
+  },
+  "additionalLaunchObservation": {
+    "exit": 1,
+    "log": "archive-browser-launch.log",
+    "reason": "browser executable unavailable before required Chromium path was set"
+  }
 }

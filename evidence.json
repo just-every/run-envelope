@@ -7,16 +7,16 @@
       "sha256": "b97096bb8ce8ce78e1940300c3dc8bff95f171f38e39094665955f3685cf4211"
     },
     {
-      "blob": "284686b3aa451d3d0517c6a04dfb7659e855eec9",
-      "bytes": 4569,
+      "blob": "97463a78ca576f6fb435fe02deed49accc667a3a",
+      "bytes": 8179,
       "path": "RECEIPT.json",
-      "sha256": "778ce4216ce3ecff90bf18032a7b51271c540dffa15fa858bcfd14f030de4910"
+      "sha256": "1325c3836ac7f6600316c08e889559d85a12e5da7cb30facd64bc796e66f1479"
     },
     {
-      "blob": "e447b2be186d00cfdfa4829d68f6db01fb0042e2",
-      "bytes": 14064,
+      "blob": "9fa1cf4784c7ee49867f58d735e20f0aac974f25",
+      "bytes": 15530,
       "path": "REPORT.md",
-      "sha256": "e62f5ef24d636a2abc9527f86aaea68b8e22932ba50cfa63734c77bbcf28e1ab"
+      "sha256": "885d30630cb3cff2975dd43fca47f0d9fad0641e5439eceadcf56ccec1b3136b"
     },
     {
       "blob": "b445db202b88f42092e54e359845414580b8352e",
@@ -25,10 +25,22 @@
       "sha256": "6942eaec58efb5b91e07032cde1a1fb75403236d3a854b6f0f98b4ffb1bf9e21"
     },
     {
+      "blob": "530e3b44bf7d6939cdcb64260d20decaea8971fb",
+      "bytes": 1757,
+      "path": "archive-browser-launch.log",
+      "sha256": "227a10a36b9def1ec3acbec5751e2a08a4e383a0c9f83ee6389ff2c06e150bee"
+    },
+    {
       "blob": "339cb86fb10bf06011e5d59c7450fe71d9a2539a",
       "bytes": 169563,
       "path": "archive-failure.log",
       "sha256": "1307ea6428bf54a4399013340b6ca82948131f0055618bcd870d8cc0304c29d2"
+    },
+    {
+      "blob": "5a00a553aab491a75318d8f2fb9527fc4f95f031",
+      "bytes": 120917,
+      "path": "archive-final-local.log",
+      "sha256": "cbcce0c7fcc72ec449f580961a31961fd6f73aa8f066a9cffc2c6919571aaeb1"
     },
     {
       "blob": "3c27ce4f7083a0d118a28c47cfb41682ba5b5046",
@@ -49,10 +61,22 @@
       "sha256": "1b7f6be6d8e1ede75a4e4d9f51e337279831dbe52a18bba488fba8a0862d7b1f"
     },
     {
+      "blob": "e39a096a57896ac8bd63867be1eaa896f7787a1a",
+      "bytes": 183,
+      "path": "candidate-ci-status.json",
+      "sha256": "6c2fb126066c7870a1c994af95b490b1b026157b89845829fea07aa45c8b0c00"
+    },
+    {
       "blob": "0aadef20552be76cc52538485f19bfce80945cde",
       "bytes": 228,
       "path": "candidate-ci.json",
       "sha256": "87116973ea04797ce7fa7d2e29d8866f678870881545260fdc779ecf2747d65b"
+    },
+    {
+      "blob": "bd91e221e1e4343e301637224ebbd8fd97b820af",
+      "bytes": 1435,
+      "path": "candidate-jobs.json",
+      "sha256": "f2943df6c3da32d724addf41bf2d417edcb35da71af4c71517826671ae8bd222"
     },
     {
       "blob": "19aae49d51ebd3d6c5b9b8ecb2a9a7e6f97b8051",
