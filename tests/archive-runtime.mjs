@@ -1,3 +1,4 @@
+import { waLiArchiveFixture } from './wa-li-runtime.mjs'
 import { agentMessage, agentValue } from './agent-policy-runtime.mjs'
 import { restoredResourceAuthority } from './archive-authority.mjs'
 import assert from 'node:assert/strict'
@@ -123,6 +124,7 @@ export async function archiveJourney(context) {
     await context.upgrade()
     assert.deepEqual(populated(await snapshot(persist)),populated(priorState),'reapplying migrations is non-destructive')
   })
+  fixture.waLi=await waLiArchiveFixture(context,fixture.companies[0])
   fixture.futa=await futaArchiveFixture(context,fixture.companies[0],fixture.retainedPersonId)
   fixture.extendedRetirement=await extendedRetirementArchiveFixture(context,fixture.companies[0],fixture.retainedPersonId)
   console.log('ARCHIVE-UPGRADE passed: populated prior schema, unknown notice obligations, unchanged ciphertext and authority history, idempotent native migration')
@@ -156,6 +158,7 @@ export async function archiveJourney(context) {
       assert.equal(before.env_workspace_versions.filter(row=>row.kind==='run-intake' && row.object_id===source.id).length,2,
         'the earlier archive really contains both source capture editions before erasure')
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
+    for (const kind of ['wa-li-notice','wa-li-hours','wa-li-preparation']) assert.ok(before.env_workspace_versions.some(row=>row.company_id===fixture.waLi.companyId && row.kind===kind),'Actual encrypted WA notices, class hours and worksheets are archived')
     for (const kind of ['futa-source','futa-wages','futa-preparation']) assert.ok(before.env_workspace_versions.some(row=>row.company_id===fixture.futa.companyId && row.kind===kind),'Actual encrypted FUTA source, wages and preparation are archived')
     assert.ok(before.env_workspace_decision_authority.some(row=>row.object_id===fixture.extendedRetirement.setupId),'The actual archive contains retirement approval provenance')
     for(const id of [fixture.extendedRetirement.setupId,fixture.extendedRetirement.proposalId])assert.ok(before.env_workspace_versions.some(row=>row.object_id===id),'Retirement sources and employer proposals are real encrypted archive records')
@@ -311,11 +314,11 @@ export async function archiveJourney(context) {
       const outboundBefore = context.edge.mails.length
       await restoredResourceAuthority(context,fixture.authority)
       const company = '/api/envelope/companies/' + fixture.companies[0]
-      const requests = [[company, 'GET'], [company + '/notices', 'POST'],[fixture.futa.door,'GET'],[fixture.futa.door,'POST'],[fixture.futa.door+'/review','GET'],[fixture.extendedRetirement.door,'GET'],[fixture.extendedRetirement.door+'/preview','POST']]
+      const requests = [[fixture.waLi.door,'GET'],[fixture.waLi.door,'POST'],[company, 'GET'], [company + '/notices', 'POST'],[fixture.futa.door,'GET'],[fixture.futa.door,'POST'],[fixture.futa.door+'/review','GET'],[fixture.extendedRetirement.door,'GET'],[fixture.extendedRetirement.door+'/preview','POST']]
       for (const [path, method] of requests) {
         const response = await context.worker.fetch(context.origin + path, { method,
           headers: { cookie: context.cookie, origin: context.origin, 'content-type': 'application\u002fjson' },
-          ...(method === 'POST' ? { body: JSON.stringify(path === fixture.futa.door ? fixture.futa.capture : path.endsWith('/preview') ? fixture.extendedRetirement.capture : { reference: 'synthetic-envelope-replay', body: 'Former-session replay' }) } : {}) })
+          ...(method === 'POST' ? { body: JSON.stringify(path === fixture.waLi.door ? fixture.waLi.capture : path === fixture.futa.door ? fixture.futa.capture : path.endsWith('/preview') ? fixture.extendedRetirement.capture : { reference: 'synthetic-envelope-replay', body: 'Former-session replay' }) } : {}) })
         assert.equal(response.status, 401, 'the real restored Worker refuses prior installation authority')
         assert.deepEqual(await response.json(), { error: 'authentication_required' })
       }

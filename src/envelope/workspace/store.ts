@@ -5,6 +5,10 @@ import { fence, auditStatement, requireAction, locationSql, fields, type Actor }
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'wa-li-notice'
+  | 'wa-li-hours'
+  | 'wa-li-election'
+  | 'wa-li-preparation'
   | 'futa-source'
   | 'futa-wages'
   | 'futa-preparation'

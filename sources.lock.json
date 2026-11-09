@@ -581,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "cdda3a737f671c7359ca83360ff8701c9801204838d4c4c7b205726c33aca8e1",
+      "sha256": "88322aa8350e75db4b542d279a8345377177cde623e5700e6e9ed52cdff9ee02",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2249,7 +2249,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "d17793b7dd0e95b7ef652774949142718a2c11fcdd384229274d137f97840718",
+      "sha256": "b32f6e9bbd475d8aa84eb6d63cb92989179da26dabb41758a05013154b41b6fd",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2262,6 +2262,10 @@
     },
     "src/envelope/calculation/states.ts": {
       "sha256": "d64a57b56f2feb438636cd7c1215073daf97fb48a0ed0b467e6cf91a91b37854",
+      "executable": false
+    },
+    "src/envelope/calculation/wa-li.ts": {
+      "sha256": "297cd9af00b0f73fdcc627f5f407e37e5cd29e6a704a0d1833ea27d53d7d6086",
       "executable": false
     },
     "src/envelope/calculation/west-virginia.ts": {
@@ -2409,7 +2413,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "57553facdc993cb301d27bd78232043b44c9543ca86a18a3c47d11c58ccce261",
+      "sha256": "2d29ee13a71ee3b4e07e4b2b566392583e93529ebb6f65ca2c3d7f4d8e2c0b8d",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2701,11 +2705,11 @@
       "executable": false
     },
     "src/envelope/workspace/review-inputs.ts": {
-      "sha256": "69e3e07400ba8661835585da11f2e9f2d3aa2482dba09c6e9eb9d4c831dcd008",
+      "sha256": "fe763e2d405cd3d4c0b727386729065e745e6ca67a7cc8cd79689b46e92f05b2",
       "executable": false
     },
     "src/envelope/workspace/rules.ts": {
-      "sha256": "7dcfbc857ddff3f08b461487f0649d8cc36a08b4fd45c5afac31986946ff870e",
+      "sha256": "e1d70bf1c5af7b94d35c3c07cb03d525db536651d6eb09cc236eebc9b0fa8492",
       "executable": false
     },
     "src/envelope/workspace/run-approval-pages.tsx": {
@@ -2725,7 +2729,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "114ca979698d8e62730f240c5decae0b7f217adc3619667cca7bb93f2c640851",
+      "sha256": "2af040b5062ca1c17c910765dbc68a1db514fce75a5fbd449f232f35e245cef7",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -4353,7 +4357,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "4fe1ee4ed975415eb3bbee5d02d22c19b4db698d2b153001a230324045e7ecad",
+      "sha256": "3c00b49ec55306064de83b1fcd52a11900a5831ffe972f739dd328b59b1db587",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -4589,7 +4593,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "a3f6b417e857694f2fd200399f067ace74eac37bc2a18516498b0b8285893899",
+      "sha256": "1abc7c3c442c2abefdd82a74414c80b6cd42d484f61a2cec98434335f3f9098c",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -4600,12 +4604,16 @@
       "sha256": "8bb5355750d1743fd97860ebe6a2b0f47a2b9f695bc6fb122289a09d28b17ba1",
       "executable": false
     },
+    "tests/wa-li-runtime.mjs": {
+      "sha256": "8d2a9ffc9512121c69a60021c3954fa9cc5f5c4d3cf6437d16366fdcec79fc49",
+      "executable": false
+    },
     "tsconfig.json": {
       "sha256": "54d38c791f1570448bf550f708c01bede26a02111c9da21a242501ac252989bc",
       "executable": false
     },
     "verification.json": {
-      "sha256": "6cdcfc8fa54056c059d75698df26b553625c013cbb9737a08de279c3532c1d8f",
+      "sha256": "a4e8b06c1d1023659b349b7faf9ddfb22853d7dd576dc3fb3ebb2cd54a5e0664",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

@@ -1,3 +1,4 @@
+import { WaLi } from './calculation/wa-li'
 import { FutaCreditReduction } from './calculation/futa-credit-reduction'
 import { agentRest } from './door/rest'
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
@@ -251,7 +252,8 @@ export async function payrollResponse(
           }
           const ref = value.nyDbl as {personId:string;proposalId:string;version:number} | undefined
           const dbl = ref ? await new NyDbl(new WorkspaceStore(records)).calculation(actor,ref.personId,ref.proposalId,ref.version) : undefined
-          result=calculationPreview(value as unknown as PreviewInput,retirement,dbl)
+          const waLi = value.waLi ? await new WaLi(new WorkspaceStore(records)).calculation(actor,value.waLi as Input) : undefined
+          result=calculationPreview(value as unknown as PreviewInput,retirement,dbl,waLi)
         }
         catch(error){ if(error instanceof PayrollError)throw error; throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
         if (value.hiBenefits) {
@@ -304,7 +306,26 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!ui && tail[0] === 'futa-credit-sources') {
+      if (!ui && tail[0] === 'wa-li') {
+        const wa = new WaLi(new WorkspaceStore(records)), section = tail[1]
+        if (section === 'notices' || section === 'elections') {
+          const kind = section === 'notices' ? 'wa-li-notice' : 'wa-li-election'
+          if (tail.length === 2 && post) response = json(section === 'notices' ? await wa.saveNotice(actor, value) : await wa.saveElection(actor, value), 201)
+          else if (tail.length >= 2 && tail.length <= 4) response = json(await wa.evidence(actor, kind, tail[2], undefined, tail[3] ?? '', value, post))
+          else throw new PayrollError('not_found', 404)
+        } else if (section === 'hours' && tail.length >= 3 && tail.length <= 5) {
+          const person = tail[2]
+          if (tail.length === 3 && post) response = json(await wa.saveHours(actor, person, value), 201)
+          else response = json(await wa.evidence(actor, 'wa-li-hours', tail[3], person, tail[4] ?? '', value, post))
+        } else if (section === 'preparations' && tail.length === 2) response = json(post ? await wa.prepare(actor, value) : await wa.preparations(actor), post ? 201 : 200)
+        else if (section === 'preparations' && tail.length === 4 && tail[3] === 'review' && !post) {
+          const result = await wa.calculation(actor, { id: tail[2], version: url.searchParams.get('version') })
+          response = json({ result, unsigned: true, unfiled: true })
+        } else {
+          await wa.scope(actor)
+          throw new PayrollError('wa_li_payment_and_filing_unavailable', 409)
+        }
+      } else if (!ui && tail[0] === 'futa-credit-sources') {
         const futa = new FutaCreditReduction(new WorkspaceStore(records))
         if (tail.length === 1) response = json(post ? await futa.saveSource(actor, value) : await futa.sources(actor), post ? 201 : 200)
         else if (tail.length === 2 && tail[1] === 'review' && !post) response = json(await futa.reviewSource(actor))

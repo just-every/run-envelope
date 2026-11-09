@@ -118,6 +118,15 @@ export const ruleFingerprint = (
     ),
   )
 
+/** Exact notice transcription shared by native WA preparation and rule metadata. */
+export function waLiNoticeRates(input: Input) {
+  const riskClass = text(input.riskClass, 80)
+  if (!/^\d{4}-\d{2}$/.test(riskClass)) throw new PayrollError('invalid_wa_li_risk_class')
+  const totalRate = decimal(input.totalRate), employeeRate = decimal(input.employeeRate)
+  if (Number(employeeRate) > Number(totalRate)) throw new PayrollError('employee_rate_exceeds_total')
+  return { riskClass, totalRate, employeeRate }
+}
+
 export class Rules {
   constructor(public store: WorkspaceStore) {}
   async save(actor: Actor, input: Input) {

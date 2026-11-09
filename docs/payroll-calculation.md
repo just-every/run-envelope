@@ -264,3 +264,81 @@ source claims fenced against replay. The existing archive carries encrypted
 versions and retained source code, excludes native sessions, review tokens and
 company grants, and restores history without preparation or payment authority.
 No FUTA operation makes an outbound request.
+
+## Washington L&I reviewed preparation
+
+The current native installation owner can retain an employer's assigned L&I
+rate-notice transcription through the company endpoint
+`POST /api/envelope/companies/{company}/wa-li/notices`. Each immutable edition
+contains the exact company ID and employer EIN, risk class, effective dates,
+total hourly dollar rate, permitted employee hourly dollar rate, source edition,
+official L&I source URL, document text and reference. A digest binds that whole
+snapshot. The EIN must match the retained company, and the employee rate cannot
+exceed the total. The separately issued exact-review token at the notice's
+`review` endpoint is required at its `approve` endpoint. Human review records
+what was reviewed; it does not authenticate a state account or certify coverage.
+Generic rule metadata alone cannot supply a missing reviewed notice.
+
+Use `POST /api/envelope/companies/{company}/wa-li/hours/{person}` for one
+effective period of reviewed class-allocation evidence. The worker must belong
+to this company's Washington location. Actual hourly or salaried hours are
+explicit decimal strings by class, each bound to the notice ID and exact notice
+version. An assumed salaried period must consist of complete calendar months,
+with one evidenced risk class: 160 hours per month, including 480 hours for a
+full three-month quarter. Partial assumed months, ambiguous assumed class splits
+and alternative exposure units are refused; no wage-percentage substitute is
+used. The same exact-review and approve ceremony applies to each hours edition.
+
+WAC 296-17-31021, effective January 1, 2021, requires all salaried employees of
+an employer to use the same method. The company `/api/envelope/companies/{company}/wa-li/elections` endpoint retains the
+explicit complete salaried roster, every exact reviewed hours edition and the
+employer's chosen method, with the retained official WAC edition and excerpt.
+A mixed actual-hours and assumed-hours roster is refused even when the proposed
+worksheet selects only one of those workers. Overlapping monthly and quarterly evidence must
+also agree, so changing the reporting period cannot hide a conflicting method. Correct the underlying evidence
+and review a fresh consistent election. The collection pin includes all native
+hours evidence, so a subsequently entered worker cannot silently bypass the
+earlier review. This bounded preparation requires the employer's complete-roster
+attestation; it does not establish complete applicability for uncaptured workers.
+
+The company `/api/envelope/companies/{company}/wa-li/preparations` endpoint requires the exact complete retained period
+selection and election version. It returns an unsigned, unfiled worksheet with
+per-worker and per-class hours, proposed employee shares, total premiums and the
+employer remainder, plus immutable notice references, digests and editions.
+Each worker and class premium and employee proposal is calculated with integer
+decimal arithmetic, rounded to the nearest cent with a half-cent upward; the
+employer receives the remainder of that rounded total. Worksheet totals sum
+those rounded rows. These are proposed worksheet conventions, not proof of an
+accepted state report or collected deductions. The retained reporting door lists
+historical editions and marks stale sources. Its exact-version review endpoint
+returns the current worksheet without creating payroll approval.
+
+An optional `waLi: {id, version}` reference on the existing company
+`calculation-preview` endpoint exposes that same current retained worksheet
+only for the matching Washington period. L&I remains separate from ordinary
+deductions and net pay, with an explicit preparation hold. A corrected notice,
+worker, hours capture or roster requires fresh dependent evidence review and
+preparation. Old results keep their original rates and amounts. Exact replay
+after a lost response or restart returns the one retained current preparation;
+stale captures and revoked authority are checked before replay.
+
+All evidence uses the encrypted native workspace and existing attributed audit,
+privacy inventory, legal-hold, eligible erasure and permanent source fences.
+Worker-bearing worksheets and elections belong to the worker's derivative
+custody graph; employer notice editions remain separately retained. Archives
+retain evidence and source bytes without reactivating sessions, review tokens,
+company grants, payment authority or provider configuration. A privacy hold
+refuses new preparation, private reads and replay.
+
+Preparation never establishes account authority, coverage, collected premiums,
+paid stubs, accepted quarterly reports or payments, required zero-hours filing,
+complete alternative-exposure applicability, or state-certified self-insurance.
+A connected private policy cannot supply any of those outcomes. Existing
+calculation-catalog, employer, rail, filing, provider, exact human approval and
+delegation holds remain unchanged.
+
+Official method source:
+https://app.leg.wa.gov/wac/default.aspx?cite=296-17-31021.
+Employer-specific rates must come from the retained assigned notice, rather than
+a general base-rate table:
+https://www.lni.wa.gov/insurance/rates-risk-classes/rates-for-workers-compensation/.
