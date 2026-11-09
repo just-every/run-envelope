@@ -264,3 +264,67 @@ source claims fenced against replay. The existing archive carries encrypted
 versions and retained source code, excludes native sessions, review tokens and
 company grants, and restores history without preparation or payment authority.
 No FUTA operation makes an outbound request.
+
+## Oregon WBF: reviewed period proposals
+
+The configured current native owner can prepare WBF at
+`/api/envelope/companies/{company}/or-wbf-preparations/2026/{quarter}`.
+This is selected-period calculation and reporting data, never collected employee
+withholding, paid employer costs, a signed report or remittance authority.
+
+First POST `/or-wbf-sources` under the company with prior `version`, `taxYear: 2026`,
+`state: OR`, `sourceEdition: OR-WBF-2026-order-25-054-period-rounding`,
+`rounding: nearest-cent-per-pay-period-half-up` and an evidence `reference`.
+GET its `/review`, inspect the exact retained official source and interpretation,
+then POST `/approve` with that review's `version` and `reviewToken`. The source
+contains the adopted October 2, 2025 Order 25-054 PDF digest and sections
+436-070-0010 and 436-070-0020, effective January 1, 2026. Changing the source
+requires a fresh exact human review and replacement preparation. Earlier
+editions, references and calculation results remain immutable.
+
+Period evidence uses
+`/people/{person}/or-wbf-hours/{from}` under the company. POST prior `version`,
+`taxYear`, `state`, `subject: true`, inclusive `from` and `through`, `payDate`,
+`frequency`, exact decimal-string `hours`, boolean `actualHoursTracked`, `method`,
+`reference`, `methodReference` and `methodExplanation`. Review and approve through
+that period's `/review` and `/approve` routes. Actual hours retain fractions up to
+six decimal places; excess precision refuses instead of rounding. Covered Oregon
+work, its source, subjectivity and hours require explicit evidence. This bounded
+door does not independently establish complete legal applicability.
+
+Tracked hours require `actual`. Untracked hours require an explicitly documented
+`flat`, `contract` or `reasonable` method. Flat full periods use 40 weekly hours,
+80 biweekly hours, 173.33 monthly hours or 86.665 hours for each half of a month.
+A partial flat period refuses. Contract and reasonable methods require their
+retained evidence reference and explanation, exact hours and human review.
+Washington's 160-hour election is never an Oregon default. A copied 160-hour flat
+value, missing explanation, tracked-hours flat method or unsupported method
+refuses. Dates and frequency must match the later calculation-preview selection.
+The assessment edition and reporting quarter follow the payroll payment date.
+
+POST preparation with prior `version`, `taxYear: 2026`, `quarter`, `sourceVersion`
+and `periods`, each containing `personId`, `from` and exact evidence `version`.
+The response contains each period's hours and proposed shares, exact sources,
+selected-period coverage and an unsigned, unfiled `combinedReportWorksheet` for
+Form OQ. Employee cents round separately per person per pay period, half upward;
+employer cents equal the sum of these employee cents. Report hours are never
+rounded before calculating period cents. Two separate 0.5-hour periods produce
+zero cents each, whereas incorrectly rounding their aggregate would produce one
+cent each. The contract's 10.5 and 10.6 hours produce 9 and 10 cents each;
+173.33 monthly hours produce 156 cents each and 312 cents total.
+
+GET preparation history retains earlier results. GET `/review` requires current
+reviewed inputs. Exact repeated captures return the same preparation after a
+restart; changed inputs require a new version. Corrections make earlier
+preparation and preview references stale. Duplicate source claims, duplicate
+period selections, overlapping periods, wrong years and paid-quarter mismatches
+refuse. Current owner authority and worker custody are checked on all paths.
+
+The existing company `/calculation-preview` optionally accepts `orWbf` containing
+`taxYear`, `quarter`, preparation `version`, `personId` and period `from`. It
+returns only that period's proposed WBF component alongside the company quarter
+worksheet. Ordinary withholding and deductions stay separately identified and
+unchanged. Complete payroll integration and a complete net remain held. No WBF
+route can approve payroll, collect deductions, pay money, sign, file or send.
+Worker privacy follows period evidence and derivative worksheets; erasure
+retires source identities, and archived evidence restores with authority inactive.

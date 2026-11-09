@@ -28,7 +28,9 @@ Specialized `details`:
 
 - `wa-li`: `riskClass`, `totalRate`, `employeeRate`, `hoursMethod` (actual/wa-160-month).
 - `or-wbf`: `totalRate`, `employeeRate`, `hoursMethod` (actual/assumed), `rounding`
-  (nearest-cent-per-report).
+  (`nearest-cent-per-pay-period-half-up` for new exact Oregon review). Earlier
+  `nearest-cent-per-report` metadata remains historical and supplies no WBF
+  calculation authority; record and review a fresh exact source edition.
 - `hi-plan-share`: `planRef`, `weeklyCapCents`, `employeePercentCap`.
 - `futa`: `reduction`, `bcr`, `addOn`, optional `waiverRef`; a final determination
   additionally requires `finalNoticeRef`.
@@ -46,3 +48,16 @@ coverage, duty delivery/support calendars, lawful replacement payroll, funded
 worker receipt and true historical payroll replay remain unimplemented. ENV-027
 is partial. ENV-006/034/046/066 inherit the calculation, approval, service and
 coverage obligations; this input registry does not discharge them.
+
+## Exact 2026 Oregon source review
+
+WBF calculation uses the separate native source review described in
+`./payroll-calculation.md`, bound to the adopted Order 25-054 and its retained
+PDF digest. General rule-register metadata cannot bypass this review. An old
+per-report rounding approval is never silently reinterpreted as per-period
+rounding. The current 440-4999 FAQ edition contains conflicting rounding
+examples; those examples are excluded from calculation authority. The adopted
+OAR 436-070-0020 governs employee period rounding and equal employer totals.
+No later year's rate or publication is inherited from 2026. Source corrections
+retain their previous version, invalidate affected preparation and require
+fresh exact review.

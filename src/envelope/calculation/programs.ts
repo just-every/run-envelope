@@ -27,6 +27,7 @@ const required:Record<string,string[]>={
 export function programInventory(state:string,taxYear=2026){
  if(!Object.hasOwn(wageBases,state))return null
  return {status:'unmapped',amountCents:null,requestedTaxYear:taxYear,
+   workersBenefitFund:state==='OR'?{taxYear,status:taxYear===2026?'reviewed-period-preparation':'unmapped',completePayroll:false,report:'unsigned-OQ-worksheet',payment:'unavailable'}:null,
    futaCreditReduction:{taxYear,status:'unmapped',finalSource:null,scheduleA:'unmapped'},
    unemploymentReference:{source:'https://oui.doleta.gov/unemploy/content/sigpros/2020-2029/January2026.pdf',retrievedAt:'2026-10-28',effectiveOn:'2026-01-01',
      wageBaseDollars:wageBases[state],newEmployerBasePercent:newEmployerBase[state],

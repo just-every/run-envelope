@@ -165,7 +165,7 @@ export class Rules {
       details.totalRate = decimal(d.totalRate)
       details.employeeRate = decimal(d.employeeRate)
       details.hoursMethod = choice(d.hoursMethod, ['actual', 'assumed'])
-      details.rounding = choice(d.rounding, ['nearest-cent-per-report'])
+      details.rounding = choice(d.rounding, ['nearest-cent-per-report', 'nearest-cent-per-pay-period-half-up'])
       if (Number(details.employeeRate) > Number(details.totalRate))
         throw new PayrollError('employee_rate_exceeds_total')
     } else if (family === 'hi-plan-share') {

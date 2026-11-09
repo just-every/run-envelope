@@ -5,6 +5,9 @@ import { fence, auditStatement, requireAction, locationSql, fields, type Actor }
 import { PayrollError, text, integer, recordKey, seal, unseal } from '../security'
 
 export type Kind =
+  | 'or-wbf-source'
+  | 'or-wbf-hours'
+  | 'or-wbf-preparation'
   | 'futa-source'
   | 'futa-wages'
   | 'futa-preparation'

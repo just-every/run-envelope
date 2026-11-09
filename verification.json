@@ -64,7 +64,7 @@
       "hosted": false,
       "commands": [
         "pnpm run build",
-        "ENVELOPE_JOURNEYS=industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit,or-wbf pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=retirement pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=multi-company pnpm run test:runtime",
         "ENVELOPE_JOURNEYS=accounting pnpm run test:runtime"

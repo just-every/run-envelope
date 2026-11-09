@@ -1,3 +1,4 @@
+import { OrWbf } from './calculation/or-wbf'
 import { FutaCreditReduction } from './calculation/futa-credit-reduction'
 import { agentRest } from './door/rest'
 import { HiPlanShares, type HiPreviewRequest } from './benefits/hi-plan-shares'
@@ -251,7 +252,9 @@ export async function payrollResponse(
           }
           const ref = value.nyDbl as {personId:string;proposalId:string;version:number} | undefined
           const dbl = ref ? await new NyDbl(new WorkspaceStore(records)).calculation(actor,ref.personId,ref.proposalId,ref.version) : undefined
-          result=calculationPreview(value as unknown as PreviewInput,retirement,dbl)
+          const wbf = value.orWbf ? await new OrWbf(new WorkspaceStore(records)).calculation(actor,value.orWbf as Input,
+            {from:String(value.from),through:String(value.through),payDate:String(value.payDate),frequency:String(value.frequency),workState:String(value.workState)}) : undefined
+          result=calculationPreview(value as unknown as PreviewInput,retirement,dbl,wbf as import('./calculation/or-wbf').WbfResult | undefined)
         }
         catch(error){ if(error instanceof PayrollError)throw error; throw new PayrollError(error instanceof Error?error.message:'invalid_calculation_input') }
         if (value.hiBenefits) {
@@ -304,7 +307,25 @@ export async function payrollResponse(
         actor = await records.actor(companyId),
         tail = parts.slice(2),
         base = companyPath(companyId)
-      if (!ui && tail[0] === 'futa-credit-sources') {
+      if (!ui && tail[0] === 'or-wbf-sources') {
+        const wbf = new OrWbf(new WorkspaceStore(records))
+        if (tail.length === 1) response = json(post ? await wbf.saveSource(actor,value) : await wbf.sources(actor),post ? 201 : 200)
+        else if (tail.length === 2 && tail[1] === 'review' && !post) response = json(await wbf.reviewSource(actor))
+        else if (tail.length === 2 && tail[1] === 'approve' && post) response = json(await wbf.approveSource(actor,value))
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0] === 'people' && tail[2] === 'or-wbf-hours') {
+        const wbf = new OrWbf(new WorkspaceStore(records)), person = tail[1], from = tail[3]
+        if (tail.length === 3 && !post) response = json(await wbf.periods(actor,person))
+        else if (tail.length === 4 && post) response = json(await wbf.saveHours(actor,person,from,value),201)
+        else if (tail.length === 5 && tail[4] === 'review' && !post) response = json(await wbf.reviewHours(actor,person,from))
+        else if (tail.length === 5 && tail[4] === 'approve' && post) response = json(await wbf.approveHours(actor,person,from,value))
+        else throw new PayrollError('not_found',404)
+      } else if (!ui && tail[0] === 'or-wbf-preparations') {
+        const wbf = new OrWbf(new WorkspaceStore(records)), taxYear = tail[1], quarter = tail[2]
+        if (tail.length === 3) response = json(post ? await wbf.prepare(actor,taxYear,quarter,value) : await wbf.preparations(actor,taxYear,quarter),post ? 201 : 200)
+        else if (tail.length === 4 && tail[3] === 'review' && !post) response = json(await wbf.reviewPreparation(actor,taxYear,quarter))
+        else { await wbf.scope(actor); throw new PayrollError('wbf_payment_and_filing_unavailable',409) }
+      } else if (!ui && tail[0] === 'futa-credit-sources') {
         const futa = new FutaCreditReduction(new WorkspaceStore(records))
         if (tail.length === 1) response = json(post ? await futa.saveSource(actor, value) : await futa.sources(actor), post ? 201 : 200)
         else if (tail.length === 2 && tail[1] === 'review' && !post) response = json(await futa.reviewSource(actor))
