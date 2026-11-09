@@ -69,6 +69,8 @@ export async function orWbfJourney(context) {
   {method:'reasonable',actualHoursTracked:false,methodExplanation:''},
   {hours:10.6},{hours:'10.0000001'},{taxYear:2025},{state:'WA'},{subject:false},{payDate:'2025-01-07'},
  ]) await refused(period('2026-02-01'),hours('2026-02-01','2026-02-07','10.5',bad),bad.hours===10.6||bad.hours==='10.0000001'||bad.methodReference===''||bad.methodExplanation===''?400:409)
+ const intervalRefusal=await refused(period('2026-02-01'),hours('2026-02-01','2026-02-15','10.5'))
+ assert.equal((await intervalRefusal.json()).error,'wbf_pay_frequency_period_mismatch','a weekly record cannot aggregate multiple pay periods')
  await refused(period('2026-01-05'),hours('2026-01-05','2026-01-11','1'))
  const prepared=await data(door,capture,201),result=prepared.result
  // OAR: 10.5 x .009 dollars = .0945 -> .09; 10.6 x .009 = .0954 -> .10.

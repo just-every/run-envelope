@@ -317,7 +317,8 @@ GET preparation history retains earlier results. GET `/review` requires current
 reviewed inputs. Exact repeated captures return the same preparation after a
 restart; changed inputs require a new version. Corrections make earlier
 preparation and preview references stale. Duplicate source claims, duplicate
-period selections, overlapping periods, wrong years and paid-quarter mismatches
+period selections, overlapping periods, intervals longer than the stated pay
+frequency, wrong years and paid-quarter mismatches
 refuse. Current owner authority and worker custody are checked on all paths.
 
 The existing company `/calculation-preview` optionally accepts `orWbf` containing

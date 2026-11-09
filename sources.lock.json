@@ -581,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "f61cf4009c967343a4d51a7f1eda823fb9e49bbea4db9a5f498ed74c07cf6972",
+      "sha256": "e49c45467f27b3e596a05934d8a0a6d0cfd2e2b1055af45b33f020136b841c49",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2241,7 +2241,7 @@
       "executable": false
     },
     "src/envelope/calculation/or-wbf.ts": {
-      "sha256": "9dd745cde745d399872714f2db3f1db7052ccf3a99f59b5b0be49e0546d14148",
+      "sha256": "cc45c244b8be635ae70717409381c739dba92aa75202d7711d6fae4a08b1417f",
       "executable": false
     },
     "src/envelope/calculation/oregon.ts": {
@@ -4569,7 +4569,7 @@
       "executable": false
     },
     "tests/or-wbf-runtime.mjs": {
-      "sha256": "4bdf45cb41c7520c4667912abe171152adfc095addd4bfeb0ccbed3cc93c3c0b",
+      "sha256": "21d218919509b2dee1bcfce29822d7914feb614d5533ac9250c5d5a3121cacfe",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

@@ -88,7 +88,9 @@ export class OrWbf {
     if (start !== input.from || start > through || payDate < through || !payDate.startsWith('2026-')) fail('wbf_period_or_paid_year_mismatch')
     const days = (Date.parse(through) - Date.parse(start)) / 86400000 + 1
     const frequency = text(input.frequency), method = text(input.method)
-    if (!['weekly', 'biweekly', 'semimonthly', 'monthly'].includes(frequency) || days > 31) fail('wbf_pay_frequency_unsupported')
+    if (!['weekly', 'biweekly', 'semimonthly', 'monthly'].includes(frequency)) fail('wbf_pay_frequency_unsupported')
+    const maximumDays = { weekly: 7, biweekly: 14, semimonthly: 16, monthly: 31 }[frequency]!
+    if (days > maximumDays) fail('wbf_pay_frequency_period_mismatch')
     const micros = hoursMicros(input.hours)
     if (micros > days * 24000000) fail('wbf_hours_outside_period')
     const tracked = input.actualHoursTracked
