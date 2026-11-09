@@ -144,7 +144,6 @@ export async function archiveJourney(context) {
   assert.equal(active.status,200,await active.clone().text())
   assert.ok((await agentValue(await active.json())).records.length,'the source bearer still serves populated company data before its restored replay is refused')
   const temporary = await mkdtemp(join(tmpdir(), 'envelope-archive-'))
-  let completed = false
   try {
     const source = join(temporary, 'source'), target = join(temporary, 'target'), corruptTarget = join(temporary, 'corrupt-target')
     await Promise.all([source, target, corruptTarget].map(directory => checkout(resolve(root), directory)))
@@ -359,11 +358,11 @@ export async function archiveJourney(context) {
     await rewrittenArchive(brokenConsent, brokenConsentArchive)
     const consentRefusal = await rer(corruptTarget, 'import', brokenConsentArchive)
     assert.notEqual(consentRefusal.code, 0, 'a checksummed receipt cannot claim an unrelated audit event as consent')
-    assert.ok(consentRefusal.output.includes('archive_relationship_invalid'))
+    assert.ok(consentRefusal.output.includes('archive_relationship_invalid'), 'consent relationship refusal: ' + consentRefusal.output)
     assert.equal(digest(populated(await snapshot(state(corruptTarget)))), digest(populated(consentEmpty)),
       'invalid consent attribution publishes no business or identity history')
     const consentRestore = await rer(corruptTarget, 'import', consentArchive)
-    assert.equal(consentRestore.code, 0, 'the next empty installation retains consent without restoring its authority')
+    assert.equal(consentRestore.code, 0, 'the next empty installation retains consent without restoring its authority: ' + consentRestore.output)
     const nextHistory = await snapshot(state(corruptTarget))
     assert.deepEqual(nextHistory.env_archive_adoptions, adoptedHistory.env_archive_adoptions)
     assert.equal(nextHistory.env_grants.length, 0, 'historical consent cannot recreate a restored grant')
@@ -373,12 +372,8 @@ export async function archiveJourney(context) {
     assert.ok(occupied.output.includes('target_not_empty'), 'the refusal is specifically the nonempty target')
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(adoptedHistory)), 'nonempty refusal leaves all prior business and identity history unchanged')
     await keys.occupied()
-    completed = true
     console.log('Archive custody journey passed: native annual corrections, source editions, unused-worker erasure fence, inactive authority, restricted audited adoption and atomic CLI refusals.')
-  } finally {
-    if (completed) await rm(temporary, { recursive: true, force: true })
-    else console.log('ARCHIVE_FAILURE_FIXTURE ' + temporary)
-  }
+  } finally { await rm(temporary, { recursive: true, force: true }) }
 }
 
 /** The verification journey supplies its real native state before and after erasure. */

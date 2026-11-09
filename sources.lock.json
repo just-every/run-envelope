@@ -4357,7 +4357,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "3d0a1b44a0174fb325010573d5e4daec44ac0d48ca3362692bd427d971d51844",
+      "sha256": "f10e7e9d2d6a006ceca9012ec659ab147e0bd114af25c5930644ae4e48d6c7a0",
       "executable": false
     },
     "tests/archive-worker.mjs": {
