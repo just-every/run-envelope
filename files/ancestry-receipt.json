@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "tag": "sx-envelope-c-f104-pc1",
+  "repository": "just-every/run-envelope",
+  "recorded_at": "2026-11-09T15:27:20.730998+00:00",
+  "outcome": "BLOCKED_ALREADY_ON_MAIN",
+  "clone": "/workspace/run-envelope",
+  "requested_branch": "cloud/sx-envelope-c-f104-pc1",
+  "requested_branch_created": false,
+  "product_commits_created": 0,
+  "product_pushes": 0,
+  "pr_url": null,
+  "candidate": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+  "current_main": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "actual_checkout_branch": "main",
+  "checks": [
+    {
+      "command": "git rev-parse origin/main origin/cloud/sx-envelope-c-f104 HEAD",
+      "exit_code": 0,
+      "stdout": "fc8fa4f03b5f078b52e443751b12a3677102f01e\na0be89405b7b9dd0f1b6035f74b611fca8a1e81c\nfc8fa4f03b5f078b52e443751b12a3677102f01e\n",
+      "stderr": ""
+    },
+    {
+      "command": "git merge-base --is-ancestor a0be89405b7b9dd0f1b6035f74b611fca8a1e81c origin/main",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "git merge-base origin/main origin/cloud/sx-envelope-c-f104",
+      "exit_code": 0,
+      "stdout": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c\n",
+      "stderr": ""
+    },
+    {
+      "command": "git rev-list --left-right --count origin/cloud/sx-envelope-c-f104...origin/main",
+      "exit_code": 0,
+      "stdout": "0\t7\n",
+      "stderr": ""
+    },
+    {
+      "command": "git diff --stat origin/main...origin/cloud/sx-envelope-c-f104",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "git diff --quiet origin/cloud/sx-envelope-c-f104 origin/main -- CONTRACT.md",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "git log -2 --format=%H %P %s origin/main",
+      "exit_code": 0,
+      "stdout": "fc8fa4f03b5f078b52e443751b12a3677102f01e 97207010ba85c1f10f03cc0dd30d23519b44b08a Balance runtime journeys across eight Verify shards\n97207010ba85c1f10f03cc0dd30d23519b44b08a a0be89405b7b9dd0f1b6035f74b611fca8a1e81c ed99e6c214966b95a61b3b6f3696b3cc354dc331 Merge current main while retaining WA and Oregon preparation journeys [skip ci]\n",
+      "stderr": ""
+    },
+    {
+      "command": "git log origin/main..HEAD --format=%an <%ae>%n%cn <%ce>%n%(trailers:only,unfold)",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "git status --porcelain=v1",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "clause_changes": [],
+  "counts_before": {
+    "done": 6,
+    "partial": 44,
+    "missing": 76,
+    "total": 126
+  },
+  "counts_after": {
+    "done": 6,
+    "partial": 44,
+    "missing": 76,
+    "total": 126
+  },
+  "tests": "Not run: the brief requires immediate blocked exit when main already carries all candidate work.",
+  "github_api_calls": 1
+}

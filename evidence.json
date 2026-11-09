@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "blob": "f2eb734517bb83fb78d433842ca1c624657a20b0",
+      "bytes": 4565,
+      "path": "REPORT.md",
+      "sha256": "ea9590999176b952ea61489f0f01a262de182315e20ac0679ebdb449e48043f6"
+    },
+    {
+      "blob": "0182771e521dda70cbdf5e63139be9cf5bd586a8",
+      "bytes": 2846,
+      "path": "ancestry-receipt.json",
+      "sha256": "f04822b28c2ff1c12807ec9ed9b53554bad1d509ab483afe6e21e3af7474ac3b"
+    },
+    {
+      "blob": "228e279c6e1aac9a272a935610fcff7297d2135d",
+      "bytes": 1848,
+      "path": "ci-receipt.json",
+      "sha256": "1347a20a9405e0913a64cd8b5af2e4438f6d37424fbec8b2e8d5deecb2288e9a"
+    }
+  ],
+  "product_branch": "main",
+  "product_head": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "ref": "refs/heads/evidence/sx-envelope-c-f104-pc1",
+  "repository": "just-every/run-envelope",
+  "schema": 1,
+  "tag": "sx-envelope-c-f104-pc1"
+}

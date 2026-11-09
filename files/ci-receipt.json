@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "source_command": "python3 /tmp/fleet-gh.py api 'repos/just-every/run-envelope/actions/runs?head_sha=fc8fa4f03b5f078b52e443751b12a3677102f01e&per_page=100' --jq '.workflow_runs[] | {id,name,status,conclusion,head_sha,html_url}'",
+  "command_exit_code": 0,
+  "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "workflow_runs": [
+    {
+      "id": 42641395275,
+      "name": "Run demo",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42641395275"
+    },
+    {
+      "id": 42641395249,
+      "name": "Run site",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42641395249"
+    },
+    {
+      "id": 42641395387,
+      "name": "Verify",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42641395387"
+    },
+    {
+      "id": 42641393319,
+      "name": "Push on main",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42641393319"
+    },
+    {
+      "id": 42631428360,
+      "name": "Verify",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42631428360"
+    }
+  ],
+  "note": "Read-only exact-main-SHA observation; no new product branch, candidate Verify, READY or acceptance claim."
+}
