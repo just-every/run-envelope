@@ -10,6 +10,7 @@ import { maskedResourceJourney } from './agent-door/masked-resources.mjs'
 import { hiBenefitsJourney } from './hi-benefits-runtime.mjs'
 import { extendedRetirementJourney } from './extended-retirement-runtime.mjs'
 import { retirementBenefitsJourney } from './retirement-benefits-runtime.mjs'
+import { orWbfJourney } from './or-wbf-runtime.mjs'
 import { futaCreditJourney } from './futa-credit-runtime.mjs'
 import { nyDblJourney } from './ny-dbl-runtime.mjs'
 import { calculationJourney } from './calculation-runtime.mjs'
@@ -65,7 +66,7 @@ if (!process.env.ENVELOPE_JOURNEYS) {
   for (const journeys of [
     'records,approvals,sponsored,identity', 'agent-docs', 'agent-policy', 'masked-resources', 'agent-replay', 'agent-capacity', 'agent-decisions',
     'allocations,schedules,pay-items,rules,leave,source-intake,income-verification,intake',
-    'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit,wa-li', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
+    'firm', 'industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit,or-wbf,wa-li', 'retirement', 'multi-company', 'tax-notices', 'claims', 'archive', 'new-hires', 'paper-onboarding', 'automation', 'accounting',
   ]) execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
     stdio: 'inherit', env: { ...process.env, ENVELOPE_JOURNEYS: journeys },
   })
@@ -273,7 +274,7 @@ try {
   if (
     selected?.some(
       (name) =>
-        !['masked-resources', 'agent-decisions', 'wa-li', 'futa-credit', 'agent-capacity', 'agent-replay', 'agent-docs', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
+        !['wa-li', 'or-wbf', 'masked-resources', 'agent-decisions', 'futa-credit', 'agent-capacity', 'agent-replay', 'agent-docs', 'agent-policy', 'ny-dbl', 'retirement', 'hi-benefits', 'extended-retirement', 'calculation', 'accounting', 'intake', 'paper-onboarding', 'automation', 'new-hires', 'archive', 'claims', 'industry', 'multi-company', 'tax-notices', 'firm', 'records', 'allocations', 'schedules', 'pay-items', 'rules', 'approvals', 'sponsored', 'identity', 'leave', 'source-intake', 'income-verification'].includes(name),
     )
   )
     throw Error('Unknown payroll journey')
@@ -358,6 +359,7 @@ try {
   if (selected?.includes('extended-retirement')) cookie = await extendedRetirementJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('retirement')) await retirementBenefitsJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('wa-li')) await waLiJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,outboundCount:recordedOutboundCount,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
+  if (selected?.includes('or-wbf')) await orWbfJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,outboundCount:recordedOutboundCount,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('futa-credit')) await futaCreditJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,outboundCount:recordedOutboundCount,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('ny-dbl')) await nyDblJourney({origin,cookie,sql:statement=>/^\s*SELECT\b/i.test(statement)?inspectNativeSql(persist,statement):sql(statement),settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})
   if (selected?.includes('calculation')) await calculationJourney({origin,cookie,sql,settings,restart:async()=>{await stopWorker();worker=await launch(settings);await waitForWorker()}})

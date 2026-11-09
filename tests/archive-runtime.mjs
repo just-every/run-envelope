@@ -1,4 +1,5 @@
 import { waLiArchiveFixture } from './wa-li-runtime.mjs'
+import { orWbfArchiveFixture } from './or-wbf-runtime.mjs'
 import { agentMessage, agentValue } from './agent-policy-runtime.mjs'
 import { restoredResourceAuthority } from './archive-authority.mjs'
 import assert from 'node:assert/strict'
@@ -125,6 +126,7 @@ export async function archiveJourney(context) {
     assert.deepEqual(populated(await snapshot(persist)),populated(priorState),'reapplying migrations is non-destructive')
   })
   fixture.waLi=await waLiArchiveFixture(context,fixture.companies[0])
+  fixture.orWbf=await orWbfArchiveFixture(context,fixture.companies[0])
   fixture.futa=await futaArchiveFixture(context,fixture.companies[0],fixture.retainedPersonId)
   fixture.extendedRetirement=await extendedRetirementArchiveFixture(context,fixture.companies[0],fixture.retainedPersonId)
   console.log('ARCHIVE-UPGRADE passed: populated prior schema, unknown notice obligations, unchanged ciphertext and authority history, idempotent native migration')
@@ -159,6 +161,7 @@ export async function archiveJourney(context) {
         'the earlier archive really contains both source capture editions before erasure')
     assert.ok(before.env_workspace_decisions.some(row => row.decision === 'approved'), 'historical human approvals are real source records')
     for (const kind of ['wa-li-notice','wa-li-hours','wa-li-preparation']) assert.ok(before.env_workspace_versions.some(row=>row.company_id===fixture.waLi.companyId && row.kind===kind),'Actual encrypted WA notices, class hours and worksheets are archived')
+    for (const kind of ['or-wbf-source','or-wbf-hours','or-wbf-preparation']) assert.ok(before.env_workspace_versions.some(row=>row.company_id===fixture.orWbf.companyId && row.kind===kind),'Actual encrypted WBF edition, period evidence and worksheet are archived')
     for (const kind of ['futa-source','futa-wages','futa-preparation']) assert.ok(before.env_workspace_versions.some(row=>row.company_id===fixture.futa.companyId && row.kind===kind),'Actual encrypted FUTA source, wages and preparation are archived')
     assert.ok(before.env_workspace_decision_authority.some(row=>row.object_id===fixture.extendedRetirement.setupId),'The actual archive contains retirement approval provenance')
     for(const id of [fixture.extendedRetirement.setupId,fixture.extendedRetirement.proposalId])assert.ok(before.env_workspace_versions.some(row=>row.object_id===id),'Retirement sources and employer proposals are real encrypted archive records')
@@ -263,7 +266,7 @@ export async function archiveJourney(context) {
     await unrelatedPersonArchive(records, unrelated)
     const relation = await rer(target, 'import', unrelated)
     assert.notEqual(relation.code, 0, 'a checksummed archive with a foreign person reference refuses import')
-    assert.ok(relation.output.includes('archive_relationship_invalid'), 'staged business relationships are checked beyond transport checksums')
+    assert.ok(relation.output.includes('archive_relationship_invalid'), 'staged business relationships are checked beyond transport checksums: ' + relation.output)
     assert.equal(digest(populated(await snapshot(state(target)))), digest(populated(empty)), 'relationship refusal publishes no business or identity rows')
     for (const field of ['runId','accountId']) {
       const foreign = join(temporary, 'foreign-funding-' + field + '.rer')
@@ -298,7 +301,7 @@ export async function archiveJourney(context) {
     const removedSource = join(target, 'src', 'envelope', 'workspace', 'nj-withholding.ts')
     await rm(removedSource)
     const restored = await rer(target, 'import', archive)
-    assert.equal(restored.code, 0, 'independently supplying the original record key permits the actual CLI restore')
+    assert.equal(restored.code, 0, 'independently supplying the original record key permits the actual CLI restore: ' + restored.output)
     assert.deepEqual(await readFile(join(target, '.rer', 'archive-editions', editions.descriptor.sha256 + '.json')), editions.bytes,
       'restore retains exact historical source bytes independently of the target checkout')
     assert.equal(await lstat(removedSource).catch(error => { if (error.code === 'ENOENT') return null; throw error }), null,
@@ -314,14 +317,15 @@ export async function archiveJourney(context) {
       const outboundBefore = context.edge.mails.length
       await restoredResourceAuthority(context,fixture.authority)
       const company = '/api/envelope/companies/' + fixture.companies[0]
-      const requests = [[fixture.waLi.door,'GET'],[fixture.waLi.door,'POST'],[company, 'GET'], [company + '/notices', 'POST'],[fixture.futa.door,'GET'],[fixture.futa.door,'POST'],[fixture.futa.door+'/review','GET'],[fixture.extendedRetirement.door,'GET'],[fixture.extendedRetirement.door+'/preview','POST']]
+      const requests = [[fixture.waLi.door,'GET'],[fixture.waLi.door,'POST'],[fixture.orWbf.door,'GET'],[fixture.orWbf.door,'POST'],[fixture.orWbf.door+'/review','GET'],[company, 'GET'], [company + '/notices', 'POST'],[fixture.futa.door,'GET'],[fixture.futa.door,'POST'],[fixture.futa.door+'/review','GET'],[fixture.extendedRetirement.door,'GET'],[fixture.extendedRetirement.door+'/preview','POST']]
       for (const [path, method] of requests) {
         const response = await context.worker.fetch(context.origin + path, { method,
           headers: { cookie: context.cookie, origin: context.origin, 'content-type': 'application\u002fjson' },
-          ...(method === 'POST' ? { body: JSON.stringify(path === fixture.waLi.door ? fixture.waLi.capture : path === fixture.futa.door ? fixture.futa.capture : path.endsWith('/preview') ? fixture.extendedRetirement.capture : { reference: 'synthetic-envelope-replay', body: 'Former-session replay' }) } : {}) })
+          ...(method === 'POST' ? { body: JSON.stringify(path === fixture.waLi.door ? fixture.waLi.capture : path === fixture.orWbf.door ? fixture.orWbf.capture : path === fixture.futa.door ? fixture.futa.capture : path.endsWith('/preview') ? fixture.extendedRetirement.capture : { reference: 'synthetic-envelope-replay', body: 'Former-session replay' }) } : {}) })
         assert.equal(response.status, 401, 'the real restored Worker refuses prior installation authority')
         assert.deepEqual(await response.json(), { error: 'authentication_required' })
       }
+      console.log('OR-WBF-ARCHIVE passed: exact encrypted evidence restored and former native session refused for WBF list, replay and review')
       const response = await context.worker.fetch(context.origin + '/api/envelope/mcp', { method: 'POST',
         headers: {'MCP-Protocol-Version':'2025-11-25', authorization: 'Bearer ' + fixture.authority.agentToken, origin: context.origin, 'content-type': 'application\u002fjson' },
         body: JSON.stringify(agentMessage(['tools', 'call'].join('/'),{ name: 'reply.dispatch',
@@ -357,11 +361,11 @@ export async function archiveJourney(context) {
     await rewrittenArchive(brokenConsent, brokenConsentArchive)
     const consentRefusal = await rer(corruptTarget, 'import', brokenConsentArchive)
     assert.notEqual(consentRefusal.code, 0, 'a checksummed receipt cannot claim an unrelated audit event as consent')
-    assert.ok(consentRefusal.output.includes('archive_relationship_invalid'))
+    assert.ok(consentRefusal.output.includes('archive_relationship_invalid'), 'consent relationship refusal: ' + consentRefusal.output)
     assert.equal(digest(populated(await snapshot(state(corruptTarget)))), digest(populated(consentEmpty)),
       'invalid consent attribution publishes no business or identity history')
     const consentRestore = await rer(corruptTarget, 'import', consentArchive)
-    assert.equal(consentRestore.code, 0, 'the next empty installation retains consent without restoring its authority')
+    assert.equal(consentRestore.code, 0, 'the next empty installation retains consent without restoring its authority: ' + consentRestore.output)
     const nextHistory = await snapshot(state(corruptTarget))
     assert.deepEqual(nextHistory.env_archive_adoptions, adoptedHistory.env_archive_adoptions)
     assert.equal(nextHistory.env_grants.length, 0, 'historical consent cannot recreate a restored grant')

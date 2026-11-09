@@ -581,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "cf4e7586ebc98a37855c07aa637c4e997642c9e8dfd22653a883345239382b7f",
+      "sha256": "8132eb6c3f1e7acf452700f42ed6e8acaa4107903c5c23819de82e4f4a10e406",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -621,7 +621,7 @@
       "executable": false
     },
     "docs/payroll-rule-editions.md": {
-      "sha256": "5f761ccb9355e0a788e36773b59156b2edfa2c8300afe11dad5bccf3012bd459",
+      "sha256": "b8b8ae090ca7093391d0e51dc7f50b9195d8e7f2ad7ba9de53a6a3119054c8a4",
       "executable": false
     },
     "docs/payroll-schedules.md": {
@@ -2240,6 +2240,10 @@
       "sha256": "5259f306062861814c24701c092a84e822adfa1a159f9967591bfcb8386998f8",
       "executable": false
     },
+    "src/envelope/calculation/or-wbf.ts": {
+      "sha256": "cc45c244b8be635ae70717409381c739dba92aa75202d7711d6fae4a08b1417f",
+      "executable": false
+    },
     "src/envelope/calculation/oregon.ts": {
       "sha256": "d6eef75e257a99410d1646e26224cac60a85e7964868e176418bb8bcd934b543",
       "executable": false
@@ -2249,7 +2253,7 @@
       "executable": false
     },
     "src/envelope/calculation/preview.ts": {
-      "sha256": "b32f6e9bbd475d8aa84eb6d63cb92989179da26dabb41758a05013154b41b6fd",
+      "sha256": "6171663793235b83585808fd9534c33afd64b350caff24de5a0cf23a10cdfdcb",
       "executable": false
     },
     "src/envelope/calculation/printed-tables.ts": {
@@ -2257,7 +2261,7 @@
       "executable": false
     },
     "src/envelope/calculation/programs.ts": {
-      "sha256": "7c8219842a978ad9ac88a5fcc223f89f7fc3435e58935d8a48f2646203bb8d6f",
+      "sha256": "2e74f29a09a595010ef4ae47a396f097fa5eb818f2f68516d4a819af8db1b253",
       "executable": false
     },
     "src/envelope/calculation/states.ts": {
@@ -2413,7 +2417,7 @@
       "executable": false
     },
     "src/envelope/http.ts": {
-      "sha256": "2d29ee13a71ee3b4e07e4b2b566392583e93529ebb6f65ca2c3d7f4d8e2c0b8d",
+      "sha256": "be3abba4b74c7bb0b57ae8866e1dc1557f39b7d39720513f3a101d0e1a32d9a2",
       "executable": false
     },
     "src/envelope/human-proof.ts": {
@@ -2709,7 +2713,7 @@
       "executable": false
     },
     "src/envelope/workspace/rules.ts": {
-      "sha256": "e1d70bf1c5af7b94d35c3c07cb03d525db536651d6eb09cc236eebc9b0fa8492",
+      "sha256": "cbc09f6bca28e1e60ef2ac13a3bcf71bccddc075ec4e8ad4d2202af20df81161",
       "executable": false
     },
     "src/envelope/workspace/run-approval-pages.tsx": {
@@ -2729,7 +2733,7 @@
       "executable": false
     },
     "src/envelope/workspace/store.ts": {
-      "sha256": "2af040b5062ca1c17c910765dbc68a1db514fce75a5fbd449f232f35e245cef7",
+      "sha256": "2219bacd15e231c2307c3caec40730b0b95f5734e55fe373fc3b6ee3f41b743e",
       "executable": false
     },
     "src/envelope/workspace/tax-elections.ts": {
@@ -4357,7 +4361,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "3c00b49ec55306064de83b1fcd52a11900a5831ffe972f739dd328b59b1db587",
+      "sha256": "a4ecdf755003f604381393ff735a237c915432c11cba9abef6284a39bb0a88f1",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -4568,6 +4572,10 @@
       "sha256": "a89b284c9f45bc7e01951c9bbe663fce79855a119f22c5cb18d6b047475cf192",
       "executable": false
     },
+    "tests/or-wbf-runtime.mjs": {
+      "sha256": "6788ab9a5e230700702f9e57cf65e23624434f66c5ec6af68d492d4561d10f39",
+      "executable": false
+    },
     "tests/payroll-approvals.mjs": {
       "sha256": "e15ffcfb4e58fd5c66175d3c0d5043956bca410ed5bb72fc9189d2cc9f9f49de",
       "executable": false
@@ -4593,7 +4601,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "1abc7c3c442c2abefdd82a74414c80b6cd42d484f61a2cec98434335f3f9098c",
+      "sha256": "7e4db97f68f929ef2e48fe61b819a3dd7fecc5caba98536d3c37b4c20a447334",
       "executable": false
     },
     "tests/tax-notice-runtime.mjs": {
@@ -4613,7 +4621,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "a4e8b06c1d1023659b349b7faf9ddfb22853d7dd576dc3fb3ebb2cd54a5e0664",
+      "sha256": "390cb853cfc224354c144a8b232820818a905f62ac6551064ef5dce270245f16",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
