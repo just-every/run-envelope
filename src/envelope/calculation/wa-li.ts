@@ -2,8 +2,7 @@ import type { Actor } from '../access'
 import { fence } from '../access'
 import type { Input } from '../records'
 import { date, integer, PayrollError, recordKey, text, unseal } from '../security'
-import { WorkspaceStore, digest, objectId, revision, type Kind, type Revision } from '../workspace/store'
-import { collectionPins } from '../workspace/review-inputs'
+import { WorkspaceStore, digest, objectId, revision, type Kind, type Revision, type SourceFence } from '../workspace/store'
 import { waLiNoticeRates } from '../workspace/rules'
 
 const rule = {
@@ -12,6 +11,10 @@ const rule = {
   retainedExcerpt: 'Salaried employees: Actual hours worked; or assumed hours of one hundred-sixty hours per month. All salaried employees of an employer must be reported by the same method.',
 }
 interface Period { from: string; through: string }
+interface SourceSnapshot { versions: number; decisions: number; people: number; personVersions: number; erasures: number }
+const sameSnapshot = (a: SourceSnapshot | undefined, b: SourceSnapshot) => !!a
+  && a.versions === b.versions && a.decisions === b.decisions && a.people === b.people
+  && a.personVersions === b.personVersions && a.erasures === b.erasures
 interface Notice extends Period {
   companyId: string; employerEin: string; riskClass: string; totalRate: string; employeeRate: string
   sourceEdition: string; reference: string; documentText: string; sourceUrl: string; documentDigest: string
@@ -19,7 +22,7 @@ interface Notice extends Period {
 interface Allocation { riskClass: string; noticeId: string; noticeVersion: number; hours: string }
 interface Hours extends Period { remuneration: string; method: string; reference: string; allocations: Allocation[] }
 interface Selection { personId: string; version: number }
-interface Election extends Period { method: string; workers: Selection[]; completeSalariedRoster: true; rule: typeof rule }
+interface Election extends Period { snapshot: SourceSnapshot; method: string; workers: Selection[]; completeSalariedRoster: true; rule: typeof rule }
 export interface WaLiResult extends Period {
   status: string; companyId: string; unsigned: true; unfiled: true; rule: typeof rule
   rows: { personId: string; evidenceVersion: number; remuneration: string; method: string; riskClass: string
@@ -30,7 +33,7 @@ export interface WaLiResult extends Period {
   collectedPremiumCents: null; accountAuthority: false; coverageEstablished: false; paymentReady: false
   payrollApproval: null; filing: string; payment: string; holds: string[]
 }
-interface Preparation extends Period { fingerprint: string; electionVersion: number; workers: Selection[]; result: WaLiResult }
+interface Preparation extends Period { snapshot: SourceSnapshot; fingerprint: string; electionVersion: number; workers: Selection[]; result: WaLiResult }
 const fail = (code: string, status = 409): never => { throw new PayrollError(code, status) }
 const keys = (input: Input, allowed: string[]) => {
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !allowed.includes(k))) fail('unsupported_wa_li_input', 400)
@@ -128,11 +131,34 @@ export class WaLi {
     }
     return rows.sort((a, b) => a.personId!.localeCompare(b.personId!))
   }
-  async pins(actor: Actor) { return collectionPins(this.store, actor, [{ kind: 'wa-li-hours', personId: '*', exceptId: '' }]) }
+  snapshotQuery(actor: Actor) {
+    return { sql: `SELECT
+      (SELECT COUNT(*) FROM env_workspace_versions WHERE company_id=? AND kind IN ('wa-li-notice','wa-li-hours')) AS versions,
+      (SELECT COUNT(*) FROM env_workspace_decisions WHERE company_id=? AND kind IN ('wa-li-notice','wa-li-hours')) AS decisions,
+      (SELECT COUNT(*) FROM env_people WHERE company_id=?) AS people,
+      (SELECT COALESCE(SUM(version),0) FROM env_people WHERE company_id=?) AS personVersions,
+      (SELECT COUNT(*) FROM env_privacy_requests WHERE company_id=? AND status='completed') AS erasures`,
+      args: Array(5).fill(actor.company) as string[] }
+  }
+  async snapshot(actor: Actor): Promise<SourceSnapshot> {
+    const query = this.snapshotQuery(actor)
+    return await this.store.records.statement(query.sql, query.args).first<SourceSnapshot>() ?? fail('wa_li_source_changed')
+  }
+  sourceCondition(actor: Actor, snapshot: SourceSnapshot): SourceFence {
+    const query = this.snapshotQuery(actor), hold = noHold(actor)
+    return { sql: `EXISTS(SELECT 1 FROM (${query.sql}) sc WHERE sc.versions=? AND sc.decisions=?
+      AND sc.people=? AND sc.personVersions=? AND sc.erasures=?) AND ${hold.sql}`,
+      args: [...query.args, snapshot.versions, snapshot.decisions, snapshot.people, snapshot.personVersions, snapshot.erasures, ...hold.args] }
+  }
+  async assertSnapshot(actor: Actor, snapshot: SourceSnapshot) {
+    await this.scope(actor)
+    const condition = this.sourceCondition(actor, snapshot), f = fence(actor)
+    if (!await this.store.records.statement(`SELECT 1 WHERE ${f.sql} AND ${condition.sql}`, [...f.args, ...condition.args]).first()) fail('wa_li_source_changed')
+  }
   async saveElection(actor: Actor, input: Input) {
     await this.scope(actor)
     keys(input, ['version', 'from', 'through', 'method', 'workers', 'completeSalariedRoster', 'sourceEdition'])
-    const reviewSets = await this.pins(actor)
+    const snapshot = await this.snapshot(actor)
     const p = period(input), method = text(input.method), workers = this.selection(input.workers)
     if (!['actual', 'wa-160-month'].includes(method) || input.completeSalariedRoster !== true || input.sourceEdition !== rule.edition) fail('wa_li_employer_election_required')
     const companySalaries = (await this.allHours(actor, p, true)).filter(r => r.data.remuneration === 'salary')
@@ -148,8 +174,8 @@ export class WaLi {
     }
     if (method === 'wa-160-month') assumedHours(p)
     return this.store.append<Election>(actor, 'wa-li-election', periodId(p), revision(input.version),
-      { ...p, method, workers, completeSalariedRoster: true, rule }, undefined, true,
-      { condition: noHold(actor), reviewSets,
+      { ...p, method, workers, completeSalariedRoster: true, rule, snapshot }, undefined, true,
+      { condition: this.sourceCondition(actor, snapshot),
         people: hours.map(h => ({ id: h.personId!, version: h.personVersion! })),
         objects: hours.map(h => ({ kind: 'wa-li-hours', id: h.id, version: h.version, approved: true })) })
   }
@@ -159,7 +185,7 @@ export class WaLi {
     if (new Set(workers.map(w => w.personId)).size !== workers.length) fail('wa_li_duplicate_worker')
     return workers
   }
-  async inputs(actor: Actor, p: Period, workers: Selection[], electionVersion: number) {
+  async inputs(actor: Actor, p: Period, workers: Selection[], electionVersion: number, snapshot: SourceSnapshot) {
     for (const worker of workers) await this.scope(actor, worker.personId)
     const hours = await this.allHours(actor, p)
     if (!hours.length || hours.length !== workers.length || hours.some((r, i) => r.personId !== workers[i].personId || r.version !== workers[i].version)) fail('wa_li_complete_period_evidence_required')
@@ -169,6 +195,7 @@ export class WaLi {
     if (salaries.length) {
       election = await this.store.find<Election>(actor, 'wa-li-election', periodId(p), undefined, true)
       reviewed(election, electionVersion)
+      if (!sameSnapshot(election.data.snapshot, snapshot)) fail('wa_li_employer_election_stale')
       const companySalaries = (await this.allHours(actor, p, true)).filter(r => r.data.remuneration === 'salary')
       for (const row of companySalaries) {
         reviewed(row, row.version)
@@ -192,12 +219,12 @@ export class WaLi {
   async prepare(actor: Actor, input: Input) {
     await this.scope(actor)
     keys(input, ['version', 'from', 'through', 'workers', 'electionVersion'])
-    const reviewSets = await this.pins(actor)
+    const snapshot = await this.snapshot(actor)
     const p = period(input), workers = this.selection(input.workers), electionVersion = revision(input.electionVersion)
-    const { hours, election, notices } = await this.inputs(actor, p, workers, electionVersion)
-    const id = await this.preparationId(actor, p), fingerprint = await digest(JSON.stringify({ ...p, workers, electionVersion }))
+    const { hours, election, notices } = await this.inputs(actor, p, workers, electionVersion, snapshot)
+    const id = await this.preparationId(actor, p), fingerprint = await digest(JSON.stringify({ ...p, workers, electionVersion, snapshot }))
     const prior = latest(await this.store.list<Preparation>(actor, 'wa-li-preparation', undefined, true, false)).find(r => r.id === id)
-    if (prior?.sourcesCurrent && prior.data.fingerprint === fingerprint) { await this.scope(actor); return { id, version: prior.version, replayed: true, result: prior.data.result } }
+    if (prior?.sourcesCurrent && sameSnapshot(prior.data.snapshot, snapshot) && prior.data.fingerprint === fingerprint) { await this.assertSnapshot(actor, snapshot); return { id, version: prior.version, replayed: true, result: prior.data.result } }
     const rows = hours.flatMap(h => h.data.allocations.map(a => {
       const n = notices.get(a.noticeId)!, totalPremiumCents = cents(a.hours, n.data.totalRate), proposedEmployeeCents = cents(a.hours, n.data.employeeRate)
       return { personId: h.personId!, evidenceVersion: h.version, remuneration: h.data.remuneration, method: h.data.method,
@@ -219,7 +246,7 @@ export class WaLi {
       filing: 'unavailable', payment: 'unavailable', holds: ['Unsigned reporting worksheet only; no collected premiums, coverage, state account or submission authority.',
         'Alternative exposure units, partial assumed months, zero-hours filings and accepted quarterly reports and payments remain unproved.'] }
     const saved = await this.store.append<Preparation>(actor, 'wa-li-preparation', id, revision(input.version),
-      { ...p, fingerprint, electionVersion, workers, result }, undefined, true, { condition: noHold(actor), reviewSets,
+      { ...p, fingerprint, electionVersion, workers, result, snapshot }, undefined, true, { condition: this.sourceCondition(actor, snapshot),
         people: hours.map(h => ({ id: h.personId!, version: h.personVersion! })),
         objects: [...hours.map(h => ({ kind: 'wa-li-hours' as Kind, id: h.id, version: h.version, approved: true })),
           ...[...notices.values()].map(n => ({ kind: 'wa-li-notice' as Kind, id: n.id, version: n.version, approved: true })),
@@ -228,24 +255,34 @@ export class WaLi {
   }
   async preparations(actor: Actor) {
     await this.scope(actor)
-    return (await this.store.list<Preparation>(actor, 'wa-li-preparation', undefined, true)).map(row => ({ ...row,
-      current: !!row.sourcesCurrent, unsigned: true, unfiled: true }))
+    const snapshot = await this.snapshot(actor)
+    const rows = await this.store.list<Preparation>(actor, 'wa-li-preparation', undefined, true)
+    await this.assertSnapshot(actor, snapshot)
+    return rows.map(row => ({ ...row, current: !!row.sourcesCurrent && sameSnapshot(row.data.snapshot, snapshot)
+      && row.version === rows.find(r => r.id === row.id)?.version, unsigned: true, unfiled: true }))
   }
   async calculation(actor: Actor, input: Input) {
     await this.scope(actor)
     keys(input, ['id', 'version'])
     const row = await this.store.find<Preparation>(actor, 'wa-li-preparation', objectId(input.id), undefined, true)
-    if (row.version !== integer(input.version) || !row.sourcesCurrent) fail('wa_li_preparation_stale')
-    await this.inputs(actor, row.data, row.data.workers, row.data.electionVersion)
-    await this.scope(actor)
+    const snapshot = await this.snapshot(actor)
+    if (row.version !== integer(input.version) || !row.sourcesCurrent || !sameSnapshot(row.data.snapshot, snapshot)) fail('wa_li_preparation_stale')
+    await this.inputs(actor, row.data, row.data.workers, row.data.electionVersion, snapshot)
+    await this.assertSnapshot(actor, snapshot)
     return row.data.result
   }
   async evidence(actor: Actor, kind: 'wa-li-notice' | 'wa-li-hours' | 'wa-li-election', id: string | undefined, person: string | undefined, action: string, input: Input, post: boolean) {
     await this.scope(actor, person)
     if (action === '' && !post) return this.store.list(actor, kind, person, true)
     const key = objectId(id)
-    if (action === 'review' && !post) return this.store.review(actor, kind, key, person, noHold(actor))
-    if (action === 'approve' && post) return this.store.decide(actor, kind, key, input, person, false, noHold(actor))
+    let condition: SourceFence = noHold(actor)
+    if (kind === 'wa-li-election') {
+      const row = await this.store.find<Election>(actor, kind, key, undefined, true), snapshot = await this.snapshot(actor)
+      if (!sameSnapshot(row.data.snapshot, snapshot)) fail('wa_li_employer_election_stale')
+      condition = this.sourceCondition(actor, snapshot)
+    }
+    if (action === 'review' && !post) return this.store.review(actor, kind, key, person, condition)
+    if (action === 'approve' && post) return this.store.decide(actor, kind, key, input, person, false, condition)
     fail('not_found', 404)
   }
 }

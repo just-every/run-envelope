@@ -581,7 +581,7 @@
       "executable": false
     },
     "docs/payroll-calculation.md": {
-      "sha256": "88322aa8350e75db4b542d279a8345377177cde623e5700e6e9ed52cdff9ee02",
+      "sha256": "cf4e7586ebc98a37855c07aa637c4e997642c9e8dfd22653a883345239382b7f",
       "executable": false
     },
     "docs/payroll-external-data.md": {
@@ -2265,7 +2265,7 @@
       "executable": false
     },
     "src/envelope/calculation/wa-li.ts": {
-      "sha256": "835f7f6e8584abae607b9b2ca849bb0110204eb2f6a07a6ac73b6c75014d7cdb",
+      "sha256": "178d914a8dbc3d45ce82e58dbec04d130a59d982d7c268cb4a12968f0b3260f1",
       "executable": false
     },
     "src/envelope/calculation/west-virginia.ts": {
@@ -2705,7 +2705,7 @@
       "executable": false
     },
     "src/envelope/workspace/review-inputs.ts": {
-      "sha256": "fe763e2d405cd3d4c0b727386729065e745e6ca67a7cc8cd79689b46e92f05b2",
+      "sha256": "69e3e07400ba8661835585da11f2e9f2d3aa2482dba09c6e9eb9d4c831dcd008",
       "executable": false
     },
     "src/envelope/workspace/rules.ts": {

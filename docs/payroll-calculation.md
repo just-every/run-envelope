@@ -296,9 +296,10 @@ employer's chosen method, with the retained official WAC edition and excerpt.
 A mixed actual-hours and assumed-hours roster is refused even when the proposed
 worksheet selects only one of those workers. Overlapping monthly and quarterly evidence must
 also agree, so changing the reporting period cannot hide a conflicting method. Correct the underlying evidence
-and review a fresh consistent election. The collection pin includes all native
-hours evidence, so a subsequently entered worker cannot silently bypass the
-earlier review. This bounded preparation requires the employer's complete-roster
+and review a fresh consistent election. A company source snapshot binds all native notice and hours versions and
+decisions, the worker inventory and completed erasure history. Atomic write and review
+conditions recheck it, so a subsequently entered worker cannot silently bypass
+the earlier review. This bounded preparation requires the employer's complete-roster
 attestation; it does not establish complete applicability for uncaptured workers.
 
 The company `/api/envelope/companies/{company}/wa-li/preparations` endpoint requires the exact complete retained period

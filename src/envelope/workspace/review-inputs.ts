@@ -11,7 +11,7 @@ export interface ReviewInputSet {
   decisions: number
 }
 const counts = (company: string, kind: string, person: string, except: string) => {
-  const where = `cv.company_id=${company} AND cv.kind=${kind} AND (cv.person_id IS NULLIF(${person},'') OR (${kind}='wa-li-hours' AND ${person}='*')) AND cv.object_id!=${except}`
+  const where = `cv.company_id=${company} AND cv.kind=${kind} AND cv.person_id IS NULLIF(${person},'') AND cv.object_id!=${except}`
   return {
     versions: `(CASE WHEN ${kind}='private-ssn' THEN COALESCE((SELECT version FROM env_private_records WHERE company_id=${company} AND person_id=${person} AND kind='ssn'),0) ELSE (SELECT COUNT(*) FROM env_workspace_versions cv WHERE ${where}) END)`,
     decisions: `(CASE WHEN ${kind}='private-ssn' THEN 0 ELSE (SELECT COUNT(*) FROM env_workspace_decisions cd JOIN env_workspace_versions cv ON cv.company_id=cd.company_id AND cv.kind=cd.kind AND cv.object_id=cd.object_id AND cv.version=cd.version WHERE ${where}) END)`,
