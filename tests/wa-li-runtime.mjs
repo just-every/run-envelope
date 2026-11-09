@@ -218,6 +218,32 @@ export async function waLiJourney(context) {
   assert.equal(overlap.error, 'wa_li_mixed_salaried_methods', 'an all-actual monthly selection cannot conceal an overlapping assumed-hours quarterly election')
   await refused(door + '/' + monthlyPrepared.id + '/review?version=1', undefined)
 
+  // A consistently reviewed actual-hours employer is also supported. Its
+  // fractional class hours remain hours, never a wage-based premium.
+  const actualCompany = await data('/api/envelope/companies', { name: 'Synthetic actual-hours employer', ein: '00-0009503' }, 201)
+  const actualBase = '/api/envelope/companies/' + actualCompany.id, actualWa = actualBase + '/wa-li'
+  const actualLocation = await data(actualBase + '/locations', { name: 'Washington actual workplace', state: 'WA' }, 201)
+  const actualPerson = await data(actualBase + '/people', { name: 'Synthetic actual salaried worker', locationId: actualLocation.id }, 201)
+  const actualNotice = notice(actualCompany.id, '00-0009503')
+  await data(actualWa + '/notices', actualNotice, 201); await approve(data, actualWa + '/notices/' + actualNotice.id)
+  await data(actualWa + '/hours/' + actualPerson.id, salary({ method: 'actual', allocations: [allocation(false, { hours: '10.5' }), allocation(true, { hours: '10.6' })] }), 404)
+  await data(actualWa + '/notices', notice(actualCompany.id, '00-0009503', true), 201)
+  await approve(data, actualWa + '/notices/' + secondNotice.id)
+  await data(actualWa + '/hours/' + actualPerson.id, salary({ method: 'actual', allocations: [allocation(false, { hours: '10.5' }), allocation(true, { hours: '10.6' })] }), 201)
+  await approve(data, actualWa + '/hours/' + actualPerson.id + '/' + evidenceId(actualPerson))
+  await data(actualWa + '/elections', election([actualPerson], { method: 'actual' }), 201)
+  await approve(data, actualWa + '/elections/' + quarter.from + '-' + quarter.through)
+  const actual = await data(actualWa + '/preparations', capture([actualPerson]), 201)
+  // 10.5 x 1.50 = 15.75, employee 3.15, employer 12.60;
+  // 10.6 x 2.25 = 23.85, employee 4.24, employer 19.61.
+  assert.deepEqual(actual.result.rows.map(r => [r.hours, r.totalPremiumCents, r.proposedEmployeeCents, r.employerRemainderCents]),
+    [['10.5', 1575, 315, 1260], ['10.6', 2385, 424, 1961]])
+  assert.deepEqual([actual.result.totalPremiumCents, actual.result.proposedEmployeeCents, actual.result.employerRemainderCents], [3960, 739, 3221])
+  assertions(actual.result)
+  const outside = await data(actualBase + '/locations', { name: 'Other-state workplace', state: 'OR' }, 201)
+  const outsideWorker = await data(actualBase + '/people', { name: 'Synthetic Oregon worker', locationId: outside.id }, 201)
+  await refused(actualWa + '/hours/' + outsideWorker.id, hours())
+
   const foreign = await data('/api/envelope/companies', { name: 'Synthetic other Washington company', ein: '00-0009502' }, 201)
   await refused('/api/envelope/companies/' + foreign.id + '/wa-li/notices/' + firstNotice.id + '/review', undefined, 404)
   await refused('/api/envelope/companies/' + foreign.id + '/wa-li/hours/' + hourly.id, undefined, 404)

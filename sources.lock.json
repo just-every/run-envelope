@@ -2265,7 +2265,7 @@
       "executable": false
     },
     "src/envelope/calculation/wa-li.ts": {
-      "sha256": "297cd9af00b0f73fdcc627f5f407e37e5cd29e6a704a0d1833ea27d53d7d6086",
+      "sha256": "835f7f6e8584abae607b9b2ca849bb0110204eb2f6a07a6ac73b6c75014d7cdb",
       "executable": false
     },
     "src/envelope/calculation/west-virginia.ts": {
@@ -4605,7 +4605,7 @@
       "executable": false
     },
     "tests/wa-li-runtime.mjs": {
-      "sha256": "8d2a9ffc9512121c69a60021c3954fa9cc5f5c4d3cf6437d16366fdcec79fc49",
+      "sha256": "34c13bef297dc23ccfd7bfccb3fe2d7650c1ff750ff91816de7d76ed31574a43",
       "executable": false
     },
     "tsconfig.json": {

@@ -37,7 +37,7 @@ const keys = (input: Input, allowed: string[]) => {
 }
 const period = (input: Input): Period => {
   const from = date(input.from), through = date(input.through)
-  if (from > through || from.slice(0, 4) !== through.slice(0, 4)) fail('wa_li_period_unsupported')
+  if (from > through || from < '2021-01-01' || from.slice(0, 4) !== through.slice(0, 4)) fail('wa_li_period_unsupported')
   return { from, through }
 }
 const periodId = (p: Period) => p.from + '-' + p.through
