@@ -1,0 +1,33 @@
+{"version":1,"verb":"import","event":"node-selection","versionSelected":"22.20.0","previousVersion":"24.19.0","message":"Using project Node 22.20.0 (current Node 24.19.0)."}
+Checking pinned pnpm
+10.12.4
+Local import
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+Checking archive policy local installation data
+Checking migration history for local installation data
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Restoring local installation data
+Restoring a 4.5 MB archive. This takes under a minute.
+Checking the whole archive before anything is restored.
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Cleaned up an unfinished earlier import: a restore that stopped part-way left its staged data here. Its staging is removed and this import starts from the beginning.
+Checking the whole archive before anything is restored.
+Staging the restore: 1 of 35 parts (27.3 KB).
+Staging the restore: 8 of 35 parts (383 KB), under a minute left.
+Staging the restore: 10 of 35 parts (760 KB), under a minute left.
+Staging the restore: 16 of 35 parts (769 KB), under a minute left.
+Staging the restore: 17 of 35 parts (770 KB), under a minute left.
+Staging the restore: 21 of 35 parts (780 KB), under a minute left.
+Staging the restore: 25 of 35 parts (791 KB), under a minute left.
+Staging the restore: 29 of 35 parts (975 KB), under a minute left.
+Staging the restore: 34 of 35 parts (1.4 MB), under a minute left.
+Staging the restore: 35 of 35 parts (4.4 MB).
+All 35 parts are staged; verifying them and publishing the restore. This can take several minutes.
+{"version":1,"verb":"import","event":"error","code":"restore_refused","message":"The portability module refused or failed the archive operation (archive_relationship_invalid).","exitCode":4}
+{"version":1,"verb":"import","event":"result","ok":false,"exitCode":4}

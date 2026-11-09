@@ -1,0 +1,30 @@
+{"version":1,"verb":"import","event":"node-selection","versionSelected":"22.20.0","previousVersion":"24.19.0","message":"Using project Node 22.20.0 (current Node 24.19.0)."}
+Checking pinned pnpm
+10.12.4
+Local import
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+Checking archive policy local installation data
+Checking migration history for local installation data
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Restoring local installation data
+Restoring a 4.5 MB archive. This takes under a minute.
+Checking the whole archive before anything is restored.
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Checking the whole archive before anything is restored.
+Staging the restore: 1 of 35 parts (27.3 KB).
+Staging the restore: 8 of 35 parts (383 KB), under a minute left.
+Staging the restore: 9 of 35 parts (717 KB), about 2 min left.
+Staging the restore: 11 of 35 parts (763 KB), about 1 min left.
+Staging the restore: 13 of 35 parts (764 KB), about 1 min left.
+Staging the restore: 19 of 35 parts (778 KB), under a minute left.
+Staging the restore: 25 of 35 parts (791 KB), under a minute left.
+Staging the restore: 29 of 35 parts (975 KB), under a minute left.
+Staging the restore: 35 of 35 parts (4.4 MB).
+All 35 parts are staged; verifying them and publishing the restore. This can take several minutes.
+{"version":1,"verb":"import","event":"result","ok":true,"exitCode":0,"target":"local","input":"../target/exports/adopted-history.rer","contentHash":"51553d50a9a0b27e8a9ee314f1507744eeb8d126a10ffdac77287af6915cf465","archiveHash":"b272185951e76815c7bbbe4fc8caf7663a2e72d77491461d522f44671e72065f","tables":[{"name":"agent_door_audit","count":12},{"name":"agent_door_events","count":0},{"name":"bs_audit","count":0},{"name":"bs_logo","count":0},{"name":"bs_overrides","count":0},{"name":"env_access_changes","count":11},{"name":"env_agent_access","count":12},{"name":"env_agent_call_audit","count":14},{"name":"env_agent_call_facts","count":3},{"name":"env_agent_grants","count":3},{"name":"env_agent_policy","count":0},{"name":"env_archive_adoptions","count":3},{"name":"env_audit","count":2128},{"name":"env_automation_tasks","count":0},{"name":"env_companies","count":7},{"name":"env_company_setup","count":0},{"name":"env_firm_settings","count":0},{"name":"env_firm_work","count":0},{"name":"env_firm_work_history","count":0},{"name":"env_hris_people","count":1},{"name":"env_jurisdictions","count":0},{"name":"env_lifecycle_events","count":0},{"name":"env_locations","count":6},{"name":"env_notice_analysis","count":0},{"name":"env_notice_approvals","count":3},{"name":"env_notice_dispatches","count":2},{"name":"env_notice_replies","count":3},{"name":"env_notices","count":1},{"name":"env_operation_sentinels","count":0},{"name":"env_people","count":22},{"name":"env_privacy_epochs","count":7},{"name":"env_privacy_guard","count":0},{"name":"env_privacy_holds","count":1},{"name":"env_privacy_redactions","count":0},{"name":"env_privacy_requests","count":4},{"name":"env_privacy_source_fences","count":47},{"name":"env_private_records","count":1},{"name":"env_rate_proposals","count":0},{"name":"env_run_approvals","count":0},{"name":"env_run_drafts","count":0},{"name":"env_verification_consents","count":0},{"name":"env_verification_corrections","count":0},{"name":"env_verification_releases","count":0},{"name":"env_webhook_attempts","count":0},{"name":"env_webhook_jobs","count":0},{"name":"env_webhooks","count":1},{"name":"env_workspace_decision_authority","count":1},{"name":"env_workspace_decisions","count":50},{"name":"env_workspace_dependencies","count":151},{"name":"env_workspace_people","count":100},{"name":"env_workspace_review_inputs","count":290},{"name":"env_workspace_versions","count":118},{"name":"oa_auth_audit","count":3},{"name":"oa_auth_settings","count":1},{"name":"oa_bootstrap","count":1},{"name":"oa_domain_rules","count":0},{"name":"oa_external_identities","count":0},{"name":"oa_invitation_cancellations","count":0},{"name":"oa_logout_events","count":0},{"name":"oa_operators","count":3},{"name":"oc_owner_claims","count":0},{"name":"rer_dependency_installation","count":0},{"name":"rer_dependency_link","count":0},{"name":"rer_erasure_operations","count":0}],"objects":0,"payloads":1,"exclusions":{"tables":["agent_door_agents","agent_door_approvals","agent_door_calls","agent_door_reviews","agent_door_state","agent_door_usage","bs_assert","bs_settings","bs_team","d1_migrations","env_agent_class_policy","env_agent_credentials","env_business_agent_bindings","env_external_providers","env_grants","env_human_challenges","env_new_hire_authority","env_notice_reviews","env_passkeys","env_rate_reviews","env_review_presentations","env_webhook_keys","env_workspace_reviews","oa_credentials","oa_dev_credentials","oa_first_run","oa_identity_provider_health","oa_identity_providers","oa_limits","oa_oidc_limits","oa_oidc_transactions","oa_owner_signins","oa_policy_approvals","oa_policy_runs","oa_provider_session_pins","oa_provider_sessions","oa_sessions","oa_setup_links","oa_step_up_challenges","oa_tokens","oc_idp_grants","rer_command_receipts","rer_dependency_codes","rer_dependency_keys","rer_dependency_pending","rer_erasure_blobs","rer_erasure_guard","rer_erasure_scope","rer_mail_development_outbox","rer_portability_epochs","rer_portability_guard","rer_portability_import_leases","rer_portability_jobs","rer_portability_journal","rer_portability_owned","rer_portability_parts","rer_portability_segments","rer_portability_state"],"columns":{},"configuration":true,"transient":["local runtime caches and logs"]},"requiredConfiguration":["ENVELOPE_RECORD_KEY","OWNER_EMAIL","SESSION_SECRET","SETUP_TOKEN","AUTH_ORIGIN","MAIL_PROVIDER","MAIL_FROM"],"safetyChanges":[]}

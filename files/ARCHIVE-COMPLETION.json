@@ -1,0 +1,12 @@
+{
+  "consentHistoryRestored": true,
+  "consents": 3,
+  "restoredGrants": 0,
+  "restoredSessions": 0,
+  "nonemptyRefusalExit": 4,
+  "nonemptyRefusalCode": "target_not_empty",
+  "businessUnchanged": true,
+  "keyRefusalExit": 1,
+  "keyRefusalCode": "record_key_target_not_empty",
+  "keyUnchanged": true
+}

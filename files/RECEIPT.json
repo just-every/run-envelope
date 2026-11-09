@@ -1,0 +1,214 @@
+{
+  "authority": {
+    "automaticOutbound": false,
+    "collectedEmployeeCents": null,
+    "filing": "unavailable",
+    "paidEmployerCents": null,
+    "payment": "unavailable",
+    "paymentReady": false
+  },
+  "branch": "cloud/sx-envelope-c-f103",
+  "candidateFiles": {
+    "sources.lock.json": "ab4b7c019b9ea61521b8fe0b43033e6a4e2bc849",
+    "src/envelope/calculation/or-wbf.ts": "5ee969725a076a224bf8cec33418d2b890ec42fd",
+    "tests/archive-runtime.mjs": "07641912b3523bb1f4e9bbdf32644572a98ffefa",
+    "tests/or-wbf-runtime.mjs": "2766b85aade8fed12ed51922af11df17648e9e26",
+    "verification.json": "c134fd27fe23d769f632bf9b2ae2bad8b660cda2"
+  },
+  "candidateHead": "ed99e6c214966b95a61b3b6f3696b3cc354dc331",
+  "candidateRunSite": "fleet landing gate",
+  "checks": [
+    {
+      "command": "pnpm run typecheck",
+      "exit": 0,
+      "log": "TYPECHECK.log"
+    },
+    {
+      "command": "cloud_run env CI=true npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "BUILD.log"
+    },
+    {
+      "command": "cloud_run env CI=true WRANGLER_SEND_METRICS=false ENVELOPE_JOURNEYS=or-wbf PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium timeout 1200 node tests/runtime.mjs",
+      "exit": 0,
+      "log": "WBF.log"
+    },
+    {
+      "command": "cloud_run env ENVELOPE_JOURNEYS=calculation,rules PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium timeout 1200 node tests/runtime.mjs",
+      "exit": 0,
+      "log": "REGRESSION.log"
+    },
+    {
+      "command": "cloud_run env CI=true WRANGLER_SEND_METRICS=false ENVELOPE_JOURNEYS=archive PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium timeout 1200 node tests/runtime.mjs",
+      "exit": 1,
+      "failure": "Full isolated archive run passed WBF encrypted restore and inactive-authority assertions, then an existing unrelated-consent error-code assertion failed. Exact CLI reproduction returned expected archive_relationship_invalid; remaining assertions passed directly. See ARCHIVE-DIAGNOSIS.md.",
+      "fullJourneyPassed": false,
+      "log": "ARCHIVE.log",
+      "wbfArchiveAssertionsPassed": true
+    },
+    {
+      "command": "cloud_run npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write; node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "generatedFilesCommitted": false
+    },
+    {
+      "command": "node scripts/edition-authoring/cli.mjs lock; node scripts/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "migration-ledger check",
+      "result": "not applicable; no migration changed"
+    },
+    {
+      "command": "Direct original CLI unrelated-consent import, valid consent import and retained-fixture completion script",
+      "logs": [
+        "CONSENT-REFUSAL.log",
+        "CONSENT-RESTORE.log",
+        "ARCHIVE-COMPLETION.log",
+        "OCCUPIED-REFUSAL.log",
+        "KEY-REFUSAL.log"
+      ],
+      "receipt": "ARCHIVE-COMPLETION.json",
+      "result": "consent refusal exit 4 with archive_relationship_invalid; valid consent import exit 0; completion script exit 0"
+    }
+  ],
+  "ci": {
+    "candidate": {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "ed99e6c214966b95a61b3b6f3696b3cc354dc331",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42606243074",
+      "id": 42606243074,
+      "name": "Verify",
+      "observedAt": "2026-11-09T11:06:00Z",
+      "status": "in_progress"
+    },
+    "githubCallsUsed": 2,
+    "mainHead": "2913789638d9f6da2cccb65ea318cc9b92f185e1",
+    "mainRunSite": 42437532472,
+    "mainVerify": 42592619451,
+    "oldNightlyFailure": 42558285666
+  },
+  "claim": {
+    "acceptance2": "calculation and unsigned reporting data only",
+    "acceptancePointsProven": [
+      1
+    ],
+    "clause": "ENV-096",
+    "status": "PARTIAL"
+  },
+  "counts": {
+    "after": {
+      "done": 6,
+      "missing": 76,
+      "partial": 44,
+      "total": 126
+    },
+    "before": {
+      "done": 6,
+      "missing": 76,
+      "partial": 44,
+      "total": 126
+    },
+    "contractStatusCellsChanged": false
+  },
+  "finalEditScope": "Archive assertion diagnostic text and restoration of original always-cleanup behavior only; calculation, WBF journey, all archive assertions and product source bytes unchanged since their latest successful relevant probes.",
+  "lastPushedSave": "632c5bfebe4c8912c3b9a930dc9f5e8d023d966d",
+  "mainEquality": false,
+  "packetFiles": {
+    "ARCHIVE-COMPLETION-PROBE.mjs": {
+      "bytes": 3714,
+      "sha256": "5eaec4d03820e6d473a77067d23f923a2677c058693c517bd2d525d76fa9905a"
+    },
+    "ARCHIVE-COMPLETION.json": {
+      "bytes": 302,
+      "sha256": "ac9a8cf9d8e295b1b3653500803d2a17b4a47d7353e8feda594de77d6312baa8"
+    },
+    "ARCHIVE-COMPLETION.log": {
+      "bytes": 269,
+      "sha256": "0ce1e0355605da41b1b8b71606b5ac378a9e69ac4a85d1b624b4eece59738205"
+    },
+    "ARCHIVE-FIRST-CI.log": {
+      "bytes": 158328,
+      "sha256": "35f0ad79ab7bbeaf2c36fd3fcf2e33b40137d3b9d5ca2c5b4ca4e31dc22db41c"
+    },
+    "ARCHIVE-MAIN.log": {
+      "bytes": 176608,
+      "sha256": "23894de08d0bc32424b55895690b0ead9c075756d41e6a2d5e787d8318b1361f"
+    },
+    "ARCHIVE-SERIALIZED.log": {
+      "bytes": 140748,
+      "sha256": "1383f59171d1d4dd1934b5e78a856ade9f25debe1bb4f0a17475ba2e6237c12c"
+    },
+    "ARCHIVE.log": {
+      "bytes": 189697,
+      "sha256": "fc7dc6ee791af2af4771e76a25b676a71070b9d4ac02fd719d79bc3b657cce62"
+    },
+    "BUILD.log": {
+      "bytes": 1544,
+      "sha256": "6ad72b5f11d7a5da52afd0036c4a05287a1fffe55b91ec662cb38818803988e1"
+    },
+    "CONSENT-REFUSAL.log": {
+      "bytes": 2000,
+      "sha256": "8fdc2da14c2d9e227f77fb836d70f372bea37de5dc2d691ce012ffff9263ab5f"
+    },
+    "CONSENT-RESTORE.log": {
+      "bytes": 5902,
+      "sha256": "7e0da7561ee84aadef3ab3c0abdaf5dcc79fc18e51517792e64226388732ea05"
+    },
+    "KEY-REFUSAL.log": {
+      "bytes": 196,
+      "sha256": "8d858d78c3c0ad468f97c5a762c4df2aca939824b6f63e7b84f41c9ecc03cd12"
+    },
+    "LOCK-CHECK.json": {
+      "bytes": 188643,
+      "sha256": "97f3f0515b8f77ea623866a26a17fb6bf9163b033219cfc6c6d1dc21ccd2d6fd"
+    },
+    "OCCUPIED-REFUSAL.log": {
+      "bytes": 959,
+      "sha256": "adc6b41c9d1d9bc5216de414ce16aa8d0fc1cc0dcf17ddb0d942c34bdb480d18"
+    },
+    "REGRESSION.log": {
+      "bytes": 5448,
+      "sha256": "8aa11e597d0e07e5abf968829825005e1c22cf1525ff502a8349537c0c0c1da1"
+    },
+    "TYPECHECK.log": {
+      "bytes": 195,
+      "sha256": "b72e2bc48565d2447268b26dec32f5f94235d585cb6d16bb327ac38982ba768c"
+    },
+    "VIEWS-CHECK.log": {
+      "bytes": 32,
+      "sha256": "c21aae40192141751d6d5c7a3a1d0eb701a6852f305d592d77b4dcab9c2536ab"
+    },
+    "VIEWS-WRITE.log": {
+      "bytes": 28,
+      "sha256": "14cee29b7bd19487e15f4013d4fb85016e022ef21d230676971a6490c88436d2"
+    },
+    "WBF.log": {
+      "bytes": 1102,
+      "sha256": "2091886f9587b7b1229e7c52afcf7c0560da21ebfdd5c7a9221c98760cd1d448"
+    }
+  },
+  "pr": null,
+  "publicationScan": {
+    "complete": null,
+    "findings": null,
+    "historyScanned": null,
+    "status": "not run in cloud; guarded fleet lander owns scan"
+  },
+  "repository": "just-every/run-envelope",
+  "schema": 1,
+  "tag": "sx-envelope-c-f103",
+  "testBudget": {
+    "check": "first-party profile passed; no cap override requested or changed",
+    "existingArchiveJourneyExtended": true,
+    "existingAssertionsRemoved": false,
+    "file": "test-budget.json",
+    "newJourneyRegistrations": 1,
+    "present": false
+  }
+}

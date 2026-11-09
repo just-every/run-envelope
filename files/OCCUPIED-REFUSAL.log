@@ -1,0 +1,10 @@
+{"version":1,"verb":"import","event":"node-selection","versionSelected":"22.20.0","previousVersion":"24.19.0","message":"Using project Node 22.20.0 (current Node 24.19.0)."}
+{"version":1,"verb":"import","event":"error","code":"restore_refused","message":"Restore refused (target_not_empty): table agent_door_audit in this installation already holds rows its migrations did not insert, and a restore only goes into an empty installation. To replace this installation's data with the archive, keep a copy with rer export --output exports/before-restore.rer, then run rer reset --yes and rer import --input ../source/exports/custody.rer --yes again.","exitCode":4}
+{"version":1,"verb":"import","event":"result","ok":false,"exitCode":4}
+Checking pinned pnpm
+10.12.4
+Local import
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+Checking archive policy local installation data
