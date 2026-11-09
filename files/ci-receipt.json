@@ -1,0 +1,31 @@
+{
+  "repository": "just-every/run-envelope",
+  "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "calls_before_watcher": 5,
+  "observations": [
+    {
+      "id": 42631428360,
+      "status": "in_progress",
+      "conclusion": null,
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42631428360",
+      "created_at": "2026-11-09T14:06:30Z",
+      "updated_at": "2026-11-09T14:06:39Z",
+      "observed_at": "2026-11-09T14:11:56Z"
+    },
+    {
+      "id": 42631428360,
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+      "html_url": "https://github.com/just-every/run-envelope/actions/runs/42631428360",
+      "created_at": "2026-11-09T14:06:30Z",
+      "updated_at": "2026-11-09T14:15:50Z",
+      "observed_at": "2026-11-09T14:16:57Z"
+    }
+  ],
+  "watcher_calls": 2,
+  "result": "success",
+  "final_timing_query_run_id": 42631428360,
+  "total_gh_invocations": 8
+}

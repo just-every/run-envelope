@@ -1,0 +1,163 @@
+{
+  "candidate": {
+    "explicit_registrations": 7,
+    "registrations": [
+      {
+        "path": "tests/incremental-typecheck.test.mjs",
+        "line": 5,
+        "registration": "test('exported foundation incremental typecheck', async t => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 94,
+        "registration": "await t.test('cold and deleted-cache runs fully check; unchanged warm run skips the checker', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 112,
+        "registration": "await t.test('a new local source error fails, including a repeated unchanged failing run', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 118,
+        "registration": "await t.test('an exported type edit invalidates its unchanged dependent file', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 123,
+        "registration": "await t.test('reverting both edits restores a clean check and warm skip', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 131,
+        "registration": "await t.test('a changed compiler option detects a previously valid unchanged source', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 140,
+        "registration": "await t.test('metadata from a different TypeScript version forces a full recheck', async () => {"
+      }
+    ]
+  },
+  "main": {
+    "explicit_registrations": 7,
+    "registrations": [
+      {
+        "path": "tests/incremental-typecheck.test.mjs",
+        "line": 5,
+        "registration": "test('exported foundation incremental typecheck', async t => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 94,
+        "registration": "await t.test('cold and deleted-cache runs fully check; unchanged warm run skips the checker', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 112,
+        "registration": "await t.test('a new local source error fails, including a repeated unchanged failing run', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 118,
+        "registration": "await t.test('an exported type edit invalidates its unchanged dependent file', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 123,
+        "registration": "await t.test('reverting both edits restores a clean check and warm skip', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 131,
+        "registration": "await t.test('a changed compiler option detects a previously valid unchanged source', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 140,
+        "registration": "await t.test('metadata from a different TypeScript version forces a full recheck', async () => {"
+      }
+    ]
+  },
+  "merged_before_ci": {
+    "explicit_registrations": 7,
+    "registrations": [
+      {
+        "path": "tests/incremental-typecheck.test.mjs",
+        "line": 5,
+        "registration": "test('exported foundation incremental typecheck', async t => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 94,
+        "registration": "await t.test('cold and deleted-cache runs fully check; unchanged warm run skips the checker', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 112,
+        "registration": "await t.test('a new local source error fails, including a repeated unchanged failing run', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 118,
+        "registration": "await t.test('an exported type edit invalidates its unchanged dependent file', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 123,
+        "registration": "await t.test('reverting both edits restores a clean check and warm skip', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 131,
+        "registration": "await t.test('a changed compiler option detects a previously valid unchanged source', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 140,
+        "registration": "await t.test('metadata from a different TypeScript version forces a full recheck', async () => {"
+      }
+    ]
+  },
+  "after_ci": {
+    "explicit_registrations": 7,
+    "registrations": [
+      {
+        "path": "tests/incremental-typecheck.test.mjs",
+        "line": 5,
+        "registration": "test('exported foundation incremental typecheck', async t => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 94,
+        "registration": "await t.test('cold and deleted-cache runs fully check; unchanged warm run skips the checker', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 112,
+        "registration": "await t.test('a new local source error fails, including a repeated unchanged failing run', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 118,
+        "registration": "await t.test('an exported type edit invalidates its unchanged dependent file', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 123,
+        "registration": "await t.test('reverting both edits restores a clean check and warm skip', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 131,
+        "registration": "await t.test('a changed compiler option detects a previously valid unchanged source', async () => {"
+      },
+      {
+        "path": "tests/typecheck-checks.mjs",
+        "line": 140,
+        "registration": "await t.test('metadata from a different TypeScript version forces a full recheck', async () => {"
+      }
+    ]
+  },
+  "note": "Seven explicit Node test()/t.test() registrations under tests, excluding vendored sources. Native public-door journeys are separately inventoried as 36 unchanged selections in plan-coverage.json; assertion scripts remain unchanged. These are separate inventories, not a claimed canonical whole-seed behavior count. The CI repair adds no registrations, deletes none, and changes no test/assertion source; the 200-test cap is unchanged."
+}

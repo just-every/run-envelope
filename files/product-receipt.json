@@ -1,0 +1,49 @@
+{
+  "branch": "cloud/sx-envelope-f104-shard-time-1",
+  "head": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "merged_main": "ed99e6c214966b95a61b3b6f3696b3cc354dc331",
+  "save_head": "97207010ba85c1f10f03cc0dd30d23519b44b08a",
+  "candidate_start": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+  "test_changes_in_ci_commit": false,
+  "contract_status_changes": [],
+  "publication_scan": "not run: expressly out of scope; cloud fleet scans at landing",
+  "pr": "not required by repository AGENTS.md; no PR created",
+  "protected_files": {
+    "CONTRACT.md": {
+      "same_as_merged_main": true,
+      "sha256": "b9455b3d833bbf189fe4c812ad165591c68cca57451eca1ee75e85d444726c13"
+    },
+    "docs/contract/ID-MAP.json": {
+      "same_as_merged_main": true,
+      "sha256": "b50d96aa3aaca81dc6238dfc0463a60ca83916b50f9902eaa6310b35d28272b3"
+    },
+    "ACCEPTANCE.md": {
+      "same_as_merged_main": true,
+      "sha256": "c70accf56d6f345f11fa265f4d72c1fd09bfb6c1a57db6b0296f30a14ab83d99"
+    },
+    "docs/CLAIMS.md": {
+      "same_as_merged_main": true,
+      "sha256": "f49f15d2da699297daf7fff1c0782e6ac1742a5f1f1186f0cc1138d2114fe6bb"
+    },
+    ".github/workflows/verify.yml": {
+      "same_as_merged_main": true,
+      "sha256": "12912bc8dc20570c30d4a8aa0844f0c17ec9867f949b2998454428d6d5841b11"
+    }
+  },
+  "push_status": "published",
+  "pushed_head": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "identity_review": "All five commits in origin/main..HEAD, including side parents, have fleet author and committer identity. No coauthor trailers or disallowed trailer addresses.",
+  "verify_run_id": 42631428360,
+  "verify_conclusion": "success",
+  "verify_url": "https://github.com/just-every/run-envelope/actions/runs/42631428360",
+  "terminal_product_status": "READY",
+  "blockers": [],
+  "remote_product_head_verified_by_ls_remote": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "local_worktree_clean": true,
+  "owned_setup_and_test_processes": "completed; subreapers exited; recorded PIDs 1038, 2150 and 2181 no longer running",
+  "timing_targets_met": true,
+  "runtime_before_seconds_cancelled": 736,
+  "runtime_after_seconds_success": 421,
+  "longest_shard_seconds": 545,
+  "longest_to_mean": 1.4087237479806138
+}

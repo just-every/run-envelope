@@ -1,0 +1,8 @@
+{
+  "repository": "just-every/run-envelope",
+  "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "calls_before_watcher": 4,
+  "observations": [],
+  "watcher_calls": 1,
+  "result": "no exact-SHA push Verify discovered"
+}

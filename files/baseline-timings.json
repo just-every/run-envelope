@@ -1,0 +1,84 @@
+{
+  "run_id": 42606279615,
+  "attempt": 2,
+  "head": "a0be89405b7b9dd0f1b6035f74b611fca8a1e81c",
+  "shards": [
+    {
+      "name": "shards (claims, true)",
+      "job_id": 129160060480,
+      "conclusion": "success",
+      "duration_seconds": 251.0,
+      "commands_seconds": 198.0
+    },
+    {
+      "name": "shards (verification, true)",
+      "job_id": 129160060483,
+      "conclusion": "success",
+      "duration_seconds": 196.0,
+      "commands_seconds": 153.0
+    },
+    {
+      "name": "shards (source, false)",
+      "job_id": 129160060533,
+      "conclusion": "success",
+      "duration_seconds": 27.0,
+      "commands_seconds": 1.0
+    },
+    {
+      "name": "shards (new-hires, true)",
+      "job_id": 129160060565,
+      "conclusion": "success",
+      "duration_seconds": 194.0,
+      "commands_seconds": 156.0
+    },
+    {
+      "name": "shards (industry, true)",
+      "job_id": 129160060567,
+      "conclusion": "success",
+      "duration_seconds": 269.0,
+      "commands_seconds": 231.0
+    },
+    {
+      "name": "shards (workspace, true)",
+      "job_id": 129160060585,
+      "conclusion": "success",
+      "duration_seconds": 281.0,
+      "commands_seconds": 242.0
+    },
+    {
+      "name": "shards (typecheck, false)",
+      "job_id": 129160060637,
+      "conclusion": "success",
+      "duration_seconds": 103.0,
+      "commands_seconds": 78.0
+    },
+    {
+      "name": "shards (agent-door, true)",
+      "job_id": 129160060654,
+      "conclusion": "success",
+      "duration_seconds": 488.0,
+      "commands_seconds": 442.0
+    },
+    {
+      "name": "shards (firm, true)",
+      "job_id": 129160060655,
+      "conclusion": "success",
+      "duration_seconds": 126.0,
+      "commands_seconds": 73.0
+    },
+    {
+      "name": "shards (archive, true)",
+      "job_id": 129160060681,
+      "conclusion": "success",
+      "duration_seconds": 527.0,
+      "commands_seconds": 471.0
+    },
+    {
+      "name": "shards (runtime, true)",
+      "job_id": 129160060814,
+      "conclusion": "cancelled",
+      "duration_seconds": 736.0,
+      "commands_seconds": 684.0
+    }
+  ]
+}

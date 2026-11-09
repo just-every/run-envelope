@@ -1,0 +1,19 @@
+HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+APP-HOME passed against emitted local Worker: the owner claims, finishes setup and opens the app home
+HI-BENEFITS passed: reviewed source-bound weekly and monthly caps, dependent allocations, exact corrections, unsafe refusals, replay, encrypted restart and current company authority; no coverage or remittance claim.
+EXTENDED-RETIREMENT passed: reviewed year-specific 403(b), both 457(b) arrangements and SEP proposals, combined limits, ordering, reporting, unchanged refusals, source corrections, replay, restart and current private authority
+PROBE ENV-095 1: actual notice setup, exact review, private calculation preview and worksheet -> hourly two-class 270.00 total, 52.00 employee, 218.00 employer; salaried quarter 480 hours, 720.00 total, 144.00 employee, 576.00 employer; unsigned and unfiled
+PROBE ENV-095 2 calculation and mixed-method refusal: new actual-hours salaried worker -> old preparation and mixed election refused; corrected 160 method plus fresh complete-roster review -> both salaries 480 hours
+WA-LI passed: independently notice and WAC-derived amounts, exact notice and company binding, complete salaried election, source correction, immutable history, lost-response replay and restart, scoped refusals, privacy holds and erasure, no collected premiums or payment authority
+PROBE ENV-096 1: current native source and exact period review, preparation and calculation-preview -> 10.5 hours gives 9 employee cents and 9 employer cents; 10.6 gives 10 each; unsigned OQ worksheet and unchanged ordinary payroll
+PROBE ENV-096 2 calculation: reviewed untracked monthly flat method and 173.33 hours -> 156 employee cents, 156 employer cents and 312 total; copied Washington 160-hour default refuses without writes
+OR-WBF passed: independent OAR goldens, period versus aggregate rounding, source and period corrections, exact review, replay and restart, authority and custody refusals, erasure and unchanged money authority
+PROBE ENV-089 1: reviewed CA 2025 source and three annual 20000 dollar wages -> 21000 taxable, 252 additional employer Q4 liability on Schedule A and Form 940 line 11; unsigned and unfiled
+PROBE ENV-089 2 calculation: reviewed ten 7000 dollar annual bases -> 70000 taxable and 840 additional Q4 employer liability; deposit and payment unavailable
+PROBE ENV-089 BLOCKING-A: actual worker erasure, then company annual preparation with three remaining reviewed 20000 dollar workers -> 201, 21000 taxable and 252 additional Q4 liability; exact review and restart replay succeed; erased worker and source replay remain refused
+FUTA-CREDIT passed: independent IRS goldens, annual base once per worker and EIN, reviewed exact sources, immutable corrections, lost-response replay and restart, held-source and current-authority refusals, erasure fences and no money or filing effects
+NY-DBL passed: reviewed statutory preparation, weekly and premium caps, split checks, concurrent earnings, migrated collections, source corrections, replay, restart, scoped refusals and unavailable remittance
+CALCULATION-CORPUS {"states":51,"withholdingGoldens":51,"completeStates":0,"complete":false}
+CALCULATION-PREVIEW passed: dated federal and bounded state components, weighted weekly earnings, approved California premiums, tip-tax shortage, explicit coverage holds and unsafe deductions through the native API
+Industry journey: reviewed farm, office, H-2A, charity, clergy, shareholder, resident, student and family federal checks; original and corrected official forms; current authority passed.
+PRIVACY-RECORDER passed {"outbound":0,"browserRequests":467,"browserLogs":8,"workerLogs":0,"bundles":78,"privateInputs":0}

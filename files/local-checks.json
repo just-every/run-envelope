@@ -1,0 +1,56 @@
+{
+  "checks": [
+    {
+      "name": "fleet setup and hooks",
+      "status": "passed",
+      "command_or_result": "Fleet identity, decrypted-bundle credential helper, preserved repository hooks and commit-msg coauthor cleanup installed."
+    },
+    {
+      "name": "setup",
+      "status": "passed",
+      "command_or_result": "cloud_run npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive; exit 0. Private setup output is not selected for evidence."
+    },
+    {
+      "name": "typecheck",
+      "status": "passed",
+      "command_or_result": "cloud_run pnpm run typecheck; exit 0."
+    },
+    {
+      "name": "build",
+      "status": "passed",
+      "command_or_result": "cloud_run npx -y @runeditrun/rer build; exit 0."
+    },
+    {
+      "name": "plan coverage",
+      "status": "passed",
+      "command_or_result": "Exact multiset of 25 non-build commands preserved; 36 journey names once each; eight push shards."
+    },
+    {
+      "name": "contract generation",
+      "status": "passed",
+      "command_or_result": "node src/base/contract-docs.mjs write; node src/base/contract-docs.mjs check; exit 0. Generated views restored whole from main."
+    },
+    {
+      "name": "source lock",
+      "status": "passed",
+      "command_or_result": "node scripts/edition-authoring/cli.mjs lock; node scripts/edition-authoring/cli.mjs check; exit 0."
+    },
+    {
+      "name": "merged runtime syntax",
+      "status": "passed",
+      "command_or_result": "node --check tests/runtime.mjs; node --check tests/archive-runtime.mjs; exit 0."
+    },
+    {
+      "name": "workflow permission check",
+      "status": "passed",
+      "command_or_result": "node scripts/verify-ci.mjs --check-workflows; exit 0."
+    },
+    {
+      "name": "merged industry selection",
+      "status": "passed",
+      "command_or_result": "cloud_run env CI=1 WRANGLER_SEND_METRICS=false PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium ENVELOPE_JOURNEYS=industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit,or-wbf,wa-li node tests/runtime.mjs",
+      "exit_code": 0
+    }
+  ],
+  "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e"
+}

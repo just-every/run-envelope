@@ -1,0 +1,4 @@
+gh run view 42606279615 --repo just-every/run-envelope --job 129160060814 --log-failed: exit 0, empty output
+gh run view 42606279615 --repo just-every/run-envelope --job 129160060814 --log: exit 0, empty output
+gh api repos/just-every/run-envelope/actions/jobs/129160060814/logs:
+Get "https://productionresultssa4.blob.core.windows.net/actions-results/39092515-1b0e-8806-8857-88d72fba6dc9/workflow-job-run-87137a7a-ec59-580d-bca5-7dd954decb25/logs/job/job-logs.txt": Forbidden

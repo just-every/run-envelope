@@ -1,0 +1,174 @@
+{
+  "before_shards": 11,
+  "after_shards": 8,
+  "nonbuild_commands_unchanged": true,
+  "before_commands": 25,
+  "after_commands": 25,
+  "journeys_before": [
+    "accounting",
+    "agent-capacity",
+    "agent-decisions",
+    "agent-docs",
+    "agent-policy",
+    "agent-replay",
+    "allocations",
+    "approvals",
+    "archive",
+    "automation",
+    "calculation",
+    "claims",
+    "extended-retirement",
+    "firm",
+    "futa-credit",
+    "hi-benefits",
+    "identity",
+    "income-verification",
+    "industry",
+    "intake",
+    "leave",
+    "masked-resources",
+    "multi-company",
+    "new-hires",
+    "ny-dbl",
+    "or-wbf",
+    "paper-onboarding",
+    "pay-items",
+    "records",
+    "retirement",
+    "rules",
+    "schedules",
+    "source-intake",
+    "sponsored",
+    "tax-notices",
+    "wa-li"
+  ],
+  "journeys_after": [
+    "accounting",
+    "agent-capacity",
+    "agent-decisions",
+    "agent-docs",
+    "agent-policy",
+    "agent-replay",
+    "allocations",
+    "approvals",
+    "archive",
+    "automation",
+    "calculation",
+    "claims",
+    "extended-retirement",
+    "firm",
+    "futa-credit",
+    "hi-benefits",
+    "identity",
+    "income-verification",
+    "industry",
+    "intake",
+    "leave",
+    "masked-resources",
+    "multi-company",
+    "new-hires",
+    "ny-dbl",
+    "or-wbf",
+    "paper-onboarding",
+    "pay-items",
+    "records",
+    "retirement",
+    "rules",
+    "schedules",
+    "source-intake",
+    "sponsored",
+    "tax-notices",
+    "wa-li"
+  ],
+  "shards": [
+    {
+      "name": "runtime",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=records,approvals,sponsored,identity pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-policy pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "workspace",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=allocations,schedules,pay-items,rules,leave,source-intake,intake pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "verification",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "pnpm run check --profile first-party",
+        "pnpm run typecheck",
+        "pnpm run test:typecheck",
+        "ENVELOPE_JOURNEYS=income-verification pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-docs pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-decisions pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "industry",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=industry,calculation,ny-dbl,extended-retirement,hi-benefits,futa-credit,or-wbf,wa-li pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=retirement pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=multi-company pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=accounting pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=masked-resources pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "claims",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=claims pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=tax-notices pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=firm pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "archive",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=archive pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "new-hires",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "pnpm run build",
+        "ENVELOPE_JOURNEYS=new-hires pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=paper-onboarding pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=automation pnpm run test:runtime",
+        "ENVELOPE_JOURNEYS=agent-capacity pnpm run test:runtime"
+      ]
+    },
+    {
+      "name": "agent-door",
+      "browser": true,
+      "hosted": true,
+      "commands": [
+        "pnpm run build",
+        "pnpm run typecheck",
+        "node tests/agent-door/failures.mjs",
+        "ENVELOPE_JOURNEYS=agent-replay pnpm run test:runtime"
+      ]
+    }
+  ]
+}

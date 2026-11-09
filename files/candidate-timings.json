@@ -1,0 +1,66 @@
+{
+  "head_sha": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "run_id": 42631428360,
+  "shards": [
+    {
+      "name": "shards (runtime, true)",
+      "job_id": 129208481669,
+      "conclusion": "success",
+      "duration_seconds": 421.0,
+      "commands_seconds": 381.0
+    },
+    {
+      "name": "shards (claims, true)",
+      "job_id": 129208481688,
+      "conclusion": "success",
+      "duration_seconds": 335.0,
+      "commands_seconds": 280.0
+    },
+    {
+      "name": "shards (verification, true)",
+      "job_id": 129208481766,
+      "conclusion": "success",
+      "duration_seconds": 304.0,
+      "commands_seconds": 262.0
+    },
+    {
+      "name": "shards (new-hires, true)",
+      "job_id": 129208481783,
+      "conclusion": "success",
+      "duration_seconds": 338.0,
+      "commands_seconds": 293.0
+    },
+    {
+      "name": "shards (archive, true)",
+      "job_id": 129208481791,
+      "conclusion": "success",
+      "duration_seconds": 545.0,
+      "commands_seconds": 500.0
+    },
+    {
+      "name": "shards (workspace, true)",
+      "job_id": 129208481836,
+      "conclusion": "success",
+      "duration_seconds": 208.0,
+      "commands_seconds": 172.0
+    },
+    {
+      "name": "shards (agent-door, true)",
+      "job_id": 129208481941,
+      "conclusion": "success",
+      "duration_seconds": 458.0,
+      "commands_seconds": 410.0
+    },
+    {
+      "name": "shards (industry, true)",
+      "job_id": 129208482061,
+      "conclusion": "success",
+      "duration_seconds": 486.0,
+      "commands_seconds": 439.0
+    }
+  ],
+  "longest_seconds": 545.0,
+  "mean_seconds": 386.875,
+  "total_gh_invocations": 8,
+  "longest_to_mean": 1.4087237479806138
+}

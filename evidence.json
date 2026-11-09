@@ -1,0 +1,112 @@
+{
+  "files": [
+    {
+      "blob": "eebe44e56c3d09156343a87d02345ccc8977844d",
+      "bytes": 1065,
+      "path": "ASSIGNMENTS.md",
+      "sha256": "23aa866f31d250169c3b6f2a296e82e4681db27cdd89c277b9f390535ba23092"
+    },
+    {
+      "blob": "113314630de17793d08d21160e51a24fd358f16c",
+      "bytes": 2550,
+      "path": "PLAN.md",
+      "sha256": "bd2caf05edac8644394d6153bc2ba6395bdfc942cf51fd7dc1079077856149b2"
+    },
+    {
+      "blob": "13ae826511206cfa97ee1e75ba9a7aea67127049",
+      "bytes": 6399,
+      "path": "REPORT.md",
+      "sha256": "1f73c43c72488ebc000066335c34908581169ecf9127219522deb7c6d087eda3"
+    },
+    {
+      "blob": "2d94959c7d468bc96a5d11003729377aa9a0c811",
+      "bytes": 43325,
+      "path": "baseline-jobs.json",
+      "sha256": "2ccea441d78f517ad6a337d6b14f734e8b06e079af6d1cefd3d74cec9a9b3523"
+    },
+    {
+      "blob": "af6b56fd7fc322165b8d1d6c02fe47c66d89eb5d",
+      "bytes": 477,
+      "path": "baseline-log-transport.txt",
+      "sha256": "2371c1b24a81472d8888d795f174082efc8e762051e19892e44959bddba5c4b3"
+    },
+    {
+      "blob": "57b40faa8c9d50008930a2f10cf31fb82cb2bb0b",
+      "bytes": 2094,
+      "path": "baseline-timings.json",
+      "sha256": "76d157a2f3900580d4cd5b74edc12307b2c442e65b878f2387d04d55a76523bc"
+    },
+    {
+      "blob": "21cc8c8b447db0cc55eb7462905c3d22a32411d1",
+      "bytes": 32556,
+      "path": "candidate-jobs.json",
+      "sha256": "d6257bf4055102f4500772e42e9b54ff675753fcbdd1b2881684f167519d127c"
+    },
+    {
+      "blob": "49c205ada04f439eff2762afc797d5a1e83c5d11",
+      "bytes": 1673,
+      "path": "candidate-timings.json",
+      "sha256": "6c151c9849c34ab0683cd0d8165bc85fb5457371ef0a6a9f8558d816f9e969f9"
+    },
+    {
+      "blob": "4acdd3eb4633777b8c1004b23d384d8aa6cb896e",
+      "bytes": 228,
+      "path": "ci-discovery-initial.json",
+      "sha256": "2fbc9ea06db0e48d7da4066d014e9e967e296d58fb5c9236656213d41440196a"
+    },
+    {
+      "blob": "7fe01c488984020d084ff505790cb49593a123ef",
+      "bytes": 1034,
+      "path": "ci-receipt.json",
+      "sha256": "f66b80f78b4cef9c1ba7a526d9499bc90bbbc57cff57cd927ddded653eaad1f4"
+    },
+    {
+      "blob": "45a0374db1f0f8e212ca57dba85d0fa48826f1b7",
+      "bytes": 630,
+      "path": "identity-trailers.txt",
+      "sha256": "710045e1390ee28ba4220543c77e5568225367fdee7b40369531ba86084a8ea4"
+    },
+    {
+      "blob": "7800e787e44b598aaf29c2d70074d01d0c25a115",
+      "bytes": 2161,
+      "path": "local-checks.json",
+      "sha256": "83e0e7369870ae83dbd6b72541e5b38dc528c3ada5ba214b5a7135c3a426c752"
+    },
+    {
+      "blob": "8795d2244f347197e38d6cfaad2835142a9d8f26",
+      "bytes": 3744,
+      "path": "native-worker-probes.txt",
+      "sha256": "2f5d5fc31a292775f63bb777ee34a18a37635cf5a0abc2d23faeab960208553b"
+    },
+    {
+      "blob": "c717b184a62bb6d3d599e8d0142a329e7218cb71",
+      "bytes": 4220,
+      "path": "plan-coverage.json",
+      "sha256": "80aa27ca1a8d3857c962dabf5982b3abf7b4a23fd406a573c51cf7c0875d599f"
+    },
+    {
+      "blob": "9dd38d89009813953a299cce83407f4d88dcdd85",
+      "bytes": 763,
+      "path": "product-push.txt",
+      "sha256": "0f8d319571dbe67b6ce7a57eaa300d286fe5de4ec0e88b4d653391deb7d08488"
+    },
+    {
+      "blob": "b3544f8739c023839d85c2d0d516b89eb9bc4f49",
+      "bytes": 2220,
+      "path": "product-receipt.json",
+      "sha256": "ff96849685917bc6529923ae5bd4cd7b90a8b6871cbebfcafcc09c7432f79399"
+    },
+    {
+      "blob": "ee7aef4e5769bc0f91d81a90aad2040001d5ac39",
+      "bytes": 6508,
+      "path": "test-counts.json",
+      "sha256": "72227497cd8658ce391cc3482a1ffb0f43d8d15ea919ef89e81c52467b0a187c"
+    }
+  ],
+  "product_branch": "cloud/sx-envelope-f104-shard-time-1",
+  "product_head": "fc8fa4f03b5f078b52e443751b12a3677102f01e",
+  "ref": "refs/heads/evidence/sx-envelope-f104-shard-time-1",
+  "repository": "just-every/run-envelope",
+  "schema": 1,
+  "tag": "sx-envelope-f104-shard-time-1"
+}
