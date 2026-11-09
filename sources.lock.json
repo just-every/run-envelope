@@ -4357,7 +4357,7 @@
       "executable": false
     },
     "tests/archive-runtime.mjs": {
-      "sha256": "3ce85689b254fd5668a5f5daa3a9da7f3963c2a84a27895c33b633feded4bc45",
+      "sha256": "3d0a1b44a0174fb325010573d5e4daec44ac0d48ca3362692bd427d971d51844",
       "executable": false
     },
     "tests/archive-worker.mjs": {
@@ -4569,7 +4569,7 @@
       "executable": false
     },
     "tests/or-wbf-runtime.mjs": {
-      "sha256": "21d218919509b2dee1bcfce29822d7914feb614d5533ac9250c5d5a3121cacfe",
+      "sha256": "6788ab9a5e230700702f9e57cf65e23624434f66c5ec6af68d492d4561d10f39",
       "executable": false
     },
     "tests/payroll-approvals.mjs": {

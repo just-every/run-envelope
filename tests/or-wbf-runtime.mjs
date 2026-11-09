@@ -50,8 +50,8 @@ export async function orWbfJourney(context) {
  for(const bad of [{taxYear:2025},{state:'WA'},{sourceEdition:'440-4999-COM-12-25'},{rounding:'nearest-cent-per-report'},{sourceEdition:'OR-WBF-2027'}]) await refused(sources,{...source,...bad})
  await data(sources,source,201)
  const first=hours('2026-01-01','2026-01-07','10.5'),second=hours('2026-01-08','2026-01-14','10.6')
- await data(period(first.from),first,201);await data(period(second.from),second,201)
  privateValue(first.reference);privateValue(first.methodReference)
+ await data(period(first.from),first,201);await data(period(second.from),second,201)
  const capture=request([selection(person,first.from),selection(person,second.from)])
  await refused(door,capture)
  const reviewedSource=await approve(data,sources)
@@ -100,17 +100,19 @@ export async function orWbfJourney(context) {
  console.log('PROBE ENV-096 1: current native source and exact period review, preparation and calculation-preview -> 10.5 hours gives 9 employee cents and 9 employer cents; 10.6 gives 10 each; unsigned OQ worksheet and unchanged ordinary payroll')
 
  // 0.5 hour x .009 dollars = .0045 dollars: each period rounds to zero.
- // Aggregating the two hours first would incorrectly produce .01 dollars each.
+ // Aggregating those hours first would incorrectly produce .01 dollars each.
+ // At six-decimal precision, 10.555555 hours yields 9.4999995 cents, while
+ // 10.555556 yields 9.5000004 cents. Rounding hours first changes the first amount.
  const rounding=await data(base+'/people',{name:'Synthetic period-rounding worker',locationId:location.id},201)
  const roundingPeriods=[]
- for(const [from,through] of [['2026-01-01','2026-01-07'],['2026-01-08','2026-01-14']]) {
+ for(const [from,through,value] of [['2026-01-01','2026-01-07','0.5'],['2026-01-08','2026-01-14','0.5'],['2026-01-15','2026-01-21','10.555555'],['2026-01-22','2026-01-28','10.555556']]) {
   const p=base+'/people/'+rounding.id+'/or-wbf-hours/'+from
-  await data(p,hours(from,through,'0.5',{reference:'synthetic-envelope-round-'+from}),201);await approve(data,p);roundingPeriods.push(selection(rounding,from))
+  await data(p,hours(from,through,value,{reference:'synthetic-envelope-round-'+from}),201);await approve(data,p);roundingPeriods.push(selection(rounding,from))
  }
  const periodRounded=await data(door,{...request(roundingPeriods),version:1},201)
- assert.equal(periodRounded.result.hours,'1');assert.equal(periodRounded.result.employeeCents,0);assert.equal(periodRounded.result.employerCents,0)
- assert.equal(periodRounded.result.combinedReportWorksheet.proposedAssessmentCents,0)
- assert.deepEqual(periodRounded.result.rows.map(r=>r.employeeCents),[0,0])
+ assert.equal(periodRounded.result.hours,'22.111111');assert.equal(periodRounded.result.employeeCents,19);assert.equal(periodRounded.result.employerCents,19)
+ assert.equal(periodRounded.result.combinedReportWorksheet.proposedAssessmentCents,38,'period amounts sum to 19 cents each; rounding aggregate hours would incorrectly give 20 each')
+ assert.deepEqual(periodRounded.result.rows.map(r=>[r.hours,r.employeeCents,r.employerCents]),[['0.5',0,0],['0.5',0,0],['10.555555',9,9],['10.555556',10,10]])
  // Explicit half-cent boundary: 5 hours x .9 cents = 4.5 cents -> 5 cents.
  const monthly=await data(base+'/people',{name:'Synthetic untracked-hours monthly worker',locationId:location.id},201)
  const monthDoor=base+'/people/'+monthly.id+'/or-wbf-hours/2026-02-01'
