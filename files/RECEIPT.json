@@ -40,6 +40,7 @@
     },
     {
       "command": "cloud_run env CI=true WRANGLER_SEND_METRICS=false ENVELOPE_JOURNEYS=archive PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium timeout 1200 node tests/runtime.mjs",
+      "exactCandidateVerify": "success in push Verify 42606243074; earlier complete local archive invocation still recorded as exit 1",
       "exit": 1,
       "failure": "Full isolated archive run passed WBF encrypted restore and inactive-authority assertions, then an existing unrelated-consent error-code assertion failed. Exact CLI reproduction returned expected archive_relationship_invalid; remaining assertions passed directly. See ARCHIVE-DIAGNOSIS.md.",
       "fullJourneyPassed": false,
@@ -78,16 +79,16 @@
   ],
   "ci": {
     "candidate": {
-      "conclusion": null,
+      "conclusion": "success",
       "event": "push",
       "head_sha": "ed99e6c214966b95a61b3b6f3696b3cc354dc331",
       "html_url": "https://github.com/just-every/run-envelope/actions/runs/42606243074",
       "id": 42606243074,
       "name": "Verify",
-      "observedAt": "2026-11-09T11:06:00Z",
-      "status": "in_progress"
+      "observedAt": "2026-11-09T11:16:34Z",
+      "status": "completed"
     },
-    "githubCallsUsed": 2,
+    "githubCallsUsed": 4,
     "mainHead": "2913789638d9f6da2cccb65ea318cc9b92f185e1",
     "mainRunSite": 42437532472,
     "mainVerify": 42592619451,
@@ -115,6 +116,14 @@
       "total": 126
     },
     "contractStatusCellsChanged": false
+  },
+  "evidenceReadback": {
+    "allBytesSizesHashesAndBlobsMatch": true,
+    "authenticationRecovery": "First optional fetch rejected; launcher bundle refreshed, same fleet helper reinstalled, next fetch succeeded. No product push rejection.",
+    "files": 23,
+    "head": "10d573438ee17c28748968d5e64ff5cf690023a2",
+    "productCheckoutUnchanged": true,
+    "productHeadMatches": true
   },
   "finalEditScope": "Archive assertion diagnostic text and restoration of original always-cleanup behavior only; calculation, WBF journey, all archive assertions and product source bytes unchanged since their latest successful relevant probes.",
   "lastPushedSave": "632c5bfebe4c8912c3b9a930dc9f5e8d023d966d",
@@ -151,6 +160,10 @@
     "BUILD.log": {
       "bytes": 1544,
       "sha256": "6ad72b5f11d7a5da52afd0036c4a05287a1fffe55b91ec662cb38818803988e1"
+    },
+    "CI.json": {
+      "bytes": 181,
+      "sha256": "7467fb13d5797566ddda5b628c3fed690b46d4c02d1aef6da08f58736f170ebb"
     },
     "CONSENT-REFUSAL.log": {
       "bytes": 2000,
@@ -203,6 +216,7 @@
   "repository": "just-every/run-envelope",
   "schema": 1,
   "tag": "sx-envelope-c-f103",
+  "terminalProductCustody": "READY: exact pushed product SHA has completed successful push Verify; no main or default branch was pushed.",
   "testBudget": {
     "check": "first-party profile passed; no cap override requested or changed",
     "existingArchiveJourneyExtended": true,

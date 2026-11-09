@@ -2,7 +2,8 @@
 
 Repository: just-every/run-envelope. Product branch: cloud/sx-envelope-c-f103.
 Candidate head: ed99e6c214966b95a61b3b6f3696b3cc354dc331. Exact CI custody is recorded in RECEIPT.json.
-Verify push run 42606243074 is in progress at first discovery; no candidate Run site or landing is claimed.
+Verify push run 42606243074 completed successfully on this exact SHA, observed
+2026-11-09T11:16:34Z. No candidate Run site or landing is claimed.
 
 ENV-096 is claimed PARTIAL. Acceptance 1 is proved through current native owner
 source review, period review, preparation and calculation-preview routes.
@@ -78,8 +79,8 @@ has already passed.
 | --- | --- | --- |
 | 1 | PARTIAL | R1 through R12 cover the native preparation slice; R13 remains owed. Exact Verify custody is separate in RECEIPT.json. |
 | 2 | PASS locally | Populated independent OAR cent goldens and unsafe routes exercised both ways; refused attempts compare retained evidence and business authority. |
-| 3 | CI custody pending until recorded | Both journeys are registered in existing push Verify commands; exact-SHA result is in RECEIPT.json. |
-| 4 | PASS for relevant bytes | Final local runs use the completed source and test bytes. Subsequent mechanical lock changes alter no calculation or assertion. |
+| 3 | PASS | Push Verify 42606243074 completed successfully on ed99e6c214966b95a61b3b6f3696b3cc354dc331; both journeys run through its existing commands. |
+| 4 | PASS | Exact-SHA push Verify 42606243074 passed the final code and assertions. Earlier local probes and their diagnostic limits remain in the receipt. |
 | 5 | INSPECTED | ENV-096 retains its existing From: ENV-021 and D-4 rule citation; no inherited duty is counted as completed. |
 | 6 | PASS mechanical | Contract generator write and check pass, generated views are restored from main, and source lock is regenerated last and checked. Status cells remain untouched. |
 | 7 | PASS | No acceptance, contract shape, ruling or coverage-map change. |
@@ -163,3 +164,32 @@ fixture cleanup. Full exact-SHA Verify remains the decisive recorded CI proof.
 PROBE ENV-096 1: current native source and exact period review, preparation and calculation-preview -> 10.5 hours gives 9 employee cents and 9 employer cents; 10.6 gives 10 each, with unsigned OQ worksheet and unchanged ordinary payroll.
 PROBE ENV-096 2 calculation: reviewed untracked monthly flat method and 173.33 hours -> 156 employee cents, 156 employer cents and 312 total; Washington 160-hour default refuses without writes.
 MECHANICAL lock=node scripts/edition-authoring/cli.mjs lock and check exit=0; views=node src/base/contract-docs.mjs write and check exit=0; ledger=none exit=0.
+
+## Terminal custody and evidence
+
+Exact candidate ed99e6c214966b95a61b3b6f3696b3cc354dc331 is pushed only to
+cloud/sx-envelope-c-f103. Push Verify 42606243074 completed with success on that
+exact SHA. The observed REST response is in CI.json. The existing full archive
+command is registered in that successful Verify; the earlier local archive
+failures and direct successful reproductions remain recorded without rewriting
+their outcomes. Four explicit GitHub API calls were used, including the main
+check, candidate discovery and two spaced candidate polls.
+
+All 23 files in the first evidence publication were fetched back and verified
+against their manifest bytes, sizes, SHA-256 hashes and Git blob ids; the product
+checkout remained unchanged. Its optional initial read-back fetch had one
+authentication rejection. Refreshing the launcher's same injected bundle and
+reinstalling the same helper resolved it on the next fetch. Neither product nor
+evidence push was rejected. The final evidence publication adds this CI receipt.
+
+CLAIM ENV-096 PARTIAL points=1 tests=tests/or-wbf-runtime.mjs#orWbfJourney; tests/archive-runtime.mjs#archiveJourney
+GAP ENV-096: Acceptance 2's actual combined reporting and remittance, actual deductions, paid stubs, complete applicability and effective history, and full payroll integration remain owed under the existing account, employer, rail and agency holds.
+
+No DEFAULT line is needed: no new policy was adopted. No contract or plan row
+was edited. Proposed plan return is ENV-096 MISSING to PARTIAL for acceptance 1
+and only the calculation and unsigned reporting-data portion of acceptance 2.
+Counts in the source remain 6 DONE, 44 PARTIAL and 76 MISSING, total 126.
+The full plan is PLAN.md; the frozen rubric, all eleven DONE-RIDERS rows and
+pre-handoff checks are above. Main equality, COMPLETE full-history publication
+scan with zero findings, guarded landing and candidate Run site remain fleet
+gates, not receipts this cloud asserts.
