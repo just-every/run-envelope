@@ -73,7 +73,6 @@ jobs:
       - name: Install Chromium and system libraries
         if: matrix.browser
         run: |
-        run: |
           # The hosted Azure mirror once stalled package downloads past the job limit, and a
           # single forced mirror has the same exposure. Walk three mirrors, one per bounded
           # attempt (Linen/Spool pattern); the first mirror whose apt-get update completes
