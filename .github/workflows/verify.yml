@@ -73,10 +73,45 @@ jobs:
       - name: Install Chromium and system libraries
         if: matrix.browser
         run: |
-          # The hosted Azure mirror stalled package downloads past the job limit.
-          # Keep the full browser dependency installation on Ubuntu's primary mirror.
-          printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          pnpm exec playwright install --with-deps chromium
+        run: |
+          # The hosted Azure mirror once stalled package downloads past the job limit, and a
+          # single forced mirror has the same exposure. Walk three mirrors, one per bounded
+          # attempt (Linen/Spool pattern); the first mirror whose apt-get update completes
+          # stays configured for the Playwright dependency install.
+          mirrors=(http://azure.archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu http://us-east-1.ec2.archive.ubuntu.com/ubuntu)
+          printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/99envelope-ci-acquire > /dev/null
+          started=$SECONDS
+          chosen=
+          for attempt in 1 2 3; do
+            mirror=${mirrors[attempt - 1]}
+            sudo sed -i -E "s@^(URIs:[[:space:]]*)(mirror\+file:/etc/apt/apt-mirrors\.txt|https?://(([a-z0-9.-]+\.)?archive\.ubuntu\.com|security\.ubuntu\.com|mirrors\.edge\.kernel\.org)/ubuntu/?)@\1${mirror}/@" /etc/apt/sources.list.d/ubuntu.sources
+            printf 'Browser deps apt: attempt %s/3 (90s deadline; mirror %s)\n' "$attempt" "$mirror"
+            if sudo timeout --kill-after=5s 90s apt-get update; then
+              chosen=$mirror
+              printf 'Browser deps apt: complete (attempt=%s mirror=%s seconds=%s)\n' "$attempt" "$mirror" "$((SECONDS - started))"
+              break
+            else
+              status=$?
+              printf 'Browser deps apt: attempt %s/3 failed (mirror %s, exit %s, seconds=%s)\n' "$attempt" "$mirror" "$status" "$((SECONDS - started))" >&2
+            fi
+            if (( attempt < 3 )); then sleep "$((attempt * 2))"; fi
+          done
+          if [ -z "$chosen" ]; then
+            printf 'Browser deps apt: failed on all 3 mirrors (seconds=%s)\n' "$((SECONDS - started))" >&2
+            exit 1
+          fi
+          for attempt in 1 2; do
+            printf 'Playwright deps: attempt %s/2 (240s deadline; mirror %s)\n' "$attempt" "$chosen"
+            if timeout --kill-after=5s 240s pnpm exec playwright install --with-deps chromium; then
+              exit 0
+            else
+              status=$?
+              printf 'Playwright deps: attempt %s/2 failed (exit %s, seconds=%s)\n' "$attempt" "$status" "$((SECONDS - started))" >&2
+            fi
+            if (( attempt < 2 )); then sleep 5; fi
+          done
+          printf 'Playwright deps: failed after 2 attempts (seconds=%s)\n' "$((SECONDS - started))" >&2
+          exit 1
       - name: Reserve disk for native runtime journeys
         if: matrix.browser
         run: |
