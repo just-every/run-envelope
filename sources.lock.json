@@ -2353,7 +2353,7 @@
       "executable": false
     },
     "src/envelope/door/index.ts": {
-      "sha256": "bb78e5ab69ee0adae654aa76feafd7532311f9e16554b6772a4fffcbae17bc58",
+      "sha256": "4fbfa29cdfedf4715b4699c159ad0d4b73ba3268ea0205e67b05e2fb84e61d0d",
       "executable": false
     },
     "src/envelope/door/native.ts": {

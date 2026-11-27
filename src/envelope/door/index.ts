@@ -18,13 +18,27 @@ function trust(env: Bindings): Trust | null {
   if (!issuer || !installationId || !keys) throw new Error('Incomplete agent trust')
   return {issuer,installationId,appOrigin:env.AUTH_ORIGIN,publicKeys:JSON.parse(keys)}
 }
-/** The JSON-RPC id of a request within the advertised body limit, else null. */
-async function requestId(request: {headers:Headers;text():Promise<string>}) {
+/** The JSON-RPC id of a request within the advertised body limit, else null.
+ * Reads at most that limit, counted in bytes, whether or not a length was sent. */
+async function requestId(request: {headers:Headers;body:ReadableStream<Uint8Array>|null}) {
   if(Number(request.headers.get('content-length')??0)>capacityLimits.maxBodyBytes)return null
+  const reader=request.body?.getReader()
+  if(!reader)return null
+  const chunks:Uint8Array[]=[]
+  let length=0
   try {
-    const text=await request.text()
-    if(text.length>capacityLimits.maxBodyBytes)return null
-    const id=(JSON.parse(text) as {id?:unknown}|null)?.id
+    for(;;) {
+      const {done,value}=await reader.read()
+      if(done)break
+      length+=value.byteLength
+      // Not awaited: cancelling one branch of a cloned body waits for the other.
+      if(length>capacityLimits.maxBodyBytes){reader.cancel().catch(()=>{});return null}
+      chunks.push(value)
+    }
+    const bytes=new Uint8Array(length)
+    let offset=0
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+    const id=(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)) as {id?:unknown}|null)?.id
     return typeof id==='string'||typeof id==='number'?id:null
   } catch {return null}
 }
