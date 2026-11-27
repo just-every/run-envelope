@@ -11,7 +11,7 @@ import { outputSchema } from './schemas'
 import { rotate, rotationKey } from './rotation'
 import { effect, sensitiveRecords } from './effects'
 import { catalogue } from './catalogue'
-import { personUri } from './resources'
+import { personUri, proposalUri } from './resources'
 
 async function snapshot(env: Bindings, ctx: ToolContext) {
   const agent=await nativeAgent(env,ctx), f=agent.fence(), l=agent.location('location_id')
@@ -72,6 +72,10 @@ export function nativeTools(env: Bindings,defer?: (work:Promise<unknown>)=>void)
           if(nativeName==='records.list') {
             const page=value as Awaited<ReturnType<typeof agent.records>>
             return {result:page,resources:page.records.map(person=>({uri:personUri(agent.grant.company_id,String(person.id)),name:String(person.name)}))}
+          }
+          if(nativeName==='draft.prepare') {
+            const proposal=value as Awaited<ReturnType<typeof agent.prepare>>
+            return {result:proposal,resources:[{uri:proposalUri(agent.grant.company_id,String(proposal.id)),name:'Hourly proposal'}]}
           }
           return {result:value}
         } catch(error) {

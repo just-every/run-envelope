@@ -8,6 +8,7 @@ import { document_sha256 } from '../../src/modules/agent-door/policy/document.ts
 import { client, state, answers } from './native.mjs'
 
 const template='envelope://companies/{company}/people/{person}'
+const offered=['envelope://companies/{company}/drafts/{draft}',template]
 const uri=(company,person)=>'envelope://companies/'+company+'/people/'+person
 const identity=({id,name,locationId,version})=>({id,name,locationId,version})
 const code=body=>body.error?.data?.code
@@ -31,7 +32,7 @@ export default async function maskedResources(context) {
   assert.deepEqual(links.map(link=>link.uri),records.map(person=>uri(saved.company.id,person.id)))
   for(const path of ['/mcp','/api/envelope/mcp']) {
     const templates=await (await rpc(request,origin,token,'resources/templates/list',{},path)).json()
-    assert.deepEqual(templates.result.resourceTemplates.map(item=>item.uriTemplate),[template])
+    assert.deepEqual(templates.result.resourceTemplates.map(item=>item.uriTemplate),offered)
     for(const person of records) {
       const body=await (await rpc(request,origin,token,'resources/read',{uri:uri(saved.company.id,person.id)},path)).json()
       assert.deepEqual(readValue(body),identity(await data(saved.base+'/people/'+person.id)))
@@ -127,7 +128,7 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
 
   for(const path of ['/mcp','/api/envelope/mcp']) {
     const listing=await (await rpc(fetch,origin,credential.token,'resources/templates/list',{},path)).json()
-    assert.deepEqual(listing.result.resourceTemplates.map(item=>item.uriTemplate),[template])
+    assert.deepEqual(listing.result.resourceTemplates.map(item=>item.uriTemplate),offered)
     const body=await read(undefined,credential.token,path)
     assert.deepEqual(readValue(body),expected)
     assert.deepEqual(body.result._meta['com.runeditrun/decision'].classes.map(item=>item.class),['standard'])

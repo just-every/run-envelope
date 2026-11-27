@@ -14,6 +14,7 @@ export const toolClasses: Record<string, readonly string[]> = {
   'workspace.snapshot': ['standard'],
   'draft.prepare': ['standard'],
   'draft.read': ['sensitive'],
+  'draft.proposal': ['sensitive'],
   'reports.proposals': ['sensitive'],
   'bonus.prepare': ['standard'],
   'bonus.read': ['sensitive'],

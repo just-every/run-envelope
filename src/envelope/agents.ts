@@ -255,6 +255,10 @@ export class AgentSettings {
     ).results
   }
 }
+// One hourly proposal as its preparing credential reads it, by tool or resource.
+export const proposalSelect = `SELECT d.id,d.person_id AS personId,p.name AS personName,d.person_version AS personVersion,d.rate_id AS rateId,r.hourly_cents AS hourlyCents,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,d.source_ref AS sourceRef,(p.version!=d.person_version) AS stale
+    FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id JOIN env_rate_proposals r ON r.company_id=d.company_id AND r.id=d.rate_id`
+export const proposalState = { status: 'uncalculated-proposal', approval: 'not-approved', dispatch: 'unavailable' } as const
 export class AgentTools {
   doorContext?: ToolContext
   resourceContext?: ResourceContext
@@ -527,18 +531,12 @@ export class AgentTools {
         [this.grant.company_id, id, this.grant.id, ...l.args],
       ),
       this.env.DB.prepare(
-        `SELECT d.id,d.person_id AS personId,p.name AS personName,d.person_version AS personVersion,d.rate_id AS rateId,r.hourly_cents AS hourlyCents,d.minutes,d.period_start AS periodStart,d.period_end AS periodEnd,d.pay_date AS payDate,d.source_ref AS sourceRef,(p.version!=d.person_version) AS stale
-    FROM env_run_drafts d JOIN env_people p ON p.company_id=d.company_id AND p.id=d.person_id JOIN env_rate_proposals r ON r.company_id=d.company_id AND r.id=d.rate_id
+        `${proposalSelect}
     WHERE d.company_id=? AND d.id=? AND d.credential_id=? AND ${l.sql} AND ${f.sql}`,
       ).bind(this.grant.company_id, id, this.grant.id, ...l.args, ...f.args),
     ])
     if (!result[0].meta.changes || !result[1].results[0])
       throw new PayrollError('draft_or_authority_unavailable', 403)
-    return {
-      ...result[1].results[0],
-      status: 'uncalculated-proposal',
-      approval: 'not-approved',
-      dispatch: 'unavailable',
-    }
+    return { ...result[1].results[0], ...proposalState }
   }
 }

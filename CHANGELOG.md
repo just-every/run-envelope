@@ -5,6 +5,7 @@
 - First public release of Envelope, with the payroll workspace, owner setup and portable records.
 - Hosted installs can run without outbound email. The owner can sign in with `rer signin`.
 - The hosted demo deploys from the published release tag.
+- An agent that prepares an hourly proposal gets a link to it and can read the written proposal back as a resource (`envelope://companies/{company}/drafts/{draft}`), under the same policy and scope as reading the proposal with the tool.
 
 ## 28 October 2026 — contract cleanup to the RER contract standard
 

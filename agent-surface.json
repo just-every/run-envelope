@@ -351,6 +351,7 @@
     }
   ],
   "resources": [
+    "envelope://companies/{company}/drafts/{draft}",
     "envelope://companies/{company}/people/{person}"
   ],
   "notTools": [
@@ -499,7 +500,27 @@
             "measure": 1
           }
         }
-      ]
+      ],
+      "resource": {
+        "uriTemplate": "envelope://companies/{company}/drafts/{draft}",
+        "state": {
+          "id": {
+            "$from": "draft",
+            "pointer": "/id"
+          },
+          "personId": {
+            "$fixture": "person",
+            "pointer": ""
+          },
+          "minutes": 480,
+          "periodStart": "2026-10-01",
+          "periodEnd": "2026-10-07",
+          "payDate": "2026-10-09",
+          "status": "uncalculated-proposal",
+          "approval": "not-approved",
+          "dispatch": "unavailable"
+        }
+      }
     },
     {
       "id": "draft-read",

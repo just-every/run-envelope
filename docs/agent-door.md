@@ -284,8 +284,22 @@ Revocation from the shared Agents page also fences an already suspended read;
 a native credential cannot bypass that client revocation.
 The final delivery query checks the current identity and authority together;
 an identity edit after the native read also invalidates an approved retry.
-Company, run, filing, notice, case, coverage and report resource families remain
-unavailable, as do sensitive resource reads and file exports.
+
+The hourly proposal resource template is
+`envelope://companies/{company}/drafts/{draft}`. A successful
+`envelope.draft.prepare` returns one resource link to the proposal it wrote, and
+`resources/read` on that link returns the same JSON as `envelope.draft.read`: the
+worker and reviewed-rate references, hourly rate, minutes, dates, source, stale
+flag and the uncalculated, not-approved state. The read carries sensitive with
+kind compensation and needs current `drafts:read`, the compensation field, the
+matching company and location, and the credential that prepared the proposal.
+It is fenced and audited like the masked worker read, under the native call
+`draft.proposal`: the same policy holds, changed-projection refusal and
+`resource_unavailable` for a missing, foreign or inaccessible proposal apply.
+
+Bonus preparations return no resource link yet. Company, run, filing, notice,
+case, coverage and report resource families remain unavailable, as do file
+exports.
 
 All installed tools publish closed output contracts. Hourly proposals retain their
 worker and reviewed-rate references, source, minutes, dates and numeric stale flag;

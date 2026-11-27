@@ -365,7 +365,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "031dec6cb53814a58a53b32e762738bd0c8b6889961ea8c3d63c069a02fef145",
+      "sha256": "d95343d3a62e06f75faf287ff7aea9a7f11cd5646b70bf495a39ab2502b4efe3",
       "executable": false
     },
     "AGENTS.md": {
@@ -377,7 +377,7 @@
       "executable": false
     },
     "CHANGELOG.md": {
-      "sha256": "48c35564b75b37e69a7a90376f03daf710acc68a095ae922b6a9b2cd1e2793bf",
+      "sha256": "6b05603324b5b1ccacf04a9ebd9e3c08e1a30ffa3bd6d6474adcd04f4af47414",
       "executable": false
     },
     "CLAUDE.md": {
@@ -409,7 +409,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "c15fb292d70569ba5fe55ed93d4dde15adc133ac2fde9310cea39517992ddd92",
+      "sha256": "189ab9b46ee2da385a272949ee4981595e1aec67fa571625efb99389a73fd154",
       "executable": false
     },
     "docs/archive-recovery.md": {
@@ -2145,11 +2145,11 @@
       "executable": false
     },
     "src/envelope/agent-policy.ts": {
-      "sha256": "4c0aa3cc62d8b8fb136b21c2ca333f1b1504368d9ffddb1c55ef8b5448df632c",
+      "sha256": "a94f6846852e2cb7fc9f6f793ce0c4f0758363ed4d2409b5a4eeda8c84c6f91d",
       "executable": false
     },
     "src/envelope/agents.ts": {
-      "sha256": "a54458138e8160e4e506d8d9bb82981d61fcfab1f71fd3365185fad67419af9b",
+      "sha256": "bce237420f53146bbb80f3e656febd1783c680032af4fab0c175ba0fcf896cd0",
       "executable": false
     },
     "src/envelope/archive-history.ts": {
@@ -2361,7 +2361,7 @@
       "executable": false
     },
     "src/envelope/door/resources.ts": {
-      "sha256": "582a9d0fb0e5672b6641c81997075006130be53b20f65e11e1ca9f6378b3df99",
+      "sha256": "e3b329cd5228cf0adffa95b5773b729a7feb4519005ab9e9c4b96e4188674374",
       "executable": false
     },
     "src/envelope/door/rest.ts": {
@@ -2377,7 +2377,7 @@
       "executable": false
     },
     "src/envelope/door/tools.ts": {
-      "sha256": "cc3ff15718468bc0215f4cb5eadb7c009fbee40766d31aa1066b67304be250bc",
+      "sha256": "d0febbdf736800cfd2f6c49680fa1f744cecd4634267c885f6eb3ed6231dbf5a",
       "executable": false
     },
     "src/envelope/empty-worker-erasure.ts": {
@@ -4269,7 +4269,7 @@
       "executable": false
     },
     "tests/agent-door/masked-resources.mjs": {
-      "sha256": "74016b77a06a1a7598298e41f78e721ad06eb42e2c98bcaadca41726566ac89d",
+      "sha256": "556122c8ea2ff7776c3248fbad5f0304e4fab2e3ed98c68973ec823dc6d55bbf",
       "executable": false
     },
     "tests/agent-door/native.mjs": {
@@ -4313,7 +4313,7 @@
       "executable": false
     },
     "tests/agent-door/rotation-journey.mjs": {
-      "sha256": "f977828681b8cac3efed1b2b308b51faffd5c0d6500112dfa9fd568da8e3d441",
+      "sha256": "64f7ec883c339fbe2ed31a15711bd466c07de817944b6bde42348bcb216eb20b",
       "executable": false
     },
     "tests/agent-door/tool-contracts.mjs": {
