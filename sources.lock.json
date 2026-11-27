@@ -4269,7 +4269,7 @@
       "executable": false
     },
     "tests/agent-door/masked-resources.mjs": {
-      "sha256": "556122c8ea2ff7776c3248fbad5f0304e4fab2e3ed98c68973ec823dc6d55bbf",
+      "sha256": "678ca440368e4a6bf580617a2f20538cbf5223c69bf45a7351443e141f477a30",
       "executable": false
     },
     "tests/agent-door/native.mjs": {

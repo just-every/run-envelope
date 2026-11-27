@@ -128,7 +128,7 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
 
   for(const path of ['/mcp','/api/envelope/mcp']) {
     const listing=await (await rpc(fetch,origin,credential.token,'resources/templates/list',{},path)).json()
-    assert.deepEqual(listing.result.resourceTemplates.map(item=>item.uriTemplate),offered)
+    assert.deepEqual(listing.result.resourceTemplates.map(item=>item.uriTemplate),[template])
     const body=await read(undefined,credential.token,path)
     assert.deepEqual(readValue(body),expected)
     assert.deepEqual(body.result._meta['com.runeditrun/decision'].classes.map(item=>item.class),['standard'])
@@ -149,6 +149,22 @@ export async function maskedResourceJourney({origin,cookie,settings,sql,restart,
   }
   for(const refusal of refusals)assert.deepEqual(refusal,refusals[0])
   assert.equal(refusals[0].data.code,'resource_unavailable')
+  // A written hourly proposal reads back only for the credential that prepared it.
+  const preparer=await issue({actions:['records:read','drafts:prepare','drafts:read'],fields:['compensation']}),peer=await issue({actions:['records:read','drafts:read'],fields:['compensation']})
+  const call=async(name,args)=>(await rpc(fetch,origin,preparer.token,'tools/call',{name,arguments:args})).json()
+  const prepared=await call('envelope.draft.prepare',{companyId:company.id,personId:people[0].id,minutes:135,periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-hours-9737',requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()})
+  const proposal=prepared.result.structuredContent,proposalUri='envelope://companies/'+company.id+'/drafts/'+proposal.id
+  assert.deepEqual(prepared.result.content.filter(item=>item.type==='resource_link').map(link=>link.uri),[proposalUri])
+  const written=await read({uri:proposalUri},preparer.token)
+  assert.deepEqual(written.result._meta['com.runeditrun/decision'].classes.map(item=>item.class),['sensitive'])
+  assert.equal(written.result.contents[0]._meta['com.runeditrun/untrusted'],true)
+  const writtenState=JSON.parse(written.result.contents[0].text)
+  assert.deepEqual(writtenState,(await call('envelope.draft.read',{companyId:company.id,draftId:proposal.id})).result.structuredContent)
+  assert.deepEqual([writtenState.personId,writtenState.minutes,writtenState.hourlyCents],[people[0].id,135,3271])
+  noContent(await read({uri:proposalUri}))
+  for(const [target,token] of [[proposalUri,peer.token],['envelope://companies/'+other.id+'/drafts/'+proposal.id,preparer.token],['envelope://companies/'+company.id+'/drafts/synthetic-envelope-missing',preparer.token]]) {
+    const body=await read({uri:target},token);noContent(body);assert.deepEqual(body.error,refusals[0])
+  }
   for(const mode of ['review','approval','blocked']) {
     await policy(mode)
     const body=await read()
