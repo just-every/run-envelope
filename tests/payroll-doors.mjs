@@ -129,7 +129,7 @@ export async function visitorStorage(context, page) {
 // Use the real site build, then enumerate its emitted documents. No copied HTML
 // or hand-maintained documentation subset can conceal an added public page.
 export async function publicSiteBrowser({browser, privateValues, proof, audits, axe}) {
- execFileSync(process.execPath, ['node_modules/@runeditrun/rer/global/rer.mjs', 'build', '--site'], {stdio: 'pipe', timeout: 120000})
+ execFileSync('pnpm', ['exec', 'rer', 'build', '--site'], {stdio: 'pipe', timeout: 120000})
  const root = './dist/site', files = new Map()
  async function collect(directory, prefix = '') {
   for (const entry of await readdir(directory, {withFileTypes: true})) {

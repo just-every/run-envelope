@@ -94,11 +94,15 @@
       "label": "Mail provider",
       "kind": "select",
       "required": true,
-      "default": "none",
+      "default": "development",
       "options": [
         {
+          "value": "development",
+          "label": "Local development (no delivery)"
+        },
+        {
           "value": "none",
-          "label": "Set up mail later"
+          "label": "Off (owner signs in with rer signin)"
         },
         {
           "value": "resend",
