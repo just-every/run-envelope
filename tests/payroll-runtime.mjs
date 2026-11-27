@@ -1566,14 +1566,16 @@ export async function payrollJourney({ origin, cookie, settings, sql, receiverSt
         assert.equal(
           started,
           transport==='rest',
-          'REST authenticates before streaming; shared MCP authenticates its complete parsed request',
+          'REST authenticates before streaming; shared MCP records no transport use before the complete request arrives',
         )
         const beforeRace = await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts')
         await data(company + '/agents/' + racing.id + '/revoke', { version: 1 })
         streamController.enqueue(new TextEncoder().encode(complete.slice(-1)))
         streamController.close()
         const refused = await pending
-        assert.equal(refused.status, transport==='rest'?403:401, await refused.clone().text())
+        // The door admits the bearer before reading the request, so a grant revoked
+        // in flight is refused at the current-scope check on both transports.
+        assert.equal(refused.status, 403, await refused.clone().text())
         if(transport==='rest')assert.equal((await refused.clone().json()).error,'insufficient_scope','the shared door narrows the retained native admission before any effect')
         assert.deepEqual(
           await sql('SELECT COUNT(*) AS drafts FROM env_run_drafts'),

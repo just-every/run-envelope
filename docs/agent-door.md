@@ -15,7 +15,7 @@ The last slot may execute; the next attempt receives HTTP 429 and a positive
 exhaustion uses `agent_rate_limited`; the shared guard uses `rate_limited`.
 Invalid credentials remain authentication refusals. Restarting the Worker or
 switching routes does not replenish capacity; independently issued credentials
-have independent budgets. Public discovery does not consume a native slot. Concurrent requests through
+have independent budgets. Discovery needs a current credential and uses one of its slots; a caller without one receives 401 with the resource-metadata challenge before its request is read, so that answer carries no request id. A capacity refusal answers the caller's own request id. Concurrent requests through
 these routes compete for the same final slot; at most one is admitted. A fresh
 human sign-in does not replenish an existing agent budget. Revocation is checked
 before capacity, so a revoked credential receives an authority refusal rather
@@ -242,7 +242,7 @@ survive rotation or a native policy change. These fingerprints grant no scope.
 
 Native scope reduction (`envelope.credentials.restrict`) carries access, keeps the calling grant identity, and accepts only retained actions, fields and locations. Adding any power or naming another credential refuses without changing the grant. A reduction invalidates prior admissions; repeating the retained scope leaves its revision unchanged.
 
-The additive core migrations are 0044_business_settings.sql, 0045_business_people.sql, 0046_agent_door.sql, 0047_business_agent_bindings.sql, 0048_agent_door_policy_attribution.sql and 0049_agent_operation_lookup.sql; main’s existing 0001–0043 migrations remain unchanged.
+The additive core migrations are 0044_business_settings.sql, 0045_business_people.sql, 0046_agent_door.sql, 0047_business_agent_bindings.sql, 0048_agent_door_policy_attribution.sql, 0049_agent_operation_lookup.sql, 0050_agent_door_relay_upgrade.sql and 0051_business_retired.sql; main’s existing 0001–0043 migrations remain unchanged. 0050 and 0051 bring the door's tables to Base's schema for rer 0.2.143 (replay and erasure custody, the Business decision relay served at `POST /api/rer/agent-decisions`, retired policy references and Business roster tombstones); both are additive.
 
 A native agent bearer at the existing person administration doors receives
 `self_escalation` when it tries to promote its sponsoring installation role,

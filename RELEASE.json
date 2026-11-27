@@ -51,7 +51,9 @@
     "0046_agent_door.sql",
     "0047_business_agent_bindings.sql",
     "0048_agent_door_policy_attribution.sql",
-    "0049_agent_operation_lookup.sql"
+    "0049_agent_operation_lookup.sql",
+    "0050_agent_door_relay_upgrade.sql",
+    "0051_business_retired.sql"
   ],
   "breaking": false,
   "agentUpdateInstructions": "Install the pinned dependencies and use the native rer commands. Keep the original payroll record encryption key for backup recovery. Review CONTRACT.md and ACCEPTANCE.md for implemented behavior before using payroll workflows."

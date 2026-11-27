@@ -29,7 +29,7 @@ export async function replayJourney({origin,cookie,settings,sql,restart,advanceC
   const wire=async(credential,name,args,{path='/mcp',discard=false,requestState}={})=>{
     const id=++seq,response=await fetch(origin+path,{method:'POST',headers:{origin,authorization:'Bearer '+credential.token,'content-type':'application/json','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args,...(requestState?{requestState}:{}),_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}})})
     if(discard) {assert.equal(response.status,200);await response.body.cancel();return {id}}
-    const answer=await response.json();assert.equal(answer.id,id,'each retry uses its own JSON-RPC id')
+    const answer=await response.json();assert.ok(answer.id===id||response.status===401&&answer.id===null,'each retry uses its own JSON-RPC id; a bearer the door cannot admit is challenged before its request is read')
     return {...answer,httpStatus:response.status}
   }
   const business=async()=>({drafts:await owner(base+'/drafts'),preparations:(await owner(base+'/agents')).access.filter(row=>row.action==='drafts:prepare')})

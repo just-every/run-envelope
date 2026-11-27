@@ -6,6 +6,7 @@
 - Hosted installs can run without outbound email. The owner can sign in with `rer signin`.
 - The hosted demo deploys from the published release tag.
 - An agent that prepares an hourly proposal gets a link to it and can read the written proposal back as a resource (`envelope://companies/{company}/drafts/{draft}`), under the same policy and scope as reading the proposal with the tool.
+- The agent door is Base's current one (rer 0.2.143): every MCP method, discovery included, needs a current credential; a Business can pull its decisions from `POST /api/rer/agent-decisions`; migrations 0050 and 0051 add the tables it needs.
 
 ## 28 October 2026 — contract cleanup to the RER contract standard
 

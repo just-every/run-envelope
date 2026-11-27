@@ -417,19 +417,19 @@ export async function safeInputsBrowser({context,f}) {
    inventory.push({method,path,status:response.status()})
   }
   // Valid protocol messages reach authentication instead of passing only a
-  // malformed-request refusal. Discovery stays public and contains no records.
+  // malformed-request refusal. Every method, discovery included, is challenged first.
   const discover=['server','discover'].join('/'),listTools=['tools','list'].join('/'),callTool=['tools','call'].join('/'),readResource=['resources','read'].join('/')
   const resourceTemplates=['resources','templates','list'].join('/'),listPrompts=['prompts','list'].join('/'),getPrompt=['prompts','get'].join('/'),listen=['subscriptions','listen'].join('/')
   for(const path of ['/mcp','/api/envelope/mcp'])for(const method of ['initialize',discover,listTools,callTool,readResource,resourceTemplates,listPrompts,getPrompt,listen]) {
    const response=await visitor.request.post(context.origin+path,{headers:{origin:context.origin,'MCP-Protocol-Version':'2025-11-25'},
     data:{jsonrpc:'2.0',id:1,method,params:method==='initialize'?{protocolVersion:'2025-11-25'}:method===callTool?{name:'records_list',arguments:{companyId:f.company.id}}:method===readResource?{uri:context.origin+personDoor}:{}}})
-   const discovery=['initialize',discover].includes(method),body=await response.text()
-   assert.equal(response.status(),discovery?200:401,method+' is public discovery or requires current credentials')
+   const body=await response.text()
+   assert.equal(response.status(),401,method+' requires current credentials')
    assert.equal(response.headers()['cache-control'],'no-store')
    assert.equal(response.headers()['set-cookie'],undefined)
    const message=JSON.parse(body)
-   if(discovery)assert.ok(message.result)
-   else assert.equal(message.error.code,-32001)
+   assert.equal(message.result,undefined)
+   assert.equal(message.error.code,-32001)
    for(const value of [...planted,payload])assert.ok(!body.includes(value),'agent discovery and refusals expose no payroll content')
    inventory.push({method:'POST',path,operation:method,status:response.status()})
   }

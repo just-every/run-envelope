@@ -380,13 +380,15 @@ export async function approvalJourney({ origin, cookie, sql, settings }) {
           if(opened)break
           await new Promise(resolve=>setTimeout(resolve,25))
         }
-        assert.equal(opened,transport==='rest','MCP parses the complete request before authentication; REST authenticates before streaming')
+        assert.equal(opened,transport==='rest','MCP records no transport use before the complete request arrives; REST authenticates before streaming')
         await data(base+'/agents/'+racing.id+'/revoke',{version:1},200,humans.admin.cookie)
       } finally {
         controller.enqueue(new TextEncoder().encode(encoded.slice(-1)));controller.close()
       }
       const denied=await pending
-      assert.equal(denied.status,transport==='rest'?403:401,await denied.clone().text())
+      // The door admits the bearer before reading the request, so a grant revoked
+      // in flight is refused at the current-scope check on both transports.
+      assert.equal(denied.status,403,await denied.clone().text())
       assert.deepEqual(await bonusRows(),priorBonusRows,'revocation in flight persists no bonus')
     }
 

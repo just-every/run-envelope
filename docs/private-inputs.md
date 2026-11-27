@@ -131,7 +131,7 @@ document offers; new route families must extend it and their applicable states.
 That includes explicit dependency diagnostics, case policy, agent class policy
 and Pause, and native authentication policy administration. Signed-out protocol
 probes also exercise every installed MCP operation, including resource templates,
-prompts and subscriptions; public discovery never substitutes for private access.
+prompts and subscriptions; each one, discovery included, is refused without a current credential.
 
 Federal and state originals carry different bytes, as do their replacement
 versions. GET checks exact bytes independently for every retained form and

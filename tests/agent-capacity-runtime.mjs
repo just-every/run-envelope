@@ -49,7 +49,7 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   const wire=async(credential,path,name,args={},method='tools/call')=>{
     const id=++sequence,response=await request(origin+path,{method:'POST',headers:{origin,...(credential?{authorization:'Bearer '+credential.token}:{}),'content-type':'application/json','MCP-Protocol-Version':'2026-07-28','Mcp-Method':method,...(method==='tools/call'?{'Mcp-Name':name}:{})},body:JSON.stringify({jsonrpc:'2.0',id,method,params:{...(method==='tools/call'?{name,arguments:args}:{}),_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}})})
     const body=await response.json()
-    assert.equal(body.id,id,'capacity errors retain the parsed request id')
+    assert.equal(body.id,response.status===401?null:id,'capacity errors retain the parsed request id; an unknown bearer is challenged before its request is read')
     return {response,body}
   }
   const rest=async(credential,body,method=body===undefined?'GET':'POST')=>{
@@ -100,7 +100,9 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
     if(phase==='held')await signIn()
     await owner('/agents/api/policy',{document},'PUT')
     const credential=await issue(),independent=await issue()
-    const discovery=await wire(null,'/mcp',null,{},'server/discover'),alias=await wire(null,'/api/envelope/mcp',null,{},'server/discover')
+    // Limits are advertised to an admitted agent; a caller without a bearer is challenged first.
+    const discovery=await wire(independent,'/mcp',null,{},'server/discover'),alias=await wire(independent,'/api/envelope/mcp',null,{},'server/discover')
+    assert.equal((await wire(null,'/mcp',null,{},'server/discover')).response.status,401)
     const limits=discovery.body.result._meta['com.runeditrun/limits']
     assert.deepEqual(alias.body.result._meta['com.runeditrun/limits'],limits)
     assert.ok(Number.isSafeInteger(limits.requestsPerMinute)&&limits.requestsPerMinute>1&&limits.requestsPerMinute<=1000)
@@ -288,7 +290,7 @@ export async function agentCapacityJourney({origin,cookie,settings,sql,restart,a
   await issue(otherId)
   const paired={token:await accessToken({...context,agentId:boundId})},other={token:await accessToken({...context,agentId:otherId})}
   for(const route of routes.slice(0,2))await read(paired,route)
-  const discovered=await wire(null,'/mcp',null,{},'server/discover'),capacity=discovered.body.result._meta['com.runeditrun/limits'].requestsPerMinute
+  const discovered=await wire(other,'/mcp',null,{},'server/discover'),capacity=discovered.body.result._meta['com.runeditrun/limits'].requestsPerMinute
   for(let slot=2;slot<capacity-1;slot++)await read(paired,routes[slot%2])
   const before=await business(),args={companyId:company.id,personId:person.id,minutes:60,periodStart:'2026-10-01',periodEnd:'2026-10-07',payDate:'2026-10-09',sourceRef:'synthetic-envelope-9877',requestKey:crypto.randomUUID(),idempotency_key:crypto.randomUUID()}
   const last=await wire(paired,'/api/envelope/mcp','envelope.draft.prepare',args)
